@@ -777,6 +777,19 @@ function open(html) { dlg().innerHTML = `<div class="dlg">${html}</div>`; if (!d
 const close = () => dlg().open && dlg().close();
 const catOptions = (type, sel) => `<option value="">— None (AI may suggest) —</option>${catTree(type).map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}`;
 
+/* parents a new category can live in: none (a new top-level category) or an existing top-level one of this type */
+const quickParentOptions = (type) => `<option value="">Nothing: a new top-level category</option>${D().categories.filter((c) => !c.parent_id && !c.archived && c.type === type).map((c) => `<option value="${c.id}">${c.icon} ${esc(c.name)} (as a sub-category)</option>`).join('')}`;
+/* add a category without leaving the transaction form, then select it */
+function quickAddCategory(form) {
+  const type = form.type.value === 'income' ? 'income' : 'expense', name = form.qc_name.value.trim(), parent = form.qc_parent.value ? catOf(form.qc_parent.value) : null;
+  if (!name) { toast('Enter a name for the category'); form.qc_name.focus(); return; }
+  if (D().categories.some((c) => !c.archived && (c.parent_id || null) === (parent?.id || null) && c.type === type && c.name.toLowerCase() === name.toLowerCase())) { toast('That name already exists here'); return; }
+  const c = { id: uid(), parent_id: parent ? parent.id : null, name, type, icon: form.qc_icon.value.trim() || '🏷️', color: parent ? parent.color : SWATCHES[D().categories.length % SWATCHES.length], archived: false };
+  D().categories.push(c); save();
+  $('select[name=category]', form).innerHTML = catOptions(type, c.id);
+  form.qc_name.value = ''; form.qc_icon.value = ''; $('.quick-cat', form).hidden = true;
+  toast(parent ? `Added ${name} under ${parent.name}` : `Added ${name}`);
+}
 function txnDialog(t, presetType) {
   const type = t?.type || presetType || 'expense', ws = D().wallets.filter((w) => !w.archived);
   // the amount is entered in the chosen wallet's currency
@@ -787,6 +800,12 @@ function txnDialog(t, presetType) {
     <div class="two"><label class="field"><span data-amt-label>Amount (${esc(c)})</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}" autofocus></label>
       <label class="field">Date<input name="date" type="date" required value="${t?.occurred_at || isoDate(new Date())}"></label></div>
     <label class="field">Category<select name="category">${catOptions(type, t?.category_id)}</select></label>
+    <button type="button" class="legend-btn" data-act="quick-cat" style="align-self:flex-start;margin-top:-6px">+ New category or sub-category</button>
+    <div class="quick-cat" hidden>
+      <div class="two"><label class="field">Name<input name="qc_name" maxlength="40" placeholder="e.g. Gym, or Snacks" autocomplete="off"></label>
+        <label class="field">Icon<input name="qc_icon" maxlength="4" placeholder="🏷️" autocomplete="off"></label></div>
+      <label class="field">Inside<select name="qc_parent">${quickParentOptions(type)}</select></label>
+      <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">Cancel</button><button type="button" class="btn" data-act="quick-cat-add">Add category</button></div></div>
     <label class="field">Wallet<select name="wallet">${ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select></label>
     ${D().occasions.some((o) => !o.archived || o.id === t?.occasion_id) ? `<label class="field">Special occasion (optional)<select name="occasion"><option value="">None</option>${D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id).map((o) => `<option value="${o.id}" ${o.id === t?.occasion_id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select></label>` : ''}
     <label class="field">Note<textarea name="note" maxlength="140" placeholder="e.g. Coffee shop">${esc(t?.note || '')}</textarea></label>
@@ -1022,6 +1041,9 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
   else if (act === 'toggle-cats') { state.ui.catsOpen = !state.ui.catsOpen; render(); }
   else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }
+  else if (act === 'quick-cat') { const q = $('.quick-cat', el.form || el.closest('form')); q.hidden = !q.hidden; if (!q.hidden) $('input[name=qc_name]', q).focus(); }
+  else if (act === 'quick-cat-cancel') $('.quick-cat', el.closest('form')).hidden = true;
+  else if (act === 'quick-cat-add') quickAddCategory(el.closest('form'));
   else if (act === 'add-wallet') walletDialog();
   else if (act === 'add-occasion') occasionDialog();
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
@@ -1090,7 +1112,7 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-filter]')) { state.ui[t.dataset.filter] = t.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
   else if (t.name === 'type' && t.form?.dataset.form === 'txn') {
     if (t.value === 'invest') holdingDialog(null, null, { invest: true });
-    else $('select[name=category]', t.form).innerHTML = catOptions(t.value);
+    else { $('select[name=category]', t.form).innerHTML = catOptions(t.value); $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value); }
   }
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
@@ -1135,6 +1157,7 @@ document.addEventListener('input', (e) => {
   if (e.target.matches('[data-filter="q"]')) { state.ui.q = e.target.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
 });
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target.name?.startsWith('qc_')) { e.preventDefault(); quickAddCategory(e.target.form); return; }   // Enter adds the category, not the transaction
   if (e.key === 'Enter' && e.target.id === 'gsearch') { state.ui.q = e.target.value; location.hash = '#/transactions'; }
 });
 

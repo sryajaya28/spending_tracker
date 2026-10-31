@@ -1,0 +1,7 @@
+{
+  "outputDirectory": "prototype",
+  "functions": {
+    "api/index.py": { "maxDuration": 60, "includeFiles": "tools/**" }
+  },
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index" }]
+}

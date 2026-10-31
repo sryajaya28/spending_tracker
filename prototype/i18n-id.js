@@ -1,6 +1,9 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Day {n}": "Tanggal {n}",
+ "Day 1 (calendar month)": "Tanggal 1 (bulan kalender)",
+ "Budget period starts on": "Periode anggaran dimulai tanggal",
  "Upcoming": "Akan datang",
  "new investment account": "akun investasi baru",
  "new": "baru",

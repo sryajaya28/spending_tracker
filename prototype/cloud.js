@@ -70,7 +70,7 @@ const Cloud = (() => {
       m.price_date ||= new Date().toISOString().slice(0, 10);
       R.manual_prices.push({ id: key, user_id: userId, symbol: key, price_date: m.price_date, price_usd: m.price });
     });
-    R.profile = { id: userId, display_name: d.profile.name || null, default_currency: d.profile.currency, ai_tagging_enabled: !!d.profile.ai, sample_ids: d.profile.sample || null, language: d.profile.language || null, theme: d.profile.theme || null };
+    R.profile = { id: userId, display_name: d.profile.name || null, default_currency: d.profile.currency, ai_tagging_enabled: !!d.profile.ai, sample_ids: d.profile.sample || null, language: d.profile.language || null, period_day: d.profile.period || 1, theme: d.profile.theme || null };
     return R;
   }
 
@@ -78,7 +78,7 @@ const Cloud = (() => {
   function dataFromRows(S, catalog) {
     const p = S.profile;
     const d = {
-      profile: { name: p.display_name || '', currency: p.default_currency, ai: p.ai_tagging_enabled, sample: p.sample_ids || null, language: p.language || null, theme: p.theme || null },
+      profile: { name: p.display_name || '', currency: p.default_currency, ai: p.ai_tagging_enabled, sample: p.sample_ids || null, language: p.language || null, theme: p.theme || null, period: p.period_day || 1 },
       categories: [...S.categories].sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'expense' ? -1 : 1)).map((c) => ({ id: c.id, parent_id: c.parent_id, name: c.name, type: c.type, icon: c.icon || '•', color: c.color || '#94A3B8', archived: c.archived })),
       wallets: S.wallets.map((w) => ({ id: w.id, name: w.name, type: w.type, currency: w.currency, opening_balance_minor: +w.opening_balance_minor, archived: w.archived, since: w.since_month.slice(0, 7) })),
       occasions: S.occasions.map((o) => ({ id: o.id, name: o.name, amount_minor: +o.amount_minor, currency: o.currency, start: o.start_date || '', end: o.end_date || '', archived: o.archived })),
@@ -187,8 +187,8 @@ const Cloud = (() => {
       for (const part of chunk(rows, 400)) must(await client.from(table).upsert(part, { onConflict: onConflict || 'id' }));
     }
     if (ops.profile) {
-      const { display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme } = ops.profile;
-      must(await client.from('profiles').update({ display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme }).eq('id', userId));
+      const { display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme, period_day } = ops.profile;
+      must(await client.from('profiles').update({ display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme, period_day }).eq('id', userId));
     }
     for (const { table, ids } of ops.deletes) {
       for (const part of chunk(ids, 200)) {

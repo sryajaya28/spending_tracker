@@ -56,6 +56,10 @@ infrastructure names, see section 8).
   `wallet_id` null, currency USD, 1 coin = 1 USD (amount in cents). It counts in income/spending, budgets, categories and net
   worth (via the holding); it does not touch any wallet balance. Edit changes the trade too; delete reverses it (`removeTrade`).
   Transactions can be filtered by the coin, and recurring rules can use it.
+- **Budget period:** Settings > Profile > "Budget period starts on" (day 1-28, saved as `profiles.period_day`). "Month" then means that
+  period everywhere: period key `YYYY-MM` is the one that STARTS in that month (start day 25: `2026-10` = 25 Oct to 24 Nov). Month totals, Money
+  Flow, budgets, spending donut, occasions, balances/holdings history and the month pickers all follow it (`periodStart/End`, `inPeriod`,
+  `periodKeyOf`, `currentPeriod`, `lastMonths`, period-aware `monthLabel`). Budgets keep `start_month` as the first of the period's month.
 - **Recurring:** a **Repeat** choice (does not repeat / every week / every month) on new expenses, income, transfers and
   investment buys. A rule is saved (`recurring_rules`); due entries are created **when the app opens or the tab returns to the front**
   (no server job), dated on their due day, with ids derived from rule+date so two devices never double-add. Settings > Recurring
@@ -128,7 +132,7 @@ Composite foreign keys `(id, user_id)` stop rows referencing another user's rows
 
 | Table | Notes |
 |---|---|
-| `profiles` | `id = auth.users.id`, `display_name`, `default_currency`, `ai_tagging_enabled`, `sample_ids` (legacy), `language`, `theme` |
+| `profiles` | `id = auth.users.id`, `display_name`, `default_currency`, `ai_tagging_enabled`, `sample_ids` (legacy), `language`, `theme`, `period_day` (1-28) |
 | `wallets` | `type` cash/bank/ewallet/card, `currency`, `opening_balance_minor`, `archived`, `since_month` |
 | `categories` | one level of `parent_id`, `type` expense/income, emoji `icon`, `color`, unique sibling names |
 | `transactions` | `wallet_id` is null for USDT/USDC income/expense (then `holding_event_id` is set; check `transactions_source_chk`), `type` expense/income/transfer, `amount_minor`, `currency`, `occurred_at`, `category_source` user/ai/rule, `transfer_direction` in/out, `holding_event_id`, `occasion_id`, `transfer_group_id` |
@@ -146,7 +150,7 @@ from `options.data`), a **Cash** wallet, 12 default categories with emoji icons 
 
 Migrations (repo file names; applied through the Supabase tools with different recorded version numbers):
 1 schema, 2 RLS, 3 signup seed, 4 views+functions, 5 portfolio, 6 debts, 7 trades, 8 app seed + `holdings.since_month`,
-9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme, 14 `recurring_rules`, 15 nullable `transactions.wallet_id` for coin income/expense (14 and 15 applied to the live project).
+9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme, 14 `recurring_rules`, 15 nullable `transactions.wallet_id` for coin income/expense 16 `profiles.period_day` (14, 15 and 16 applied to the live project).
 
 ## 7. Business rules the code encodes
 
@@ -269,6 +273,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: Period customization (migration 16 applied to production): Settings > Profile > Budget period starts on. All month logic
+  goes through the period helpers; `render()` re-selects the current period when the start day changes. e2e `period`.
 
 - 2026-10-31: Portfolio lists sort from the highest amount (compared in USD): savings accounts, investment accounts and the assets inside
   each, lent and loans (`byValue`). e2e `pfrange` checks savings and loans.

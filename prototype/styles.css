@@ -106,18 +106,6 @@ h1, h2, h3, p { margin: 0; }
 .tile { --c: #94a3b8; width: 34px; height: 34px; border-radius: 10px; background: color-mix(in srgb, var(--c) 18%, white); display: inline-grid; place-items: center; font-size: 17px; flex: none; }
 .tile.sm { width: 28px; height: 28px; font-size: 14px; border-radius: 9px; }
 
-/* budget tiles (reference "goals" style) */
-.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
-.btile { text-align: center; }
-.btile .well { height: 150px; border-radius: 20px; background: var(--soft); position: relative; overflow: hidden; display: flex; align-items: flex-end; }
-.btile .fill { width: 100%; border-radius: 20px; position: relative; transition: height .4s; }
-.btile .fill.ok { background: linear-gradient(180deg, #4a44c6, #8b8ff0); }
-.btile .fill.warning { background: linear-gradient(180deg, #f5b800, #ffe27a); }
-.btile .fill.exceeded { background: linear-gradient(180deg, #e5484d, #f59a9d); }
-.btile .fill.hatch { background-image: repeating-linear-gradient(135deg, rgba(74, 68, 198, .18) 0 2px, transparent 2px 8px); background-color: #e8e9fb; }
-.btile .pct { position: absolute; left: 50%; transform: translateX(-50%); bottom: max(8px, calc(var(--h, 0) * 1.5px - 34px)); background: #fff; color: var(--ink); border-radius: 999px; font-size: 12px; font-weight: 700; padding: 3px 10px; box-shadow: 0 1px 4px rgba(30, 27, 75, .12); transition: bottom .4s; }
-.btile b { display: block; margin-top: 10px; font-size: 14px; }
-.btile small { color: var(--muted); }
 
 /* ---------- lists ---------- */
 .list { display: flex; flex-direction: column; }
@@ -256,8 +244,7 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
   .profile { display: none; }   /* the name pill is desktop-only; on phones it left an empty bar */
   .hero .amount { font-size: 38px; }
   .big { font-size: 28px; }
-  .tiles { gap: 8px; }
-  .bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); z-index: 20; }
+    .bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); z-index: 20; }
   .bottom-nav a { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); padding: 6px 0; border-radius: 12px; }
   .bottom-nav a svg { width: 22px; height: 22px; }
   .bottom-nav a.active { color: var(--brand); font-weight: 700; }
@@ -389,3 +376,5 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 .hero-actions .ghost svg { width: 16px; height: 16px; flex: none; }
 @container (max-width: 520px) { .hero-actions .ghost svg { display: none; } .hero-actions .ghost { font-size: 13px; } }
 @container (max-width: 340px) { .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.ov-buds { margin-top: 14px; }

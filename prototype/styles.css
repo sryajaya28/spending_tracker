@@ -51,7 +51,7 @@ h1, h2, h3, p { margin: 0; }
 .search svg, .icon-btn svg { width: 20px; height: 20px; }
 .icon-btn { width: 48px; height: 48px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-items: center; position: relative; }
 .icon-btn .dot { position: absolute; top: 11px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-.profile { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 16px 5px 5px; height: 48px; }
+.profile { text-decoration: none; color: inherit; display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 16px 5px 5px; height: 48px; }
 .avatar { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; display: grid; place-items: center; font-weight: 700; }
 .profile b { display: block; font-size: 14px; line-height: 1.1; }
 .profile small { color: var(--muted); font-size: 12px; }
@@ -243,15 +243,18 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
   .topbar { margin-bottom: 10px; }
   .search { display: none; }
   .topbar h1 { font-size: 22px; }
-  .profile { display: none; }   /* the name pill is desktop-only; on phones it left an empty bar */
+  .profile { padding: 0; border: 0; background: none; height: auto; }   /* phones: just the round avatar, tap for Settings */
+  .profile > div:last-child { display: none; }
   .hero .amount { font-size: 38px; }
   .big { font-size: 28px; }
     .bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); z-index: 20; }
   .bottom-nav a { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); padding: 6px 0; border-radius: 12px; }
   .bottom-nav a svg { width: 22px; height: 22px; }
   .bottom-nav a.active { color: var(--brand); font-weight: 700; }
-  .fab { display: grid; place-items: center; position: fixed; right: 18px; bottom: calc(82px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--navy); color: #fff; box-shadow: 0 10px 24px rgba(30, 27, 75, .35); z-index: 21; }
-  .fab svg { width: 26px; height: 26px; }
+  .bottom-nav .nav-add { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: 0; font: inherit; font-size: 11px; font-weight: 700; color: var(--navy); padding: 0; margin-top: -18px; }
+  .nav-add span { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: 0 8px 18px rgba(74, 68, 198, .4); border: 4px solid var(--surface); }
+  .nav-add svg { width: 24px; height: 24px; }
+  .fab { display: none; }
   .card { padding: 20px; border-radius: 22px; }
 }
 
@@ -377,7 +380,7 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 .hero-actions .ghost { justify-content: center; height: 44px; padding: 0 8px; font-size: 14px; white-space: nowrap; min-width: 0; gap: 6px; }
 .hero-actions .ghost svg { width: 16px; height: 16px; flex: none; }
 @container (max-width: 520px) { .hero-actions .ghost svg { display: none; } .hero-actions .ghost { font-size: 13px; } }
-@container (max-width: 340px) { .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (max-width: 290px) { .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .ov-buds { margin-top: 14px; }
 
@@ -463,3 +466,4 @@ html { -webkit-text-size-adjust: 100%; }
 .filters.scroll-row select { flex: 1 1 0; min-width: 0; width: 100%; height: 40px; border-radius: 999px; font-size: 13px; padding: 0 10px; appearance: none; -webkit-appearance: none; text-overflow: ellipsis; background: var(--soft); }
 .filters.scroll-row .pill-select { margin: 0; flex: 0 0 auto; width: auto; }
 .dlg:focus { outline: 0; }
+:root[data-theme="dark"] .nav-add { color: var(--ink); }

@@ -257,6 +257,11 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Phone navigation: removed the floating + button and the Settings tab; bottom bar is now Overview, Activity, a raised
+  highlighted **Add** button in the middle (opens the add-transaction dialog), Budgets, Portfolio. The round profile avatar at the
+  top right (`.profile`, now a link) opens Settings on phones; desktop keeps the name pill and the sidebar. Overview hero buttons
+  stay on one row down to 290px container width.
+
 - 2026-10-31: Dialogs no longer autofocus a field (removed every `autofocus`; `open()` focuses the dialog box itself), so the phone
   keyboard stays down until the user taps an input. e2e `daily` checks it.
 

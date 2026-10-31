@@ -608,8 +608,7 @@ function sidebar() {
 function bottomNav() {
   const r = route();
   const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
-  return `<nav class="bottom-nav">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Activity')}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}${l('settings', 'gear', 'Settings')}</nav>
-    <button class="fab" data-act="add-txn" aria-label="${__('Add transaction')}">${icon('plus')}</button>`;
+  return `<nav class="bottom-nav">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Activity')}<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}</nav>`;
 }
 function topbar(title, sub) {
   const p = D().profile, hour = new Date().getHours();
@@ -617,7 +616,7 @@ function topbar(title, sub) {
   const greet = title ? __(title) : hour < 12 ? __('Good morning, {name}', { name: first }) : hour < 18 ? __('Good afternoon, {name}', { name: first }) : __('Good evening, {name}', { name: first });
   return `<header class="topbar"><div><h1>${greet}</h1></div>
     <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="${__('Search transactions')}" aria-label="${__('Search transactions')}"></label>
-    <div class="profile"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></div></div></header>`;
+    <a class="profile" href="#/settings" aria-label="${__('Settings')}"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></a></div></header>`;
 }
 
 function viewOverview() {

@@ -489,7 +489,7 @@ function viewPortfolio() {
 
   let body = '';
   if (tab === 'savings') {
-    body = `<section class="card"><div class="card-head"><div><h2>Savings and wallets</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><button class="btn" data-act="add-wallet">+ Wallet</button></div>
+    body = `<section class="card"><div class="card-head"><div><h2>Savings and wallets</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><div class="tools"><button class="btn secondary" data-act="transfer">Transfer</button><button class="btn" data-act="add-wallet">+ Wallet</button></div></div>
       <div class="wallets">${walletCards()}</div>${archivedWallets()}</section>${growth}`;
   } else if (tab === 'investment') {
     const byType = {};
@@ -609,7 +609,7 @@ function viewOverview() {
       <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
       <div class="delta"><b>${saved >= 0 ? '+' : ''}${saved}%</b><span>${net >= 0 ? '+' : '−'}${money(Math.abs(net), cur())} this month</span></div>
       ${sparkline(bal)}
-      <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} Expense</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} Income</button><button class="ghost" data-act="invest">${icon('plus')} Invest</button></div>
+      <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} Expense</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} Income</button><button class="ghost" data-act="invest">${icon('plus')} Invest</button><button class="ghost" data-act="transfer">${icon('swap')} Transfer</button></div>
       </section>
     <section class="card"><div class="card-head"><h2>Money Flow</h2><span class="chip">6 months</span></div>
       <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">Saved in ${esc(monthLabel(k))}</p>
@@ -619,8 +619,8 @@ function viewOverview() {
       <div class="cat-legend">${cats.slice(0, 3).map((c) => `<button class="legend-btn" data-act="breakdown" data-id="${c.id || ''}">${tile({ icon: c.icon, color: c.color }, true)}${esc(c.name)}</button>`).join('') || '<div>No spending this month</div>'}</div></section>
     <section class="card"><div class="card-head"><h2>Budgets</h2><a class="chip" href="#/budgets">Manage</a></div>
       ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">of ${money(global.budget, cur())} monthly budget</p>` : '<div class="big">No monthly budget</div><p class="muted">Set one to track your month</p>'}
-      <div class="tiles">${tiles.map((b) => `<div class="btile"><div class="well"><div class="fill ${b.status}" style="height:${Math.max(14, Math.min(100, b.pct))}%"><span class="pct">${Math.round(b.pct)}%</span></div></div><b>${esc(b.name)}</b><small class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</small></div>`).join('') || (occs.length ? '' : '<p class="muted">No budgets yet.</p>')}</div>
-      ${occs.length ? `<h3 class="ov-h">Special occasions</h3>${occs.map((o) => `<div class="ov-occ"><div class="meta"><span>🎉 ${esc(o.name)}</span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())}</span></div><div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div></div>`).join('')}${moreOcc ? `<p class="muted" style="margin-top:10px"><a href="#/budgets">+${moreOcc} more on the Budgets page</a></p>` : ''}` : ''}</section>
+      <div class="tiles">${tiles.map((b) => `<div class="btile"><div class="well" style="--h:${b.pct > 0 ? Math.max(4, Math.min(100, b.pct)) : 0}"><div class="fill ${b.status}" style="height:${b.pct > 0 ? Math.max(4, Math.min(100, b.pct)) : 0}%"></div><span class="pct">${Math.round(b.pct)}%</span></div><b>${esc(b.name)}</b><small class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</small></div>`).join('') || (occs.length ? '' : '<p class="muted">No budgets yet.</p>')}</div>
+      ${occs.length ? `<h3 class="ov-h">Special occasions</h3>${occs.map((o) => `<div class="ov-occ"><div class="meta"><span>🎉 ${esc(o.name)}</span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div><div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div></div>`).join('')}${moreOcc ? `<p class="muted" style="margin-top:10px"><a href="#/budgets">+${moreOcc} more on the Budgets page</a></p>` : ''}` : ''}</section>
   </div>
   <section class="card" style="margin-top:20px"><div class="card-head"><h2>Recent transactions</h2><a class="chip" href="#/transactions">View all</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>`;
 }
@@ -628,21 +628,22 @@ function viewOverview() {
 function txnRow(t) {
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
-    return `<div class="row"><span class="tile" style="--c:#F5B800">${t.flow === 'out' ? '📈' : '💵'}</span>
-    <div><div class="title">${esc(t.note)}<span class="badge">Investment</span></div>
+    const xfer = !!t.transfer_id;
+    return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
+    <div><div class="title">${esc(t.note)}<span class="badge">${xfer ? 'Transfer' : 'Investment'}</span></div>
     <div class="sub">Transfer · ${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' }))}</div></div>
     <div class="amt num">${t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div></div>`;
   }
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
-    <div><div class="title">${esc(t.note || c?.name || 'Transaction')}${t.category_source === 'ai' ? '<span class="badge ai" title="Tagged by AI">AI</span>' : ''}${!c ? '<span class="badge">Uncategorized</span>' : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
+    <div><div class="title">${esc(t.note || c?.name || 'Transaction')}${t.category_source === 'ai' ? '<span class="badge ai" title="Tagged by AI">AI</span>' : ''}${!c ? '<span class="badge">Uncategorized</span>' : ''}${t.transfer_id ? '<span class="badge">Transfer fee</span>' : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
     <div class="sub">${esc(c ? catPath(c.id) : 'No category')} ·${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' }))}</div></div>
     <div class="amt num ${t.type}">${sign}${money(t.amount_minor, t.currency)}</div></div>`;
 }
 function filteredTxns() {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
   return D().transactions.filter((t) => (occ || t.occurred_at.startsWith(state.ui.month))
-    && (!cat || (cat === 'none' ? !t.category_id : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet) && (!occ || t.occasion_id === occ)
+    && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
 }
 function txnListHtml() {
@@ -672,14 +673,14 @@ function viewBudgets() {
       <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span class="muted">${g.remaining >= 0 ? `${money(g.remaining, cur())} left` : `${money(-g.remaining, cur())} over`} · ${Math.round(g.pct)}% used</span>${cap(g)}<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">Edit</button></div>`
       : '<p class="muted">No overall budget yet. Add one to cap total monthly spending.</p>'}</section>
   <section class="card"><div class="card-head"><h2>By category</h2></div>
-    ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">Edit</button></div>`).join('') : '<div class="empty">No category budgets yet.</div>'}</section>
+    ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">Edit</button></div>`).join('') : '<div class="empty">No category budgets yet.</div>'}</section>
   <section class="card"><div class="card-head"><h2>Special occasions</h2><button class="btn" data-act="add-occasion">+ Occasion</button></div>
     <p class="muted" style="margin-bottom:8px">A one-off budget for a trip, a party or a dinner. Tag expenses to it when you add them.</p>
     ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : '<div class="empty">No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".</div>') + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">Past occasions</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
 }
 const occasionRow = (o) => {
   const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
-  return `<div class="brow wrap"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? 'On track' : o.status === 'warning' ? 'Almost there' : 'Over budget'}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())}</span></div>
+  return `<div class="brow wrap"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? 'On track' : o.status === 'warning' ? 'Almost there' : 'Over budget'}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div>
     <div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div><small class="muted">${o.count} expense${o.count === 1 ? '' : 's'}${dates ? ' · ' + esc(dates) : ''}${o.remaining < 0 ? ` · ${money(-o.remaining, cur())} over` : ` · ${money(o.remaining, cur())} left`}</small></div>
     <div class="tools"><button class="btn" data-act="add-occasion-txn" data-id="${o.id}">+ Expense</button><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">Expenses</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">Edit</button></div></div>`;
 };
@@ -798,6 +799,53 @@ function quickAddCategory(form) {
 }
 /* active occasions whose dates include this day (an occasion without dates never matches by date) */
 const occasionOn = (date) => D().occasions.filter((o) => !o.archived && o.start && date >= o.start && date <= (o.end || o.start));
+/* the four ways to add money movement; the active one is highlighted and the others switch dialogs */
+const kindSeg = (active) => `<div class="seg seg4">${[['expense', 'Expense'], ['income', 'Income'], ['invest', 'Invest'], ['transfer', 'Transfer']].map(([k, n]) => `<label><input type="radio" name="txkind" value="${k}" ${k === active ? 'checked' : ''}>${n}</label>`).join('')}</div>`;
+
+/* ---------- transfers between wallets ----------
+   Stored as linked transactions sharing a transfer_id: an 'out' leg on the source wallet, an 'in' leg on the
+   destination (in its own currency) and an optional fee as a normal expense on the source wallet. Transfers
+   are not income or spending; the fee is spending. */
+function transferDialog(preset) {
+  const ws = D().wallets.filter((w) => !w.archived);
+  if (ws.length < 2) { toast('Add a second wallet first to transfer between wallets'); return; }
+  const from = preset?.from || ws[0], to = ws.find((w) => w.id !== from.id);
+  const opt = (w, sel) => `<option value="${w.id}" ${w.id === sel ? 'selected' : ''}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`;
+  open(`<h2>Transfer between wallets</h2><form data-form="transfer" style="display:contents">
+    ${kindSeg('transfer')}
+    <div class="two"><label class="field">From<select name="from">${ws.map((w) => opt(w, from.id)).join('')}</select></label>
+      <label class="field">To<select name="to">${ws.map((w) => opt(w, to.id)).join('')}</select></label></div>
+    <div class="two"><label class="field"><span data-send-label>Amount sent</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required autofocus></label>
+      <label class="field">Date<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
+    <label class="field" data-recv hidden><span data-recv-label>Amount received</span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
+    <label class="field"><span data-fee-label>Transfer fee (optional)</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    <label class="field">Note (optional)<input name="note" maxlength="140" placeholder="e.g. Top up e-wallet"></label>
+    <p class="hint">A transfer is not income or spending. If you enter a fee it is taken from the source wallet on top of the amount and counts as spending.</p>
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Transfer</button></div></form>`);
+  syncTransfer($('#dlg form'));
+}
+/* keep labels in the right currency; when the two wallets differ, show and prefill the received amount */
+function syncTransfer(form) {
+  const A = walletOf(form.from.value), B = walletOf(form.to.value), cross = A.currency !== B.currency;
+  $('[data-send-label]', form).textContent = `Amount sent (${A.currency})`;
+  $('[data-fee-label]', form).textContent = `Transfer fee, optional (${A.currency})`;
+  $('[data-recv]', form).hidden = !cross;
+  if (cross) {
+    $('[data-recv-label]', form).textContent = `Amount received (${B.currency}) · estimated, edit if different`;
+    const a = parseFloat(form.amount.value);
+    if (!form.received.dataset.touched) form.received.value = a > 0 ? toMajor(convert(toMinor(a, A.currency), A.currency, B.currency), B.currency).toFixed(expOf(B.currency)) : '';
+  }
+}
+function transferDetail(gid) {
+  const legs = D().transactions.filter((t) => t.transfer_id === gid), out = legs.find((t) => t.flow === 'out'), inn = legs.find((t) => t.flow === 'in'), fee = legs.find((t) => t.type === 'expense');
+  const row = (k, v) => `<div class="form-row"><div>${k}</div><b class="num">${v}</b></div>`;
+  open(`<h2>Transfer</h2>
+    ${row('From', esc(walletOf(out?.wallet_id)?.name || '—'))}${row('To', esc(walletOf(inn?.wallet_id)?.name || '—'))}
+    ${out ? row('Sent', money(out.amount_minor, out.currency)) : ''}${inn ? row('Received', money(inn.amount_minor, inn.currency)) : ''}${fee ? row('Fee', money(fee.amount_minor, fee.currency)) : ''}
+    ${row('Date', esc(new Date((out || inn || fee).occurred_at + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })))}
+    <p class="hint">Deleting removes the transfer and its fee, and both wallet balances go back to what they were.</p>
+    <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">Delete transfer</button><button type="button" class="btn secondary" data-act="close">Close</button></div>`);
+}
 function txnDialog(t, presetType, presetOccasion) {
   const type = t?.type || presetType || 'expense', ws = D().wallets.filter((w) => !w.archived);
   const live = D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id), occ0 = t ? t.occasion_id : presetOccasion?.id || (occasionOn(isoDate(new Date()))[0]?.id);
@@ -806,7 +854,7 @@ function txnDialog(t, presetType, presetOccasion) {
   const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = expOf(c) ? '0.01' : '1';
   open(`<h2>${t ? 'Edit' : 'Add'} transaction</h2>
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
-    <div class="seg ${t ? '' : 'seg3'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>Expense</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>Income</label>${t ? '' : '<label><input type="radio" name="type" value="invest">Invest</label>'}</div>
+    <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>Expense</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>Income</label>${t ? '' : '<label><input type="radio" name="type" value="invest">Invest</label><label><input type="radio" name="type" value="transfer">Transfer</label>'}</div>
     <div class="two"><label class="field"><span data-amt-label>Amount (${esc(c)})</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}" autofocus></label>
       <label class="field">Date<input name="date" type="date" required value="${date0}"></label></div>
     <label class="field">Category<select name="category">${catOptions(type, t?.category_id)}</select></label>
@@ -898,7 +946,7 @@ function holdingDialog(h, accId, opts = {}) {
   const accounts = activeAccounts(), info = h && assetInfo(h.symbol), invest = !!opts.invest;
   const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
   open(`<h2>${h ? `Edit ${esc(info.symbol)}` : invest ? 'Add transaction' : 'Add asset'}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
-    ${invest ? '<div class="seg seg3"><label><input type="radio" name="txkind" value="expense">Expense</label><label><input type="radio" name="txkind" value="income">Income</label><label><input type="radio" name="txkind" value="invest" checked>Invest</label></div>' : ''}
+    ${invest ? kindSeg('invest') : ''}
     <label class="field">Account<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(info.type)}</span></p>` : `
     <div class="field" id="picker">Asset
@@ -1046,6 +1094,9 @@ document.addEventListener('click', (e) => {
   if (act === 'close') close();
   else if (act === 'add-txn') txnDialog(null, type);
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
+  else if (act === 'transfer') transferDialog();
+  else if (act === 'view-transfer') transferDetail(id);
+  else if (act === 'delete-transfer') { D().transactions = D().transactions.filter((t) => t.transfer_id !== id); save(); close(); render(); toast('Transfer deleted'); }
   else if (act === 'edit-txn') txnDialog(find(D().transactions));
   else if (act === 'add-budget') budgetDialog();
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
@@ -1116,19 +1167,36 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); });
 
+document.addEventListener('input', (e) => {
+  const t = e.target, f = t.form;
+  if (f?.dataset.form !== 'transfer') return;
+  if (t.name === 'received') t.dataset.touched = '1';   // the user set it: stop auto-filling
+  else if (t.name === 'amount') syncTransfer(f);
+});
 document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
   else if (t.matches('[data-filter]')) { state.ui[t.dataset.filter] = t.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
   else if (t.name === 'type' && t.form?.dataset.form === 'txn') {
     if (t.value === 'invest') holdingDialog(null, null, { invest: true });
+    else if (t.value === 'transfer') transferDialog();
     else { $('select[name=category]', t.form).innerHTML = catOptions(t.value); $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value); }
   }
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
-  else if (t.name === 'txkind') { if (t.value !== 'invest') txnDialog(null, t.value); }
+  else if (t.name === 'txkind') {
+    const here = t.form?.dataset.form;   // 'holding' is the Invest dialog
+    if (t.value === 'invest' && here !== 'holding') holdingDialog(null, null, { invest: true });
+    else if (t.value === 'transfer' && here !== 'transfer') transferDialog();
+    else if (t.value === 'expense' || t.value === 'income') txnDialog(null, t.value);
+  }
+  else if (t.form?.dataset.form === 'transfer' && (t.name === 'from' || t.name === 'to')) {
+    const f = t.form;   // never the same wallet on both sides
+    if (f.from.value === f.to.value) { const other = D().wallets.find((w) => !w.archived && w.id !== t.value); (t.name === 'from' ? f.to : f.from).value = other.id; }
+    delete f.received.dataset.touched; syncTransfer(f);
+  }
   else if (t.name === 'date' && t.form?.dataset.form === 'txn' && t.form.occasion && !t.form.occasion.value) {
     const hit = occasionOn(t.value)[0]; if (hit) t.form.occasion.value = hit.id;   // a date inside an occasion tags it automatically
   }
@@ -1209,6 +1277,22 @@ document.addEventListener('submit', (e) => {
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     state.ui.month = row.occurred_at.slice(0, 7) <= monthKey(new Date()) ? row.occurred_at.slice(0, 7) : state.ui.month;
     save(); close(); render(); toast(msg);
+  }
+  if (kind === 'transfer') {
+    const A = walletOf(v.from), B = walletOf(v.to);
+    if (!A || !B || A.id === B.id) { toast('Pick two different wallets'); return; }
+    const cross = A.currency !== B.currency, amount = toMinor(parseFloat(v.amount), A.currency), fee = v.fee ? toMinor(parseFloat(v.fee), A.currency) : 0;
+    const received = cross ? toMinor(parseFloat(v.received), B.currency) : amount;
+    if (!(amount > 0) || !(received > 0)) { toast(cross && !(received > 0) ? 'Enter the amount received' : 'Enter an amount above zero'); return; }
+    if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    if (A.type !== 'card' && amount + fee > walletBalance(A)) { toast(`${A.name} doesn't have enough balance`); return; }
+    const gid = uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: v.date, transfer_id: gid }, extra = v.note.trim() ? ` · ${v.note.trim()}` : '';
+    D().transactions.push({ id: uid(), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.currency, note: `Transfer to ${B.name}${extra}`, ...base });
+    D().transactions.push({ id: uid(), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.currency, note: `Transfer from ${A.name}${extra}`, ...base });
+    if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: `Transfer fee (${A.name} → ${B.name})`, ...base });
+    D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    state.ui.month = v.date.slice(0, 7) <= monthKey(new Date()) ? v.date.slice(0, 7) : state.ui.month;
+    save(); close(); render(); toast(`Moved ${money(amount, A.currency)} from ${A.name} to ${B.name}${fee > 0 ? ` (fee ${money(fee, A.currency)})` : ''}`); return;
   }
   if (kind === 'occasion') {
     const existing = f.dataset.id && occasionOf(f.dataset.id), c = existing ? existing.currency : v.currency, minor = toMinor(parseFloat(v.amount), c), name = v.name.trim();

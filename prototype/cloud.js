@@ -50,7 +50,7 @@ const Cloud = (() => {
     d.transactions.forEach((t) => R.transactions.push({
       id: t.id, wallet_id: t.wallet_id, category_id: t.category_id || null, type: t.type, amount_minor: t.amount_minor, currency: t.currency,
       occurred_at: t.occurred_at, note: t.note || null, occasion_id: t.occasion_id && d.occasions.some((o) => o.id === t.occasion_id) ? t.occasion_id : null, category_source: t.category_source || 'user', ai_confidence: t.ai_confidence ?? null,
-      transfer_direction: t.type === 'transfer' ? t.flow : null, holding_event_id: t.trade_id && tradeIds.has(t.trade_id) ? t.trade_id : null,
+      transfer_direction: t.type === 'transfer' ? t.flow : null, holding_event_id: t.trade_id && tradeIds.has(t.trade_id) ? t.trade_id : null, transfer_group_id: t.transfer_id || null,
     }));
     d.budgets.forEach((b) => R.budgets.push({ id: b.id, category_id: b.category_id || null, amount_minor: b.amount_minor, currency: b.currency, start_month: b.start_month }));
     d.loans.forEach((l) => {
@@ -89,6 +89,7 @@ const Cloud = (() => {
       if (t.transfer_direction) o.flow = t.transfer_direction;
       if (t.holding_event_id) o.trade_id = t.holding_event_id;
       if (t.occasion_id) o.occasion_id = t.occasion_id;
+      if (t.transfer_group_id) o.transfer_id = t.transfer_group_id;
       return o;
     }).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
 

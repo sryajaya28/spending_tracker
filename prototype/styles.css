@@ -436,3 +436,11 @@ dialog { background: var(--surface); }
 .donut .center p i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
 .donut .center p.pct { color: var(--ink); font-weight: 600; }
 .donut .center b { display: block; white-space: nowrap; letter-spacing: -.02em; font-size: min(26px, calc(44cqw / (var(--len, 8) * .6))); line-height: 1.2; }
+
+/* installed app (home-screen / PWA): feels native, no browser-style bounce, selection or link callouts */
+html { -webkit-text-size-adjust: 100%; }
+@media (display-mode: standalone) {
+  html, body { overscroll-behavior-y: none; }
+  body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; }
+}

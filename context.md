@@ -257,6 +257,11 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Installable app polish: iOS meta tags (`apple-mobile-web-app-capable`, status bar `default`), PNG icons
+  (`icon-192/512.png`, maskable, `apple-touch-icon.png`, full-bleed squares made from the brand logo), manifest `display: standalone`
+  with PNG icons, standalone-only CSS (no bounce/selection), service worker cache `stiver-shell-v4`. Existing home-screen installs
+  must be removed and re-added once to pick this up. A page opened from a link inside another app still shows that app's browser bar.
+
 - 2026-10-31: Overview Budgets card got a month picker next to Manage. The month is shared state (`state.ui.month`), so it also
   switches the Spending chart on the same page. e2e `donut` covers it.
 

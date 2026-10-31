@@ -276,3 +276,9 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 .btn.google { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
 .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--soft); }
+
+/* collapsible categories */
+.chev { display: inline-block; font-size: 18px; line-height: 1; transition: transform .15s; }
+[aria-expanded="true"] > .chev, [aria-expanded="true"] .chev { transform: rotate(90deg); }
+.card-toggle { padding: 0; gap: 8px; color: inherit; }
+.card-toggle h2 { margin: 0; }

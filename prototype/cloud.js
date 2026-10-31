@@ -76,7 +76,7 @@ const Cloud = (() => {
     const p = S.profile;
     const d = {
       profile: { name: p.display_name || '', currency: p.default_currency, ai: p.ai_tagging_enabled },
-      categories: S.categories.map((c) => ({ id: c.id, parent_id: c.parent_id, name: c.name, type: c.type, icon: c.icon || '•', color: c.color || '#94A3B8', archived: c.archived })),
+      categories: [...S.categories].sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'expense' ? -1 : 1)).map((c) => ({ id: c.id, parent_id: c.parent_id, name: c.name, type: c.type, icon: c.icon || '•', color: c.color || '#94A3B8', archived: c.archived })),
       wallets: S.wallets.map((w) => ({ id: w.id, name: w.name, type: w.type, currency: w.currency, opening_balance_minor: +w.opening_balance_minor, archived: w.archived })),
       occasions: S.occasions.map((o) => ({ id: o.id, name: o.name, amount_minor: +o.amount_minor, currency: o.currency, start: o.start_date || '', end: o.end_date || '', archived: o.archived })),
       budgets: S.budgets.map((b) => ({ id: b.id, category_id: b.category_id, amount_minor: +b.amount_minor, currency: b.currency, start_month: b.start_month })),

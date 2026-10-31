@@ -190,7 +190,7 @@ function seed(name, cur) {
   return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions: [], investments: [exch, broker], holdings, customAssets: {}, livePrices: {}, loans, lent };
 }
 
-const state = { data: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '' } };
+const state = { data: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set() } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
 function save() {
   try { localStorage.setItem(PRICES_KEY, JSON.stringify(state.data.livePrices)); } catch { /* storage unavailable */ }
@@ -664,14 +664,25 @@ const occasionRow = (o) => {
     <div class="tools"><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">Expenses</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">Edit</button></div></div>`;
 };
 
+/* Settings > Categories: collapsed by default; each parent with sub-categories expands on its own */
+function categoriesCard() {
+  const roots = D().categories.filter((c) => !c.parent_id && !c.archived), subs = D().categories.filter((c) => c.parent_id && !c.archived).length;
+  const open = state.ui.catsOpen;
+  const rows = roots.map((c) => {
+    const kids = childrenOf(c.id), isOpen = state.ui.openCats.has(c.id);
+    return `<div class="brow">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${c.type}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${kids.length} sub-categor${kids.length === 1 ? 'y' : 'ies'} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
+      <div class="tools"><button class="btn secondary" data-act="add-cat" data-parent="${c.id}">+ Sub</button><button class="btn secondary" data-act="edit-cat" data-id="${c.id}">Edit</button></div></div>`
+      + (isOpen ? kids.map((k) => `<div class="brow indent">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">Edit</button></div></div>`).join('') : '');
+  }).join('');
+  return `<section class="card"><div class="card-head"><button type="button" class="legend-btn card-toggle" data-act="toggle-cats" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><h2>Categories</h2></button><button class="btn" data-act="add-cat">+ Category</button></div>
+    <p class="muted" style="margin-top:4px">${roots.length} categories · ${subs} sub-categories${open ? '. Totals and budgets roll sub-categories up into their parent.' : ''}</p>
+    ${open ? `<div style="margin-top:6px">${rows}</div>` : ''}</section>`;
+}
 function viewSettings() {
   const p = D().profile;
   return `${topbar('Settings', 'Profile, currency and privacy')}
   <div class="stack">
-  <section class="card"><div class="card-head"><h2>Categories</h2><button class="btn" data-act="add-cat">+ Category</button></div>
-    <p class="muted" style="margin-bottom:6px">Add your own categories and optional sub-categories. Totals and budgets roll sub-categories up into their parent.</p>
-    ${catTree().map((c) => `<div class="brow ${c.parent_id ? 'indent' : ''}">${tile(c, !!c.parent_id)}<div><b>${esc(c.name)}</b> ${c.parent_id ? '' : `<span class="badge">${c.type}</span>`}</div>
-      <div class="tools">${c.parent_id ? '' : `<button class="btn secondary" data-act="add-cat" data-parent="${c.id}">+ Sub</button>`}<button class="btn secondary" data-act="edit-cat" data-id="${c.id}">Edit</button></div></div>`).join('')}</section>
+  ${categoriesCard()}
   <section class="card"><div class="card-head"><h2>Profile</h2></div>
     <div class="form-row"><div>Display name<small>Shown in the greeting</small></div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="Display name"></div></div>
     <div class="form-row"><div>Reporting currency<small>Used for totals, budgets and charts. Wallets keep their own currency; budgets convert at demo rates.</small></div><div class="field"><select data-setting="currency" aria-label="Currency">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
@@ -993,6 +1004,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-txn') txnDialog(find(D().transactions));
   else if (act === 'add-budget') budgetDialog();
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
+  else if (act === 'toggle-cats') { state.ui.catsOpen = !state.ui.catsOpen; render(); }
+  else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }
   else if (act === 'add-wallet') walletDialog();
   else if (act === 'add-occasion') occasionDialog();
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
@@ -1165,6 +1178,7 @@ document.addEventListener('submit', (e) => {
     const fields = { name, icon: v.icon.trim() || '🏷️', color: v.color, parent_id: parent ? parent.id : null, type };
     if (existing) Object.assign(existing, fields);
     else D().categories.push({ id: uid(), archived: false, ...fields });
+    if (parent) { state.ui.catsOpen = true; state.ui.openCats.add(parent.id); }   // show the sub-category you just added
     save(); close(); render(); toast(existing ? 'Category saved' : 'Category added');
     return;
   }

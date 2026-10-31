@@ -274,6 +274,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio history list under the chart shows the latest 3 months, then "See more (n)" / "Show less" (`state.ui.histMore`; the
+  shared `toggle-more` action takes `data-key`).
+
 - 2026-10-31: Overview on desktop: Recent transactions moved into the card grid, next to Budgets (no empty cell); phones still stack it.
 
 - 2026-10-31: Budgets > Overall budget footer: the status badge and Edit button now share one vertically centred line (`.budget-foot`/`.budget-end`).

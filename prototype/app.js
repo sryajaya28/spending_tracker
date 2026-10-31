@@ -510,7 +510,7 @@ const walletCard = (w) => {
 const walletCards = () => {
   const all = D().wallets.filter((w) => !w.archived).sort(byValue((w) => toUSD(walletBalance(w), w.currency))), more = !!state.ui.walletsMore, rest = all.length - 3;
   return (more || rest <= 0 ? all : all.slice(0, 3)).map(walletCard).join('')
-    + (rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : '');
+    + (rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="wallets" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : '');
 };
 
 
@@ -549,12 +549,15 @@ function viewPortfolio() {
     // a list, not a table: the value gets its own line, so figures of any size (hundreds of billions) never push other columns off screen
     const chg = d === null ? '—' : `${d >= 0 ? '+' : '−'}${m(Math.abs(d))}`;
     return `<div class="mrow"><span class="mname">${esc(new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }))}</span><div class="mval"><b class="num">${m(series[i])}</b><small class="num">${chg}${p === null ? '' : ` · <span class="${good}">${pctFmt(p)}</span>`}</small></div></div>`;
-  }).reverse().join('');
+  }).reverse();
+  const histMore = !!state.ui.histMore, histRest = months6.length - 3;
+  const histHtml = (histMore || histRest <= 0 ? months6 : months6.slice(0, 3)).join('')
+    + (histRest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="hist" aria-expanded="${histMore}">${histMore ? __('Show less') : __('See more ({n})', { n: histRest })}<span class="chev" aria-hidden="true">${histMore ? '⌃' : '⌄'}</span></button>` : '');
   const noData = series.every((v) => !v);   // nothing to chart yet: say so instead of a flat line and a table of zeros
   const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
     <div class="empty sm">${__('Nothing to chart yet. This fills in as you add {what}.', { what: { savings: __('accounts'), investment: __('investments'), lent: __('money you lent'), loan: __('loans') }[tab] })}</div></section>`
     : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
-    ${valueChart(rm, series, vc)}<div class="mlist">${months6}</div></section>`;
+    ${valueChart(rm, series, vc)}<div class="mlist">${histHtml}</div></section>`;
 
   let body = '';
   if (tab === 'savings') {
@@ -1410,7 +1413,7 @@ document.addEventListener('click', (e) => {
   }
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
-  else if (act === 'toggle-more') { state.ui.walletsMore = !state.ui.walletsMore; render(); }
+  else if (act === 'toggle-more') { const k = el.dataset.key === 'hist' ? 'histMore' : 'walletsMore'; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }
   else if (act === 'delete-wallet') {

@@ -16,7 +16,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert((await p.innerText('.see-more')).includes('See more (')); await p.click('.see-more'); const every = await p.$$eval('.wallet .wname', (e) => e.map((x) => x.textContent)); assert(every.length > 3 && every[every.length - 1] === 'Tiny', JSON.stringify(every));
   assert((await p.innerText('.see-more')).includes('Show less')); await p.click('.see-more'); assert.equal((await p.$$('.wallet')).length, 3, 'collapses again');
   await p.click('[data-act=pf-tab][data-tab=loan]'); const ln = await p.$$eval('.stack h2', (e) => e.map((x) => x.textContent)); const at = (n) => ln.findIndex((x) => x.startsWith(n)); assert(at('Large loan') >= 0 && at('Large loan') < at('Small loan'), JSON.stringify(ln)); await p.click('[data-act=pf-tab][data-tab=savings]');
-  assert.equal(await rows(), 6, 'default 6 months'); const h0 = await hero();
+  assert.equal(await rows(), 3, 'history shows the latest 3 months first'); assert((await p.innerText('.mlist .see-more')).includes('See more (3)')); await p.click('.mlist .see-more'); assert.equal(await rows(), 6, 'default 6 months after See more'); assert((await p.innerText('.mlist .see-more')).includes('Show less')); await p.click('.mlist .see-more'); assert.equal(await rows(), 3); await p.click('.mlist .see-more'); const h0 = await hero();
   const pick = async (v) => { await p.selectOption('select[data-bind=pfRange]', v); await p.waitForSelector('.mrow'); };
   await pick('1m'); assert.equal(await rows(), 2, '1 month = this and last month');
   await pick('3m'); assert.equal(await rows(), 3);

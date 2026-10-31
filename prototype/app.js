@@ -208,6 +208,8 @@ const D = () => state.data;
 const cur = () => D().profile.currency;
 const occasionOf = (id) => D().occasions.find((o) => o.id === id);
 /* special-occasion budgets: a one-off amount; spent = expenses tagged to it (converted to the reporting currency) */
+// an occasion belongs to the months its dates span (or any month with an expense tagged to it); undated ones show every month
+const occasionInMonth = (o, k) => !o.start || (k >= o.start.slice(0, 7) && k <= (o.end || o.start).slice(0, 7)) || D().transactions.some((t) => t.occasion_id === o.id && t.occurred_at.startsWith(k));
 function occasionStatus() {
   return D().occasions.map((o) => {
     const txns = D().transactions.filter((t) => t.occasion_id === o.id && t.type === 'expense');
@@ -627,7 +629,7 @@ function viewOverview() {
   const global = bs.find((b) => b.category_id === null);
   const tiles = [...(global ? [global] : []), ...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct)].slice(0, 3);
   const saved = inc > 0 ? Math.round((net / inc) * 100) : 0;
-  const allOcc = occasionStatus().filter((o) => !o.archived).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999')), occs = allOcc.slice(0, 3), moreOcc = allOcc.length - occs.length;
+  const allOcc = occasionStatus().filter((o) => !o.archived && occasionInMonth(o, k)).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999')), occs = allOcc.slice(0, 3), moreOcc = allOcc.length - occs.length;
   const recent = D().transactions.slice(0, 6);
   return `${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
@@ -720,7 +722,7 @@ function viewBudgets() {
   <section class="card"><div class="card-head"><h2>${__('By category')}</h2></div>
     ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
   <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Occasion')}</button></div>
-    ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
+    ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived && occasionInMonth(o, state.ui.month)), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
 }
 const occasionRow = (o) => {
   const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');

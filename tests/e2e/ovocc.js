@@ -12,5 +12,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 1250000, currency: 'IDR', occurred_at: isoDate(new Date()), note: 'Hotel', category_source: 'user', ai_confidence: null, occasion_id: o.id }); render(); });
   const card = await p.$('.card:has(h2:text("Budgets"))'); assert((await card.innerText()).includes('Bandung Trip')); assert((await card.innerText()).replace(/\u00a0/g, ' ').includes('1,250,000 / IDR 5,000,000'));
   await card.screenshot({ path: __dirname + '/out/ov_occ.png' });
+  // an occasion only shows in the months it spans (or that have its expenses)
+  const cardOn = async (m) => { await p.evaluate((m) => { state.ui.month = m; render(); }, m); return (await (await p.$('.card:has(h2:text("Budgets"))')).innerText()); };
+  assert(!(await cardOn('2026-09')).includes('Bandung Trip'), 'hidden in September');
+  assert((await cardOn('2026-11')).includes('Bandung Trip'), 'shown in its own month');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.error('FAIL', e); process.exit(1); });

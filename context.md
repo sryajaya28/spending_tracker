@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio net-worth card made smaller: removed the "1 USD = ... live rate" line and the "Preferred currency" label; the
+  currency dropdown is now a small pill in the card's top-right corner.
+
 - 2026-10-31: Budgets > Special occasions rows now show only the date range under the bar (no expense count, no amount left/over);
   nothing is shown when the occasion has no dates.
 

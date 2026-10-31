@@ -554,8 +554,7 @@ function viewPortfolio() {
     <section class="card hero"><div class="label">${__('Net worth')} <span>${activeLoans().length ? __('after loans') : __('no loans')}</span></div>
       <div class="amount num" style="--len:${m(now).length}">${moneyHtml(usdToMinor(now, vc), vc)}</div>
       <div class="delta"><b>${pctFmt(mom)}</b><span>${__('vs last month')}</span></div>
-      <p style="font-size:12px;opacity:.85">${api.fx ? __('1 USD = {rate} {cur} · live rate ({source}, {date})', { rate: new Intl.NumberFormat(locale(), { maximumFractionDigits: 4 }).format(RATES[base] || 1), cur: base, source: esc(api.fx.source), date: esc(api.fx.date) }) : __('Exchange rates are demo values (no live feed).')}</p>
-      <label class="hero-cur">${__('Preferred currency')}<select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
+      <label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
     <section class="card"><div class="card-head"><h2>${__('Breakdown')}</h2></div>
       <div class="alloc"><i style="flex:${Math.max(S[5], 0.0001)};background:#4A44C6"></i><i style="flex:${Math.max(I[5], 0.0001)};background:#F5B800"></i><i style="flex:${Math.max(LT[5], 0.0001)};background:#1fa971"></i></div>
       <div class="alloc-legend">

@@ -468,3 +468,8 @@ html { -webkit-text-size-adjust: 100%; }
 .filters.scroll-row .pill-select { margin: 0; flex: 0 0 auto; width: auto; }
 .dlg:focus { outline: 0; }
 :root[data-theme="dark"] .nav-add { color: var(--ink); }
+
+/* Portfolio hero: the currency dropdown is a small pill in the top-right corner, so the card is shorter */
+.hero:has(.hero-cur) { padding-bottom: 14px; }
+.hero-cur { position: absolute; top: 12px; right: 14px; margin: 0; }
+.hero-cur select { height: 32px; padding: 0 28px 0 12px; font-size: 13px; }

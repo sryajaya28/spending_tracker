@@ -352,12 +352,12 @@ function flowChart(months, inc, exp) {
   const ticks = [0, 1, 2, 3, 4].map((i) => (max * i) / 4);
   return `<div class="chart-wrap" id="flow" data-n="${months.length}">
     <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${__('Income versus spending by month')}">
-      ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="#ECEEF8"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="#6B6F8F">${esc(compact(t, cur()))}</text>`).join('')}
+      ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--line)"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">${esc(compact(t, cur()))}</text>`).join('')}
       <path d="${area}" fill="#8B8FF0" fill-opacity=".16"/>
       <path d="${line(inc)}" fill="none" stroke="#4A44C6" stroke-width="2.5" stroke-linejoin="round"/>
       <path d="${line(exp)}" fill="none" stroke="#F5B800" stroke-width="2.5" stroke-linejoin="round"/>
-      ${months.map((k, i) => `<circle cx="${x(i)}" cy="${y(inc[i])}" r="4" fill="#4A44C6"/><circle cx="${x(i)}" cy="${y(exp[i])}" r="4" fill="#F5B800"/><text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6B6F8F">${monthLabel(k, 'short')}</text>`).join('')}
-      <line id="flow-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" stroke="#1E1B4B" stroke-width="1.5" opacity="0"/>
+      ${months.map((k, i) => `<circle cx="${x(i)}" cy="${y(inc[i])}" r="4" fill="#4A44C6"/><circle cx="${x(i)}" cy="${y(exp[i])}" r="4" fill="#F5B800"/><text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${monthLabel(k, 'short')}</text>`).join('')}
+      <line id="flow-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" style="stroke:var(--ink)" stroke-width="1.5" opacity="0"/>
     </svg><div class="tip" id="flow-tip"></div></div>
     <div class="legend-row" style="margin-top:10px"><span><i style="background:#4A44C6"></i>${__('Income')}</span><span><i style="background:#F5B800"></i>${__('Spending')}</span></div>`;
 }
@@ -410,11 +410,11 @@ function valueChart(months, usd, vc) {
   const ticks = [0, 1, 2, 3].map((i) => min + ((max - min) * i) / 3);
   return `<div class="chart-wrap" id="pf"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${__('Portfolio value by month')}">
     <defs><linearGradient id="pfg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A44C6" stop-opacity=".25"/><stop offset="1" stop-color="#4A44C6" stop-opacity="0"/></linearGradient></defs>
-    ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="#ECEEF8"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="#6B6F8F">${cmp(t)}</text>`).join('')}
+    ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--line)"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">${cmp(t)}</text>`).join('')}
     <path d="${line} L${x(vals.length - 1)},${H - pb} L${x(0)},${H - pb} Z" fill="url(#pfg)"/>
     <path d="${line}" fill="none" stroke="#4A44C6" stroke-width="2.5" stroke-linejoin="round"/>
-    ${vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#4A44C6"/><text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6B6F8F">${monthLabel(months[i], 'short')}</text>`).join('')}
-    <line id="pf-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" stroke="#1E1B4B" stroke-width="1.5" opacity="0"/></svg><div class="tip" id="pf-tip"></div></div>`;
+    ${vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#4A44C6"/><text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${monthLabel(months[i], 'short')}</text>`).join('')}
+    <line id="pf-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" style="stroke:var(--ink)" stroke-width="1.5" opacity="0"/></svg><div class="tip" id="pf-tip"></div></div>`;
 }
 function bindValue(months, usd, vc) {
   const wrap = $('#pf'); if (!wrap) return;
@@ -717,6 +717,7 @@ function viewSettings() {
     <div class="form-row"><div>${__('Display name')}<small>${__('Shown in the greeting')}</small></div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
     <div class="form-row"><div>${__('Reporting currency')}<small>${__('Used for totals, budgets and charts. Wallets keep their own currency; budgets convert at demo rates.')}</small></div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
     <div class="form-row"><div>${__('Language')}<small>${__('Language for menus and messages.')}</small></div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Appearance')}<small>${__('Light, dark, or match your device.')}</small></div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div>
   <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
     <div class="form-row"><div>${__('AI category suggestions')}<small>${__('After about 30 labeled transactions, uncategorized ones are tagged from your history. If unsure it stays empty.')}</small></div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
   <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
@@ -754,7 +755,7 @@ function viewLanding() {
   const step = (n, text) => `<li><span class="step-n">${n}</span><span>${__(text)}</span></li>`;
   return `<div class="land">
   <header class="land-nav"><a class="logo" href="#"><img src="icon.svg" alt="">Stiver</a>
-    <div class="land-nav-r">${langSelect()}<button class="btn secondary" data-act="auth-view" data-view="signin">${__('Sign in')}</button><button class="btn" data-act="auth-view" data-view="signup">${__('Get started')}</button></div></header>
+    <div class="land-nav-r">${langSelect()}<button type="button" class="theme-btn" data-act="theme-toggle" aria-label="${__('Switch between light and dark')}">${effectiveTheme() === 'dark' ? '☀️' : '🌙'}</button><button class="btn secondary" data-act="auth-view" data-view="signin">${__('Sign in')}</button><button class="btn" data-act="auth-view" data-view="signup">${__('Get started')}</button></div></header>
   <section class="land-hero">
     <div class="land-copy">
       <h1>${__('Your money, finally in one place.')}</h1>
@@ -1165,6 +1166,7 @@ document.addEventListener('click', (e) => {
   const { act, id, type } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
   if (act === 'close') close();
+  else if (act === 'theme-toggle') { applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); render(); }
   else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
   else if (act === 'add-txn') txnDialog(null, type);
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
@@ -1258,6 +1260,7 @@ document.addEventListener('change', (e) => {
     else if (t.value === 'transfer') transferDialog();
     else { $('select[name=category]', t.form).innerHTML = catOptions(t.value); $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value); }
   }
+  else if (t.matches('[data-theme-select]')) { applyTheme(t.value); if (state.data && !state.real) { state.data.profile.theme = THEME; save(); } render(); }
   else if (t.matches('[data-lang]')) { setLang(t.value); if (state.data && !state.real) { state.data.profile.language = LANG; save(); } render(); }
   else if (t.matches('[data-demo]')) setDemo(t.checked);
   else if (t.matches('[data-setting]')) applySetting(t);
@@ -1560,6 +1563,7 @@ async function loadUserData() {
     state.data = await Cloud.load();
     state.data.livePrices = loadPrices();
     if (api.finnhub) refreshPrices(true);
+    if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
     if (demoWanted()) await setDemo(true);
   } catch (err) { state.auth.loadError = err.message || 'network error'; }
@@ -1608,7 +1612,7 @@ function removeSample() {
   d.profile.sample = null;
   save(); render(); toast(kept ? __(kept === 1 ? 'Sample data removed. Kept {n} item you have since used.' : 'Sample data removed. Kept {n} items you have since used.', { n: kept }) : 'Sample data removed.');
 }
-setLang(initialLang());
+setLang(initialLang()); applyTheme(initialTheme());
 if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);
 else { Object.assign(state.auth, { status: 'out', error: 'The app is not connected to Supabase (missing config).' }); render(); }
 /* live fiat rates replace the demo ones (works without a Finnhub key; falls back silently) */

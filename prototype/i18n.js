@@ -17,3 +17,19 @@ function initialLang() {
   try { const s = localStorage.getItem('stiver.lang.v1'); if (s && LANGS[s]) return s; } catch { /* ignore */ }
   return (navigator.language || 'en').toLowerCase().startsWith('id') ? 'id' : 'en';
 }
+
+/* ---------- appearance (light / dark / follow the device) ---------- */
+const THEMES = ['system', 'light', 'dark'];
+const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+let THEME = 'system';
+const effectiveTheme = () => (THEME === 'dark' || (THEME === 'system' && darkQuery && darkQuery.matches) ? 'dark' : 'light');
+function applyTheme(mode) {
+  THEME = THEMES.includes(mode) ? mode : 'system';
+  const eff = effectiveTheme();
+  document.documentElement.dataset.theme = eff;
+  document.documentElement.dataset.themeMode = THEME;
+  const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.setAttribute('content', eff === 'dark' ? '#0e0d22' : '#4A44C6');
+  try { localStorage.setItem('stiver.theme.v1', THEME); } catch { /* storage unavailable */ }
+}
+function initialTheme() { try { const t = localStorage.getItem('stiver.theme.v1'); if (t && THEMES.includes(t)) return t; } catch { /* ignore */ } return 'system'; }
+if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', () => { if (THEME === 'system') applyTheme('system'); });

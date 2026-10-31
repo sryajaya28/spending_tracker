@@ -270,6 +270,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio lists sort from the highest amount (compared in USD): savings accounts, investment accounts and the assets inside
+  each, lent and loans (`byValue`). e2e `pfrange` checks savings and loans.
+
 - 2026-10-31: Portfolio account cards more compact: type and currency sit beside the name (they drop below only for long names), tighter padding.
 
 - 2026-10-31: Money not yet received/spent is left out of all analysis: `inMonth()` (month totals, Money Flow, "this month" change,

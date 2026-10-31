@@ -9,6 +9,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   await p.evaluate(() => { const w = D().wallets[0]; w.opening_balance_minor = 5000000; w.since = '2024-03'; save(); location.hash = '#/portfolio'; render(); });
   const rows = async () => (await p.$$('.mrow')).length, hero = () => p.innerText('.hero .amount');
+  // every Portfolio list is sorted from the highest amount
+  await p.evaluate(() => { D().wallets.push({ id: uid(), name: 'Big', type: 'bank', currency: 'IDR', opening_balance_minor: 99000000, archived: false, since: '2026-01' }, { id: uid(), name: 'Tiny', type: 'cash', currency: 'IDR', opening_balance_minor: 1000, archived: false, since: '2026-01' });
+    D().loans.push({ id: uid(), name: 'Small loan', currency: 'IDR', original_minor: 100000, since: '2026-01', archived: false, payments: [], type: 'other', monthly_minor: 0, rate: 0 }, { id: uid(), name: 'Large loan', currency: 'IDR', original_minor: 9000000, since: '2026-01', archived: false, payments: [], type: 'other', monthly_minor: 0, rate: 0 }); render(); });
+  const names = await p.$$eval('.wallet .wname', (e) => e.map((x) => x.textContent)); assert.equal(names[0], 'Big'); assert.equal(names[names.length - 1], 'Tiny', JSON.stringify(names));
+  await p.click('[data-act=pf-tab][data-tab=loan]'); const ln = await p.$$eval('.stack h2', (e) => e.map((x) => x.textContent)); const at = (n) => ln.findIndex((x) => x.startsWith(n)); assert(at('Large loan') >= 0 && at('Large loan') < at('Small loan'), JSON.stringify(ln)); await p.click('[data-act=pf-tab][data-tab=savings]');
   assert.equal(await rows(), 6, 'default 6 months'); const h0 = await hero();
   const pick = async (v) => { await p.selectOption('select[data-bind=pfRange]', v); await p.waitForSelector('.mrow'); };
   await pick('1m'); assert.equal(await rows(), 2, '1 month = this and last month');
@@ -22,4 +27,4 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await hero(), h0, 'net worth card unchanged by the time frame');
   await p.screenshot({ path: __dirname + '/out/pf_range.png' });
   console.log('ok', JSON.stringify(errs)); await b.close();
-})().catch((e) => { console.log('FAIL', e.message); process.exit(1); });
+})().catch((e) => { console.log('FAIL', e.message, (e.stack||'').split('\n')[1]); process.exit(1); });

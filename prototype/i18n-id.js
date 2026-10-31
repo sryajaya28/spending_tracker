@@ -1,6 +1,9 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "new investment account": "akun investasi baru",
+ "new": "baru",
+ "USDT / USDC in an investment account": "USDT / USDC di akun investasi",
  "No USDT/USDC yet. Add one under Portfolio > Investment": "Belum ada USDT/USDC. Tambahkan di Portfolio > Investasi",
  "Can't delete: the {symbol} has already been spent": "Tidak bisa dihapus: {symbol} sudah terpakai",
  "Investment accounts (USDT/USDC)": "Akun investasi (USDT/USDC)",

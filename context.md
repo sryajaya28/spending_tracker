@@ -51,7 +51,7 @@ infrastructure names, see section 8).
   `#/transactions/YYYY-MM-DD` with that day's detailed rows (edit/delete, `+ Add` prefilled with the date). Expense/income with categories + one level of sub-categories, add a category inline from the form,
   AI-style auto-tagging (mock: history match, null when unsure), search/filter, special-occasion tag.
 - **USDT/USDC as a wallet for income and expenses:** the Wallet field of the add-transaction dialog also lists stablecoin holdings
-  ("USDT · account · balance"). Income received there raises the coin quantity; an expense paid from it lowers it (refused if you hold less).
+  ("USDT · account · balance"; for income also "new" USDT/USDC in any investment account, created on save). Income received there raises the coin quantity; an expense paid from it lowers it (refused if you hold less).
   Stored as a holding trade with `kind` income/expense (holding_events.note) linked to a normal income/expense transaction with
   `wallet_id` null, currency USD, 1 coin = 1 USD (amount in cents). It counts in income/spending, budgets, categories and net
   worth (via the holding); it does not touch any wallet balance. Edit changes the trade too; delete reverses it (`removeTrade`).
@@ -267,6 +267,11 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: Add-transaction flow: the **Account** field is now first (the amount's currency/unit follows it, `syncTxnUnit`). Income can go
+  into USDT/USDC **without holding any yet**: the Account list (`acctOptions`) offers "USDT · <investment account> (new)" (value
+  `n:SYMBOL:accountId`); saving creates the holding (and a "Crypto" investment account if you have none). Those choices appear for
+  income only; the list is rebuilt when the type changes.
 
 - 2026-10-31: UI wording: savings "wallets" are now called **accounts** everywhere in the interface (English and Indonesian "Akun");
   code, database and the E-wallet type keep the wallet names. The add-transaction account list always has an

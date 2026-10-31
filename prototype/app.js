@@ -447,7 +447,13 @@ function archivedWallets() {
       return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
         <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">${__('Restore')}</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">${__('Delete')}</button></div></div>`; }).join('') : ''}</div>`;
 }
-const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><b class="wname">${esc(w.name)}</b><span class="kind">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><b class="num bal">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">${__('Edit')}</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button></div></div>`).join('');
+const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => {
+  const open = state.ui.walletMenu === w.id;
+  return `<div class="wallet"><div class="wtop"><div class="wtitle"><b class="wname">${esc(w.name)}</b><span class="kind">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span></div>
+    <div class="menu-wrap"><button type="button" class="dots" data-act="wallet-menu" data-id="${w.id}" aria-label="${__('More actions')}" aria-haspopup="menu" aria-expanded="${open}">⋯</button>
+      ${open ? `<div class="menu" role="menu"><button type="button" role="menuitem" data-act="edit-wallet" data-id="${w.id}">${__('Edit')}</button><button type="button" role="menuitem" class="warn" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button></div>` : ''}</div></div>
+    <b class="num bal">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}</div>`;
+}).join('');
 
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
 function loanCard(l, vc, kind = 'loan') {
@@ -1152,9 +1158,12 @@ function tradeHint(form) {
 
 /* ---------- events ---------- */
 document.addEventListener('click', (e) => {
-  const el = e.target.closest('[data-act]'); if (!el) return;
+  const el = e.target.closest('[data-act]');
+  if (!el) { if (state.ui.walletMenu) { state.ui.walletMenu = null; render(); } return; }
   const { act, id, type } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
+  if (act !== 'wallet-menu') state.ui.walletMenu = null;
   if (act === 'close') close();
+  else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
   else if (act === 'add-txn') txnDialog(null, type);
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
@@ -1230,7 +1239,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'demo-off') setDemo(false);
   else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); if (e.key === 'Escape' && state.ui.walletMenu) { state.ui.walletMenu = null; render(); } });
 
 document.addEventListener('input', (e) => {
   const t = e.target, f = t.form;

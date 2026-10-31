@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Settings > Categories rows tidied (`.cat-row`): tile, name with type badge and sub-category toggle underneath, and compact
+  `+ Sub` / `Edit` buttons right-aligned on the same line, on phone and desktop.
+
 - 2026-10-31: Special occasions now only show in the budget month(s) they span (`occasionInMonth`: start..end months, or any month
   with an expense tagged to it; undated occasions show every month). Applies to the Overview Budgets card and the Budgets page;
   spent/budget numbers are unchanged. e2e `ovocc` covers it.

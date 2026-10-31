@@ -271,8 +271,8 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 
 /* rows with several buttons: on phones the buttons move under the text instead of overflowing */
 @media (max-width: 560px) {
-  .brow.wrap { grid-template-columns: 44px 1fr; }
-  .brow.wrap > .tools { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
+  .brow.wrap:not(.cat-row) { grid-template-columns: 44px 1fr; }
+  .brow.wrap:not(.cat-row) > .tools { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
 }
 
 .empty.sm { padding: 18px 8px; }
@@ -444,3 +444,13 @@ html { -webkit-text-size-adjust: 100%; }
   body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
   input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; }
 }
+
+/* Settings > Categories: tile, name (+ type, sub-category toggle underneath), compact buttons, all on one line, aligned */
+.cat-row { grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; }
+.cat-row.indent { grid-template-columns: 36px minmax(0, 1fr) auto; }
+.cat-main { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.cat-name { overflow-wrap: anywhere; }
+.cat-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cat-main .legend-btn { padding: 0; font-size: 13px; gap: 4px; }
+.cat-row > .tools { gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
+.cat-row > .tools .btn { height: 32px; padding: 0 12px; font-size: 13px; }

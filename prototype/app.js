@@ -737,9 +737,9 @@ function categoriesCard() {
   const open = state.ui.catsOpen;
   const rows = roots.map((c) => {
     const kids = childrenOf(c.id), isOpen = state.ui.openCats.has(c.id);
-    return `<div class="brow wrap">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${typeLabel(c.type)}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${__(kids.length === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids.length })} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
+    return `<div class="brow cat-row">${tile(c)}<div class="cat-main"><b class="cat-name">${esc(c.name)}</b><div class="cat-meta"><span class="badge">${typeLabel(c.type)}</span>${kids.length ? `<button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${__(kids.length === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids.length })} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div></div>
       <div class="tools"><button class="btn secondary" data-act="add-cat" data-parent="${c.id}">${__('+ Sub')}</button><button class="btn secondary" data-act="edit-cat" data-id="${c.id}">${__('Edit')}</button></div></div>`
-      + (isOpen ? kids.map((k) => `<div class="brow indent wrap">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">${__('Edit')}</button></div></div>`).join('') : '');
+      + (isOpen ? kids.map((k) => `<div class="brow indent cat-row">${tile(k, true)}<div class="cat-main"><b class="cat-name">${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">${__('Edit')}</button></div></div>`).join('') : '');
   }).join('');
   return `<section class="card"><div class="card-head"><button type="button" class="legend-btn card-toggle" data-act="toggle-cats" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><h2>${__('Categories')}</h2></button><button class="btn" data-act="add-cat">${__('+ Category')}</button></div>
     ${open ? `<div style="margin-top:6px">${rows}</div>` : ''}</section>`;

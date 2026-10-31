@@ -371,18 +371,6 @@ const route = () => { const r = routeParts()[0]; return r === 'wallets' ? 'portf
 const routeArg = () => routeParts()[1] || '';
 
 /* ---------- charts (hand-built SVG) ---------- */
-function sparkline(values) {
-  const W = 600, H = 110, p = 6, min = Math.min(...values), max = Math.max(...values);
-  const x = (i) => p + ((W - 2 * p) * i) / (values.length - 1);
-  const y = (v) => H - p - ((H - 2 * p) * (v - min)) / (max - min || 1);
-  const pts = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
-  const last = values.length - 1;
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${__('Balance trend')}">
-    <polyline points="${pts.join(' ')}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-    <polyline points="${x(last)},${y(values[last])} ${x(last) + 0.01},${y(values[last])}" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-    <polyline points="${x(last)},${y(values[last])} ${x(last) + 0.01},${y(values[last])}" fill="none" stroke="#FFD84D" stroke-width="10" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
-}
-
 function flowChart(months, inc, exp) {
   const W = 560, H = 260, pl = 46, pr = 18, pt = 14, pb = 30;
   const raw = Math.max(...inc, ...exp, 1);
@@ -671,7 +659,6 @@ function viewOverview() {
   const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
   const months = lastMonths(6);
   const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
-  const bal = months.map(balanceAtEnd);
   const cats = spendByCategory(k), bs = budgetStatus(k);
   const global = bs.find((b) => b.category_id === null);
   const tiles = [...(global ? [global] : []), ...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct)].slice(0, 3);
@@ -683,7 +670,6 @@ function viewOverview() {
     <section class="card hero"><div class="label">${__('Total Balance')} <span>${__('{n} accounts', { n: D().wallets.filter((w) => !w.archived).length })}</span></div>
       <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
       <div class="delta"><b>${saved >= 0 ? '+' : ''}${saved}%</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
-      ${sparkline(bal)}
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>

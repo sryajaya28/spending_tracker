@@ -150,7 +150,9 @@ h1, h2, h3, p { margin: 0; }
 .wallets { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
 .wallet { background: var(--soft); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
 .wallet .kind { color: var(--muted); font-size: 13px; text-transform: capitalize; }
-.wallet b { font-size: 24px; letter-spacing: -.02em; }
+.wallet .wname { font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; overflow-wrap: anywhere; }
+.wallet .kind { margin-bottom: 6px; }
+.wallet .bal { font-size: 24px; letter-spacing: -.02em; }
 .stack { display: flex; flex-direction: column; gap: 20px; }
 .form-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .form-row:last-child { border-bottom: 0; }

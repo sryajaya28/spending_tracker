@@ -11,15 +11,20 @@ const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random
 const RATES = { IDR: 15500, USD: 1, EUR: 0.92, GBP: 0.79, SGD: 1.35, AUD: 1.5, JPY: 150 };
 const PRICES_KEY = 'stiver.prices.v1';   // last live prices, only to avoid a flash of 0 on load
 
-const expOf = (cur) => new Intl.NumberFormat('en', { style: 'currency', currency: cur }).resolvedOptions().maximumFractionDigits;
+/* Decimal places per currency, fixed here on purpose. Asking the browser (Intl) gives different answers on
+   different devices (an iPhone says IDR has 2 decimals, desktop Chrome says 0), which made the same stored
+   amount read 100 times smaller on a phone. Amounts are stored in minor units using these exponents. */
+const ZERO_DECIMAL = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'UGX', 'XAF', 'XOF', 'PYG', 'RWF']);
+const expOf = (cur) => (ZERO_DECIMAL.has(cur) ? 0 : 2);
+const curFmt = (cur) => new Intl.NumberFormat('en', { style: 'currency', currency: cur, minimumFractionDigits: expOf(cur), maximumFractionDigits: expOf(cur) });
 const toMinor = (major, cur) => Math.round(major * 10 ** expOf(cur));
 const toMajor = (minor, cur) => minor / 10 ** expOf(cur);
-const money = (minor, cur) => new Intl.NumberFormat('en', { style: 'currency', currency: cur }).format(toMajor(minor, cur));
+const money = (minor, cur) => curFmt(cur).format(toMajor(minor, cur));
 const convert = (minor, from, to) => (from === to ? minor : Math.round((toMajor(minor, from) / RATES[from]) * RATES[to] * 10 ** expOf(to)));
 const usdToMinor = (usd, cur) => toMinor(usd * RATES[cur], cur);
 const compact = (minor, cur) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(toMajor(minor, cur));
 function moneyHtml(minor, cur) {
-  return new Intl.NumberFormat('en', { style: 'currency', currency: cur }).formatToParts(toMajor(minor, cur))
+  return curFmt(cur).formatToParts(toMajor(minor, cur))
     .map((p) => (p.type === 'fraction' || p.type === 'decimal' ? `<span class="dim">${p.value}</span>` : esc(p.value))).join('');
 }
 

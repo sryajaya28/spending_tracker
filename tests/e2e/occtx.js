@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
   // an occasion in the future (like "Bandung Trip", Nov 6-8)
-  await p.evaluate(() => { D().occasions.push({ id: uid(), name: 'Bandung Trip', amount_minor: 5000000, currency: 'IDR', start: '2026-11-06', end: '2026-11-08', archived: false }); save(); location.hash = '#/budgets'; render(); });
+  await p.evaluate(() => { D().occasions.push({ id: uid(), name: 'Bandung Trip', amount_minor: 5000000, currency: 'IDR', start: '2026-11-06', end: '2026-11-08', archived: false }); save(); state.ui.month = '2026-11'; location.hash = '#/budgets'; render(); });
   await settle(); await log();
   // + Expense on the occasion: occasion preselected, date moved to the trip start
   await p.click('[data-act=add-occasion-txn]');

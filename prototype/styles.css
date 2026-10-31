@@ -377,3 +377,9 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 .menu button { border: 0; background: none; text-align: left; padding: 10px 12px; border-radius: 10px; font-weight: 600; color: var(--ink); }
 .menu button:hover { background: var(--soft); }
 .menu button.warn { color: var(--bad); }
+
+/* landing demo video */
+.land-demo { padding-top: 10px; }
+.land-demo-sub { text-align: center; color: var(--muted); margin: -10px auto 22px; max-width: 560px; font-size: 16px; line-height: 1.55; }
+.demo-frame { max-width: 960px; margin: 0 auto; border-radius: 24px; overflow: hidden; background: #0f0e24; box-shadow: 0 24px 60px rgba(59, 53, 181, .22); border: 1px solid var(--line); }
+.demo-frame video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #0f0e24; }

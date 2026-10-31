@@ -769,6 +769,8 @@ function viewLanding() {
         <div class="mock-row"><span>🎉 ${__('Bali Trip')}</span><span>41%</span></div><div class="bar"><i class="ok" style="width:41%"></i></div></div>
     </div>
   </section>
+  <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, check your budgets, and move money between wallets.')}</p>
+    <div class="demo-frame"><video controls playsinline preload="metadata" poster="media/demo-poster.jpg" aria-label="${__('Stiver demo video')}"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div></section>
   <section class="land-sec"><h2>${__('Everything you need, nothing you don’t')}</h2>
     <div class="feats">
       ${feat('💸', 'Spending that makes sense', 'Log expenses and income in seconds, with categories and sub-categories that roll up into clear monthly totals.')}

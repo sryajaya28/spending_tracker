@@ -40,6 +40,8 @@ const periodEnd = (k) => { const d = periodDay(), y = +k.slice(0, 4), m = +k.sli
 const inPeriod = (iso, k) => iso >= periodStart(k) && iso <= periodEnd(k);
 const periodKeyOf = (iso) => (+iso.slice(8, 10) >= periodDay() ? iso.slice(0, 7) : monthKey(new Date(+iso.slice(0, 4), +iso.slice(5, 7) - 2, 1)));
 const currentPeriod = () => periodKeyOf(isoDate(new Date()));
+/* "since" fields (wallet, holding, loan) are calendar months of creation; a period includes anything that started by its last day */
+const liveIn = (since, k) => `${since || '0000-00'}-01` <= periodEnd(k);
 const monthLabel = (k, style = 'long') => {
   const d = new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1);
   if (style !== 'long') return d.toLocaleDateString(locale(), { month: 'short' });
@@ -259,7 +261,7 @@ const totalBalance = () => D().wallets.filter((w) => !w.archived).reduce((a, w) 
 /* A wallet counts from the month it starts (w.since): its opening balance and its transactions do not
    appear in earlier months, so money added later never inflates past months. */
 function balanceAtEnd(k) {
-  const end = [periodEnd(k), todayIso()].sort()[0], live = D().wallets.filter((w) => !w.archived && (w.since || '0000-00') <= k), ids = new Set(live.map((w) => w.id));
+  const end = [periodEnd(k), todayIso()].sort()[0], live = D().wallets.filter((w) => !w.archived && liveIn(w.since, k)), ids = new Set(live.map((w) => w.id));
   return live.reduce((a, w) => a + convert(w.opening_balance_minor, w.currency, cur()), 0)
     + D().transactions.filter((t) => t.occurred_at <= end && ids.has(t.wallet_id)).reduce((a, t) => a + cashSign(t) * amt(t), 0);
 }
@@ -309,7 +311,7 @@ const tradeSign = (tr) => (tr.side === 'buy' ? 1 : -1);
 const r12 = (x) => Math.round(x * 1e12) / 1e12;   // keep quantities free of floating-point dust
 const qtyAt = (h, k) => h.quantity - h.trades.filter((tr) => tr.date > [periodEnd(k), todayIso()].sort()[0]).reduce((a, tr) => a + tradeSign(tr) * tr.quantity, 0);
 const heldNow = (h) => qtyAt(h, currentPeriod());   // what you hold today (trades dated later are not in yet)
-const holdingUSD = (h, k) => (k < h.since ? 0 : Math.max(0, qtyAt(h, k)) * assetInfo(h.symbol).usd(k));
+const holdingUSD = (h, k) => (!liveIn(h.since, k) ? 0 : Math.max(0, qtyAt(h, k)) * assetInfo(h.symbol).usd(k));
 const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))
   .reduce((a, h) => a + holdingUSD(h, k), 0);
@@ -336,10 +338,10 @@ const savingsUSD = (k) => toUSD(balanceAtEnd(k), cur());
 const activeLoans = () => D().loans.filter((l) => !l.archived);
 const paidOf = (l, upto) => l.payments.filter((p) => !upto || p.date <= upto).reduce((a, p) => a + p.amount_minor, 0);
 const loanBalance = (l, upto) => Math.max(0, l.original_minor - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
-const loanUSD = (k) => activeLoans().reduce((a, l) => (k < l.since ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
+const loanUSD = (k) => activeLoans().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
 const activeLent = () => D().lent.filter((l) => !l.archived);
-const lentUSD = (k) => activeLent().reduce((a, l) => (k < l.since ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
+const lentUSD = (k) => activeLent().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
 const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', manual: 'Other' }[t] || t);
 const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Car loan', card: 'Credit card', personal: 'Personal loan', other: 'Other' };
 
@@ -1000,7 +1002,7 @@ function recordCoinTxn(h, { type, quantity, date, note, category_id, category_so
   const tid = tradeId || uid(), side = type === 'income' ? 'buy' : 'sell', amount_minor = Math.max(1, Math.round(quantity * 100));
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
   h.trades.push({ id: tid, date, side, kind: type, quantity, amount_minor, currency: 'USD', wallet_id: null });
-  if (side === 'buy' && periodKeyOf(date) < h.since) h.since = periodKeyOf(date);
+  if (side === 'buy' && date.slice(0, 7) < h.since) h.since = date.slice(0, 7);
   const row = { id: id || uid(), type, amount_minor, currency: 'USD', occurred_at: date, wallet_id: null, trade_id: tid, note: note || '', category_id: category_id || null, category_source: category_source || 'user', ai_confidence: ai_confidence ?? null };
   if (type === 'expense' && occasion_id && occasionOf(occasion_id)) row.occasion_id = occasion_id;
   D().transactions.push(row);
@@ -1194,7 +1196,7 @@ function payShortfall(src, side, amount) {
 
 function recordTrade(h, { side, quantity, source, amount, date }) {
   const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
-  const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && periodKeyOf(tr.date) < hh.since) hh.since = periodKeyOf(tr.date); };
+  const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && tr.date.slice(0, 7) < hh.since) hh.since = tr.date.slice(0, 7); };
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
   if (source.kind === 'wallet') {
     const w = source.wallet;
@@ -1205,7 +1207,7 @@ function recordTrade(h, { side, quantity, source, amount, date }) {
     return;
   }
   let s = source.holding;
-  if (source.kind === 'new') { s = { id: uid(), account_id: h.account_id, symbol: source.symbol, quantity: 0, since: currentPeriod(), trades: [] }; D().holdings.push(s); }
+  if (source.kind === 'new') { s = { id: uid(), account_id: h.account_id, symbol: source.symbol, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(s); }
   const mirror = uid(), ssym = assetInfo(s.symbol).symbol;
   s.quantity = r12(s.quantity + (side === 'buy' ? -amount : amount));
   addTrade(h, { id, date, side, quantity, via: { holding_id: s.id, symbol: ssym, quantity: amount, pair: mirror } });
@@ -1310,7 +1312,7 @@ function generateRecurring(r, date) {
   } else if (r.kind === 'invest') {
     const src = parseSource(sp.fund); if (!src || (src.kind === 'wallet' && !src.wallet) || (src.kind === 'holding' && !src.holding)) return;
     let h = D().holdings.find((x) => x.account_id === sp.account && x.symbol === sp.symbol);
-    if (!h) { h = { id: uid(), account_id: sp.account, symbol: sp.symbol, quantity: 0, since: periodKeyOf(date), trades: [] }; D().holdings.push(h); }
+    if (!h) { h = { id: uid(), account_id: sp.account, symbol: sp.symbol, quantity: 0, since: date.slice(0, 7), trades: [] }; D().holdings.push(h); }
     recordTrade(h, { side: 'buy', quantity: sp.quantity, source: src, amount: parseAmount(src, sp.fundamount), date });
   }
 }
@@ -1539,7 +1541,7 @@ document.addEventListener('submit', (e) => {
   if (kind === 'txn') {
     // a USDT/USDC "new" choice builds its holding now but only keeps it once the transaction is valid
     const fresh = v.wallet.startsWith('n:') ? v.wallet.split(':') : null;
-    const coin = v.wallet.startsWith('h:') ? D().holdings.find((x) => x.id === v.wallet.slice(2)) : fresh ? { id: uid(), account_id: fresh[2], symbol: fresh[1], quantity: 0, since: currentPeriod(), trades: [], _new: true } : null, type = v.type;
+    const coin = v.wallet.startsWith('h:') ? D().holdings.find((x) => x.id === v.wallet.slice(2)) : fresh ? { id: uid(), account_id: fresh[2], symbol: fresh[1], quantity: 0, since: monthKey(new Date()), trades: [], _new: true } : null, type = v.type;
     const wc = coin ? 'USD' : walletOf(v.wallet).currency, minor = coin ? Math.round(parseFloat(v.amount) * 100) : toMinor(parseFloat(v.amount), wc), existing = f.dataset.id && D().transactions.find((t) => t.id === f.dataset.id);
     if (!(minor > 0)) { toast('Enter an amount above zero'); return; }
     const row = existing || { id: uid(), category_source: 'user', ai_confidence: null };
@@ -1563,7 +1565,7 @@ document.addEventListener('submit', (e) => {
       const newQ = type === 'income' ? qty : -qty, after = r12(coin.quantity - oldQ + newQ);
       const nowOk = v.date > todayIso() || heldNow(coin) - (tr && tr.date <= todayIso() ? oldQ : 0) + newQ >= -1e-12;   // coins dated later are not spendable yet
       if (after < -1e-12 || !nowOk) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(Math.max(0, heldNow(coin))), symbol: assetInfo(coin.symbol).symbol })); return; }
-      if (tr) { coin.quantity = after; Object.assign(tr, { date: v.date, side: type === 'income' ? 'buy' : 'sell', kind: type, quantity: qty, amount_minor: minor }); if (type === 'income' && periodKeyOf(v.date) < coin.since) coin.since = periodKeyOf(v.date); }
+      if (tr) { coin.quantity = after; Object.assign(tr, { date: v.date, side: type === 'income' ? 'buy' : 'sell', kind: type, quantity: qty, amount_minor: minor }); if (type === 'income' && v.date.slice(0, 7) < coin.since) coin.since = v.date.slice(0, 7); }
       else recordCoinTxn(coin, { type, quantity: qty, date: v.date, note: row.note, category_id: row.category_id, category_source: row.category_source, ai_confidence: row.ai_confidence, occasion_id: row.occasion_id });
       if (v.repeat && !existing) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: 'h:' + coin.id, quantity: qty, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
     } else if (!existing) D().transactions.push(row);
@@ -1630,7 +1632,7 @@ document.addEventListener('submit', (e) => {
     save(); close(); render(); toast('Account saved'); return;
   }
   if (kind === 'wallet') {
-    D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), since: currentPeriod(), archived: false });
+    D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), since: monthKey(new Date()), archived: false });
     save(); close(); render(); toast(__('Account added in {cur}', { cur: v.currency }));
   }
   if (kind === 'loan') {
@@ -1639,7 +1641,7 @@ document.addEventListener('submit', (e) => {
     if (!(amount > 0) || !v.name.trim()) { toast('Enter a name and an amount above zero'); return; }
     const fields = { name: v.name.trim(), type: v.type, original_minor: amount, monthly_minor: monthly, rate: parseFloat(v.rate) || 0 };
     if (existing) Object.assign(existing, fields);
-    else D().loans.push({ id: uid(), currency: c, since: currentPeriod(), archived: false, payments: [], ...fields });
+    else D().loans.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
     state.ui.pfTab = 'loan'; save(); close(); render(); toast('Loan saved'); return;
   }
   if (kind === 'lent') {
@@ -1648,7 +1650,7 @@ document.addEventListener('submit', (e) => {
     if (!(amount > 0) || !v.name.trim()) { toast('Enter a name and an amount above zero'); return; }
     const fields = { name: v.name.trim(), original_minor: amount, due: v.due || '', note: v.note.trim() };
     if (existing) Object.assign(existing, fields);
-    else D().lent.push({ id: uid(), currency: c, since: currentPeriod(), archived: false, payments: [], ...fields });
+    else D().lent.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
     state.ui.pfTab = 'lent'; save(); close(); render(); toast('Saved'); return;
   }
   if (kind === 'payment') {
@@ -1703,7 +1705,7 @@ document.addEventListener('submit', (e) => {
     if (src && !(paid > 0)) { toast('Enter the amount you paid'); return; }
     if (src) { const short = payShortfall(src, 'buy', paid); if (short) { toast(short); return; } }
     let h = D().holdings.find((x) => x.account_id === v.account && x.symbol === sym);
-    if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: currentPeriod(), trades: [] }; D().holdings.push(h); }
+    if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); }
     if (src) recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
     if (src && v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
     else h.quantity += qty;

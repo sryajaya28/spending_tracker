@@ -29,6 +29,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const [periodStartNow, periodEndNow] = await p.evaluate(() => [periodStart(state.ui.month), periodEnd(state.ui.month)]);
   await p.evaluate(() => { location.hash = '#/transactions'; render(); }); assert(/\w+ \d+–\w+ \d+/.test(await p.innerText('.filters select[data-bind=month]')), 'Transactions filter shows the period');
   const rows = await p.$$eval('#txn-list .day-row', (e) => e.map((x) => x.dataset.id)); assert(rows.every((d) => d >= periodStartNow && d <= periodEndNow) && rows.length, JSON.stringify(rows));
+  // a wallet created in the calendar month the period ends in still counts (Total Balance and Savings must agree)
+  const agree = await p.evaluate(() => { const nm = monthKey(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)), k = currentPeriod();
+    D().wallets.push({ id: uid(), name: 'Late', type: 'cash', currency: 'IDR', opening_balance_minor: 777000, archived: false, since: periodEnd(k).slice(0, 7) });
+    const total = D().wallets.filter((w) => !w.archived).reduce((a, w) => a + walletBalance(w), 0);
+    return { total, savings: Math.round(savingsUSD(k) * RATES.IDR) }; });
+  assert(Math.abs(agree.total - agree.savings) < 2, JSON.stringify(agree));
   // reload from the saved profile row
   assert.equal(await p.evaluate(async () => (await Cloud.load()).profile.period), 25);
   await p.screenshot({ path: __dirname + '/out/period.png' });

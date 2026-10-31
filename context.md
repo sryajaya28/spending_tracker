@@ -274,6 +274,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Bug fix: with a custom period start day, accounts created in the calendar month the period ends in (e.g. made on 1 Nov while the
+  period is 25 Oct-24 Nov) were left out of Portfolio Savings, so it disagreed with Overview's Total Balance. `since` fields stay calendar
+  months and are now compared with `liveIn(since, k)` (since <= the period's last day) for wallets, holdings, loans and lent.
+
 - 2026-10-31: Removed the balance line chart from the Overview hero card (and the unused `sparkline()`); the card is now just balance, change and the four action buttons, with tight spacing; on desktop it spans the full width so no empty space is left
 beside or inside it.
 

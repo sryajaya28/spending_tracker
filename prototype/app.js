@@ -713,7 +713,8 @@ function viewSettings() {
     <div class="form-row"><div>Signed in as<small>${esc(state.auth.email)}</small></div><span class="badge ok">Active now</span></div>
     <div class="form-row"><div>Sign out<small>Ends the session on this device</small></div><button class="btn secondary" data-act="signout">Sign out</button></div>
     <div class="form-row"><div>Sign out everywhere else<small>Revokes every other device</small></div><button class="btn secondary" data-act="revoke">Sign out others</button></div>
-    <div class="form-row"><div>Sample data<small>Fill an empty account with demo wallets, transactions, budgets and a portfolio so you can explore</small></div><button class="btn secondary" data-act="load-demo">Load sample data</button></div></section></div>`;
+    ${p.sample ? `<div class="form-row"><div>Sample data<small>Demo wallets, transactions, budgets and a portfolio are in your account. Remove them to start clean. Anything you added yourself stays.</small></div><button class="btn danger" data-act="remove-sample">Remove sample data</button></div>`
+      : `<div class="form-row"><div>Sample data<small>Fill an empty account with demo wallets, transactions, budgets and a portfolio so you can explore. You can remove it again afterwards.</small></div><button class="btn secondary" data-act="load-demo">Load sample data</button></div>`}</section></div>`;
 }
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
@@ -1184,6 +1185,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
   else if (act === 'load-demo') loadDemo();
+  else if (act === 'remove-sample') { if (confirm('Remove the sample data? Anything you added yourself stays.')) removeSample(); }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); });
 
@@ -1510,15 +1512,49 @@ function onSaveError(err) {
   toast(`Couldn't save your last change (${String(err.message || err).slice(0, 80)}). Showing your saved data.`);
   loadUserData();
 }
-async function loadDemo() {
+/* ---------- sample data (optional, removable) ----------
+   Loading adds demo wallets, transactions, budgets, a portfolio and loans next to the starter categories and
+   remembers the id of everything it added (profile.sample), so "Remove sample data" can take exactly that
+   back out and leave anything you added yourself. */
+const SAMPLE_KEYS = ['categories', 'wallets', 'transactions', 'budgets', 'investments', 'holdings', 'loans', 'lent'];
+function loadDemo() {
   const d = D();
+  if (d.profile.sample) { toast('Sample data is already loaded'); return; }
   if (d.transactions.length || d.budgets.length || d.holdings.length || d.loans.length || d.lent.length) { toast('Sample data can only be loaded into an empty account'); return; }
   const s = seed(d.profile.name || 'You', cur());
-  // remove the starter categories and wallet first: the database keeps category names unique and the sample set reuses them
-  Object.assign(d, { categories: [], wallets: [] }); save(); await Cloud.idle();
-  if (state.data !== d) return;   // the save failed and the saved data was reloaded
-  Object.assign(d, { categories: s.categories, wallets: s.wallets, transactions: s.transactions, budgets: s.budgets, investments: s.investments, holdings: s.holdings, customAssets: s.customAssets, loans: s.loans, lent: s.lent });
-  save(); render(); toast('Sample data loaded');
+  // reuse the starter categories and Cash wallet instead of duplicating them (the database keeps category names unique)
+  const key = (c, list) => `${c.parent_id ? list.find((x) => x.id === c.parent_id)?.name : ''}/${c.name}/${c.type}`.toLowerCase();
+  const have = new Map(d.categories.map((c) => [key(c, d.categories), c.id])), remap = new Map(), added = [];
+  s.categories.forEach((c) => { const hit = have.get(key(c, s.categories)); if (hit) remap.set(c.id, hit); else added.push(c); });
+  added.forEach((c) => { if (c.parent_id && remap.has(c.parent_id)) c.parent_id = remap.get(c.parent_id); });
+  const wallets = s.wallets;   // sample wallets are always new ones: their history starts months back, unlike your own wallets
+  wallets.forEach((w) => { if (w.name === 'Cash') w.name = 'Cash (sample)'; });
+  s.transactions.forEach((t) => { t.category_id = remap.get(t.category_id) || t.category_id; t.wallet_id = remap.get(t.wallet_id) || t.wallet_id; });
+  s.budgets.forEach((b) => { b.category_id = remap.get(b.category_id) || b.category_id; });
+  d.categories.push(...added); d.wallets.push(...wallets);
+  d.transactions.push(...s.transactions); d.budgets.push(...s.budgets); d.investments.push(...s.investments); d.holdings.push(...s.holdings); d.loans.push(...s.loans); d.lent.push(...s.lent);
+  d.transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+  d.profile.sample = { categories: added.map((c) => c.id), wallets: wallets.map((w) => w.id), transactions: s.transactions.map((t) => t.id), budgets: s.budgets.map((b) => b.id),
+    investments: s.investments.map((a) => a.id), holdings: s.holdings.map((h) => h.id), loans: s.loans.map((l) => l.id), lent: s.lent.map((l) => l.id) };
+  save(); render(); toast('Sample data loaded. Remove it any time in Settings.');
+}
+function removeSample() {
+  const d = D(), smp = d.profile.sample; if (!smp) return;
+  const is = (k, id) => (smp[k] || []).includes(id);
+  d.transactions = d.transactions.filter((t) => !is('transactions', t.id));
+  d.budgets = d.budgets.filter((b) => !is('budgets', b.id));
+  d.loans = d.loans.filter((l) => !is('loans', l.id)); d.lent = d.lent.filter((l) => !is('lent', l.id));
+  d.holdings = d.holdings.filter((h) => !is('holdings', h.id));
+  // things the sample created that you have since used stay (a wallet or category your own transactions point to)
+  const usedWallets = new Set(d.transactions.map((t) => t.wallet_id)), usedCats = new Set([...d.transactions.map((t) => t.category_id), ...d.budgets.map((b) => b.category_id)].filter(Boolean));
+  const usedAcc = new Set(d.holdings.map((h) => h.account_id));
+  let kept = 0;
+  d.wallets = d.wallets.filter((w) => { if (!is('wallets', w.id)) return true; if (usedWallets.has(w.id)) { kept++; return true; } return false; });
+  d.investments = d.investments.filter((a) => { if (!is('investments', a.id)) return true; if (usedAcc.has(a.id)) { kept++; return true; } return false; });
+  const keepCat = (c) => usedCats.has(c.id) || d.categories.some((k) => k.parent_id === c.id && (usedCats.has(k.id)));
+  d.categories = d.categories.filter((c) => { if (!is('categories', c.id)) return true; if (keepCat(c)) { kept++; return true; } return false; });
+  d.profile.sample = null;
+  save(); render(); toast(kept ? `Sample data removed. Kept ${kept} item${kept === 1 ? '' : 's'} you have since used.` : 'Sample data removed.');
 }
 if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);
 else { Object.assign(state.auth, { status: 'out', error: 'The app is not connected to Supabase (missing config).' }); render(); }

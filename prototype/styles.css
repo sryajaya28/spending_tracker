@@ -282,3 +282,9 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 [aria-expanded="true"] > .chev, [aria-expanded="true"] .chev { transform: rotate(90deg); }
 .card-toggle { padding: 0; gap: 8px; color: inherit; }
 .card-toggle h2 { margin: 0; }
+
+/* rows with several buttons: on phones the buttons move under the text instead of overflowing */
+@media (max-width: 560px) {
+  .brow.wrap { grid-template-columns: 44px 1fr; }
+  .brow.wrap > .tools { grid-column: 1 / -1; justify-content: flex-end; flex-wrap: wrap; }
+}

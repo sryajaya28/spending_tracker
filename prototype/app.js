@@ -437,7 +437,7 @@ function archivedWallets() {
   const open = state.ui.archOpen;
   return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>Archived wallets (${list.length})</b></button>
     ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
-      return `<div class="brow"><div><b>${esc(w.name)}</b> <span class="badge">${esc(w.type)} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
+      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(w.type)} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
         <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">Restore</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">Delete</button></div></div>`; }).join('') : ''}</div>`;
 }
 const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(w.type)} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">Edit</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">Archive</button></div></div>`).join('');
@@ -671,7 +671,7 @@ function viewBudgets() {
 }
 const occasionRow = (o) => {
   const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
-  return `<div class="brow"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? 'On track' : o.status === 'warning' ? 'Almost there' : 'Over budget'}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())}</span></div>
+  return `<div class="brow wrap"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? 'On track' : o.status === 'warning' ? 'Almost there' : 'Over budget'}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())}</span></div>
     <div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div><small class="muted">${o.count} expense${o.count === 1 ? '' : 's'}${dates ? ' · ' + esc(dates) : ''}${o.remaining < 0 ? ` · ${money(-o.remaining, cur())} over` : ` · ${money(o.remaining, cur())} left`}</small></div>
     <div class="tools"><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">Expenses</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">Edit</button></div></div>`;
 };
@@ -682,9 +682,9 @@ function categoriesCard() {
   const open = state.ui.catsOpen;
   const rows = roots.map((c) => {
     const kids = childrenOf(c.id), isOpen = state.ui.openCats.has(c.id);
-    return `<div class="brow">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${c.type}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${kids.length} sub-categor${kids.length === 1 ? 'y' : 'ies'} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
+    return `<div class="brow wrap">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${c.type}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${kids.length} sub-categor${kids.length === 1 ? 'y' : 'ies'} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="add-cat" data-parent="${c.id}">+ Sub</button><button class="btn secondary" data-act="edit-cat" data-id="${c.id}">Edit</button></div></div>`
-      + (isOpen ? kids.map((k) => `<div class="brow indent">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">Edit</button></div></div>`).join('') : '');
+      + (isOpen ? kids.map((k) => `<div class="brow indent wrap">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">Edit</button></div></div>`).join('') : '');
   }).join('');
   return `<section class="card"><div class="card-head"><button type="button" class="legend-btn card-toggle" data-act="toggle-cats" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><h2>Categories</h2></button><button class="btn" data-act="add-cat">+ Category</button></div>
     <p class="muted" style="margin-top:4px">${roots.length} categories · ${subs} sub-categories${open ? '. Totals and budgets roll sub-categories up into their parent.' : ''}</p>

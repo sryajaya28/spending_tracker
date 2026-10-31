@@ -643,8 +643,7 @@ function viewOverview() {
       <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
       ${flowChart(months, incs, exps)}</section>
     <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools"><button class="chip" data-act="breakdown">${__('Details')}</button>${monthSelect()}</div></div>
-      ${halfDonut(cats, exp)}
-      <div class="cat-legend">${cats.slice(0, 3).map((c) => `<button class="legend-btn" data-act="breakdown" data-id="${c.id || ''}">${tile({ icon: c.icon, color: c.color }, true)}${esc(c.name)}</button>`).join('') || ('<div>' + __('No spending this month') + '</div>')}</div></section>
+      ${halfDonut(cats, exp)}</section>
     <section class="card"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Manage')}</a></div></div>
       ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })}</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
       <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('') || (occs.length ? '' : ('<p class="muted">' + __('No budgets yet.') + '</p>'))}</div>

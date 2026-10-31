@@ -98,8 +98,6 @@ h1, h2, h3, p { margin: 0; }
 .legend-row i, .key i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
 
 /* the free space inside the inner dot ring is ~46% of the width, so the total scales to fit it */
-.cat-legend { display: flex; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
-.cat-legend div { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 
 .tile { --c: #94a3b8; width: 34px; height: 34px; border-radius: 10px; background: color-mix(in srgb, var(--c) 18%, var(--mix)); display: inline-grid; place-items: center; font-size: 17px; flex: none; }
 .tile.sm { width: 28px; height: 28px; font-size: 14px; border-radius: 9px; }

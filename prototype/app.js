@@ -143,12 +143,13 @@ function seed(name, cur) {
     const id = uid(); catId[`${n}/${sn}`] = id;
     categories.push({ id, parent_id: catId[n], name: sn, type, icon: sic, color, archived: false });
   }));
+  const wsince = monthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1));   // sample history starts 5 months back
   const wallets = [
-    { id: uid(), name: 'Cash', type: 'cash', currency: cur, opening_balance_minor: conv(1200), archived: false },
-    { id: uid(), name: 'Main Bank', type: 'bank', currency: cur, opening_balance_minor: conv(2400), archived: false },
-    { id: uid(), name: 'E-Wallet', type: 'ewallet', currency: cur, opening_balance_minor: conv(900), archived: false },
+    { id: uid(), name: 'Cash', type: 'cash', currency: cur, opening_balance_minor: conv(1200), since: wsince, archived: false },
+    { id: uid(), name: 'Main Bank', type: 'bank', currency: cur, opening_balance_minor: conv(2400), since: wsince, archived: false },
+    { id: uid(), name: 'E-Wallet', type: 'ewallet', currency: cur, opening_balance_minor: conv(900), since: wsince, archived: false },
     // a wallet in another currency, to show multi-currency wallets
-    { id: uid(), name: `${cur === 'USD' ? 'EUR' : 'USD'} Savings`, type: 'bank', currency: cur === 'USD' ? 'EUR' : 'USD', opening_balance_minor: toMinor(cur === 'USD' ? 2000 : 3000, cur === 'USD' ? 'EUR' : 'USD'), archived: false },
+    { id: uid(), name: `${cur === 'USD' ? 'EUR' : 'USD'} Savings`, type: 'bank', currency: cur === 'USD' ? 'EUR' : 'USD', opening_balance_minor: toMinor(cur === 'USD' ? 2000 : 3000, cur === 'USD' ? 'EUR' : 'USD'), since: wsince, archived: false },
   ];
   const today = new Date();
   const txns = [];
@@ -223,10 +224,12 @@ function walletBalance(w) {
   return w.opening_balance_minor + D().transactions.filter((t) => t.wallet_id === w.id).reduce((a, t) => a + cashSign(t) * t.amount_minor, 0);
 }
 const totalBalance = () => D().wallets.filter((w) => !w.archived).reduce((a, w) => a + convert(walletBalance(w), w.currency, cur()), 0);
+/* A wallet counts from the month it starts (w.since): its opening balance and its transactions do not
+   appear in earlier months, so money added later never inflates past months. */
 function balanceAtEnd(k) {
-  const end = `${k}-31`;
-  return D().wallets.filter((w) => !w.archived).reduce((a, w) => a + convert(w.opening_balance_minor, w.currency, cur()), 0)
-    + D().transactions.filter((t) => t.occurred_at <= end).reduce((a, t) => a + cashSign(t) * amt(t), 0);
+  const end = `${k}-31`, live = D().wallets.filter((w) => !w.archived && (w.since || '0000-00') <= k), ids = new Set(live.map((w) => w.id));
+  return live.reduce((a, w) => a + convert(w.opening_balance_minor, w.currency, cur()), 0)
+    + D().transactions.filter((t) => t.occurred_at <= end && ids.has(t.wallet_id)).reduce((a, t) => a + cashSign(t) * amt(t), 0);
 }
 /* sub-categories roll up into their parent everywhere totals are shown */
 const rootOf = (id) => { const c = catOf(id); return c && c.parent_id ? c.parent_id : id; };
@@ -1194,7 +1197,7 @@ document.addEventListener('submit', (e) => {
     save(); close(); render(); toast('Wallet saved'); return;
   }
   if (kind === 'wallet') {
-    D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), archived: false });
+    D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), since: monthKey(new Date()), archived: false });
     save(); close(); render(); toast(`Wallet added in ${v.currency}`);
   }
   if (kind === 'loan') {

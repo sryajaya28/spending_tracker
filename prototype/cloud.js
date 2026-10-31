@@ -26,7 +26,7 @@ const Cloud = (() => {
       transactions: [], budgets: [], debts: [], debt_payments: [], manual_prices: [],
     };
     d.categories.forEach((c) => R.categories.push({ id: c.id, parent_id: c.parent_id || null, name: c.name, type: c.type, icon: c.icon || null, color: c.color || null, archived: !!c.archived }));
-    d.wallets.forEach((w) => R.wallets.push({ id: w.id, name: w.name, type: w.type, currency: w.currency, opening_balance_minor: w.opening_balance_minor, archived: !!w.archived }));
+    d.wallets.forEach((w) => R.wallets.push({ id: w.id, name: w.name, type: w.type, currency: w.currency, opening_balance_minor: w.opening_balance_minor, archived: !!w.archived, since_month: `${w.since || '1970-01'}-01` }));
     d.occasions.forEach((o) => R.occasions.push({ id: o.id, name: o.name, amount_minor: o.amount_minor, currency: o.currency, start_date: o.start || null, end_date: o.end || null, archived: !!o.archived }));
     d.investments.forEach((a) => R.investment_accounts.push({ id: a.id, name: a.name, archived: !!a.archived }));
 
@@ -77,7 +77,7 @@ const Cloud = (() => {
     const d = {
       profile: { name: p.display_name || '', currency: p.default_currency, ai: p.ai_tagging_enabled },
       categories: [...S.categories].sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'expense' ? -1 : 1)).map((c) => ({ id: c.id, parent_id: c.parent_id, name: c.name, type: c.type, icon: c.icon || '•', color: c.color || '#94A3B8', archived: c.archived })),
-      wallets: S.wallets.map((w) => ({ id: w.id, name: w.name, type: w.type, currency: w.currency, opening_balance_minor: +w.opening_balance_minor, archived: w.archived })),
+      wallets: S.wallets.map((w) => ({ id: w.id, name: w.name, type: w.type, currency: w.currency, opening_balance_minor: +w.opening_balance_minor, archived: w.archived, since: w.since_month.slice(0, 7) })),
       occasions: S.occasions.map((o) => ({ id: o.id, name: o.name, amount_minor: +o.amount_minor, currency: o.currency, start: o.start_date || '', end: o.end_date || '', archived: o.archived })),
       budgets: S.budgets.map((b) => ({ id: b.id, category_id: b.category_id, amount_minor: +b.amount_minor, currency: b.currency, start_month: b.start_month })),
       investments: S.investment_accounts.map((a) => ({ id: a.id, name: a.name, archived: a.archived })),

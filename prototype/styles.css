@@ -491,3 +491,16 @@ html { -webkit-text-size-adjust: 100%; }
 /* dialog fields never push past the dialog edge (the date box was cut off on phones) */
 .two > * { min-width: 0; }
 .dlg input[type="date"], .dlg select, .dlg input { min-width: 0; max-width: 100%; }
+
+/* the page never scrolls sideways (a wider page makes phones zoom out and pan) */
+html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
+.tabs { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; }
+@media (max-width: 560px) {
+  .tab { padding: 10px 14px; }
+  .land-nav { padding: 14px 14px; gap: 8px; }
+  .land-nav-r { gap: 6px; min-width: 0; }
+  .land-nav-r select { max-width: 104px; }
+  .land-nav-r .btn { padding: 0 14px; }
+}

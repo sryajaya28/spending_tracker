@@ -270,6 +270,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Stop phone zoom/pan: viewport locked (`maximum-scale=1, user-scalable=no`), `touch-action: manipulation`, `overflow-x: clip`,
+  and the real cause fixed: the Portfolio tab bar (402px) and the landing header (498px) were wider than a 390px screen. e2e `noscroll`
+  checks every page and tab at 360 and 390px. Keep new layouts within the screen width.
+
 - 2026-10-31: Future-dated entries wait for their day: `walletBalance`, `balanceAtEnd` and `qtyAt` ignore anything dated after today
   (`todayIso`, `heldNow`), so a USDT income dated next week does not raise your holding, net worth or any account balance until that
   date; coins dated later are not spendable. Month reports (income/spending by month) still list them in their month.

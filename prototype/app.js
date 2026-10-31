@@ -679,7 +679,7 @@ const occasionRow = (o) => {
   const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
   return `<div class="brow wrap"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? 'On track' : o.status === 'warning' ? 'Almost there' : 'Over budget'}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())}</span></div>
     <div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div><small class="muted">${o.count} expense${o.count === 1 ? '' : 's'}${dates ? ' · ' + esc(dates) : ''}${o.remaining < 0 ? ` · ${money(-o.remaining, cur())} over` : ` · ${money(o.remaining, cur())} left`}</small></div>
-    <div class="tools"><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">Expenses</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">Edit</button></div></div>`;
+    <div class="tools"><button class="btn" data-act="add-occasion-txn" data-id="${o.id}">+ Expense</button><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">Expenses</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">Edit</button></div></div>`;
 };
 
 /* Settings > Categories: collapsed by default; each parent with sub-categories expands on its own */
@@ -794,15 +794,19 @@ function quickAddCategory(form) {
   form.qc_name.value = ''; form.qc_icon.value = ''; $('.quick-cat', form).hidden = true;
   toast(parent ? `Added ${name} under ${parent.name}` : `Added ${name}`);
 }
-function txnDialog(t, presetType) {
+/* active occasions whose dates include this day (an occasion without dates never matches by date) */
+const occasionOn = (date) => D().occasions.filter((o) => !o.archived && o.start && date >= o.start && date <= (o.end || o.start));
+function txnDialog(t, presetType, presetOccasion) {
   const type = t?.type || presetType || 'expense', ws = D().wallets.filter((w) => !w.archived);
+  const live = D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id), occ0 = t ? t.occasion_id : presetOccasion?.id || (occasionOn(isoDate(new Date()))[0]?.id);
+  const date0 = t?.occurred_at || (presetOccasion?.start && presetOccasion.start > isoDate(new Date()) ? presetOccasion.start : isoDate(new Date()));
   // the amount is entered in the chosen wallet's currency
   const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = expOf(c) ? '0.01' : '1';
   open(`<h2>${t ? 'Edit' : 'Add'} transaction</h2>
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg3'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>Expense</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>Income</label>${t ? '' : '<label><input type="radio" name="type" value="invest">Invest</label>'}</div>
     <div class="two"><label class="field"><span data-amt-label>Amount (${esc(c)})</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}" autofocus></label>
-      <label class="field">Date<input name="date" type="date" required value="${t?.occurred_at || isoDate(new Date())}"></label></div>
+      <label class="field">Date<input name="date" type="date" required value="${date0}"></label></div>
     <label class="field">Category<select name="category">${catOptions(type, t?.category_id)}</select></label>
     <button type="button" class="legend-btn" data-act="quick-cat" style="align-self:flex-start;margin-top:-6px">+ New category or sub-category</button>
     <div class="quick-cat" hidden>
@@ -810,8 +814,8 @@ function txnDialog(t, presetType) {
         <label class="field">Icon<input name="qc_icon" maxlength="4" placeholder="🏷️" autocomplete="off"></label></div>
       <label class="field">Inside<select name="qc_parent">${quickParentOptions(type)}</select></label>
       <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">Cancel</button><button type="button" class="btn" data-act="quick-cat-add">Add category</button></div></div>
+    ${live.length ? `<label class="field">🎉 Special occasion (optional)<select name="occasion"><option value="">None</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
     <label class="field">Wallet<select name="wallet">${ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select></label>
-    ${D().occasions.some((o) => !o.archived || o.id === t?.occasion_id) ? `<label class="field">Special occasion (optional)<select name="occasion"><option value="">None</option>${D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id).map((o) => `<option value="${o.id}" ${o.id === t?.occasion_id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select></label>` : ''}
     <label class="field">Note<textarea name="note" maxlength="140" placeholder="e.g. Coffee shop">${esc(t?.note || '')}</textarea></label>
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + '">Delete</button>' : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
 }
@@ -1050,6 +1054,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'quick-cat-add') quickAddCategory(el.closest('form'));
   else if (act === 'add-wallet') walletDialog();
   else if (act === 'add-occasion') occasionDialog();
+  else if (act === 'add-occasion-txn') txnDialog(null, 'expense', occasionOf(id));
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
   else if (act === 'delete-occasion') { D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
@@ -1122,6 +1127,9 @@ document.addEventListener('change', (e) => {
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
   else if (t.name === 'txkind') { if (t.value !== 'invest') txnDialog(null, t.value); }
+  else if (t.name === 'date' && t.form?.dataset.form === 'txn' && t.form.occasion && !t.form.occasion.value) {
+    const hit = occasionOn(t.value)[0]; if (hit) t.form.occasion.value = hit.id;   // a date inside an occasion tags it automatically
+  }
   else if (t.name === 'wallet' && t.form?.dataset.form === 'txn') {
     const wc = walletOf(t.value).currency;
     $('[data-amt-label]', t.form).textContent = `Amount (${wc})`; $('input[name=amount]', t.form).step = expOf(wc) ? '0.01' : '1';

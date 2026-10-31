@@ -192,7 +192,6 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 /* portfolio */
 .tile.sym { font-size: 10px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); width: 44px; height: 44px; border-radius: 14px; }
 .ghost.on { background: #fff; color: var(--navy); }
-.alloc { display: flex; gap: 4px; height: 20px; margin: 6px 0 16px; }
 .alloc i { border-radius: 8px; min-width: 6px; }
 .alloc-legend { display: flex; flex-direction: column; gap: 10px; }
 .alloc-legend div { display: grid; grid-template-columns: 1fr auto 44px; gap: 12px; align-items: center; }
@@ -509,3 +508,6 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
 .wtitle { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
 .wallet .bal { margin-top: 4px; }
 .wallet { padding: 12px 16px; }
+
+/* Portfolio breakdown: assets add up to 100%; loans are a deduction, shown apart and without a share */
+.alloc-debt { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }

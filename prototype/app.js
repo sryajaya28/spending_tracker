@@ -599,12 +599,11 @@ function viewPortfolio() {
       <div class="delta"><b>${pctFmt(mom)}</b><span>${__('vs last month')}</span></div>
       <label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
     <section class="card"><div class="card-head"><h2>${__('Breakdown')}</h2></div>
-      <div class="alloc"><i style="flex:${Math.max(S[5], 0.0001)};background:#4A44C6"></i><i style="flex:${Math.max(I[5], 0.0001)};background:#F5B800"></i><i style="flex:${Math.max(LT[5], 0.0001)};background:#1fa971"></i></div>
       <div class="alloc-legend">
         <div><span class="key"><i style="background:#4A44C6"></i>${__('Savings')}</span><b class="num">${m(S[5])}</b><span class="muted">${share(S[5])}%</span></div>
         <div><span class="key"><i style="background:#F5B800"></i>${__('Investments')}</span><b class="num">${m(I[5])}</b><span class="muted">${share(I[5])}%</span></div>
-        <div><span class="key"><i style="background:#1fa971"></i>${__('Lent to others')}</span><b class="num">${m(LT[5])}</b><span class="muted">${share(LT[5])}%</span></div>
-        <div><span class="key"><i style="background:#E5484D"></i>${__('Loans')}</span><b class="num">−${m(L[5])}</b><span class="muted"></span></div></div></section>
+        <div><span class="key"><i style="background:#1fa971"></i>${__('Lent to others')}</span><b class="num">${m(LT[5])}</b><span class="muted">${share(LT[5])}%</span></div></div>
+      <div class="alloc-legend alloc-debt"><div><span class="key"><i style="background:#E5484D"></i>${__('Less: Loans')}</span><b class="num">−${m(L[5])}</b><span class="muted"></span></div></div></section>
   </div>
   <div class="tabs" role="tablist" style="margin:20px 0">${tabBtn('savings', 'Savings')}${tabBtn('investment', 'Investment')}${tabBtn('lent', 'Lent')}${tabBtn('loan', 'Loan')}</div>
   ${body}`;

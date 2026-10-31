@@ -274,6 +274,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio Breakdown: removed the stacked bar; Savings, Investments and Lent show their share of assets, and Loans sit apart
+  as "Less: Loans" (a deduction, no percentage).
+
 - 2026-10-31: The Transactions period dropdown shows the custom period ("Oct 25–Nov 24", `periodShort`) instead of a calendar month; the
   list already filtered by period. e2e `period` covers it.
 

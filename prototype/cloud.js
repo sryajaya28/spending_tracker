@@ -8,6 +8,8 @@ const Cloud = (() => {
   const cfg = window.STIVER || {};
   const r12 = (x) => Math.round(x * 1e12) / 1e12;
   const baseSym = (key) => key.replace(/\.US$/, '');
+  /* where auth links (email confirmation, password reset, Google) should send people back to */
+  const appUrl = (host = location.hostname) => (cfg.SITE_URL && /\.vercel\.app$/.test(host) ? cfg.SITE_URL.replace(/\/$/, '') + '/' : location.origin + location.pathname);
 
   /* ---------- app data  ->  database rows ---------- */
   /* upsert order (parents before children); deletes run in reverse */
@@ -233,13 +235,13 @@ const Cloud = (() => {
     forget() { synced = null; latest = null; },
 
     /* auth */
-    redirect: () => location.origin + location.pathname,
+    redirect: () => appUrl(), appUrl,
     getSession: async () => must(await client.auth.getSession()).session,
-    signUp: (email, password, name, currency, captchaToken) => client.auth.signUp({ email, password, options: { data: { full_name: name, currency }, emailRedirectTo: location.origin + location.pathname, captchaToken } }),
+    signUp: (email, password, name, currency, captchaToken) => client.auth.signUp({ email, password, options: { data: { full_name: name, currency }, emailRedirectTo: appUrl(), captchaToken } }),
     signIn: (email, password, captchaToken) => client.auth.signInWithPassword({ email, password, options: { captchaToken } }),
-    google: () => client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } }),
-    resend: (email, captchaToken) => client.auth.resend({ type: 'signup', email, options: { emailRedirectTo: location.origin + location.pathname, captchaToken } }),
-    reset: (email, captchaToken) => client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname, captchaToken }),
+    google: () => client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: appUrl() } }),
+    resend: (email, captchaToken) => client.auth.resend({ type: 'signup', email, options: { emailRedirectTo: appUrl(), captchaToken } }),
+    reset: (email, captchaToken) => client.auth.resetPasswordForEmail(email, { redirectTo: appUrl(), captchaToken }),
     setPassword: (password) => client.auth.updateUser({ password }),
     signOut: (scope) => client.auth.signOut({ scope: scope || 'local' }),
   };

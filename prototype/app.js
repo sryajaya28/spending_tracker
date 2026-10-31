@@ -761,7 +761,8 @@ function viewAuth() {
     <button class="btn lg" type="submit">Save password</button></form>`;
   else if (v === 'sent') body = `<div class="card">${logo}
     <div><h2 style="font-size:24px">Check your email</h2><p class="muted">We sent a link to <b>${esc(a.email)}</b>. Open it to confirm your address, then sign in. If you already have an account, just sign in.</p></div>
-    ${authMsg(a)}${captchaBox()}<button class="btn secondary lg" data-act="auth-resend">Resend the email</button>
+    ${authMsg(a)}<p class="hint" role="status">Waiting for you to confirm. Open the link on any device, and this page signs you in on its own.</p>
+    ${captchaBox()}<button class="btn lg" data-act="auth-check">I've confirmed my email</button><button class="btn secondary lg" data-act="auth-resend">Resend the email</button>
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></div>`;
   else body = `<form class="card" data-form="signin">${logo}
     <div><h2 style="font-size:24px">Welcome back</h2><p class="muted">Sign in to see your spending, budgets and net worth.</p></div>
@@ -1177,7 +1178,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'delete-txn') { D().transactions = D().transactions.filter((t) => t.id !== id); save(); close(); render(); toast('Transaction deleted'); }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.auth = { status: 'out', view: 'signin', email: '', notice: '', error: '' }; render(); });
-  else if (act === 'auth-view') { Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
+  else if (act === 'auth-check') checkConfirmed(true);
+  else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
@@ -1439,6 +1441,25 @@ window.addEventListener('beforeunload', (e) => { if (Cloud.pending > 0) { e.prev
 
 /* ---------- auth + data loading ---------- */
 const friendlyAuthError = (e) => (/invalid login/i.test(e.message) ? 'Wrong email or password.' : /already registered/i.test(e.message) ? 'That email already has an account. Try signing in.' : e.message);
+/* After sign-up the person confirms their email, often on another device (their phone). This tab can't
+   know, so while the 'Check your email' screen is open it quietly retries the sign-in (password kept only in
+   memory, never saved) every 15s and when the tab regains focus, and continues as soon as it works. */
+let pending = null, pollTimer = null;
+function stopPolling() { clearInterval(pollTimer); pollTimer = null; pending = null; }
+function startPolling(email, password) {
+  stopPolling(); pending = { email, password, until: Date.now() + 20 * 60 * 1000 };
+  if (!CAPTCHA_KEY) pollTimer = setInterval(() => checkConfirmed(false), 15000);   // with CAPTCHA on, only the button works
+}
+async function checkConfirmed(manual) {
+  if (!pending || state.auth.status !== 'out' || state.auth.view !== 'sent') return;
+  if (Date.now() > pending.until) { stopPolling(); return; }
+  if (CAPTCHA_KEY && !captchaToken) { if (manual) { state.auth.error = 'Please complete the verification first.'; render(); } return; }
+  const { error } = await Cloud.signIn(pending.email, pending.password, captchaToken || undefined);
+  if (!error) { stopPolling(); return; }   // the signed-in event takes it from here
+  if (/not confirmed/i.test(error.message)) { if (manual) toast('Not confirmed yet. Open the link in the email, then try again.'); }
+  else { stopPolling(); if (manual) { state.auth.error = friendlyAuthError(error); render(); } }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkConfirmed(false); });
 async function submitAuth(kind, v, f) {
   const a = state.auth, btn = $('button[type=submit]', f);
   if (btn) btn.disabled = true;
@@ -1448,13 +1469,13 @@ async function submitAuth(kind, v, f) {
     if (kind === 'signin') {
       const { error } = await Cloud.signIn(a.email, v.password, captchaToken || undefined);
       if (error) {
-        if (/not confirmed/i.test(error.message)) Object.assign(a, { view: 'sent', notice: 'Your email is not confirmed yet. Open the link we sent you, or resend it below.' });
+        if (/not confirmed/i.test(error.message)) { Object.assign(a, { view: 'sent', notice: 'Your email is not confirmed yet. Open the link we sent you, or resend it below.' }); startPolling(a.email, v.password); }
         else a.error = friendlyAuthError(error);
       }
     } else if (kind === 'signup') {
       const { data, error } = await Cloud.signUp(a.email, v.password, v.name.trim(), v.currency, captchaToken || undefined);
       if (error) a.error = friendlyAuthError(error);
-      else if (!data.session) a.view = 'sent';   // email confirmation is on: wait for the link
+      else if (!data.session) { a.view = 'sent'; startPolling(a.email, v.password); }   // email confirmation is on: wait for the link
     } else if (kind === 'forgot') {
       const { error } = await Cloud.reset(a.email, captchaToken || undefined);
       if (error) a.error = error.message; else a.notice = 'If that email has an account, a reset link is on its way.';
@@ -1470,7 +1491,7 @@ async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
   if (!session) { state.data = null; Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); return; }
-  a.email = session.user.email || a.email;
+  stopPolling(); a.email = session.user.email || a.email;
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
   Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
   render(); loadUserData();

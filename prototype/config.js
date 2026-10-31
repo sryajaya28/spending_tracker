@@ -5,4 +5,7 @@ window.STIVER = {
   SUPABASE_ANON_KEY: 'sb_publishable_pvHLAbOw-Q_qGKW4JTdhBA_h51EJPHC',
   // Cloudflare Turnstile site key (public). Leave empty until CAPTCHA is also enabled in Supabase, then paste it here.
   TURNSTILE_SITE_KEY: '',
+  // Canonical address of the live app. Links in emails and Google sign-in return here, even when someone signed up
+  // on the old *.vercel.app address. Must also be allowed under Supabase > Authentication > URL Configuration.
+  SITE_URL: 'https://stiver.io',
 };

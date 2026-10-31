@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Fixed Settings markup: the Profile card closed after Reporting currency, leaving Language and Appearance outside
+  it and misaligned. All Settings controls now sit right-aligned inside their cards.
+
 - 2026-10-31: Settings rows (`.form-row`): label left, input/select/toggle/button flush right on one line with a shared right edge
   (phone and desktop); controls no longer wrap or overflow.
 

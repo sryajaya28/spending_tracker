@@ -325,7 +325,9 @@ function toast(msg) {
 }
 const tile = (c, sm) => `<span class="tile ${sm ? 'sm' : ''}" style="--c:${c ? c.color : '#94A3B8'}">${c ? c.icon : '❔'}</span>`;
 const monthSelect = () => `<select class="pill-select" data-bind="month" aria-label="${__('Month')}">${lastMonths(6).reverse().map((k) => `<option value="${k}" ${k === state.ui.month ? 'selected' : ''}>${monthLabel(k)}</option>`).join('')}</select>`;
-const route = () => { const r = (location.hash.replace('#/', '') || 'overview').split('?')[0]; return r === 'wallets' ? 'portfolio' : r; };
+const routeParts = () => (location.hash.replace('#/', '') || 'overview').split('?')[0].split('/');
+const route = () => { const r = routeParts()[0]; return r === 'wallets' ? 'portfolio' : r; };
+const routeArg = () => routeParts()[1] || '';
 
 /* ---------- charts (hand-built SVG) ---------- */
 function sparkline(values) {
@@ -655,9 +657,28 @@ function filteredTxns() {
     && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
 }
+const dayTitle = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions', { n });
+// one row per day with the day's totals (transfers are neither income nor spending)
 function txnListHtml() {
   const rows = filteredTxns();
-  return rows.length ? rows.map(txnRow).join('') : ('<div class="empty">' + __('No transactions match.') + '</div>');
+  if (!rows.length) return '<div class="empty">' + __('No transactions match.') + '</div>';
+  const days = {};
+  rows.forEach((t) => { (days[t.occurred_at] = days[t.occurred_at] || []).push(t); });
+  return Object.keys(days).sort().reverse().map((d) => {
+    const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = inc - exp;
+    return `<div class="row day-row" data-act="open-day" data-id="${d}" tabindex="0" role="link"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
+    <div><div class="title">${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long' }))}</div>
+    <div class="sub">${countLabel(l.length)}${inc ? ' · ' + __('Income') + ' ' + money(inc, cur()) : ''}${exp ? ' · ' + __('Spent') + ' ' + money(exp, cur()) : ''}</div></div>
+    <div class="amt num ${net < 0 ? 'expense' : net > 0 ? 'income' : ''}">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div></div>`;
+  }).join('');
+}
+// the detail page for one day: every transaction on it
+function viewDay(d) {
+  const l = D().transactions.filter((t) => t.occurred_at === d), inc = sumBy(l, 'income'), exp = sumBy(l, 'expense');
+  return `${topbar('Transactions', countLabel(l.length) + ' · ' + __('Income') + ' ' + money(inc, cur()) + ' · ' + __('Spent') + ' ' + money(exp, cur()))}
+  <section class="card"><div class="card-head"><div><a class="back-link" href="#/transactions">← ${__('Back to Transactions')}</a><h2>${esc(dayTitle(d))}</h2></div><div class="tools"><button class="btn" data-act="add-txn" data-date="${d}">${__('+ Add')}</button></div></div>
+    <div class="list" id="day-list">${l.length ? l.map(txnRow).join('') : '<div class="empty">' + __('No transactions on this day.') + '</div>'}</div></section>`;
 }
 function viewTransactions() {
   const list = inMonth(state.ui.month);
@@ -828,7 +849,7 @@ function viewAuth() {
 const viewSplash = (msg) => `<div class="onboard"><div class="card" role="status"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="muted">${esc(__(msg))}</p></div></div>`;
 
 /* ---------- render ---------- */
-const VIEWS = { overview: viewOverview, transactions: viewTransactions, budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
+const VIEWS = { overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
   const a = state.auth;
@@ -918,10 +939,10 @@ function transferDetail(gid) {
     <p class="hint">${__('Deleting removes the transfer and its fee, and both wallet balances go back to what they were.')}</p>
     <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">${__('Delete transfer')}</button><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
 }
-function txnDialog(t, presetType, presetOccasion) {
+function txnDialog(t, presetType, presetOccasion, presetDate) {
   const type = t?.type || presetType || 'expense', ws = D().wallets.filter((w) => !w.archived);
   const live = D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id), occ0 = t ? t.occasion_id : presetOccasion?.id || (occasionOn(isoDate(new Date()))[0]?.id);
-  const date0 = t?.occurred_at || (presetOccasion?.start && presetOccasion.start > isoDate(new Date()) ? presetOccasion.start : isoDate(new Date()));
+  const date0 = t?.occurred_at || presetDate || (presetOccasion?.start && presetOccasion.start > isoDate(new Date()) ? presetOccasion.start : isoDate(new Date()));
   // the amount is entered in the chosen wallet's currency
   const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = expOf(c) ? '0.01' : '1';
   open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
@@ -1163,12 +1184,13 @@ function tradeHint(form) {
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el) { if (state.ui.walletMenu) { state.ui.walletMenu = null; render(); } return; }
-  const { act, id, type } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
+  const { act, id, type, date } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
   if (act === 'close') close();
   else if (act === 'theme-toggle') { applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); render(); }
   else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
-  else if (act === 'add-txn') txnDialog(null, type);
+  else if (act === 'add-txn') txnDialog(null, type, undefined, date);
+  else if (act === 'open-day') location.hash = '#/transactions/' + id;
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
   else if (act === 'view-transfer') transferDetail(id);

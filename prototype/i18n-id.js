@@ -1,6 +1,11 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "1 transaction": "1 transaksi",
+ "{n} transactions": "{n} transaksi",
+ "Back to Transactions": "Kembali ke Transaksi",
+ "No transactions on this day.": "Tidak ada transaksi pada hari ini.",
+ "Spent": "Dibelanjakan",
  "(as a sub-category)": "(sebagai subkategori)",
  "(fee {fee})": "(biaya {fee})",
  "(market ${price}, {diff}).": "(pasar ${price}, {diff}).",

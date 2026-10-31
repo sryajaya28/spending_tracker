@@ -9,7 +9,7 @@ See `context.md` for the full project context (architecture, services, decisions
 ## What it does
 
 - **Landing page and accounts:** one-page landing with a demo video; sign up with email (confirmation link) or Google.
-- **Transactions:** expenses and income with categories and sub-categories, multi-currency wallets, AI-style auto-tagging
+- **Transactions:** a daily summary (one row per day); click a day for its detailed transactions. Expenses and income with categories and sub-categories, multi-currency wallets, AI-style auto-tagging
   that stays uncategorized when unsure, and categories you can add right from the transaction form.
 - **Budgets:** overall and per-category monthly budgets (ok / warning / exceeded) and **special occasions** (a one-off
   budget such as "Bali Trip") that you tag expenses to.

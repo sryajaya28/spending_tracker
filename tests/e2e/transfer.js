@@ -46,8 +46,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const inn = x.find((r) => r.transfer_direction === 'in'); assert.equal(inn.amount_minor, 950); assert.equal(inn.currency, 'USD');
   // list + detail + delete restores the balances
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('#txn-list .row');
+  const dayRows = await p.$$('#txn-list .day-row'); assert(dayRows.length >= 1); await dayRows[0].click(); await p.waitForSelector('#day-list .row');
   assert((await txt()).includes('Transfer to Cash')); const before = await bal('Bank');
-  await p.click('#txn-list .row:has-text("Transfer to Cash")'); assert((await p.innerText('#dlg')).includes('Delete transfer')); assert((await p.innerText('#dlg')).includes('Fee'));
+  await p.click('#day-list .row:has-text("Transfer to Cash")'); assert((await p.innerText('#dlg')).includes('Delete transfer')); assert((await p.innerText('#dlg')).includes('Fee'));
   await p.click('[data-act=delete-transfer]'); await settle(); l = await log();
   assert(l.some((o) => o.op === 'delete' && o.table === 'transactions' && o.where[0][1].length === 3), JSON.stringify(l.map((o) => o.op + o.table)));
   assert.equal(await bal('Bank'), before + 200000 + 6500); assert.equal(await bal('Cash'), 50000);

@@ -47,7 +47,8 @@ infrastructure names, see section 8).
 - **Auth:** email + password with **email confirmation link**, Google sign-in, password reset, resend, "I've confirmed my
   email" button; while the "Check your email" screen is open, it retries sign-in every 15s and on tab focus so
   confirming on a phone continues on the desktop. Auth links return to `SITE_URL` (`https://stiver.io`).
-- **Transactions:** expense/income with categories + one level of sub-categories, add a category inline from the form,
+- **Transactions:** the list is grouped **by day** (one row per day: count, income, spent, net); clicking a day opens
+  `#/transactions/YYYY-MM-DD` with that day's detailed rows (edit/delete, `+ Add` prefilled with the date). Expense/income with categories + one level of sub-categories, add a category inline from the form,
   AI-style auto-tagging (mock: history match, null when unsure), search/filter, special-occasion tag.
 - **Budgets:** overall + per-category monthly budgets; Overview shows horizontal bars with percentages; **special
   occasions** (one-off budgets with optional dates, tagged expenses, archive/delete).
@@ -255,6 +256,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: Transactions page is now a daily cumulative view; a day opens a detail page (`#/transactions/<date>`, `viewDay`,
+  `route()` now reads only the first path segment, `routeArg()` the second). New e2e test `daily`; `run`/`transfer` updated.
 
 - 2026-10-31: Added the working agreement (section 0) and `CLAUDE.md`; README gained a "Working on this project" note.
 - 2026-10-31: Added `context.md`, refreshed `README.md` and `docs/NEXT_STEPS.md`, moved the browser tests into `tests/e2e/`

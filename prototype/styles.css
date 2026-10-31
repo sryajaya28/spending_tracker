@@ -416,3 +416,9 @@ dialog { background: var(--surface); }
 :root[data-theme="dark"] .land-hero .btn.secondary, :root[data-theme="dark"] .land-nav .btn.secondary { background: var(--soft); color: var(--ink); }
 :root[data-theme="dark"] .demo-frame { border-color: var(--line); }
 .theme-btn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 18px; line-height: 1; display: grid; place-items: center; padding: 0; }
+
+/* daily view on Transactions */
+.daybox { width: 44px; height: 44px; border-radius: 12px; background: var(--soft); display: grid; place-content: center; text-align: center; line-height: 1.1; }
+.daybox b { font-size: 17px; } .daybox small { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+.back-link { display: inline-block; font-size: 13px; color: var(--muted); margin-bottom: 4px; text-decoration: none; }
+.back-link:hover { color: var(--ink); }

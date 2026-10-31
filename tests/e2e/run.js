@@ -48,9 +48,9 @@ const assert = require('assert');
   assert(!l.some((o) => o.table === 'categories' || o.table === 'wallets'), 'untouched tables must not be re-sent');
 
   // edit it (amount), then delete
-  await page.click('#txn-list .row'); await page.fill('input[name=amount]', '50000'); await page.click('#dlg button[type=submit]'); await settle();
+  await page.click('#txn-list .day-row'); await page.click('#day-list .row'); await page.fill('input[name=amount]', '50000'); await page.click('#dlg button[type=submit]'); await settle();
   l = await log(); assert(l.some((o) => o.op === 'upsert' && o.table === 'transactions' && o.rows[0].amount_minor === 50000));
-  await page.click('#txn-list .row'); await page.click('[data-act=delete-txn]'); await settle();
+  await page.click('#day-list .row'); await page.click('[data-act=delete-txn]'); await settle();
   l = await log(); assert(l.some((o) => o.op === 'delete' && o.table === 'transactions'));
 
   // budget

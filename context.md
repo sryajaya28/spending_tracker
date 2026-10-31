@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Bottom bar Add button: label now shares the other tabs' baseline (button is the same 50px height; the 60px circle
+  rises above the bar with an 8px gap above the label).
+
 - 2026-10-31: Phone navigation: removed the floating + button and the Settings tab; bottom bar is now Overview, Activity, a raised
   highlighted **Add** button in the middle (opens the add-transaction dialog), Budgets, Portfolio. The round profile avatar at the
   top right (`.profile`, now a link) opens Settings on phones; desktop keeps the name pill and the sidebar. Overview hero buttons

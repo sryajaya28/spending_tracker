@@ -150,6 +150,8 @@ Migrations (repo file names; applied through the Supabase tools with different r
 
 ## 7. Business rules the code encodes
 
+- Entries dated after today do not change balances, holdings or net worth until their date arrives.
+
 - Transfers (wallet to wallet, buying/selling assets) are not income or spending; **a transfer fee is spending**.
   A wallet transfer is stored as linked transactions sharing `transfer_group_id`: out leg, in leg (own currency), fee.
 - Occasion expenses still count in monthly budgets. Budgets apply from `start_month` until replaced.
@@ -267,6 +269,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: Future-dated entries wait for their day: `walletBalance`, `balanceAtEnd` and `qtyAt` ignore anything dated after today
+  (`todayIso`, `heldNow`), so a USDT income dated next week does not raise your holding, net worth or any account balance until that
+  date; coins dated later are not spendable. Month reports (income/spending by month) still list them in their month.
 
 - 2026-10-31: Removed the "(new)" tag from the USDT/USDC income choices in the Account list.
 

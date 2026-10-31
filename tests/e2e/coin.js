@@ -44,6 +44,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.deepEqual(made, { q: 300, acct: true, n: 1 });
   await p.evaluate(() => txnDialog(null)); assert((await p.innerHTML('select[name=wallet]')).includes('h:'), 'now offered as a held coin');
   await p.click('#dlg label:has(input[name=type][value=expense])'); await p.selectOption('select[name=wallet]', { index: 0 }); assert(!(await p.innerHTML('select[name=wallet]')).includes('n:USDT'), 'expense list drops the new-coin choices'); await p.click('[data-act=close]');
+  // income dated in the future waits: no change to what you hold, to net worth, or to a wallet balance until its day
+  const fut = await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'USDT'), d = new Date(); d.setDate(d.getDate() + 5); const date = isoDate(d), w = D().wallets[0];
+    const before = { held: heldNow(h), nw: portfolioUSD(monthKey(new Date())), cash: walletBalance(w) };
+    recordCoinTxn(h, { type: 'income', quantity: 500, date, note: 'Later' }); D().transactions.push({ id: uid(), type: 'income', amount_minor: 777000, currency: 'IDR', occurred_at: date, wallet_id: w.id, note: 'Later cash', category_id: null, category_source: 'user' });
+    return { before, after: { held: heldNow(h), nw: portfolioUSD(monthKey(new Date())), cash: walletBalance(w) }, total: h.quantity, h: h.id }; });
+  assert.deepEqual(fut.after, fut.before, JSON.stringify(fut)); assert(fut.total >= fut.before.held + 500);
+  await p.evaluate((id) => { const h = D().holdings.find((x) => x.id === id); h.trades.filter((t) => t.date > isoDate(new Date())).forEach((t) => removeTrade(h, t)); D().transactions = D().transactions.filter((t) => t.note !== 'Later cash'); }, fut.h);
   // recurring in USDT
   hid = await p.evaluate(() => D().holdings.find((x) => x.symbol === 'USDT').id); const base = await qty();
   const n = await p.evaluate((id) => { const r = addRule('txn', 'weekly', '2026-10-10', { type: 'income', amount_minor: 5000, currency: 'USD', wallet_id: 'h:' + id, quantity: 50, note: 'Retainer', category_id: null }); r.next = '2026-10-17'; return runRecurring(); }, hid);

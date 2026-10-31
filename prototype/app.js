@@ -227,14 +227,17 @@ const sumBy = (list, type) => list.filter((t) => t.type === type).reduce((a, t) 
 /* signed cash effect of a transaction on its wallet. A 'transfer' (e.g. buying/selling an asset) moves
    money in or out without being income or spending, so budgets and monthly totals ignore it. */
 const cashSign = (t) => (t.type === 'income' || (t.type === 'transfer' && t.flow === 'in') ? 1 : t.type === 'expense' || (t.type === 'transfer' && t.flow === 'out') ? -1 : 0);
+/* anything dated after today has not happened yet: it changes no balance, wallet or holding, until its day */
+const todayIso = () => isoDate(new Date());
 function walletBalance(w) {
-  return w.opening_balance_minor + D().transactions.filter((t) => t.wallet_id === w.id).reduce((a, t) => a + cashSign(t) * t.amount_minor, 0);
+  const today = todayIso();
+  return w.opening_balance_minor + D().transactions.filter((t) => t.wallet_id === w.id && t.occurred_at <= today).reduce((a, t) => a + cashSign(t) * t.amount_minor, 0);
 }
 const totalBalance = () => D().wallets.filter((w) => !w.archived).reduce((a, w) => a + convert(walletBalance(w), w.currency, cur()), 0);
 /* A wallet counts from the month it starts (w.since): its opening balance and its transactions do not
    appear in earlier months, so money added later never inflates past months. */
 function balanceAtEnd(k) {
-  const end = `${k}-31`, live = D().wallets.filter((w) => !w.archived && (w.since || '0000-00') <= k), ids = new Set(live.map((w) => w.id));
+  const end = [`${k}-31`, todayIso()].sort()[0], live = D().wallets.filter((w) => !w.archived && (w.since || '0000-00') <= k), ids = new Set(live.map((w) => w.id));
   return live.reduce((a, w) => a + convert(w.opening_balance_minor, w.currency, cur()), 0)
     + D().transactions.filter((t) => t.occurred_at <= end && ids.has(t.wallet_id)).reduce((a, t) => a + cashSign(t) * amt(t), 0);
 }
@@ -282,7 +285,8 @@ const holdingsOf = (accId) => D().holdings.filter((h) => h.account_id === accId)
    quantity minus the trades that happen after that month. */
 const tradeSign = (tr) => (tr.side === 'buy' ? 1 : -1);
 const r12 = (x) => Math.round(x * 1e12) / 1e12;   // keep quantities free of floating-point dust
-const qtyAt = (h, k) => h.quantity - h.trades.filter((tr) => tr.date > `${k}-31`).reduce((a, tr) => a + tradeSign(tr) * tr.quantity, 0);
+const qtyAt = (h, k) => h.quantity - h.trades.filter((tr) => tr.date > [`${k}-31`, todayIso()].sort()[0]).reduce((a, tr) => a + tradeSign(tr) * tr.quantity, 0);
+const heldNow = (h) => qtyAt(h, monthKey(new Date()));   // what you hold today (trades dated later are not in yet)
 const holdingUSD = (h, k) => (k < h.since ? 0 : Math.max(0, qtyAt(h, k)) * assetInfo(h.symbol).usd(k));
 const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))
@@ -466,9 +470,9 @@ function bindValue(months, usd, vc) {
 }
 
 function holdingRow(h, vc, accTotal) {
-  const info = assetInfo(h.symbol), k = lastMonths(6)[5], price = info.usd(k), value = h.quantity * price;
+  const info = assetInfo(h.symbol), k = lastMonths(6)[5], price = info.usd(k), value = heldNow(h) * price;
   return `<div class="row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
-    <div><div class="title">${esc(info.name)} <span class="badge">${esc(typeLabel(info.type))}</span></div><div class="sub num">${qtyFmt(h.quantity)} ${esc(info.symbol)} ×${money(usdToMinor(price, vc), vc)}</div></div>
+    <div><div class="title">${esc(info.name)} <span class="badge">${esc(typeLabel(info.type))}</span></div><div class="sub num">${qtyFmt(heldNow(h))} ${esc(info.symbol)} ×${money(usdToMinor(price, vc), vc)}</div></div>
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${accTotal ? Math.round((value / accTotal) * 100) : 0}%</div></div></div>`;
 }
 
@@ -973,7 +977,7 @@ function transferDetail(gid) {
    linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
 const coinOf = (t) => (t && !t.wallet_id && t.trade_id ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
 const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; const h = coinOf(t); return h ? `${assetInfo(h.symbol).symbol} · ${accountName(h.account_id)}` : ''; };
-const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))} · ${qtyFmt(h.quantity)}</option>`;
+const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))} · ${qtyFmt(heldNow(h))}</option>`;
 function recordCoinTxn(h, { type, quantity, date, note, category_id, category_source, ai_confidence, occasion_id, id, tradeId }) {
   const tid = tradeId || uid(), side = type === 'income' ? 'buy' : 'sell', amount_minor = Math.max(1, Math.round(quantity * 100));
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
@@ -991,7 +995,7 @@ function acctOptions(type, selected) {
   const fresh = type === 'income' ? ['USDT', 'USDC'].flatMap((sym) => (accts.length ? accts : [{ id: '', name: '' }]).filter((a) => !D().holdings.some((h) => h.account_id === a.id && h.symbol === sym)).map((a) => ({ sym, a }))) : [];
   const sel = (v) => (v === selected ? 'selected' : '');
   return ws.map((w) => `<option value="${w.id}" ${sel(w.id)}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')
-    + (coins.length || fresh.length ? `<optgroup label="${__('USDT / USDC in an investment account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))} · ${qtyFmt(h.quantity)}</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${sym} · ${a.name ? esc(a.name) : __('Crypto')}</option>`).join('')}</optgroup>` : '');
+    + (coins.length || fresh.length ? `<optgroup label="${__('USDT / USDC in an investment account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))} · ${qtyFmt(heldNow(h))}</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${sym} · ${a.name ? esc(a.name) : __('Crypto')}</option>`).join('')}</optgroup>` : '');
 }
 /* the amount's unit and step follow the chosen account */
 function syncTxnUnit(form) {
@@ -1116,7 +1120,7 @@ function holdingDialog(h, accId, opts = {}) {
       <button type="button" class="legend-btn" data-act="manual-asset">${__('Not listed? Add an asset manually')}</button></div>
     <div class="custom-fields" hidden><div class="two"><label class="field">${__('Symbol')}<input name="symbol" maxlength="10" placeholder="${__('e.g. GOLD')}"></label><label class="field">${__('Name')}<input name="cname" maxlength="40" placeholder="${__('Name')}"></label></div>
       <div class="two"><label class="field">${__('Type')}<select name="ctype"><option value="crypto">${__('Crypto')}</option><option value="stock">${__('Stock')}</option><option value="etf">${__('ETF')}</option><option value="manual">${__('Other')}</option></select></label><label class="field">${__('Price (USD)')}<input name="cprice" type="number" min="0" step="any"></label></div></div>`}
-    ${h ? `<div class="holding-now"><div><small class="muted">${__('You hold')}</small><b class="num">${qtyFmt(h.quantity)} ${esc(info.symbol)}</b></div>
+    ${h ? `<div class="holding-now"><div><small class="muted">${__('You hold')}</small><b class="num">${qtyFmt(heldNow(h))} ${esc(info.symbol)}</b></div>
       <div class="tools"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${__('Buy')}</button><button type="button" class="btn secondary" data-act="trade" data-side="sell" data-id="${h.id}">${__('Sell')}</button></div></div>
       ${tradeList(h)}` : `
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
@@ -1148,7 +1152,7 @@ function sourceOptions(side, h, selected) {
   const fresh = h && side === 'sell' ? ['USDT', 'USDC'].filter((s) => !held.has(s) && s !== h.symbol) : [];
   const sel = (v) => (v === selected ? 'selected' : '');
   return `<optgroup label="Accounts">${ws.map((w) => `<option value="w:${w.id}" ${sel('w:' + w.id)}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</optgroup>`
-    + (st.length || fresh.length ? `<optgroup label="Stablecoins">${st.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(assetInfo(x.symbol).symbol)} · ${qtyFmt(x.quantity)} held (${esc(accountName(x.account_id))})</option>`).join('')}${fresh.map((s) => `<option value="n:${s}" ${sel('n:' + s)}>${s} · new in ${esc(accountName(h.account_id))}</option>`).join('')}</optgroup>` : '');
+    + (st.length || fresh.length ? `<optgroup label="Stablecoins">${st.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(assetInfo(x.symbol).symbol)} · ${qtyFmt(heldNow(x))} held (${esc(accountName(x.account_id))})</option>`).join('')}${fresh.map((s) => `<option value="n:${s}" ${sel('n:' + s)}>${s} · new in ${esc(accountName(h.account_id))}</option>`).join('')}</optgroup>` : '');
 }
 function parseSource(val) {
   if (!val) return null;
@@ -1165,7 +1169,7 @@ const parseAmount = (src, text) => (src.kind === 'wallet' ? toMinor(parseFloat(t
 function payShortfall(src, side, amount) {
   if (side !== 'buy') return null;
   if (src.kind === 'wallet' && amount > walletBalance(src.wallet)) return __("{name} doesn't have enough balance", { name: src.wallet.name });
-  if (src.kind === 'holding' && amount > src.holding.quantity + 1e-12) return __('You only hold {qty} {symbol}', { qty: qtyFmt(src.holding.quantity), symbol: assetInfo(src.holding.symbol).symbol });
+  if (src.kind === 'holding' && amount > heldNow(src.holding) + 1e-12) return __('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(src.holding)), symbol: assetInfo(src.holding.symbol).symbol });
   if (src.kind === 'new') return __("You don't hold any {symbol} to pay with", { symbol: src.symbol });
   return null;
 }
@@ -1212,7 +1216,7 @@ function tradeList(h) {
 
 function tradeDialog(h, side) {
   const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), first = ws.find((w) => w.currency === cur()) || ws[0];
-  open(`<h2>${side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(h.quantity), symbol: esc(info.symbol) })}</p>
+  open(`<h2>${side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: esc(info.symbol) })}</p>
   <form data-form="trade" data-id="${h.id}" style="display:contents">
     <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>${__('Buy')}</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>${__('Sell')}</label></div>
     <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01"></label>
@@ -1274,7 +1278,7 @@ function generateRecurring(r, date) {
   if (r.kind === 'txn') {
     if (String(sp.wallet_id).startsWith('h:')) {   // USDT/USDC in an investment account
       const h = D().holdings.find((x) => x.id === sp.wallet_id.slice(2)); if (!h || T.some((t) => t.id === detId(r.id, date, 't'))) return;
-      if (sp.type === 'expense' && h.quantity < sp.quantity - 1e-12) return;   // not enough coins: skip this one
+      if (sp.type === 'expense' && heldNow(h) < sp.quantity - 1e-12) return;   // not enough coins: skip this one
       recordCoinTxn(h, { type: sp.type, quantity: sp.quantity, date, note: sp.note, category_id: sp.category_id, occasion_id: sp.occasion_id, id: detId(r.id, date, 't'), tradeId: detId(r.id, date, 'e') }); return;
     }
     if (!walletOf(sp.wallet_id)) return;
@@ -1537,7 +1541,8 @@ document.addEventListener('submit', (e) => {
       }
       const qty = parseFloat(v.amount), tr = existing && coin.trades.find((x) => x.id === existing.trade_id), oldQ = tr ? tr.side === 'buy' ? tr.quantity : -tr.quantity : 0;
       const newQ = type === 'income' ? qty : -qty, after = r12(coin.quantity - oldQ + newQ);
-      if (after < -1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(coin.quantity - oldQ), symbol: assetInfo(coin.symbol).symbol })); return; }
+      const nowOk = v.date > todayIso() || heldNow(coin) - (tr && tr.date <= todayIso() ? oldQ : 0) + newQ >= -1e-12;   // coins dated later are not spendable yet
+      if (after < -1e-12 || !nowOk) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(Math.max(0, heldNow(coin))), symbol: assetInfo(coin.symbol).symbol })); return; }
       if (tr) { coin.quantity = after; Object.assign(tr, { date: v.date, side: type === 'income' ? 'buy' : 'sell', kind: type, quantity: qty, amount_minor: minor }); if (type === 'income' && v.date.slice(0, 7) < coin.since) coin.since = v.date.slice(0, 7); }
       else recordCoinTxn(coin, { type, quantity: qty, date: v.date, note: row.note, category_id: row.category_id, category_source: row.category_source, ai_confidence: row.ai_confidence, occasion_id: row.occasion_id });
       if (v.repeat && !existing) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: 'h:' + coin.id, quantity: qty, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
@@ -1644,7 +1649,7 @@ document.addEventListener('submit', (e) => {
     const h = D().holdings.find((x) => x.id === f.dataset.id), info = assetInfo(h.symbol), src = parseSource(v.source), side = v.side;
     const qty = parseFloat(v.quantity), amount = parseAmount(src, v.amount);
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
-    if (side === 'sell' && qty > h.quantity + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(h.quantity), symbol: info.symbol })); return; }
+    if (side === 'sell' && qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: info.symbol })); return; }
     const short = payShortfall(src, side, amount); if (short) { toast(short); return; }
     recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty)} ${info.symbol}`); return;

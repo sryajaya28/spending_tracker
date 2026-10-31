@@ -3,9 +3,9 @@
 Record and categorize spending, track monthly budgets (overall or per category), and see your whole
 net worth: savings, investments, money you lent, and loans you owe. Inspired by Spendee.
 
-> **Status: working prototype.** The UI runs in the browser with demo data stored locally
-> (`localStorage`). There is no sign-in and no multi-user backend yet. The Supabase schema is
-> designed and applied, but the app does not use it yet. The planned stack is Next.js (PWA) + Supabase.
+> **Status: working prototype with accounts.** Users sign up and sign in (email + password with email
+> confirmation, or Google). Each user's data is stored in Supabase and protected by row-level security.
+> The UI is a static browser app in `prototype/`; the planned stack is Next.js (PWA) + Supabase.
 
 ## What it does
 
@@ -16,6 +16,7 @@ net worth: savings, investments, money you lent, and loans you owe. Inspired by 
   Finnhub's full lists, with buy/sell and a Buy/Sell counterpart of a wallet or USDT/USDC), Lent (money others owe you),
   Loan (debts you owe, with payments).
 - **Net worth** with month-over-month growth, shown in your reporting currency (IDR by default) or USD.
+- **Special occasions:** one-off budgets such as "Bali Trip" or "Birthday Dinner"; tag expenses to them when you add a transaction.
 - Every record belongs to one user (`user_id`) and is protected by row-level security in the database schema.
 
 ## Run the prototype
@@ -32,10 +33,22 @@ server-side. Without a key the app still works with built-in demo assets and dem
 
 Data sources: Finnhub (stock/ETF/crypto symbols and prices), Frankfurter / ECB (fiat exchange rates, daily).
 
+## Accounts and data
+
+`prototype/config.js` holds the Supabase project URL and the public (anon) key; the key is safe to publish because
+row-level security guards the data. Never put the `service_role` key anywhere in this repo.
+`prototype/cloud.js` signs users in, loads their rows and saves only what changed. In the Supabase dashboard:
+
+- Authentication > Providers > Email: keep **Confirm email** on.
+- Authentication > Providers > Google: add a Google OAuth client ID and secret (redirect URI shown on that page).
+- Authentication > URL Configuration: set the Site URL to the deployed address and add it (and `http://localhost:5173`) to the redirect URLs.
+
+New accounts start empty (a Cash wallet and starter categories). Settings has an optional "Load sample data" button.
+
 ## Database
 
 `supabase/migrations/` holds the schema in order (tables, row-level security, signup seeding, budget and
-spending functions, investments, debts, trades). `supabase/tests/` has pgTAP tests for the first migrations
+spending functions, investments, debts, trades, special occasions). `supabase/tests/` has pgTAP tests for the first migrations
 (run with `supabase test db`).
 
 ## Before releasing publicly

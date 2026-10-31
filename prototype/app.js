@@ -1,6 +1,6 @@
 'use strict';
-/* Spendly UI prototype. Mock data lives in localStorage; the real app swaps this
-   store for Supabase calls. Money is kept in integer minor units, like the DB schema. */
+/* Spendly app. Signed-in users' data lives in Supabase (see cloud.js); the UI works on the in-memory
+   object state.data and save() syncs changes. Money is kept in integer minor units, like the DB schema. */
 
 /* ---------- utils ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -9,7 +9,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
 // units of currency per 1 USD (mock; the real app reads these from the fx_rates table)
 const RATES = { IDR: 15500, USD: 1, EUR: 0.92, GBP: 0.79, SGD: 1.35, AUD: 1.5, JPY: 150 };
-const KEY = 'spendly.proto.v5';
+const PRICES_KEY = 'spendly.prices.v1';   // last live prices, only to avoid a flash of 0 on load
 
 const expOf = (cur) => new Intl.NumberFormat('en', { style: 'currency', currency: cur }).resolvedOptions().maximumFractionDigits;
 const toMinor = (major, cur) => Math.round(major * 10 ** expOf(cur));
@@ -187,19 +187,28 @@ function seed(name, cur) {
     { id: uid(), name: 'Credit card', type: 'card', currency: cur, original_minor: conv(900), monthly_minor: conv(150), rate: 0, since, archived: false, payments: payments(conv(150), 3) },
   ];
   const lent = [{ id: uid(), name: 'Budi', currency: cur, original_minor: conv(300), note: 'Laptop repair', due: isoDate(new Date(today.getFullYear(), today.getMonth() + 2, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 12)), amount_minor: conv(100) }] }];
-  return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, investments: [exch, broker], holdings, customAssets: {}, livePrices: {}, loans, lent };
+  return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions: [], investments: [exch, broker], holdings, customAssets: {}, livePrices: {}, loans, lent };
 }
 
-const state = { data: null, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '' } };
-function load() {
-  try { state.data = JSON.parse(localStorage.getItem(KEY)); } catch { state.data = null; }
-  if (state.data) { state.data.livePrices ||= {}; state.data.customAssets ||= {}; state.data.loans ||= []; state.data.lent ||= []; state.data.holdings.forEach((h) => { h.trades ||= []; }); }
+const state = { data: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '' } };
+function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
+function save() {
+  try { localStorage.setItem(PRICES_KEY, JSON.stringify(state.data.livePrices)); } catch { /* storage unavailable */ }
+  Cloud.save(state.data);   // sends only what changed since the last save
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state.data)); } catch { /* storage unavailable */ } }
 
 /* ---------- selectors (mirror the SQL functions) ---------- */
 const D = () => state.data;
 const cur = () => D().profile.currency;
+const occasionOf = (id) => D().occasions.find((o) => o.id === id);
+/* special-occasion budgets: a one-off amount; spent = expenses tagged to it (converted to the reporting currency) */
+function occasionStatus() {
+  return D().occasions.map((o) => {
+    const txns = D().transactions.filter((t) => t.occasion_id === o.id && t.type === 'expense');
+    const budget = convert(o.amount_minor, o.currency, cur()), spent = txns.reduce((a, t) => a + amt(t), 0), pct = (spent * 100) / budget;
+    return { ...o, count: txns.length, budget, spent, remaining: budget - spent, pct, status: spent > budget ? 'exceeded' : pct >= 80 ? 'warning' : 'ok' };
+  });
+}
 const catOf = (id) => D().categories.find((c) => c.id === id);
 const walletOf = (id) => D().wallets.find((w) => w.id === id);
 const inMonth = (k) => D().transactions.filter((t) => t.occurred_at.startsWith(k));
@@ -606,14 +615,14 @@ function txnRow(t) {
   }
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
-    <div><div class="title">${esc(t.note || c?.name || 'Transaction')}${t.category_source === 'ai' ? '<span class="badge ai" title="Tagged by AI">AI</span>' : ''}${!c ? '<span class="badge">Uncategorized</span>' : ''}</div>
+    <div><div class="title">${esc(t.note || c?.name || 'Transaction')}${t.category_source === 'ai' ? '<span class="badge ai" title="Tagged by AI">AI</span>' : ''}${!c ? '<span class="badge">Uncategorized</span>' : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
     <div class="sub">${esc(c ? catPath(c.id) : 'No category')} ·${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' }))}</div></div>
     <div class="amt num ${t.type}">${sign}${money(t.amount_minor, t.currency)}</div></div>`;
 }
 function filteredTxns() {
-  const { q, cat, wallet, month } = state.ui, ql = q.trim().toLowerCase();
-  return D().transactions.filter((t) => t.occurred_at.startsWith(state.ui.month)
-    && (!cat || (cat === 'none' ? !t.category_id : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet)
+  const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
+  return D().transactions.filter((t) => (occ || t.occurred_at.startsWith(state.ui.month))
+    && (!cat || (cat === 'none' ? !t.category_id : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
 }
 function txnListHtml() {
@@ -626,6 +635,7 @@ function viewTransactions() {
   <section class="card"><div class="card-head"><h2>Activity</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-txn">+ Add</button></div></div>
     <div class="filters"><input data-filter="q" placeholder="Search note or category" value="${esc(state.ui.q)}">
       <select data-filter="cat" aria-label="Category"><option value="">All categories</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
+      ${D().occasions.length ? `<select data-filter="occ" aria-label="Occasion"><option value="">All occasions</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
       <select data-filter="wallet" aria-label="Wallet"><option value="">All wallets</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></div>
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
@@ -642,8 +652,17 @@ function viewBudgets() {
       <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span class="muted">${g.remaining >= 0 ? `${money(g.remaining, cur())} left` : `${money(-g.remaining, cur())} over`} · ${Math.round(g.pct)}% used</span>${cap(g)}<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">Edit</button></div>`
       : '<p class="muted">No overall budget yet. Add one to cap total monthly spending.</p>'}</section>
   <section class="card"><div class="card-head"><h2>By category</h2></div>
-    ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">Edit</button></div>`).join('') : '<div class="empty">No category budgets yet.</div>'}</section></div>`;
+    ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">Edit</button></div>`).join('') : '<div class="empty">No category budgets yet.</div>'}</section>
+  <section class="card"><div class="card-head"><h2>Special occasions</h2><button class="btn" data-act="add-occasion">+ Occasion</button></div>
+    <p class="muted" style="margin-bottom:8px">A one-off budget for a trip, a party or a dinner. Tag expenses to it when you add them.</p>
+    ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : '<div class="empty">No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".</div>') + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">Past occasions</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
 }
+const occasionRow = (o) => {
+  const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
+  return `<div class="brow"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? 'On track' : o.status === 'warning' ? 'Almost there' : 'Over budget'}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())}</span></div>
+    <div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div><small class="muted">${o.count} expense${o.count === 1 ? '' : 's'}${dates ? ' · ' + esc(dates) : ''}${o.remaining < 0 ? ` · ${money(-o.remaining, cur())} over` : ` · ${money(o.remaining, cur())} left`}</small></div>
+    <div class="tools"><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">Expenses</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">Edit</button></div></div>`;
+};
 
 function viewSettings() {
   const p = D().profile;
@@ -658,26 +677,66 @@ function viewSettings() {
     <div class="form-row"><div>Reporting currency<small>Used for totals, budgets and charts. Wallets keep their own currency; budgets convert at demo rates.</small></div><div class="field"><select data-setting="currency" aria-label="Currency">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
   <section class="card"><div class="card-head"><h2>Smart tagging</h2></div>
     <div class="form-row"><div>AI category suggestions<small>After about 30 labeled transactions, uncategorized ones are tagged from your history. If unsure it stays empty.</small></div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="AI tagging"></label></div></section>
-  <section class="card"><div class="card-head"><h2>Sessions</h2></div>
-    <div class="form-row"><div>This device<small>Stays signed in until you sign out. Sessions never expire.</small></div><span class="badge ok">Active now</span></div>
-    <div class="form-row"><div>Sign out everywhere<small>Revokes every other device</small></div><button class="btn secondary" data-act="revoke">Sign out others</button></div>
-    <div class="form-row"><div>Reset demo<small>Clears this prototype's mock data</small></div><button class="btn danger" data-act="signout">Sign out and reset</button></div></section></div>`;
+  <section class="card"><div class="card-head"><h2>Account</h2></div>
+    <div class="form-row"><div>Signed in as<small>${esc(state.auth.email)}</small></div><span class="badge ok">Active now</span></div>
+    <div class="form-row"><div>Sign out<small>Ends the session on this device</small></div><button class="btn secondary" data-act="signout">Sign out</button></div>
+    <div class="form-row"><div>Sign out everywhere else<small>Revokes every other device</small></div><button class="btn secondary" data-act="revoke">Sign out others</button></div>
+    <div class="form-row"><div>Sample data<small>Fill an empty account with demo wallets, transactions, budgets and a portfolio so you can explore</small></div><button class="btn secondary" data-act="load-demo">Load sample data</button></div></section></div>`;
 }
 
-function viewOnboard() {
-  return `<div class="onboard"><form class="card" data-form="signup"><div class="logo"><img src="icon.svg" alt="">Spendly</div>
-    <div><h2 style="font-size:24px">Create your account</h2><p class="muted">Demo sign-up. Your data stays in this browser.</p></div>
+const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
+const authMsg = (a) => (a.error ? `<p class="auth-err" role="alert">${esc(a.error)}</p>` : '') + (a.notice ? `<p class="hint" role="status">${esc(a.notice)}</p>` : '');
+const authLink = (view, text) => `<button type="button" class="legend-btn" data-act="auth-view" data-view="${view}">${text}</button>`;
+function viewAuth() {
+  const a = state.auth, v = a.view, logo = '<div class="logo"><img src="icon.svg" alt="">Spendly</div>';
+  const emailField = `<label class="field">Email<input name="email" type="email" required autocomplete="email" placeholder="you@example.com" value="${esc(a.email)}"></label>`;
+  const google = `<button type="button" class="btn secondary lg google" data-act="auth-google">${GOOGLE_LOGO} Continue with Google</button><div class="or"><span>or</span></div>`;
+  let body;
+  if (v === 'signup') body = `<form class="card" data-form="signup">${logo}
+    <div><h2 style="font-size:24px">Create your account</h2><p class="muted">Your data is private to you and saved to your account.</p></div>
+    ${google}${authMsg(a)}
     <label class="field">Name<input name="name" required placeholder="Ari Nolan" autocomplete="name"></label>
-    <label class="field">Currency<select name="currency">${Object.keys(RATES).map((c) => `<option>${c}</option>`).join('')}</select></label>
-    <p class="hint">This is your reporting currency (IDR is the default). Each wallet can still use its own currency.</p>
-    <button class="btn lg" type="submit">Get started</button></form></div>`;
+    ${emailField}
+    <label class="field">Password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label>
+    <label class="field">Reporting currency<select name="currency">${Object.keys(RATES).map((c) => `<option>${c}</option>`).join('')}</select></label>
+    <button class="btn lg" type="submit">Create account</button>
+    <p class="muted" style="text-align:center">We'll email you a link to confirm your address. Already have an account? ${authLink('signin', 'Sign in')}</p></form>`;
+  else if (v === 'forgot') body = `<form class="card" data-form="forgot">${logo}
+    <div><h2 style="font-size:24px">Reset your password</h2><p class="muted">Enter your email and we'll send you a reset link.</p></div>
+    ${authMsg(a)}${emailField}<button class="btn lg" type="submit">Send reset link</button>
+    <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></form>`;
+  else if (v === 'recovery') body = `<form class="card" data-form="recovery">${logo}
+    <div><h2 style="font-size:24px">Choose a new password</h2></div>${authMsg(a)}
+    <label class="field">New password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label>
+    <button class="btn lg" type="submit">Save password</button></form>`;
+  else if (v === 'sent') body = `<div class="card">${logo}
+    <div><h2 style="font-size:24px">Check your email</h2><p class="muted">We sent a link to <b>${esc(a.email)}</b>. Open it to confirm your address, then sign in. If you already have an account, just sign in.</p></div>
+    ${authMsg(a)}<button class="btn secondary lg" data-act="auth-resend">Resend the email</button>
+    <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></div>`;
+  else body = `<form class="card" data-form="signin">${logo}
+    <div><h2 style="font-size:24px">Welcome back</h2><p class="muted">Sign in to see your spending, budgets and net worth.</p></div>
+    ${google}${authMsg(a)}${emailField}
+    <label class="field">Password<input name="password" type="password" required autocomplete="current-password"></label>
+    <button class="btn lg" type="submit">Sign in</button>
+    <p class="muted" style="text-align:center">${authLink('forgot', 'Forgot password?')}</p>
+    <p class="muted" style="text-align:center">New here? ${authLink('signup', 'Create an account')}</p></form>`;
+  return `<div class="onboard">${body}</div>`;
 }
+const viewSplash = (msg) => `<div class="onboard"><div class="card" role="status"><div class="logo"><img src="icon.svg" alt="">Spendly</div><p class="muted">${esc(msg)}</p></div></div>`;
 
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: viewTransactions, budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
-  if (!D()) { app.innerHTML = viewOnboard(); return; }
+  const a = state.auth;
+  if (a.status === 'loading') { app.innerHTML = viewSplash('Loading…'); return; }
+  if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); return; }
+  if (!D()) {
+    app.innerHTML = a.loadError
+      ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Spendly</div><p class="auth-err" role="alert">Couldn't load your data: ${esc(a.loadError)}</p><button class="btn lg" data-act="retry-load">Try again</button><button class="btn secondary lg" data-act="signout">Sign out</button></div></div>`
+      : viewSplash('Loading your data…');
+    return;
+  }
   const r = VIEWS[route()] ? route() : 'overview';
   app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${VIEWS[r]()}</main></div>${bottomNav()}`;
   if (r === 'portfolio') bindValue(state.chart.months, state.chart.series, state.chart.vc);
@@ -704,6 +763,7 @@ function txnDialog(t, presetType) {
       <label class="field">Date<input name="date" type="date" required value="${t?.occurred_at || isoDate(new Date())}"></label></div>
     <label class="field">Category<select name="category">${catOptions(type, t?.category_id)}</select></label>
     <label class="field">Wallet<select name="wallet">${ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select></label>
+    ${D().occasions.some((o) => !o.archived || o.id === t?.occasion_id) ? `<label class="field">Special occasion (optional)<select name="occasion"><option value="">None</option>${D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id).map((o) => `<option value="${o.id}" ${o.id === t?.occasion_id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select></label>` : ''}
     <label class="field">Note<textarea name="note" maxlength="140" placeholder="e.g. Coffee shop">${esc(t?.note || '')}</textarea></label>
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + '">Delete</button>' : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
 }
@@ -715,6 +775,16 @@ function budgetDialog(b) {
     <label class="field">Monthly limit (${esc(cur())})<input name="amount" type="number" min="1" step="${expOf(cur()) ? '0.01' : '1'}" required value="${b ? toMajor(b.budget, cur()) : ''}"></label>
     <p class="hint">Applies from ${esc(monthLabel(state.ui.month))} onward until you set a new amount.</p>
     <div class="actions">${b ? `<button type="button" class="btn danger" data-act="delete-budget" data-id="${b.id}">Delete</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+}
+function occasionDialog(o) {
+  open(`<h2>${o ? 'Edit' : 'New'} special occasion</h2><form data-form="occasion" data-id="${o?.id || ''}" style="display:contents">
+    <label class="field">Name<input name="name" required maxlength="40" value="${esc(o?.name || '')}" placeholder="e.g. Bali Trip, Birthday Dinner" autofocus></label>
+    <div class="two">${o ? '' : `<label class="field">Currency<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
+      <label class="field">Budget${o ? ` (${esc(o.currency)})` : ''}<input name="amount" type="number" min="1" step="any" required value="${o ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
+    <div class="two"><label class="field">Starts (optional)<input name="start" type="date" value="${esc(o?.start || '')}"></label>
+      <label class="field">Ends (optional)<input name="end" type="date" value="${esc(o?.end || '')}"></label></div>
+    <p class="hint">Expenses you tag to this occasion still count in your monthly budgets. This budget is an extra view of what the occasion costs.</p>
+    <div class="actions">${o ? `<button type="button" class="btn danger" data-act="delete-occasion" data-id="${o.id}">Delete</button><button type="button" class="btn secondary" data-act="archive-occasion" data-id="${o.id}">${o.archived ? 'Reopen' : 'Archive'}</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
 }
 const SWATCHES = ['#4A44C6', '#8B8FF0', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#EF4444', '#0EA5E9', '#22C55E', '#94A3B8'];
 function catDialog(c, parentId) {
@@ -924,6 +994,11 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-budget') budgetDialog();
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
   else if (act === 'add-wallet') walletDialog();
+  else if (act === 'add-occasion') occasionDialog();
+  else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
+  else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
+  else if (act === 'delete-occasion') { D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
+  else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); state.ui.month = (o.start || isoDate(new Date())).slice(0, 7); location.hash = '#/transactions'; render(); }
   else if (act === 'pf-cur') { state.ui.pf = el.dataset.cur; render(); }
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
@@ -959,11 +1034,16 @@ document.addEventListener('click', (e) => {
     save(); close(); render(); toast('Category archived. Past transactions keep it.');
   }
   else if (act === 'notify') toast(budgetStatus(state.ui.month).some((b) => b.status !== 'ok') ? 'Some budgets are near or over their limit' : 'All budgets on track');
-  else if (act === 'revoke') toast('Other devices signed out');
+  else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); render(); toast('Wallet archived'); }
   else if (act === 'delete-txn') { D().transactions = D().transactions.filter((t) => t.id !== id); save(); close(); render(); toast('Transaction deleted'); }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
-  else if (act === 'signout') { try { localStorage.removeItem(KEY); } catch { /* ignore */ } state.data = null; render(); }
+  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.auth = { status: 'out', view: 'signin', email: '', notice: '', error: '' }; render(); });
+  else if (act === 'auth-view') { Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
+  else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
+  else if (act === 'auth-resend') Cloud.resend(state.auth.email).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); });
+  else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
+  else if (act === 'load-demo') loadDemo();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); });
 
@@ -1038,14 +1118,13 @@ document.addEventListener('submit', (e) => {
   const f = e.target, kind = f.dataset.form; if (!kind) return;
   e.preventDefault();
   const v = Object.fromEntries(new FormData(f));
-  if (kind === 'signup') {
-    const c = v.currency; state.data = seed(v.name.trim(), c); save(); location.hash = '#/overview'; render(); return;
-  }
+  if (['signin', 'signup', 'forgot', 'recovery'].includes(kind)) { submitAuth(kind, v, f); return; }
   if (kind === 'txn') {
     const type = v.type, wc = walletOf(v.wallet).currency, minor = toMinor(parseFloat(v.amount), wc), existing = f.dataset.id && D().transactions.find((t) => t.id === f.dataset.id);
     if (!(minor > 0)) { toast('Enter an amount above zero'); return; }
     const row = existing || { id: uid(), category_source: 'user', ai_confidence: null };
     Object.assign(row, { type, amount_minor: minor, currency: wc, occurred_at: v.date, wallet_id: v.wallet, note: v.note.trim(), category_id: v.category || null });
+    if (type === 'expense' && v.occasion) row.occasion_id = v.occasion; else delete row.occasion_id;
     let msg = existing ? 'Saved' : 'Transaction added';
     if (v.category) { row.category_source = 'user'; row.ai_confidence = null; }
     else {
@@ -1058,13 +1137,22 @@ document.addEventListener('submit', (e) => {
     state.ui.month = row.occurred_at.slice(0, 7) <= monthKey(new Date()) ? row.occurred_at.slice(0, 7) : state.ui.month;
     save(); close(); render(); toast(msg);
   }
+  if (kind === 'occasion') {
+    const existing = f.dataset.id && occasionOf(f.dataset.id), c = existing ? existing.currency : v.currency, minor = toMinor(parseFloat(v.amount), c), name = v.name.trim();
+    if (!name || !(minor > 0)) { toast('Enter a name and a budget above zero'); return; }
+    if (v.start && v.end && v.end < v.start) { toast('The end date is before the start date'); return; }
+    const fields = { name, amount_minor: minor, start: v.start || '', end: v.end || '' };
+    if (existing) Object.assign(existing, fields); else D().occasions.push({ id: uid(), currency: c, archived: false, ...fields });
+    save(); close(); render(); toast('Occasion saved'); return;
+  }
   if (kind === 'budget') {
     const minor = toMinor(parseFloat(v.amount), cur()), start = state.ui.month + '-01';
     if (f.dataset.id) { D().budgets.find((b) => b.id === f.dataset.id).amount_minor = minor; }
     else {
       const cat = v.category || null;
-      D().budgets = D().budgets.filter((b) => !(b.category_id === cat && b.start_month === start));
-      D().budgets.push({ id: uid(), category_id: cat, amount_minor: minor, currency: cur(), start_month: start });
+      const same = D().budgets.find((b) => b.category_id === cat && b.start_month === start);   // update in place: one budget per category and month
+      if (same) Object.assign(same, { amount_minor: minor, currency: cur() });
+      else D().budgets.push({ id: uid(), category_id: cat, amount_minor: minor, currency: cur(), start_month: start });
     }
     save(); close(); render(); toast('Budget saved');
   }
@@ -1163,7 +1251,71 @@ document.addEventListener('submit', (e) => {
 });
 
 window.addEventListener('hashchange', render);
-load(); render();
+window.addEventListener('beforeunload', (e) => { if (Cloud.pending > 0) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ---------- auth + data loading ---------- */
+const friendlyAuthError = (e) => (/invalid login/i.test(e.message) ? 'Wrong email or password.' : /already registered/i.test(e.message) ? 'That email already has an account. Try signing in.' : e.message);
+async function submitAuth(kind, v, f) {
+  const a = state.auth, btn = $('button[type=submit]', f);
+  if (btn) btn.disabled = true;
+  Object.assign(a, { error: '', notice: '' }); if (v.email) a.email = v.email.trim();
+  try {
+    if (kind === 'signin') {
+      const { error } = await Cloud.signIn(a.email, v.password);
+      if (error) {
+        if (/not confirmed/i.test(error.message)) Object.assign(a, { view: 'sent', notice: 'Your email is not confirmed yet. Open the link we sent you, or resend it below.' });
+        else a.error = friendlyAuthError(error);
+      }
+    } else if (kind === 'signup') {
+      const { data, error } = await Cloud.signUp(a.email, v.password, v.name.trim(), v.currency);
+      if (error) a.error = friendlyAuthError(error);
+      else if (!data.session) a.view = 'sent';   // email confirmation is on: wait for the link
+    } else if (kind === 'forgot') {
+      const { error } = await Cloud.reset(a.email);
+      if (error) a.error = error.message; else a.notice = 'If that email has an account, a reset link is on its way.';
+    } else if (kind === 'recovery') {
+      const { error } = await Cloud.setPassword(v.password);
+      if (error) a.error = error.message; else { a.view = 'signin'; toast('Password updated'); }
+    }
+  } catch (err) { a.error = err.message || 'Something went wrong. Try again.'; }
+  render();
+}
+
+async function onAuth(event, session) {
+  const a = state.auth;
+  if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
+  if (!session) { state.data = null; Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); return; }
+  a.email = session.user.email || a.email;
+  if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
+  Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
+  render(); loadUserData();
+}
+async function loadUserData() {
+  try {
+    state.data = await Cloud.load();
+    state.data.livePrices = loadPrices();
+    if (api.finnhub) refreshPrices(true);
+  } catch (err) { state.auth.loadError = err.message || 'network error'; }
+  render();
+}
+/* a failed save leaves the screen ahead of the database, so show the server's truth again */
+function onSaveError(err) {
+  console.error(err);
+  toast(`Couldn't save your last change (${String(err.message || err).slice(0, 80)}). Showing your saved data.`);
+  loadUserData();
+}
+async function loadDemo() {
+  const d = D();
+  if (d.transactions.length || d.budgets.length || d.holdings.length || d.loans.length || d.lent.length) { toast('Sample data can only be loaded into an empty account'); return; }
+  const s = seed(d.profile.name || 'You', cur());
+  // remove the starter categories and wallet first: the database keeps category names unique and the sample set reuses them
+  Object.assign(d, { categories: [], wallets: [] }); save(); await Cloud.idle();
+  if (state.data !== d) return;   // the save failed and the saved data was reloaded
+  Object.assign(d, { categories: s.categories, wallets: s.wallets, transactions: s.transactions, budgets: s.budgets, investments: s.investments, holdings: s.holdings, customAssets: s.customAssets, loans: s.loans, lent: s.lent });
+  save(); render(); toast('Sample data loaded');
+}
+if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);
+else { Object.assign(state.auth, { status: 'out', error: 'The app is not connected to Supabase (missing config).' }); render(); }
 /* live fiat rates replace the demo ones (works without a Finnhub key; falls back silently) */
 getJSON(`/api/fx?currencies=${Object.keys(RATES).join(',')}`).then((fx) => {
   Object.assign(RATES, fx.rates); api.fx = { source: fx.source, date: fx.date };

@@ -270,3 +270,9 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
   .fab svg { width: 26px; height: 26px; }
   .card { padding: 20px; border-radius: 22px; }
 }
+
+/* auth */
+.auth-err { font-size: 13px; color: #b42318; background: #fee4e2; border-radius: 12px; padding: 8px 12px; }
+.btn.google { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--soft); }

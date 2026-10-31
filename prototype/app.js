@@ -269,7 +269,7 @@ function budgetStatus(k) {
     const pct = (spent * 100) / b.amount_minor;
     const status = spent > b.amount_minor ? 'exceeded' : pct >= 80 ? 'warning' : 'ok';
     const c = catOf(b.category_id);
-    return { id: b.id, category_id: b.category_id, name: c ? c.name : 'All spending', icon: c ? c.icon : '💰', color: c ? c.color : '#4A44C6', budget: b.amount_minor, spent, remaining: b.amount_minor - spent, pct, status, start_month: b.start_month };
+    return { id: b.id, category_id: b.category_id, name: c ? c.name : __('All spending'), icon: c ? c.icon : '💰', color: c ? c.color : '#4A44C6', budget: b.amount_minor, spent, remaining: b.amount_minor - spent, pct, status, start_month: b.start_month };
   }).sort((a, b) => (a.category_id === null ? -1 : b.category_id === null ? 1 : a.name.localeCompare(b.name)));
 }
 
@@ -395,7 +395,7 @@ function halfDonut(items, total) {
   };
   const dots = Array.from({ length: N }, (_, i) => { const a = Math.PI + (Math.PI * (i + 0.5)) / N; return `<circle cx="${(cx + (r - 20) * Math.cos(a)).toFixed(1)}" cy="${(cy + (r - 20) * Math.sin(a)).toFixed(1)}" r="4.5" fill="${colors[i]}"/>`; }).join('');
   return `<div class="donut"><svg viewBox="0 0 440 240" class="chart" role="img" aria-label="${__('Spending by category')}">${Array.from({ length: N }, (_, i) => seg(i)).join('')}${dots}</svg>
-    <div class="center"><p>Spent in ${esc(monthLabel(state.ui.month).split(' ')[0])}</p><b class="num" style="--len:${money(total, cur()).length}">${money(total, cur())}</b></div></div>`;
+    <div class="center"><p>${__('Spent in {month}', { month: esc(monthLabel(state.ui.month).split(' ')[0]) })}</p><b class="num" style="--len:${money(total, cur()).length}">${money(total, cur())}</b></div></div>`;
 }
 
 function valueChart(months, usd, vc) {
@@ -468,7 +468,7 @@ function loanCard(l, vc, kind = 'loan') {
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
     <div class="bar"><i style="width:${pct}%;${lent ? 'background:#1fa971' : ''}"></i></div>
-    <div class="loan-meta"><span>${pct}% ${lent ? 'repaid' : 'paid'} · ${shown(paid)} of ${shown(l.original_minor)}</span><span>${meta}</span></div>
+    <div class="loan-meta"><span>${__(lent ? '{pct}% repaid · {paid} of {total}' : '{pct}% paid · {paid} of {total}', { pct, paid: shown(paid), total: shown(l.original_minor) })}</span><span>${meta}</span></div>
     ${bal === 0 ? `<p class="hint" style="margin-top:10px">${lent ? __('Fully repaid. You can archive this.') : __('Paid off. You can archive this.')}</p>` : ''}
     ${recent.length ? `<div class="list" style="margin-top:10px">${recent.map((p) => `<div class="pay-row"><span>${esc(new Date(p.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }))}</span><span class="num">${shown(p.amount_minor)}</span><button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: word })}">×</button></div>`).join('')}</div>` : `<p class="muted" style="margin-top:10px">${__('No {what}s yet.', { what: word })}</p>`}</section>`;
 }
@@ -575,7 +575,7 @@ function paymentDialog(l, kind = 'loan') {
     <div class="two"><label class="field">${__('Amount ({cur})', { cur: esc(l.currency) })}<input name="amount" type="number" min="0" step="any" required value="${l.monthly_minor ? toMajor(l.monthly_minor, l.currency) : ''}" autofocus></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
     <p class="hint">${lent ? __('Repayments lower what you are owed. They are not counted as income.') : __('Payments lower the loan balance and your debt in net worth. They are not counted as spending.')}</p>
-    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">Save ${lent ? 'repayment' : 'payment'}</button></div></form>`);
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${lent ? __('Save repayment') : __('Save payment')}</button></div></form>`);
 }
 
 /* ---------- views ---------- */
@@ -716,6 +716,7 @@ function viewSettings() {
   <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
     <div class="form-row"><div>${__('Display name')}<small>${__('Shown in the greeting')}</small></div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
     <div class="form-row"><div>${__('Reporting currency')}<small>${__('Used for totals, budgets and charts. Wallets keep their own currency; budgets convert at demo rates.')}</small></div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
+    <div class="form-row"><div>${__('Language')}<small>${__('Language for menus and messages.')}</small></div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
   <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
     <div class="form-row"><div>${__('AI category suggestions')}<small>${__('After about 30 labeled transactions, uncategorized ones are tagged from your history. If unsure it stays empty.')}</small></div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
   <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
@@ -856,7 +857,7 @@ const close = () => dlg().open && dlg().close();
 const catOptions = (type, sel) => `<option value="">${__('— None (AI may suggest) —')}</option>${catTree(type).map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}`;
 
 /* parents a new category can live in: none (a new top-level category) or an existing top-level one of this type */
-const quickParentOptions = (type) => `<option value="">${__('Nothing: a new top-level category')}</option>${D().categories.filter((c) => !c.parent_id && !c.archived && c.type === type).map((c) => `<option value="${c.id}">${c.icon} ${esc(c.name)} (as a sub-category)</option>`).join('')}`;
+const quickParentOptions = (type) => `<option value="">${__('Nothing: a new top-level category')}</option>${D().categories.filter((c) => !c.parent_id && !c.archived && c.type === type).map((c) => `<option value="${c.id}">${c.icon} ${esc(c.name)} ${__('(as a sub-category)')}</option>`).join('')}`;
 /* add a category without leaving the transaction form, then select it */
 function quickAddCategory(form) {
   const type = form.type.value === 'income' ? 'income' : 'expense', name = form.qc_name.value.trim(), parent = form.qc_parent.value ? catOf(form.qc_parent.value) : null;
@@ -942,9 +943,9 @@ function txnDialog(t, presetType, presetOccasion) {
 }
 function budgetDialog(b) {
   const used = new Set(D().budgets.map((x) => x.category_id));
-  const opts = [{ id: '', name: '💰 All spending (global)' }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: `${c.icon} ${c.name}` }))];
+  const opts = [{ id: '', name: '💰 ' + __('All spending (global)') }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: `${c.icon} ${c.name}` }))];
   open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2><form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
-    <label class="field">${__('Applies to')}<select name="category" ${b ? 'disabled' : ''}>${opts.map((o) => `<option value="${o.id}" ${o.id === (b?.category_id || '') ? 'selected' : ''}>${esc(o.name)}${!b && used.has(o.id || null) ? ' (replace)' : ''}</option>`).join('')}</select></label>
+    <label class="field">${__('Applies to')}<select name="category" ${b ? 'disabled' : ''}>${opts.map((o) => `<option value="${o.id}" ${o.id === (b?.category_id || '') ? 'selected' : ''}>${esc(o.name)}${!b && used.has(o.id || null) ? ' ' + __('(replace)') : ''}</option>`).join('')}</select></label>
     <label class="field">${__('Monthly limit ({cur})', { cur: esc(cur()) })}<input name="amount" type="number" min="1" step="${expOf(cur()) ? '0.01' : '1'}" required value="${b ? toMajor(b.budget, cur()) : ''}"></label>
     <p class="hint">${__('Applies from {month} onward until you set a new amount.', { month: esc(monthLabel(state.ui.month)) })}</p>
     <div class="actions">${b ? `<button type="button" class="btn danger" data-act="delete-budget" data-id="${b.id}">${__('Delete')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -953,7 +954,7 @@ function occasionDialog(o) {
   open(`<h2>${o ? __('Edit special occasion') : __('New special occasion')}</h2><form data-form="occasion" data-id="${o?.id || ''}" style="display:contents">
     <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}" autofocus></label>
     <div class="two">${o ? '' : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
-      <label class="field">Budget${o ? ` (${esc(o.currency)})` : ''}<input name="amount" type="number" min="1" step="any" required value="${o ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
+      <label class="field">${o ? __('Budget ({cur})', { cur: esc(o.currency) }) : __('Budget')}<input name="amount" type="number" min="1" step="any" required value="${o ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
     <div class="two"><label class="field">${__('Starts (optional)')}<input name="start" type="date" value="${esc(o?.start || '')}"></label>
       <label class="field">${__('Ends (optional)')}<input name="end" type="date" value="${esc(o?.end || '')}"></label></div>
     <p class="hint">${__('Expenses you tag to this occasion still count in your monthly budgets. This budget is an extra view of what the occasion costs.')}</p>
@@ -998,7 +999,7 @@ function walletDialog(w) {
   const types = [['cash', 'Cash'], ['bank', 'Bank'], ['ewallet', 'E-wallet'], ['card', 'Card']];
   open(`<h2>${w ? __('Edit wallet') : __('Add wallet')}</h2><form data-form="wallet" data-id="${w?.id || ''}" style="display:contents">
     <label class="field">${__('Name')}<input name="name" required maxlength="40" placeholder="${__('Savings')}" value="${esc(w?.name || '')}"></label>
-    <div class="two"><label class="field">${__('Type')}<select name="type">${types.map(([k, n]) => `<option value="${k}" ${k === w?.type ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    <div class="two"><label class="field">${__('Type')}<select name="type">${types.map(([k, n]) => `<option value="${k}" ${k === w?.type ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></label>
     ${w ? `<label class="field">${__('Currency')}<input value="${esc(w.currency)}" disabled></label>`
       : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''}>${x}</option>`).join('')}</select></label>`}</div>
     <label class="field">${w ? __('Current balance ({cur})', { cur: esc(w.currency) }) : __('Opening balance')}<input name="${w ? 'balance' : 'opening'}" type="number" step="any" required value="${w ? toMajor(walletBalance(w), w.currency) : 0}"></label>
@@ -1020,7 +1021,7 @@ function holdingDialog(h, accId, opts = {}) {
     ${invest ? kindSeg('invest') : ''}
     <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(typeLabel(info.type))}</span></p>` : `
-    <div class="field" id="picker">Asset
+    <div class="field" id="picker">${__('Asset')}
       <div class="pills" role="group" aria-label="${__('Asset type')}"><button type="button" class="pill on" data-act="pick-type" data-type="">${__('All')}</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">${__('Crypto')}</button><button type="button" class="pill" data-act="pick-type" data-type="stock">${__('US stocks &amp; ETFs')}</button></div>
       <input name="assetq" autocomplete="off" placeholder="${__('Search name or ticker, e.g. BTC, AAPL, VOO')}" autofocus>
       <div class="results" id="asset-results" role="listbox" hidden></div>
@@ -1258,7 +1259,7 @@ document.addEventListener('change', (e) => {
     else if (t.value === 'transfer') transferDialog();
     else { $('select[name=category]', t.form).innerHTML = catOptions(t.value); $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value); }
   }
-  else if (t.matches('[data-lang]')) { setLang(t.value); render(); }
+  else if (t.matches('[data-lang]')) { setLang(t.value); if (state.data && !state.real) { state.data.profile.language = LANG; save(); } render(); }
   else if (t.matches('[data-demo]')) setDemo(t.checked);
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
@@ -1560,6 +1561,7 @@ async function loadUserData() {
     state.data = await Cloud.load();
     state.data.livePrices = loadPrices();
     if (api.finnhub) refreshPrices(true);
+    if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
     if (demoWanted()) await setDemo(true);
   } catch (err) { state.auth.loadError = err.message || 'network error'; }
   render();
@@ -1588,7 +1590,7 @@ async function setDemo(on) {
   Object.assign(state.ui, { pf: null, pfTab: 'savings', cat: '', wallet: '', occ: '', q: '' });
   render();
 }
-const demoBar = () => `<div class="demo-bar" role="status"><span>${__('🧪 You\'re viewing')} <b>${__('sample data')}</b>${__('. Your own data is safe, and changes made here aren\'t saved.')}</span><button class="btn secondary" data-act="demo-off">${__('Back to my data')}</button></div>`;
+const demoBar = () => `<div class="demo-bar" role="status"><span>${__("🧪 You're viewing {sample}. Your own data is safe, and changes made here aren't saved.", { sample: '<b>' + __('sample data') + '</b>' })}</span><button class="btn secondary" data-act="demo-off">${__('Back to my data')}</button></div>`;
 function removeSample() {
   const d = D(), smp = d.profile.sample; if (!smp) return;
   const is = (k, id) => (smp[k] || []).includes(id);

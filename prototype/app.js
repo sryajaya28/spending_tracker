@@ -509,13 +509,20 @@ function archivedWallets() {
 }
 /* every list on Portfolio is sorted from the highest amount (compared in one currency) */
 const byValue = (val) => (a, b) => val(b) - val(a);
-const walletCards = () => D().wallets.filter((w) => !w.archived).sort(byValue((w) => toUSD(walletBalance(w), w.currency))).map((w) => {
+const walletCard = (w) => {
   const open = state.ui.walletMenu === w.id;
   return `<div class="wallet"><div class="wtop"><div class="wtitle"><b class="wname">${esc(w.name)}</b><span class="kind">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span></div>
     <div class="menu-wrap"><button type="button" class="dots" data-act="wallet-menu" data-id="${w.id}" aria-label="${__('More actions')}" aria-haspopup="menu" aria-expanded="${open}">⋯</button>
       ${open ? `<div class="menu" role="menu"><button type="button" role="menuitem" data-act="edit-wallet" data-id="${w.id}">${__('Edit')}</button><button type="button" role="menuitem" class="warn" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button></div>` : ''}</div></div>
     <b class="num bal">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}</div>`;
-}).join('');
+};
+/* the biggest 3 accounts show first; See more / Show less toggles the rest */
+const walletCards = () => {
+  const all = D().wallets.filter((w) => !w.archived).sort(byValue((w) => toUSD(walletBalance(w), w.currency))), more = !!state.ui.walletsMore, rest = all.length - 3;
+  return (more || rest <= 0 ? all : all.slice(0, 3)).map(walletCard).join('')
+    + (rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : '');
+};
+
 
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
 function loanCard(l, vc, kind = 'loan') {
@@ -1415,6 +1422,7 @@ document.addEventListener('click', (e) => {
   }
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
+  else if (act === 'toggle-more') { state.ui.walletsMore = !state.ui.walletsMore; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }
   else if (act === 'delete-wallet') {

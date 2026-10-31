@@ -511,3 +511,6 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
 
 /* Portfolio breakdown: assets add up to 100%; loans are a deduction, shown apart and without a share */
 .alloc-debt { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+.see-more { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; background: none; border: 0; color: var(--brand); font: inherit; font-weight: 600; padding: 8px; border-radius: 12px; }
+.see-more:hover { background: var(--soft); }

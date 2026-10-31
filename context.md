@@ -274,6 +274,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio > Savings shows the 3 largest accounts, then "See more (n)" / "Show less" (`state.ui.walletsMore`).
+
 - 2026-10-31: Portfolio Breakdown: removed the stacked bar; Savings, Investments and Lent show their share of assets, and Loans sit apart
   as "Less: Loans" (a deduction, no percentage).
 

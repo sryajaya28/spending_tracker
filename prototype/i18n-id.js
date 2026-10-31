@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "See more ({n})": "Lihat lainnya ({n})",
+ "Show less": "Tampilkan lebih sedikit",
  "Less: Loans": "Dikurangi: Pinjaman",
  "Day {n}": "Tanggal {n}",
  "Day 1 (calendar month)": "Tanggal 1 (bulan kalender)",

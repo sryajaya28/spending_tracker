@@ -9,7 +9,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle()), txt = () => p.evaluate(() => document.body.innerText);
   const bal = (name) => p.evaluate((n) => { const w = D().wallets.find((x) => x.name === n); return walletBalance(w); }, name);
   // only one wallet: refused with a message
-  await p.click('[data-act=transfer]'); await p.waitForTimeout(100); assert((await txt()).includes('Add a second wallet'));
+  await p.click('[data-act=transfer]'); await p.waitForTimeout(100); assert((await txt()).includes('Add a second account'));
   await p.evaluate(() => { const m = monthKey(new Date()); D().wallets[0].name = 'Cash'; D().wallets[0].opening_balance_minor = 50000;
     D().wallets.push({ id: uid(), name: 'Bank', type: 'bank', currency: 'IDR', opening_balance_minor: 1000000, since: m, archived: false }, { id: uid(), name: 'USD Savings', type: 'bank', currency: 'USD', opening_balance_minor: 100000, since: m, archived: false }); save(); render(); });
   await settle(); await log();

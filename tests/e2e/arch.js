@@ -12,12 +12,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('[data-act=add-wallet]'); await p.fill('input[name=name]', 'Spare'); await p.click('#dlg button[type=submit]'); await settle(); await log();
   assert((await p.$$('.wallet')).length === 2);
   await p.click('.wallet:nth-child(2) .dots'); await p.click('.wallet:nth-child(2) [data-act=archive-wallet]'); await settle(); await log();
-  assert((await p.$$('.wallet')).length === 1); assert((await txt()).includes('Archived wallets (1)'));
+  assert((await p.$$('.wallet')).length === 1); assert((await txt()).includes('Archived accounts (1)'));
   await p.click('[data-act=toggle-arch]'); assert((await txt()).includes('Spare'));
   await p.click('[data-act=restore-wallet]'); await settle(); await log(); assert((await p.$$('.wallet')).length === 2);
   await p.click('.wallet:nth-child(2) .dots'); await p.click('.wallet:nth-child(2) [data-act=archive-wallet]'); await settle(); await log();
   await p.click('[data-act=delete-wallet]'); await settle(); let l = await log();
-  assert(l.some((o) => o.op === 'delete' && o.table === 'wallets'), JSON.stringify(l)); assert(!(await txt()).includes('Archived wallets'));
+  assert(l.some((o) => o.op === 'delete' && o.table === 'wallets'), JSON.stringify(l)); assert(!(await txt()).includes('Archived accounts'));
   // a wallet with a transaction can't be deleted
   await p.evaluate(() => { const w = { id: uid(), name: 'Old', type: 'bank', currency: 'IDR', opening_balance_minor: 0, since: monthKey(new Date()), archived: true }; D().wallets.push(w);
     D().transactions.push({ id: uid(), wallet_id: w.id, category_id: null, type: 'expense', amount_minor: 1000, currency: 'IDR', occurred_at: isoDate(new Date()), note: '', category_source: 'user', ai_confidence: null }); save(); render(); });

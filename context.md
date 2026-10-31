@@ -62,7 +62,7 @@ infrastructure names, see section 8).
   lists rules with Pause/Resume (skips what was missed) and delete (past entries stay). Monthly keeps the day-of-month, clamped to short months.
 - **Budgets:** overall + per-category monthly budgets; Overview shows horizontal bars with percentages; **special
   occasions** (one-off budgets with optional dates, tagged expenses, archive/delete).
-- **Portfolio** tabs: Savings (wallets in any currency, compact cards with a ⋯ menu, archive/restore/delete, edit
+- **Portfolio** tabs: Savings (accounts, called wallets in the code, in any currency, compact cards with a ⋯ menu, archive/restore/delete, edit
   name/type/current balance, **transfers between wallets** with optional fee and cross-currency received amount),
   Investment (accounts, holdings, buy/sell with a wallet or USDT/USDC counterpart, live prices via Finnhub),
   Lent, Loan (payments reduce balance).
@@ -267,6 +267,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: UI wording: savings "wallets" are now called **accounts** everywhere in the interface (English and Indonesian "Akun");
+  code, database and the E-wallet type keep the wallet names. The add-transaction account list always has an
+  "Investment accounts (USDT/USDC)" group, with a hint when no stablecoin is held yet.
 
 - 2026-10-31: USDT/USDC income and expenses (migration 15 applied to production). `recordCoinTxn`, `coinOf`, `txnWhere`; the cloud layer
   stores trade `kind` in `holding_events.note`. e2e `coin`. Amounts are USD at 1 coin = 1 USD (no live peg price).

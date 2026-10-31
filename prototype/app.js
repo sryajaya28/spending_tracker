@@ -476,7 +476,7 @@ function holdingRow(h, vc, accTotal) {
 function archivedWallets() {
   const list = D().wallets.filter((w) => w.archived); if (!list.length) return '';
   const open = state.ui.archOpen;
-  return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>${__('Archived wallets ({n})', { n: list.length })}</b></button>
+  return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>${__('Archived accounts ({n})', { n: list.length })}</b></button>
     ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
       return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
         <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">${__('Restore')}</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">${__('Delete')}</button></div></div>`; }).join('') : ''}</div>`;
@@ -527,13 +527,13 @@ function viewPortfolio() {
   }).reverse().join('');
   const noData = series.every((v) => !v);   // nothing to chart yet: say so instead of a flat line and a table of zeros
   const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
-    <div class="empty sm">${__('Nothing to chart yet. This fills in as you add {what}.', { what: { savings: __('wallets'), investment: __('investments'), lent: __('money you lent'), loan: __('loans') }[tab] })}</div></section>`
+    <div class="empty sm">${__('Nothing to chart yet. This fills in as you add {what}.', { what: { savings: __('accounts'), investment: __('investments'), lent: __('money you lent'), loan: __('loans') }[tab] })}</div></section>`
     : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
     ${valueChart(rm, series, vc)}<div class="mlist">${months6}</div></section>`;
 
   let body = '';
   if (tab === 'savings') {
-    body = `<section class="card"><div class="card-head"><div><h2>${__('Savings and wallets')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><div class="tools"><button class="btn secondary" data-act="transfer">${__('Transfer')}</button><button class="btn" data-act="add-wallet">${__('+ Wallet')}</button></div></div>
+    body = `<section class="card"><div class="card-head"><div><h2>${__('Savings accounts')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><div class="tools"><button class="btn secondary" data-act="transfer">${__('Transfer')}</button><button class="btn" data-act="add-wallet">${__('+ Account')}</button></div></div>
       <div class="wallets">${walletCards()}</div>${archivedWallets()}</section>${growth}`;
   } else if (tab === 'investment') {
     const byType = {};
@@ -646,7 +646,7 @@ function viewOverview() {
   const recent = D().transactions.slice(0, 6);
   return `${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
-    <section class="card hero"><div class="label">${__('Total Balance')} <span>${__('{n} wallets', { n: D().wallets.filter((w) => !w.archived).length })}</span></div>
+    <section class="card hero"><div class="label">${__('Total Balance')} <span>${__('{n} accounts', { n: D().wallets.filter((w) => !w.archived).length })}</span></div>
       <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
       <div class="delta"><b>${saved >= 0 ? '+' : ''}${saved}%</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       ${sparkline(bal)}
@@ -716,7 +716,7 @@ function viewTransactions() {
     <div class="filters scroll-row">${monthSelect(true)}
       <select data-filter="cat" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
       ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" aria-label="${__('Wallet')}"><option value="">${__('All wallets')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))}</option>`).join('')}</select></div>
+      <select data-filter="wallet" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))}</option>`).join('')}</select></div>
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 
@@ -819,19 +819,19 @@ function viewLanding() {
         <div class="mock-row"><span>🎉 ${__('Bali Trip')}</span><span>41%</span></div><div class="bar"><i class="ok" style="width:41%"></i></div></div>
     </div>
   </section>
-  <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, check your budgets, and move money between wallets.')}</p>
+  <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, check your budgets, and move money between accounts.')}</p>
     <div class="demo-frame"><video controls playsinline preload="metadata" poster="media/demo-poster.jpg" aria-label="${__('Stiver demo video')}"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div></section>
   <section class="land-sec"><h2>${__('Everything you need, nothing you don’t')}</h2>
     <div class="feats">
       ${feat('💸', 'Spending that makes sense', 'Log expenses and income in seconds, with categories and sub-categories that roll up into clear monthly totals.')}
       ${feat('🎯', 'Budgets that keep you honest', "Set an overall limit or one per category, and see at a glance when you're close. Add special budgets for trips and celebrations.")}
-      ${feat('👛', 'Savings across wallets and currencies', 'Cash, bank accounts and e-wallets in any currency, with easy transfers between them.')}
+      ${feat('👛', 'Savings across accounts and currencies', 'Cash, bank accounts and e-wallets in any currency, with easy transfers between them.')}
       ${feat('📈', 'Investments with live prices', 'Track stocks, ETFs and crypto with current prices, buys and sells.')}
       ${feat('🤝', 'Loans and money you lent', "Know what you owe and what you're owed, and record each payment as it happens.")}
       ${feat('🌱', 'Net worth over time', 'See everything together and how it changes month by month.')}
     </div></section>
   <section class="land-sec"><h2>${__('How it works')}</h2>
-    <ol class="steps">${step(1, 'Create your account with email or Google.')}${step(2, 'Add your wallets and your first transactions.')}${step(3, 'See your full picture on every device.')}</ol></section>
+    <ol class="steps">${step(1, 'Create your account with email or Google.')}${step(2, 'Add your accounts and your first transactions.')}${step(3, 'See your full picture on every device.')}</ol></section>
   <section class="land-final"><h2>${__('Ready to take control of your money?')}</h2><button class="btn lg" data-act="auth-view" data-view="signup">${__('Create your account')}</button></section>
   <footer class="land-foot"><span>© ${new Date().getFullYear()} Stiver</span><span><a href="privacy.html">${__('Privacy Policy')}</a> · <a href="terms.html">${__('Terms of Service')}</a></span></footer>
 </div>`;
@@ -930,10 +930,10 @@ const kindSeg = (active) => `<div class="seg seg4">${[['expense', 'Expense'], ['
    are not income or spending; the fee is spending. */
 function transferDialog(preset) {
   const ws = D().wallets.filter((w) => !w.archived);
-  if (ws.length < 2) { toast('Add a second wallet first to transfer between wallets'); return; }
+  if (ws.length < 2) { toast('Add a second account first to transfer between accounts'); return; }
   const from = preset?.from || ws[0], to = ws.find((w) => w.id !== from.id);
   const opt = (w, sel) => `<option value="${w.id}" ${w.id === sel ? 'selected' : ''}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`;
-  open(`<h2>${__('Transfer between wallets')}</h2><form data-form="transfer" style="display:contents">
+  open(`<h2>${__('Transfer between accounts')}</h2><form data-form="transfer" style="display:contents">
     ${kindSeg('transfer')}
     <div class="two"><label class="field">${__('From')}<select name="from">${ws.map((w) => opt(w, from.id)).join('')}</select></label>
       <label class="field">${__('To')}<select name="to">${ws.map((w) => opt(w, to.id)).join('')}</select></label></div>
@@ -943,7 +943,7 @@ function transferDialog(preset) {
     <label class="field"><span data-fee-label>${__('Transfer fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
     <label class="field">${__('Note (optional)')}<input name="note" maxlength="140" placeholder="${__('e.g. Top up e-wallet')}"></label>
     ${repeatField()}
-    <p class="hint">${__('A transfer is not income or spending. If you enter a fee it is taken from the source wallet on top of the amount and counts as spending.')}</p>
+    <p class="hint">${__('A transfer is not income or spending. If you enter a fee it is taken from the source account on top of the amount and counts as spending.')}</p>
     <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Transfer')}</button></div></form>`);
   syncTransfer($('#dlg form'));
 }
@@ -966,7 +966,7 @@ function transferDetail(gid) {
     ${row('From', esc(walletOf(out?.wallet_id)?.name || '—'))}${row('To', esc(walletOf(inn?.wallet_id)?.name || '—'))}
     ${out ? row('Sent', money(out.amount_minor, out.currency)) : ''}${inn ? row('Received', money(inn.amount_minor, inn.currency)) : ''}${fee ? row('Fee', money(fee.amount_minor, fee.currency)) : ''}
     ${row('Date', esc(new Date((out || inn || fee).occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })))}
-    <p class="hint">${__('Deleting removes the transfer and its fee, and both wallet balances go back to what they were.')}</p>
+    <p class="hint">${__('Deleting removes the transfer and its fee, and both account balances go back to what they were.')}</p>
     <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">${__('Delete transfer')}</button><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
 }
 /* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
@@ -1005,7 +1005,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
       <label class="field">${__('Inside')}<select name="qc_parent">${quickParentOptions(type)}</select></label>
       <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">${__('Cancel')}</button><button type="button" class="btn" data-act="quick-cat-add">${__('Add category')}</button></div></div>
     ${live.length ? `<label class="field">${__('🎉 Special occasion (optional)')}<select name="occasion"><option value="">${__('None')}</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
-    <label class="field">${tcoin ? __('Paid from / received in') : __('Wallet')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : ''}${tcoin ? '' : ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}${!tcoin && coins.length ? `<optgroup label="${__('Investment accounts (USDT/USDC)')}">${coins.map((h) => coinOption(h)).join('')}</optgroup>` : ''}</select></label>
+    <label class="field">${tcoin ? __('Paid from / received in') : __('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : ''}${tcoin ? '' : ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}${!tcoin ? `<optgroup label="${__('Investment accounts (USDT/USDC)')}">${coins.length ? coins.map((h) => coinOption(h)).join('') : `<option disabled>${__('No USDT/USDC yet. Add one under Portfolio > Investment')}</option>`}</optgroup>` : ''}</select></label>
     <label class="field">${__('Note')}<textarea name="note" maxlength="140" placeholder="${__('e.g. Coffee shop')}">${esc(t?.note || '')}</textarea></label>
     ${t ? '' : repeatField()}
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + ('">' + __('Delete') + '</button>') : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -1066,13 +1066,13 @@ function breakdownDialog(selId) {
 
 function walletDialog(w) {
   const types = [['cash', 'Cash'], ['bank', 'Bank'], ['ewallet', 'E-wallet'], ['card', 'Card']];
-  open(`<h2>${w ? __('Edit wallet') : __('Add wallet')}</h2><form data-form="wallet" data-id="${w?.id || ''}" style="display:contents">
+  open(`<h2>${w ? __('Edit account') : __('Add account')}</h2><form data-form="wallet" data-id="${w?.id || ''}" style="display:contents">
     <label class="field">${__('Name')}<input name="name" required maxlength="40" placeholder="${__('Savings')}" value="${esc(w?.name || '')}"></label>
     <div class="two"><label class="field">${__('Type')}<select name="type">${types.map(([k, n]) => `<option value="${k}" ${k === w?.type ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></label>
     ${w ? `<label class="field">${__('Currency')}<input value="${esc(w.currency)}" disabled></label>`
       : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''}>${x}</option>`).join('')}</select></label>`}</div>
     <label class="field">${w ? __('Current balance ({cur})', { cur: esc(w.currency) }) : __('Opening balance')}<input name="${w ? 'balance' : 'opening'}" type="number" step="any" required value="${w ? toMajor(walletBalance(w), w.currency) : 0}"></label>
-    <p class="hint">${w ? __("Changing the balance adjusts this wallet's starting amount, so your past transactions stay exactly as they are. The currency can't be changed because existing transactions use it.") : __('Pick any currency, for example USD for savings. Totals convert to your reporting currency ({cur}).', { cur: esc(cur()) })}</p>
+    <p class="hint">${w ? __("Changing the balance adjusts this account's starting amount, so your past transactions stay exactly as they are. The currency can't be changed because existing transactions use it.") : __('Pick any currency, for example USD for savings. Totals convert to your reporting currency ({cur}).', { cur: esc(cur()) })}</p>
     <div class="actions">${w ? `<button type="button" class="btn danger" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${w ? __('Save') : __('Add')}</button></div></form>`);
 }
 
@@ -1109,7 +1109,7 @@ function holdingDialog(h, accId, opts = {}) {
       <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
     ${invest ? `<label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>` : ''}
     ${invest ? repeatField() : ''}
-    <p class="hint">${invest ? __('The money leaves the wallet (or your USDT/USDC balance) and the asset is added to your investments. It is not counted as spending.') : __('Choose a payment source if you just bought it. Leave it as "Already owned" for assets you held before.')}</p>`}
+    <p class="hint">${invest ? __('The money leaves the account (or your USDT/USDC balance) and the asset is added to your investments. It is not counted as spending.') : __('Choose a payment source if you just bought it. Leave it as "Already owned" for assets you held before.')}</p>`}
     <div class="actions">${h ? `<button type="button" class="btn danger" data-act="delete-holding" data-id="${h.id}">${__('Remove')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${h ? __('Close') : __('Cancel')}</button><button class="btn" type="submit">${h ? __('Save') : invest ? __('Invest') : __('Add asset')}</button></div></form>`);
   if (!h) syncFund($('#dlg form'));
 }
@@ -1132,7 +1132,7 @@ function sourceOptions(side, h, selected) {
   const held = new Set(st.filter((x) => x.account_id === h?.account_id).map((x) => x.symbol));
   const fresh = h && side === 'sell' ? ['USDT', 'USDC'].filter((s) => !held.has(s) && s !== h.symbol) : [];
   const sel = (v) => (v === selected ? 'selected' : '');
-  return `<optgroup label="Wallets">${ws.map((w) => `<option value="w:${w.id}" ${sel('w:' + w.id)}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</optgroup>`
+  return `<optgroup label="Accounts">${ws.map((w) => `<option value="w:${w.id}" ${sel('w:' + w.id)}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</optgroup>`
     + (st.length || fresh.length ? `<optgroup label="Stablecoins">${st.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(assetInfo(x.symbol).symbol)} · ${qtyFmt(x.quantity)} held (${esc(accountName(x.account_id))})</option>`).join('')}${fresh.map((s) => `<option value="n:${s}" ${sel('n:' + s)}>${s} · new in ${esc(accountName(h.account_id))}</option>`).join('')}</optgroup>` : '');
 }
 function parseSource(val) {
@@ -1190,7 +1190,7 @@ function tradeList(h) {
   const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), sym = assetInfo(h.symbol).symbol;
   if (!trades.length) return ('<p class="muted" style="font-size:13px">' + __('No buys or sells recorded yet.') + '</p>');
   return `<div class="list">${trades.map((tr) => {
-    const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('wallet'))}`;
+    const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('account'))}`;
     return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
   }).join('')}</div>`;
 }
@@ -1221,7 +1221,7 @@ function syncTradeForm(form, rebuild) {
 function tradeHint(form) {
   const h = D().holdings.find((x) => x.id === form.dataset.id), src = parseSource(form.source.value), q = parseFloat(form.quantity.value), a = parseFloat(form.amount.value);
   const hint = $('#trade-hint', form), buy = form.side.value === 'buy';
-  const base = src?.kind === 'wallet' ? (buy ? __('The money leaves that wallet. Not counted as spending or income.') : __('The money goes into that wallet. Not counted as spending or income.')) : (buy ? __('The coins are taken from your stablecoin balance. Not counted as spending or income.') : __('The coins are added to your stablecoin balance. Not counted as spending or income.'));
+  const base = src?.kind === 'wallet' ? (buy ? __('The money leaves that account. Not counted as spending or income.') : __('The money goes into that account. Not counted as spending or income.')) : (buy ? __('The coins are taken from your stablecoin balance. Not counted as spending or income.') : __('The coins are added to your stablecoin balance. Not counted as spending or income.'));
   if (!h || !src || !(q > 0) || !(a > 0)) { hint.textContent = base; return; }
   const info = assetInfo(h.symbol), month = monthKey(new Date());
   const usd = src.kind === 'wallet' ? a / RATES[src.wallet.currency] : a * assetInfo(src.kind === 'holding' ? src.holding.symbol : src.symbol).usd(month);
@@ -1372,14 +1372,14 @@ document.addEventListener('click', (e) => {
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
-  else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Wallet restored'); }
+  else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }
   else if (act === 'delete-wallet') {
     const w = walletOf(id), n = D().transactions.filter((t) => t.wallet_id === id).length;
-    if (n) { toast(__(n === 1 ? "Can't delete: {n} transaction uses this wallet. Restore it instead." : "Can't delete: {n} transactions use this wallet. Restore it instead.", { n })); return; }
+    if (n) { toast(__(n === 1 ? "Can't delete: {n} transaction uses this account. Restore it instead." : "Can't delete: {n} transactions use this account. Restore it instead.", { n })); return; }
     if (!confirm(__('Delete "{name}" permanently? This can\'t be undone.', { name: w.name }))) return;
-    D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Wallet deleted');
+    D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Account deleted');
   }
-  else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Wallet archived'); }
+  else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Account archived'); }
   else if (act === 'delete-txn') {
     const tx = find(D().transactions), coin = coinOf(tx);
     if (coin) { if (!removeTrade(coin, coin.trades.find((x) => x.id === tx.trade_id))) { toast(__("Can't delete: the {symbol} has already been spent", { symbol: assetInfo(coin.symbol).symbol })); return; } }
@@ -1524,7 +1524,7 @@ document.addEventListener('submit', (e) => {
   }
   if (kind === 'transfer') {
     const A = walletOf(v.from), B = walletOf(v.to);
-    if (!A || !B || A.id === B.id) { toast('Pick two different wallets'); return; }
+    if (!A || !B || A.id === B.id) { toast('Pick two different accounts'); return; }
     const cross = A.currency !== B.currency, amount = toMinor(parseFloat(v.amount), A.currency), fee = v.fee ? toMinor(parseFloat(v.fee), A.currency) : 0;
     const received = cross ? toMinor(parseFloat(v.received), B.currency) : amount;
     if (!(amount > 0) || !(received > 0)) { toast(cross && !(received > 0) ? 'Enter the amount received' : 'Enter an amount above zero'); return; }
@@ -1577,11 +1577,11 @@ document.addEventListener('submit', (e) => {
     // the shown balance = opening balance + transactions, so move the opening balance by the difference
     w.opening_balance_minor += bal - walletBalance(w);
     Object.assign(w, { name, type: v.type });
-    save(); close(); render(); toast('Wallet saved'); return;
+    save(); close(); render(); toast('Account saved'); return;
   }
   if (kind === 'wallet') {
     D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), since: monthKey(new Date()), archived: false });
-    save(); close(); render(); toast(__('Wallet added in {cur}', { cur: v.currency }));
+    save(); close(); render(); toast(__('Account added in {cur}', { cur: v.currency }));
   }
   if (kind === 'loan') {
     const existing = f.dataset.id && D().loans.find((x) => x.id === f.dataset.id), c = existing ? existing.currency : v.currency;

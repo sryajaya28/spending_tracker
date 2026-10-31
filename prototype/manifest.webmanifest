@@ -1,6 +1,6 @@
 {
-  "name": "Spendly",
-  "short_name": "Spendly",
+  "name": "Stiver",
+  "short_name": "Stiver",
   "description": "Track spending and stay within your monthly budgets.",
   "start_url": "./index.html",
   "scope": "./",

@@ -1,4 +1,4 @@
-# Spendly: spending tracker
+# Stiver: spending tracker
 
 Record and categorize spending, track monthly budgets (overall or per category), and see your whole
 net worth: savings, investments, money you lent, and loans you owe. Inspired by Spendee.

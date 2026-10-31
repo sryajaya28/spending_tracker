@@ -42,7 +42,7 @@ KEY = load_key()
 
 def finnhub(path, **params):
     url = f"{API}{path}?{urllib.parse.urlencode(params)}"
-    req = urllib.request.Request(url, headers={"X-Finnhub-Token": KEY, "User-Agent": "spendly-dev"})
+    req = urllib.request.Request(url, headers={"X-Finnhub-Token": KEY, "User-Agent": "stiver-dev"})
     with urllib.request.urlopen(req, timeout=20) as r:
         return json.load(r)
 
@@ -154,7 +154,7 @@ def fx_rates(want):
         last = "no source reachable"
         for name, url, parse in FX_SOURCES:
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "spendly-dev"})
+                req = urllib.request.Request(url, headers={"User-Agent": "stiver-dev"})
                 with urllib.request.urlopen(req, timeout=15) as r:
                     rates, date = parse(json.load(r))
                 rates["USD"] = 1.0

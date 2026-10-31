@@ -5,7 +5,7 @@
    that object to database rows, compares them with the last known server state, and sends only the
    inserts/updates/deletes. Row-level security guarantees a user only ever sees their own rows. */
 const Cloud = (() => {
-  const cfg = window.SPENDLY || {};
+  const cfg = window.STIVER || {};
   const r12 = (x) => Math.round(x * 1e12) / 1e12;
   const baseSym = (key) => key.replace(/\.US$/, '');
 

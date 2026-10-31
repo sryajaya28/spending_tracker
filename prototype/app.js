@@ -1,5 +1,5 @@
 'use strict';
-/* Spendly app. Signed-in users' data lives in Supabase (see cloud.js); the UI works on the in-memory
+/* Stiver app. Signed-in users' data lives in Supabase (see cloud.js); the UI works on the in-memory
    object state.data and save() syncs changes. Money is kept in integer minor units, like the DB schema. */
 
 /* ---------- utils ---------- */
@@ -9,7 +9,7 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
 // units of currency per 1 USD (mock; the real app reads these from the fx_rates table)
 const RATES = { IDR: 15500, USD: 1, EUR: 0.92, GBP: 0.79, SGD: 1.35, AUD: 1.5, JPY: 150 };
-const PRICES_KEY = 'spendly.prices.v1';   // last live prices, only to avoid a flash of 0 on load
+const PRICES_KEY = 'stiver.prices.v1';   // last live prices, only to avoid a flash of 0 on load
 
 const expOf = (cur) => new Intl.NumberFormat('en', { style: 'currency', currency: cur }).resolvedOptions().maximumFractionDigits;
 const toMinor = (major, cur) => Math.round(major * 10 ** expOf(cur));
@@ -555,7 +555,7 @@ function paymentDialog(l, kind = 'loan') {
 function sidebar() {
   const r = route();
   const link = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}<span>${label}</span></a>`;
-  return `<aside class="sidebar"><div class="logo"><img src="icon.svg" alt="">Spendly</div>
+  return `<aside class="sidebar"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
     <div class="nav-label">MENU</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'swap', 'Transactions')}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'trend', 'Portfolio')}</nav>
     <div class="nav-label">ACCOUNT</div><nav class="nav">${link('settings', 'gear', 'Settings')}</nav></aside>`;
 }
@@ -688,7 +688,7 @@ const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden
 const authMsg = (a) => (a.error ? `<p class="auth-err" role="alert">${esc(a.error)}</p>` : '') + (a.notice ? `<p class="hint" role="status">${esc(a.notice)}</p>` : '');
 const authLink = (view, text) => `<button type="button" class="legend-btn" data-act="auth-view" data-view="${view}">${text}</button>`;
 function viewAuth() {
-  const a = state.auth, v = a.view, logo = '<div class="logo"><img src="icon.svg" alt="">Spendly</div>';
+  const a = state.auth, v = a.view, logo = '<div class="logo"><img src="icon.svg" alt="">Stiver</div>';
   const emailField = `<label class="field">Email<input name="email" type="email" required autocomplete="email" placeholder="you@example.com" value="${esc(a.email)}"></label>`;
   const google = `<button type="button" class="btn secondary lg google" data-act="auth-google">${GOOGLE_LOGO} Continue with Google</button><div class="or"><span>or</span></div>`;
   let body;
@@ -722,7 +722,7 @@ function viewAuth() {
     <p class="muted" style="text-align:center">New here? ${authLink('signup', 'Create an account')}</p></form>`;
   return `<div class="onboard">${body}</div>`;
 }
-const viewSplash = (msg) => `<div class="onboard"><div class="card" role="status"><div class="logo"><img src="icon.svg" alt="">Spendly</div><p class="muted">${esc(msg)}</p></div></div>`;
+const viewSplash = (msg) => `<div class="onboard"><div class="card" role="status"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="muted">${esc(msg)}</p></div></div>`;
 
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: viewTransactions, budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
@@ -733,7 +733,7 @@ function render() {
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); return; }
   if (!D()) {
     app.innerHTML = a.loadError
-      ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Spendly</div><p class="auth-err" role="alert">Couldn't load your data: ${esc(a.loadError)}</p><button class="btn lg" data-act="retry-load">Try again</button><button class="btn secondary lg" data-act="signout">Sign out</button></div></div>`
+      ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="auth-err" role="alert">Couldn't load your data: ${esc(a.loadError)}</p><button class="btn lg" data-act="retry-load">Try again</button><button class="btn secondary lg" data-act="signout">Sign out</button></div></div>`
       : viewSplash('Loading your data…');
     return;
   }

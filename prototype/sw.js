@@ -1,6 +1,6 @@
 // App-shell cache. Never touches non-GET or cross-origin requests, and the prototype
 // has no authenticated API responses to cache (the real app must not cache those).
-const CACHE = 'spendly-shell-v2';
+const CACHE = 'stiver-shell-v2';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './cloud.js', './config.js', './vendor/supabase.js', './manifest.webmanifest', './icon.svg'];
 
 self.addEventListener('install', (e) => {

@@ -428,7 +428,7 @@ function holdingRow(h, vc, accTotal) {
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${accTotal ? Math.round((value / accTotal) * 100) : 0}%</div></div></div>`;
 }
 
-const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(w.type)} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div style="margin-top:8px"><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">Archive</button></div></div>`).join('');
+const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(w.type)} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">Edit</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">Archive</button></div></div>`).join('');
 
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
 function loanCard(l, vc, kind = 'loan') {
@@ -832,14 +832,16 @@ function breakdownDialog(selId) {
     <div class="actions"><button type="button" class="btn secondary" data-act="close">Close</button></div>`);
 }
 
-function walletDialog() {
-  open(`<h2>Add wallet</h2><form data-form="wallet" style="display:contents">
-    <label class="field">Name<input name="name" required placeholder="Savings"></label>
-    <div class="two"><label class="field">Type<select name="type"><option value="cash">Cash</option><option value="bank">Bank</option><option value="ewallet">E-wallet</option><option value="card">Card</option></select></label>
-    <label class="field">Currency<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div>
-    <label class="field">Opening balance<input name="opening" type="number" step="any" value="0"></label>
-    <p class="hint">Pick any currency, for example USD for savings. Totals convert to your reporting currency (${esc(cur())}).</p>
-    <div class="actions"><button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Add</button></div></form>`);
+function walletDialog(w) {
+  const types = [['cash', 'Cash'], ['bank', 'Bank'], ['ewallet', 'E-wallet'], ['card', 'Card']];
+  open(`<h2>${w ? 'Edit' : 'Add'} wallet</h2><form data-form="wallet" data-id="${w?.id || ''}" style="display:contents">
+    <label class="field">Name<input name="name" required maxlength="40" placeholder="Savings" value="${esc(w?.name || '')}"></label>
+    <div class="two"><label class="field">Type<select name="type">${types.map(([k, n]) => `<option value="${k}" ${k === w?.type ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    ${w ? `<label class="field">Currency<input value="${esc(w.currency)}" disabled></label>`
+      : `<label class="field">Currency<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''}>${x}</option>`).join('')}</select></label>`}</div>
+    <label class="field">${w ? `Current balance (${esc(w.currency)})` : 'Opening balance'}<input name="${w ? 'balance' : 'opening'}" type="number" step="any" required value="${w ? toMajor(walletBalance(w), w.currency) : 0}"></label>
+    <p class="hint">${w ? 'Changing the balance adjusts this wallet\'s starting amount, so your past transactions stay exactly as they are. The currency can\'t be changed because existing transactions use it.' : `Pick any currency, for example USD for savings. Totals convert to your reporting currency (${esc(cur())}).`}</p>
+    <div class="actions">${w ? `<button type="button" class="btn danger" data-act="archive-wallet" data-id="${w.id}">Archive</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">${w ? 'Save' : 'Add'}</button></div></form>`);
 }
 
 /* ---------- investment dialogs ---------- */
@@ -1048,7 +1050,8 @@ document.addEventListener('click', (e) => {
   }
   else if (act === 'notify') toast(budgetStatus(state.ui.month).some((b) => b.status !== 'ok') ? 'Some budgets are near or over their limit' : 'All budgets on track');
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
-  else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); render(); toast('Wallet archived'); }
+  else if (act === 'edit-wallet') walletDialog(walletOf(id));
+  else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Wallet archived'); }
   else if (act === 'delete-txn') { D().transactions = D().transactions.filter((t) => t.id !== id); save(); close(); render(); toast('Transaction deleted'); }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.auth = { status: 'out', view: 'signin', email: '', notice: '', error: '' }; render(); });
@@ -1181,6 +1184,14 @@ document.addEventListener('submit', (e) => {
     if (parent) { state.ui.catsOpen = true; state.ui.openCats.add(parent.id); }   // show the sub-category you just added
     save(); close(); render(); toast(existing ? 'Category saved' : 'Category added');
     return;
+  }
+  if (kind === 'wallet' && f.dataset.id) {
+    const w = walletOf(f.dataset.id), name = v.name.trim(), bal = toMinor(parseFloat(v.balance), w.currency);
+    if (!name || !Number.isFinite(bal)) { toast('Enter a name and a balance'); return; }
+    // the shown balance = opening balance + transactions, so move the opening balance by the difference
+    w.opening_balance_minor += bal - walletBalance(w);
+    Object.assign(w, { name, type: v.type });
+    save(); close(); render(); toast('Wallet saved'); return;
   }
   if (kind === 'wallet') {
     D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), archived: false });

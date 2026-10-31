@@ -268,6 +268,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Removed the "(new)" tag from the USDT/USDC income choices in the Account list.
+
 - 2026-10-31: Add-transaction flow: the **Account** field is now first (the amount's currency/unit follows it, `syncTxnUnit`). Income can go
   into USDT/USDC **without holding any yet**: the Account list (`acctOptions`) offers "USDT · <investment account> (new)" (value
   `n:SYMBOL:accountId`); saving creates the holding (and a "Crypto" investment account if you have none). Those choices appear for

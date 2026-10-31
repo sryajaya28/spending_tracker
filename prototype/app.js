@@ -760,7 +760,6 @@ function viewLanding() {
       <h1>${__('Your money, finally in one place.')}</h1>
       <p class="land-sub">${__('Track spending, set budgets, and watch your net worth grow across savings, investments and loans. Simple, private and built for how you actually live.')}</p>
       <div class="land-cta"><button class="btn lg" data-act="auth-view" data-view="signup">${__('Get started')}</button><button class="btn secondary lg" data-act="auth-view" data-view="signin">${__('Sign in')}</button></div>
-      <p class="land-note">${__('Sign up with email or Google. No bank login needed.')}</p>
     </div>
     <div class="land-mock" aria-hidden="true">
       <div class="mock-card"><div class="mock-label">${__('Net worth')}</div><div class="mock-amt">IDR 54,328,869</div><div class="mock-delta"><b>+12.4%</b> ${__('vs last month')}</div>

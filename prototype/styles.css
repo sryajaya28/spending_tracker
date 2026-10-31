@@ -79,7 +79,7 @@ h1, h2, h3, p { margin: 0; }
 .hero .delta { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .hero .delta b { background: var(--accent); color: var(--navy); border-radius: 999px; padding: 3px 10px; font-size: 12px; }
 .spark { width: 100%; height: 110px; display: block; }
-.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.hero-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .ghost { background: rgba(255, 255, 255, .16); border: 1px solid rgba(255, 255, 255, .28); color: #fff; border-radius: 999px; height: 48px; padding: 0 24px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
 .ghost:hover { background: rgba(255, 255, 255, .26); }
 .btn { background: var(--navy); color: #fff; border: 0; border-radius: 999px; height: 42px; padding: 0 20px; font-weight: 600; white-space: nowrap; }
@@ -383,3 +383,9 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 .land-demo-sub { text-align: center; color: var(--muted); margin: -10px auto 22px; max-width: 560px; font-size: 16px; line-height: 1.55; }
 .demo-frame { max-width: 960px; margin: 0 auto; border-radius: 24px; overflow: hidden; background: #0f0e24; box-shadow: 0 24px 60px rgba(59, 53, 181, .22); border: 1px solid var(--line); }
 .demo-frame video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #0f0e24; }
+
+/* the four hero buttons share one row; they shrink to fit, and drop their icons / go 2x2 only when the card is very narrow */
+.hero-actions .ghost { justify-content: center; height: 44px; padding: 0 8px; font-size: 14px; white-space: nowrap; min-width: 0; gap: 6px; }
+.hero-actions .ghost svg { width: 16px; height: 16px; flex: none; }
+@container (max-width: 520px) { .hero-actions .ghost svg { display: none; } .hero-actions .ghost { font-size: 13px; } }
+@container (max-width: 340px) { .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

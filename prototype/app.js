@@ -381,24 +381,41 @@ function bindFlow(months, inc, exp) {
 }
 
 function halfDonut(items, total) {
-  const N = 26, cx = 220, cy = 224, R = 204, r = 134, gap = 0.045;
+  // a donut: one arc per category (top 5 + Others). Hover (mouse) or tap shows name, amount and share in the centre.
+  const cx = 130, R = 100, SW = 40, C = 2 * Math.PI * R, GAP = 3;
   const top = items.slice(0, 5), rest = items.slice(5).reduce((a, i) => a + i.value, 0);
   const parts = rest ? [...top, { name: __('Others'), color: '#CBD0E8', value: rest }] : top;
-  // largest-remainder allocation of N segments
-  const alloc = parts.map((p) => ({ p, exact: total ? (p.value / total) * N : 0 }));
-  alloc.forEach((a) => { a.n = Math.floor(a.exact); });
-  let left = N - alloc.reduce((s, a) => s + a.n, 0);
-  [...alloc].sort((a, b) => (b.exact - b.n) - (a.exact - a.n)).forEach((a) => { if (left > 0 && total) { a.n++; left--; } });
-  const colors = total ? alloc.flatMap((a) => Array(a.n).fill(a.p.color)) : Array(N).fill('#E6E8F5');
-  const pt = (rad, ang) => `${(cx + rad * Math.cos(ang)).toFixed(1)},${(cy + rad * Math.sin(ang)).toFixed(1)}`;
-  const seg = (i) => {
-    const a0 = Math.PI + (Math.PI * i) / N + gap, a1 = Math.PI + (Math.PI * (i + 1)) / N - gap, ro = R - 5, ri = r + 5;
-    return `<path d="M${pt(ro, a0)} A${ro},${ro} 0 0 1 ${pt(ro, a1)} L${pt(ri, a1)} A${ri},${ri} 0 0 0 ${pt(ri, a0)} Z" fill="${colors[i]}" stroke="${colors[i]}" stroke-width="10" stroke-linejoin="round"/>`;
-  };
-  const dots = Array.from({ length: N }, (_, i) => { const a = Math.PI + (Math.PI * (i + 0.5)) / N; return `<circle cx="${(cx + (r - 20) * Math.cos(a)).toFixed(1)}" cy="${(cy + (r - 20) * Math.sin(a)).toFixed(1)}" r="4.5" fill="${colors[i]}"/>`; }).join('');
-  return `<div class="donut"><svg viewBox="0 0 440 240" class="chart" role="img" aria-label="${__('Spending by category')}">${Array.from({ length: N }, (_, i) => seg(i)).join('')}${dots}</svg>
-    <div class="center"><p>${__('Spent in {month}', { month: esc(monthLabel(state.ui.month).split(' ')[0]) })}</p><b class="num" style="--len:${money(total, cur()).length}">${money(total, cur())}</b></div></div>`;
+  let acc = 0;
+  const arcs = total ? parts.map((p, i) => {
+    const f = p.value / total, len = Math.max(f * C - (parts.length > 1 ? GAP : 0), 0.5), off = -acc * C; acc += f;
+    const pct = f * 100, pctTxt = pct > 0 && pct < 1 ? '<1%' : pct.toLocaleString(locale(), { maximumFractionDigits: 1 }) + '%';
+    return `<circle class="dseg" cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="${p.color}" stroke-width="${SW}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 ${cx} ${cx})" data-name="${esc(p.name)}" data-amt="${esc(money(p.value, cur()))}" data-pct="${pctTxt}" data-color="${p.color}" tabindex="0" role="img" aria-label="${esc(p.name)}: ${esc(money(p.value, cur()))}, ${pctTxt}"/>`;
+  }).join('') : `<circle cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="#E6E8F5" stroke-width="${SW}"/>`;
+  const dflt = `<p>${__('Spent in {month}', { month: esc(monthLabel(state.ui.month).split(' ')[0]) })}</p><b class="num" style="--len:${money(total, cur()).length}">${money(total, cur())}</b>`;
+  return `<div class="donut"><svg viewBox="0 0 260 260" class="chart" role="group" aria-label="${__('Spending by category')}">${arcs}</svg>
+    <div class="center" data-default="${esc(dflt)}">${dflt}</div></div>`;
 }
+// centre readout for the donut: hover on a mouse, tap to pin on touch; tap the same arc or anywhere else to clear
+function donutShow(seg) {
+  const wrap = seg.closest('.donut'), c = $('.center', wrap), svg = $('svg', wrap);
+  $$('.dseg', wrap).forEach((x) => x.classList.toggle('on', x === seg));
+  svg.classList.add('has-sel');
+  const amt = seg.dataset.amt;
+  c.innerHTML = `<p><i style="background:${seg.dataset.color}"></i>${seg.dataset.name}</p><b class="num" style="--len:${amt.length}">${amt}</b><p class="pct">${seg.dataset.pct} ${__('of total spending')}</p>`;
+}
+function donutReset(wrap) {
+  if (!wrap || wrap.dataset.pinned) return;
+  $$('.dseg', wrap).forEach((x) => x.classList.remove('on')); $('svg', wrap).classList.remove('has-sel');
+  const c = $('.center', wrap); c.innerHTML = c.dataset.default;
+}
+document.addEventListener('pointerover', (e) => { if (e.pointerType === 'mouse') { const g = e.target.closest('.dseg'); if (g && !g.closest('.donut').dataset.pinned) donutShow(g); } });
+document.addEventListener('pointerout', (e) => { if (e.pointerType === 'mouse' && e.target.closest && e.target.closest('.dseg')) donutReset(e.target.closest('.donut')); });
+document.addEventListener('click', (e) => {
+  const g = e.target.closest && e.target.closest('.dseg');
+  $$('.donut[data-pinned]').forEach((w) => { if (!g || g.closest('.donut') !== w || g.classList.contains('on')) { delete w.dataset.pinned; donutReset(w); } });
+  if (g && !g.closest('.donut').dataset.pinned) { g.closest('.donut').dataset.pinned = '1'; donutShow(g); }
+});
+document.addEventListener('focusin', (e) => { const g = e.target.closest && e.target.closest('.dseg'); if (g) donutShow(g); });
 
 function valueChart(months, usd, vc) {
   const W = 560, H = 250, pl = 58, pr = 18, pt = 14, pb = 30;

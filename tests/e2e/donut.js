@@ -1,0 +1,25 @@
+const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
+/* Overview spending donut: hover shows category, amount and % in the centre; tap pins it; tapping elsewhere clears it. */
+(async () => {
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.route('**/vendor/supabase.js', (r) => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(__dirname + '/fake_supabase.js', 'utf8') }));
+  await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+  await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
+  await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
+  const m = await p.evaluate(() => state.ui.month);
+  await p.evaluate((m) => { const w = D().wallets[0], cs = D().categories.filter((c) => c.type === 'expense' && !c.parent_id);
+    [[0, 300000], [1, 100000], [2, 100000]].forEach(([i, a]) => D().transactions.push({ id: uid(), type: 'expense', amount_minor: a, currency: w.currency, wallet_id: w.id, category_id: cs[i].id, note: 'x', occurred_at: m + '-05' }));
+    save(); location.hash = '#/overview'; render(); }, m);
+  const at = async (f) => { const r = await p.$eval('.donut svg', (e) => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, k: b.width / 260 }; }), a = f * 2 * Math.PI; return [r.x + (130 + 100 * Math.sin(a)) * r.k, r.y + (130 - 100 * Math.cos(a)) * r.k]; };
+  const segs = await p.$$('.dseg'); assert.equal(segs.length, 3);
+  const def = await p.innerText('.donut .center'); assert(def.includes('Spent in'));
+  await p.mouse.move(...(await at(0.3))); const t = await p.innerText('.donut .center');
+  assert(t.includes('60%') && t.includes('of total spending'), t);
+  await p.screenshot({ path: __dirname + '/out/donut_hover.png' });
+  await p.mouse.move(5, 5); assert((await p.innerText('.donut .center')).includes('Spent in'), 'reset on leave');
+  await p.mouse.click(...(await at(0.7))); assert((await p.innerText('.donut .center')).includes('20%'), 'tap pins');
+  await p.mouse.move(5, 5); assert((await p.innerText('.donut .center')).includes('20%'), 'stays pinned');
+  await p.click('.topbar h1'); assert((await p.innerText('.donut .center')).includes('Spent in'), 'cleared');
+  console.log('ok', JSON.stringify(errs)); await b.close();
+})().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

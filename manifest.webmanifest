@@ -1,0 +1,13 @@
+{
+  "name": "Spendly",
+  "short_name": "Spendly",
+  "description": "Track spending and stay within your monthly budgets.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F3FB",
+  "theme_color": "#4A44C6",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

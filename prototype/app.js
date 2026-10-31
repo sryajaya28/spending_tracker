@@ -329,7 +329,8 @@ function sparkline(values) {
   const last = values.length - 1;
   return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Balance trend">
     <polyline points="${pts.join(' ')}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
-    <circle cx="${x(last)}" cy="${y(values[last])}" r="6" fill="#FFD84D" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>`;
+    <polyline points="${x(last)},${y(values[last])} ${x(last) + 0.01},${y(values[last])}" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+    <polyline points="${x(last)},${y(values[last])} ${x(last) + 0.01},${y(values[last])}" fill="none" stroke="#FFD84D" stroke-width="10" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
 }
 
 function flowChart(months, inc, exp) {
@@ -476,8 +477,11 @@ function viewPortfolio() {
     const good = p === null ? '' : (tab === 'loan' ? p <= 0 : p >= 0) ? 'up' : 'down';
     return `<tr><td>${esc(monthLabel(k))}</td><td class="num">${m(series[i])}</td><td class="num">${d === null ? '—' : `${d >= 0 ? '+' : '−'}${m(Math.abs(d))}`}</td><td class="num ${good}">${pctFmt(p)}</td></tr>`;
   }).reverse().join('');
-  const growth = `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">6 months</span></div>
-    ${valueChart(months, series, vc)}<table class="tbl"><thead><tr><th>Month</th><th>Value</th><th>Change</th><th>${tab === 'investment' ? 'MoM' : 'Change %'}</th></tr></thead><tbody>${months6}</tbody></table></section>`;
+  const noData = series.every((v) => !v);   // nothing to chart yet: say so instead of a flat line and a table of zeros
+  const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">6 months</span></div>
+    <div class="empty sm">Nothing to chart yet. This fills in as you add ${{ savings: 'wallets', investment: 'investments', lent: 'money you lent', loan: 'loans' }[tab]}.</div></section>`
+    : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">6 months</span></div>
+    ${valueChart(months, series, vc)}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Month</th><th>Value</th><th>Change</th><th>${tab === 'investment' ? 'MoM' : 'Change %'}</th></tr></thead><tbody>${months6}</tbody></table></div></section>`;
 
   let body = '';
   if (tab === 'savings') {
@@ -490,15 +494,15 @@ function viewPortfolio() {
     body = `<section class="card"><div class="card-head"><div><h2>Investments</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(I[5])}</div></div>
         <div class="tools"><button class="btn secondary" data-act="refresh-prices">Refresh prices</button><button class="btn" data-act="add-account">+ Account</button></div></div>
       ${alloc.length ? `<div class="alloc">${alloc.map(([t, v]) => `<i style="flex:${v};background:${TYPE_COLOR[t]}" title="${esc(t)}"></i>`).join('')}</div>
-      <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : '<div class="empty">Add an account and assets to see allocation.</div>'}
-      <p class="muted" style="font-size:12px;margin-top:12px">${api.finnhub ? 'Current prices are live from Finnhub; earlier months of built-in assets are mock history.' : 'Prices are mock data (no Finnhub connection).'} Growth counts money you add; buying-price tracking comes in v2.</p></section>
+      <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? 'Add assets to an account to see your allocation.' : 'No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.'}</div>`}
+      <p class="muted" style="font-size:12px;margin-top:12px">${api.finnhub ? 'Current prices are live from Finnhub.' : 'Prices are mock data (no Finnhub connection).'} Growth counts money you add.</p></section>
       ${growth}
       <div class="stack" style="margin-top:20px">${activeAccounts().map((a) => {
         const hs = holdingsOf(a.id), total = portfolioUSD(months[5], a.id);
         return `<section class="card"><div class="card-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
           <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">Edit</button><button class="btn" data-act="add-holding" data-account="${a.id}">+ Asset</button></div></div>
           <div class="list">${hs.map((h) => holdingRow(h, vc, total)).join('') || '<div class="empty">No assets yet. Add one to start tracking.</div>'}</div></section>`;
-      }).join('') || '<div class="card empty">No investment accounts yet. Add one (for example your exchange or brokerage).</div>'}</div>`;
+      }).join('')}</div>`;
   } else if (tab === 'lent') {
     const owed = activeLent().reduce((a, l) => a + toUSD(loanBalance(l), l.currency), 0);
     body = `<section class="card"><div class="card-head"><div><h2>Money you lent</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(LT[5])}</div>

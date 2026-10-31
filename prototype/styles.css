@@ -304,3 +304,8 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 .quick-cat[hidden] { display: none; }
 .quick-cat .field input, .quick-cat .field select { background: var(--surface); }
 .legend-btn[data-act="quick-cat"] { color: var(--brand); font-weight: 600; }
+
+/* preferred-currency dropdown on the net worth card */
+.hero-cur { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 13px; opacity: .95; }
+.hero-cur select { appearance: none; -webkit-appearance: none; background: rgba(255, 255, 255, .2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 16px center; color: #fff; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; height: 44px; padding: 0 40px 0 18px; font: inherit; font-weight: 600; font-size: 15px; min-width: 120px; cursor: pointer; }
+.hero-cur select option { color: var(--ink); background: #fff; }

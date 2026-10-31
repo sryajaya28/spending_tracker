@@ -471,7 +471,6 @@ function viewPortfolio() {
   const N = months.map((_, i) => S[i] + I[i] + LT[i] - L[i]);
   const now = N[5], prev = N[4], mom = prev > 0 ? ((now - prev) / prev) * 100 : null;
   const m = (usd) => money(usdToMinor(usd, vc), vc);
-  const toggles = [...new Set([base, 'USD'])];
   const assets = S[5] + I[5] + LT[5];
   const share = (v) => (assets > 0 ? Math.round((v / assets) * 100) : 0);
   const series = { savings: S, investment: I, lent: LT, loan: L }[tab];
@@ -529,7 +528,7 @@ function viewPortfolio() {
       <div class="amount num" style="--len:${m(now).length}">${moneyHtml(usdToMinor(now, vc), vc)}</div>
       <div class="delta"><b>${pctFmt(mom)}</b><span>vs last month</span></div>
       <p style="font-size:12px;opacity:.85">${api.fx ? `1 USD = ${new Intl.NumberFormat('en', { maximumFractionDigits: 4 }).format(RATES[base] || 1)} ${base} · live rate (${esc(api.fx.source)}, ${esc(api.fx.date)})` : 'Exchange rates are demo values (no live feed).'}</p>
-      <div class="hero-actions" style="margin-top:8px">${toggles.map((c) => `<button class="ghost ${c === vc ? 'on' : ''}" data-act="pf-cur" data-cur="${c}">${c}</button>`).join('')}</div></section>
+      <label class="hero-cur">Preferred currency<select data-setting="currency" aria-label="Preferred currency">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
     <section class="card"><div class="card-head"><h2>Breakdown</h2></div>
       <div class="alloc"><i style="flex:${Math.max(S[5], 0.0001)};background:#4A44C6"></i><i style="flex:${Math.max(I[5], 0.0001)};background:#F5B800"></i><i style="flex:${Math.max(LT[5], 0.0001)};background:#1fa971"></i></div>
       <div class="alloc-legend">
@@ -1055,7 +1054,6 @@ document.addEventListener('click', (e) => {
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
   else if (act === 'delete-occasion') { D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
   else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); state.ui.month = (o.start || isoDate(new Date())).slice(0, 7); location.hash = '#/transactions'; render(); }
-  else if (act === 'pf-cur') { state.ui.pf = el.dataset.cur; render(); }
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
   else if (act === 'edit-loan') loanDialog(find(D().loans));

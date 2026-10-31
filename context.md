@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Tighter spacing everywhere (`styles.css`: page padding, card padding 16/18px (12/14 on phones), card/stack gaps 12px,
+  list rows, form rows, topbar margin, h1 24px/22px). Keep new layouts compact.
+
 - 2026-10-31: Removed descriptive text for a cleaner, phone-friendly UI: page subtitles under titles (`topbar` now renders only the
   title), Settings row descriptions, the Categories count line, and the explainer paragraphs on Lent, Loan and Special occasions.
   Keep new screens free of helper text; hints inside dialogs stay.

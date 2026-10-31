@@ -274,6 +274,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: See more / Show less (savings accounts, Portfolio month history) is phone-only: every item is rendered, the extras carry `.more-item`
+  and are hidden by CSS under 900px while the list is `.collapsed`; on desktop all items show and the button is hidden.
+
 - 2026-10-31: Portfolio history list under the chart shows the latest 3 months, then "See more (n)" / "Show less" (`state.ui.histMore`; the
   shared `toggle-more` action takes `data-key`).
 

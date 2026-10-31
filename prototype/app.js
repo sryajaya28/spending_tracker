@@ -509,7 +509,7 @@ const walletCard = (w) => {
 /* the biggest 3 accounts show first; See more / Show less toggles the rest */
 const walletCards = () => {
   const all = D().wallets.filter((w) => !w.archived).sort(byValue((w) => toUSD(walletBalance(w), w.currency))), more = !!state.ui.walletsMore, rest = all.length - 3;
-  return (more || rest <= 0 ? all : all.slice(0, 3)).map(walletCard).join('')
+  return all.map((w, i) => walletCard(w).replace('<div class="wallet"', i >= 3 ? '<div class="wallet more-item"' : '<div class="wallet"')).join('')
     + (rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="wallets" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : '');
 };
 
@@ -551,18 +551,18 @@ function viewPortfolio() {
     return `<div class="mrow"><span class="mname">${esc(new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }))}</span><div class="mval"><b class="num">${m(series[i])}</b><small class="num">${chg}${p === null ? '' : ` · <span class="${good}">${pctFmt(p)}</span>`}</small></div></div>`;
   }).reverse();
   const histMore = !!state.ui.histMore, histRest = months6.length - 3;
-  const histHtml = (histMore || histRest <= 0 ? months6 : months6.slice(0, 3)).join('')
+  const histHtml = months6.map((r, i) => (i >= 3 ? r.replace('<div class="mrow">', '<div class="mrow more-item">') : r)).join('')
     + (histRest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="hist" aria-expanded="${histMore}">${histMore ? __('Show less') : __('See more ({n})', { n: histRest })}<span class="chev" aria-hidden="true">${histMore ? '⌃' : '⌄'}</span></button>` : '');
   const noData = series.every((v) => !v);   // nothing to chart yet: say so instead of a flat line and a table of zeros
   const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
     <div class="empty sm">${__('Nothing to chart yet. This fills in as you add {what}.', { what: { savings: __('accounts'), investment: __('investments'), lent: __('money you lent'), loan: __('loans') }[tab] })}</div></section>`
     : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
-    ${valueChart(rm, series, vc)}<div class="mlist">${histHtml}</div></section>`;
+    ${valueChart(rm, series, vc)}<div class="mlist ${histMore ? '' : 'collapsed'}">${histHtml}</div></section>`;
 
   let body = '';
   if (tab === 'savings') {
     body = `<section class="card"><div class="card-head"><div><h2>${__('Savings accounts')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><div class="tools"><button class="btn secondary" data-act="transfer">${__('Transfer')}</button><button class="btn" data-act="add-wallet">${__('+ Account')}</button></div></div>
-      <div class="wallets">${walletCards()}</div>${archivedWallets()}</section>${growth}`;
+      <div class="wallets ${state.ui.walletsMore ? '' : 'collapsed'}">${walletCards()}</div>${archivedWallets()}</section>${growth}`;
   } else if (tab === 'investment') {
     const byType = {};
     D().holdings.filter((h) => activeAccounts().some((a) => a.id === h.account_id)).forEach((h) => { const t = assetInfo(h.symbol).type; byType[t] = (byType[t] || 0) + holdingUSD(h, months[5]); });

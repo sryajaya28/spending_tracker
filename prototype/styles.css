@@ -523,3 +523,10 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
 .budget-end .btn { height: 34px; padding: 0 16px; }
 
 .mlist .see-more { width: 100%; border-top: 1px solid var(--line); border-radius: 0; margin-top: 2px; }
+
+/* See more / Show less only exist on phones; on wider screens every account and month shows */
+.see-more { display: none; }
+@media (max-width: 900px) {
+  .see-more { display: flex; }
+  .collapsed > .more-item { display: none; }
+}

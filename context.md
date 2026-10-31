@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Settings rows (`.form-row`): label left, input/select/toggle/button flush right on one line with a shared right edge
+  (phone and desktop); controls no longer wrap or overflow.
+
 - 2026-10-31: Tighter spacing everywhere (`styles.css`: page padding, card padding 16/18px (12/14 on phones), card/stack gaps 12px,
   list rows, form rows, topbar margin, h1 24px/22px). Keep new layouts compact.
 

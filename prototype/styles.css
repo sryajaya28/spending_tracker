@@ -515,3 +515,9 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
 .grid > .hero { grid-column: 1 / -1; align-self: start; gap: 6px; padding-top: 14px; padding-bottom: 14px; }
 .hero .amount { line-height: 1.05; }
 .hero .hero-actions { margin-top: 6px; }
+
+/* overall budget footer: text on the left; status badge and Edit share one centred line on the right */
+.budget-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.budget-end { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.budget-end .badge { margin: 0; }
+.budget-end .btn { height: 34px; padding: 0 16px; }

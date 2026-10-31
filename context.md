@@ -274,6 +274,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Budgets > Overall budget footer: the status badge and Edit button now share one vertically centred line (`.budget-foot`/`.budget-end`).
+  Reminder: Vercel is on Pro; push to `main` only (the session branch makes a second build per change).
+
 - 2026-10-31: Bug fix: with a custom period start day, accounts created in the calendar month the period ends in (e.g. made on 1 Nov while the
   period is 25 Oct-24 Nov) were left out of Portfolio Savings, so it disagreed with Overview's Total Balance. `since` fields stay calendar
   months and are now compared with `liveIn(since, k)` (since <= the period's last day) for wallets, holdings, loans and lent.

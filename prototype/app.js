@@ -16,13 +16,13 @@ const PRICES_KEY = 'stiver.prices.v1';   // last live prices, only to avoid a fl
    amount read 100 times smaller on a phone. Amounts are stored in minor units using these exponents. */
 const ZERO_DECIMAL = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'UGX', 'XAF', 'XOF', 'PYG', 'RWF']);
 const expOf = (cur) => (ZERO_DECIMAL.has(cur) ? 0 : 2);
-const curFmt = (cur) => new Intl.NumberFormat('en', { style: 'currency', currency: cur, minimumFractionDigits: expOf(cur), maximumFractionDigits: expOf(cur) });
+const curFmt = (cur) => new Intl.NumberFormat(locale(), { style: 'currency', currency: cur, minimumFractionDigits: expOf(cur), maximumFractionDigits: expOf(cur) });
 const toMinor = (major, cur) => Math.round(major * 10 ** expOf(cur));
 const toMajor = (minor, cur) => minor / 10 ** expOf(cur);
 const money = (minor, cur) => curFmt(cur).format(toMajor(minor, cur));
 const convert = (minor, from, to) => (from === to ? minor : Math.round((toMajor(minor, from) / RATES[from]) * RATES[to] * 10 ** expOf(to)));
 const usdToMinor = (usd, cur) => toMinor(usd * RATES[cur], cur);
-const compact = (minor, cur) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(toMajor(minor, cur));
+const compact = (minor, cur) => new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(toMajor(minor, cur));
 function moneyHtml(minor, cur) {
   return curFmt(cur).formatToParts(toMajor(minor, cur))
     .map((p) => (p.type === 'fraction' || p.type === 'decimal' ? `<span class="dim">${p.value}</span>` : esc(p.value))).join('');
@@ -31,7 +31,7 @@ function moneyHtml(minor, cur) {
 const pad = (n) => String(n).padStart(2, '0');
 const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const monthKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-const monthLabel = (k, style = 'long') => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString('en', style === 'long' ? { month: 'long', year: 'numeric' } : { month: 'short' });
+const monthLabel = (k, style = 'long') => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), style === 'long' ? { month: 'long', year: 'numeric' } : { month: 'short' });
 const lastMonths = (n) => { const t = new Date(); return Array.from({ length: n }, (_, i) => monthKey(new Date(t.getFullYear(), t.getMonth() - (n - 1 - i), 1))); };
 
 /* ---------- icons ---------- */
@@ -285,7 +285,7 @@ const holdingUSD = (h, k) => (k < h.since ? 0 : Math.max(0, qtyAt(h, k)) * asset
 const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))
   .reduce((a, h) => a + holdingUSD(h, k), 0);
-const qtyFmt = (q) => new Intl.NumberFormat('en', { maximumFractionDigits: 8 }).format(q);
+const qtyFmt = (q) => new Intl.NumberFormat(locale(), { maximumFractionDigits: 8 }).format(q);
 const pctFmt = (p) => (p === null ? '—' : `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`);
 const pf = () => state.ui.pf || cur();
 
@@ -319,11 +319,11 @@ function aiTag(note, type) {
 /* ---------- ui helpers ---------- */
 function toast(msg) {
   const el = $('#toast');
-  el.textContent = msg; el.classList.add('show');
+  el.textContent = __(msg); el.classList.add('show');
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600);
 }
 const tile = (c, sm) => `<span class="tile ${sm ? 'sm' : ''}" style="--c:${c ? c.color : '#94A3B8'}">${c ? c.icon : '❔'}</span>`;
-const monthSelect = () => `<select class="pill-select" data-bind="month" aria-label="Month">${lastMonths(6).reverse().map((k) => `<option value="${k}" ${k === state.ui.month ? 'selected' : ''}>${monthLabel(k)}</option>`).join('')}</select>`;
+const monthSelect = () => `<select class="pill-select" data-bind="month" aria-label="${__('Month')}">${lastMonths(6).reverse().map((k) => `<option value="${k}" ${k === state.ui.month ? 'selected' : ''}>${monthLabel(k)}</option>`).join('')}</select>`;
 const route = () => { const r = (location.hash.replace('#/', '') || 'overview').split('?')[0]; return r === 'wallets' ? 'portfolio' : r; };
 
 /* ---------- charts (hand-built SVG) ---------- */
@@ -333,7 +333,7 @@ function sparkline(values) {
   const y = (v) => H - p - ((H - 2 * p) * (v - min)) / (max - min || 1);
   const pts = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
   const last = values.length - 1;
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Balance trend">
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${__('Balance trend')}">
     <polyline points="${pts.join(' ')}" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
     <polyline points="${x(last)},${y(values[last])} ${x(last) + 0.01},${y(values[last])}" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
     <polyline points="${x(last)},${y(values[last])} ${x(last) + 0.01},${y(values[last])}" fill="none" stroke="#FFD84D" stroke-width="10" stroke-linecap="round" vector-effect="non-scaling-stroke"/></svg>`;
@@ -350,7 +350,7 @@ function flowChart(months, inc, exp) {
   const area = `${line(inc)} ${[...exp].map((v, i) => [x(i), y(v)]).reverse().map(([a, b]) => `L${a.toFixed(1)},${b.toFixed(1)}`).join(' ')} Z`;
   const ticks = [0, 1, 2, 3, 4].map((i) => (max * i) / 4);
   return `<div class="chart-wrap" id="flow" data-n="${months.length}">
-    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Income versus spending by month">
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${__('Income versus spending by month')}">
       ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="#ECEEF8"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="#6B6F8F">${esc(compact(t, cur()))}</text>`).join('')}
       <path d="${area}" fill="#8B8FF0" fill-opacity=".16"/>
       <path d="${line(inc)}" fill="none" stroke="#4A44C6" stroke-width="2.5" stroke-linejoin="round"/>
@@ -358,7 +358,7 @@ function flowChart(months, inc, exp) {
       ${months.map((k, i) => `<circle cx="${x(i)}" cy="${y(inc[i])}" r="4" fill="#4A44C6"/><circle cx="${x(i)}" cy="${y(exp[i])}" r="4" fill="#F5B800"/><text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#6B6F8F">${monthLabel(k, 'short')}</text>`).join('')}
       <line id="flow-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" stroke="#1E1B4B" stroke-width="1.5" opacity="0"/>
     </svg><div class="tip" id="flow-tip"></div></div>
-    <div class="legend-row" style="margin-top:10px"><span><i style="background:#4A44C6"></i>Income</span><span><i style="background:#F5B800"></i>Spending</span></div>`;
+    <div class="legend-row" style="margin-top:10px"><span><i style="background:#4A44C6"></i>${__('Income')}</span><span><i style="background:#F5B800"></i>${__('Spending')}</span></div>`;
 }
 function bindFlow(months, inc, exp) {
   const wrap = $('#flow'); if (!wrap) return;
@@ -393,7 +393,7 @@ function halfDonut(items, total) {
     return `<path d="M${pt(ro, a0)} A${ro},${ro} 0 0 1 ${pt(ro, a1)} L${pt(ri, a1)} A${ri},${ri} 0 0 0 ${pt(ri, a0)} Z" fill="${colors[i]}" stroke="${colors[i]}" stroke-width="10" stroke-linejoin="round"/>`;
   };
   const dots = Array.from({ length: N }, (_, i) => { const a = Math.PI + (Math.PI * (i + 0.5)) / N; return `<circle cx="${(cx + (r - 20) * Math.cos(a)).toFixed(1)}" cy="${(cy + (r - 20) * Math.sin(a)).toFixed(1)}" r="4.5" fill="${colors[i]}"/>`; }).join('');
-  return `<div class="donut"><svg viewBox="0 0 440 240" class="chart" role="img" aria-label="Spending by category">${Array.from({ length: N }, (_, i) => seg(i)).join('')}${dots}</svg>
+  return `<div class="donut"><svg viewBox="0 0 440 240" class="chart" role="img" aria-label="${__('Spending by category')}">${Array.from({ length: N }, (_, i) => seg(i)).join('')}${dots}</svg>
     <div class="center"><p>Spent in ${esc(monthLabel(state.ui.month).split(' ')[0])}</p><b class="num" style="--len:${money(total, cur()).length}">${money(total, cur())}</b></div></div>`;
 }
 
@@ -404,10 +404,10 @@ function valueChart(months, usd, vc) {
   const min = Math.max(0, lo - pad), max = hi + pad;
   const x = (i) => pl + ((W - pl - pr) * i) / (months.length - 1);
   const y = (v) => pt + (H - pt - pb) * (1 - (v - min) / (max - min));
-  const cmp = (v) => new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+  const cmp = (v) => new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(v);
   const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   const ticks = [0, 1, 2, 3].map((i) => min + ((max - min) * i) / 3);
-  return `<div class="chart-wrap" id="pf"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Portfolio value by month">
+  return `<div class="chart-wrap" id="pf"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${__('Portfolio value by month')}">
     <defs><linearGradient id="pfg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A44C6" stop-opacity=".25"/><stop offset="1" stop-color="#4A44C6" stop-opacity="0"/></linearGradient></defs>
     ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" stroke="#ECEEF8"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" fill="#6B6F8F">${cmp(t)}</text>`).join('')}
     <path d="${line} L${x(vals.length - 1)},${H - pb} L${x(0)},${H - pb} Z" fill="url(#pfg)"/>
@@ -444,9 +444,9 @@ function archivedWallets() {
   return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>Archived wallets (${list.length})</b></button>
     ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
       return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(w.type)} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
-        <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">Restore</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">Delete</button></div></div>`; }).join('') : ''}</div>`;
+        <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">${__('Restore')}</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">${__('Delete')}</button></div></div>`; }).join('') : ''}</div>`;
 }
-const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(w.type)} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">Edit</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">Archive</button></div></div>`).join('');
+const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(w.type)} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">${__('Edit')}</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button></div></div>`).join('');
 
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
 function loanCard(l, vc, kind = 'loan') {
@@ -454,16 +454,16 @@ function loanCard(l, vc, kind = 'loan') {
   const bal = loanBalance(l), paid = paidOf(l), pct = l.original_minor ? Math.min(100, Math.round((paid / l.original_minor) * 100)) : 0;
   const shown = (m) => money(convert(m, l.currency, vc), vc);
   const recent = [...l.payments].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
-  const word = lent ? 'repayment' : 'payment';
-  const meta = lent ? `${l.due ? `Due ${new Date(l.due + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}` : 'No due date'}${l.note ? ` · ${esc(l.note)}` : ''}`
-    : `${l.monthly_minor ? `Monthly ${shown(l.monthly_minor)}` : ''}${l.rate ? ` · ${l.rate}% APR` : ''}`;
-  return `<section class="card"><div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? 'Lent' : esc(LOAN_TYPES[l.type] || 'Loan')}</span></h2>
+  const word = lent ? __('repayment') : __('payment');
+  const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}`
+    : `${l.monthly_minor ? __('Monthly {amount}', { amount: shown(l.monthly_minor) }) : ''}${l.rate ? ` · ${l.rate}% APR` : ''}`;
+  return `<section class="card"><div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Loan'))}</span></h2>
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
-      <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">Edit</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? 'Repayment' : 'Payment'}</button></div></div>
+      <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
     <div class="bar"><i style="width:${pct}%;${lent ? 'background:#1fa971' : ''}"></i></div>
     <div class="loan-meta"><span>${pct}% ${lent ? 'repaid' : 'paid'} · ${shown(paid)} of ${shown(l.original_minor)}</span><span>${meta}</span></div>
-    ${bal === 0 ? `<p class="hint" style="margin-top:10px">${lent ? 'Fully repaid' : 'Paid off'}. You can archive this.</p>` : ''}
-    ${recent.length ? `<div class="list" style="margin-top:10px">${recent.map((p) => `<div class="pay-row"><span>${esc(new Date(p.date + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }))}</span><span class="num">${shown(p.amount_minor)}</span><button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="Remove ${word}">×</button></div>`).join('')}</div>` : `<p class="muted" style="margin-top:10px">No ${word}s yet.</p>`}</section>`;
+    ${bal === 0 ? `<p class="hint" style="margin-top:10px">${lent ? __('Fully repaid. You can archive this.') : __('Paid off. You can archive this.')}</p>` : ''}
+    ${recent.length ? `<div class="list" style="margin-top:10px">${recent.map((p) => `<div class="pay-row"><span>${esc(new Date(p.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }))}</span><span class="num">${shown(p.amount_minor)}</span><button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: word })}">×</button></div>`).join('')}</div>` : `<p class="muted" style="margin-top:10px">${__('No {what}s yet.', { what: word })}</p>`}</section>`;
 }
 
 function viewPortfolio() {
@@ -476,121 +476,122 @@ function viewPortfolio() {
   const share = (v) => (assets > 0 ? Math.round((v / assets) * 100) : 0);
   const series = { savings: S, investment: I, lent: LT, loan: L }[tab];
   state.chart = { months, series, vc };
-  const titles = { savings: 'Savings over time', investment: 'Investment growth month over month', lent: 'Money lent over time', loan: 'Loan balance over time' };
+  const titles = { savings: __('Savings over time'), investment: __('Investment growth month over month'), lent: __('Money lent over time'), loan: __('Loan balance over time') };
   const months6 = months.map((k, i) => {
     const d = i ? series[i] - series[i - 1] : null, p = i && series[i - 1] > 0 ? (d / series[i - 1]) * 100 : null;
     const good = p === null ? '' : (tab === 'loan' ? p <= 0 : p >= 0) ? 'up' : 'down';
     return `<tr><td>${esc(monthLabel(k))}</td><td class="num">${m(series[i])}</td><td class="num">${d === null ? '—' : `${d >= 0 ? '+' : '−'}${m(Math.abs(d))}`}</td><td class="num ${good}">${pctFmt(p)}</td></tr>`;
   }).reverse().join('');
   const noData = series.every((v) => !v);   // nothing to chart yet: say so instead of a flat line and a table of zeros
-  const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">6 months</span></div>
-    <div class="empty sm">Nothing to chart yet. This fills in as you add ${{ savings: 'wallets', investment: 'investments', lent: 'money you lent', loan: 'loans' }[tab]}.</div></section>`
-    : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">6 months</span></div>
-    ${valueChart(months, series, vc)}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Month</th><th>Value</th><th>Change</th><th>${tab === 'investment' ? 'MoM' : 'Change %'}</th></tr></thead><tbody>${months6}</tbody></table></div></section>`;
+  const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">${__('6 months')}</span></div>
+    <div class="empty sm">${__('Nothing to chart yet. This fills in as you add {what}.', { what: { savings: __('wallets'), investment: __('investments'), lent: __('money you lent'), loan: __('loans') }[tab] })}</div></section>`
+    : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">${__('6 months')}</span></div>
+    ${valueChart(months, series, vc)}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>${__('Month')}</th><th>${__('Value')}</th><th>${__('Change')}</th><th>${tab === 'investment' ? __('MoM') : __('Change %')}</th></tr></thead><tbody>${months6}</tbody></table></div></section>`;
 
   let body = '';
   if (tab === 'savings') {
-    body = `<section class="card"><div class="card-head"><div><h2>Savings and wallets</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><div class="tools"><button class="btn secondary" data-act="transfer">Transfer</button><button class="btn" data-act="add-wallet">+ Wallet</button></div></div>
+    body = `<section class="card"><div class="card-head"><div><h2>${__('Savings and wallets')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><div class="tools"><button class="btn secondary" data-act="transfer">${__('Transfer')}</button><button class="btn" data-act="add-wallet">${__('+ Wallet')}</button></div></div>
       <div class="wallets">${walletCards()}</div>${archivedWallets()}</section>${growth}`;
   } else if (tab === 'investment') {
     const byType = {};
     D().holdings.filter((h) => activeAccounts().some((a) => a.id === h.account_id)).forEach((h) => { const t = assetInfo(h.symbol).type; byType[t] = (byType[t] || 0) + holdingUSD(h, months[5]); });
     const alloc = Object.entries(byType).sort((a, b) => b[1] - a[1]);
-    body = `<section class="card"><div class="card-head"><div><h2>Investments</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(I[5])}</div></div>
-        <div class="tools"><button class="btn secondary" data-act="refresh-prices">Refresh prices</button><button class="btn" data-act="add-account">+ Account</button></div></div>
+    body = `<section class="card"><div class="card-head"><div><h2>${__('Investments')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(I[5])}</div></div>
+        <div class="tools"><button class="btn secondary" data-act="refresh-prices">${__('Refresh prices')}</button><button class="btn" data-act="add-account">${__('+ Account')}</button></div></div>
       ${alloc.length ? `<div class="alloc">${alloc.map(([t, v]) => `<i style="flex:${v};background:${TYPE_COLOR[t]}" title="${esc(t)}"></i>`).join('')}</div>
-      <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? 'Add assets to an account to see your allocation.' : 'No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.'}</div>`}
-      <p class="muted" style="font-size:12px;margin-top:12px">${api.finnhub ? 'Current prices are live from Finnhub.' : 'Prices are mock data (no Finnhub connection).'} Growth counts money you add.</p></section>
+      <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? __('Add assets to an account to see your allocation.') : __('No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.')}</div>`}
+      <p class="muted" style="font-size:12px;margin-top:12px">${api.finnhub ? __('Current prices are live from Finnhub.') : __('Prices are mock data (no Finnhub connection).')} ${__('Growth counts money you add.')}</p></section>
       ${growth}
       <div class="stack" style="margin-top:20px">${activeAccounts().map((a) => {
         const hs = holdingsOf(a.id), total = portfolioUSD(months[5], a.id);
         return `<section class="card"><div class="card-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
-          <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">Edit</button><button class="btn" data-act="add-holding" data-account="${a.id}">+ Asset</button></div></div>
-          <div class="list">${hs.map((h) => holdingRow(h, vc, total)).join('') || '<div class="empty">No assets yet. Add one to start tracking.</div>'}</div></section>`;
+          <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">${__('Edit')}</button><button class="btn" data-act="add-holding" data-account="${a.id}">${__('+ Asset')}</button></div></div>
+          <div class="list">${hs.map((h) => holdingRow(h, vc, total)).join('') || ('<div class="empty">' + __('No assets yet. Add one to start tracking.') + '</div>')}</div></section>`;
       }).join('')}</div>`;
   } else if (tab === 'lent') {
     const owed = activeLent().reduce((a, l) => a + toUSD(loanBalance(l), l.currency), 0);
-    body = `<section class="card"><div class="card-head"><div><h2>Money you lent</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(LT[5])}</div>
-        <small class="muted">${activeLent().length} open · ${m(owed)} still owed to you</small></div><button class="btn" data-act="add-lent">+ Lent</button></div>
-      <p class="muted" style="font-size:13px">Money others owe you counts as an asset in your net worth. Record each repayment you receive.</p></section>
-      <div class="stack" style="margin-top:20px">${activeLent().map((l) => loanCard(l, vc, 'lent')).join('') || '<div class="card empty">Nothing lent out. Add money you lent to a friend or family member to track repayments.</div>'}</div>${growth}`;
+    body = `<section class="card"><div class="card-head"><div><h2>${__('Money you lent')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(LT[5])}</div>
+        <small class="muted">${__('{n} open · {amount} still owed to you', { n: activeLent().length, amount: m(owed) })}</small></div><button class="btn" data-act="add-lent">${__('+ Lent')}</button></div>
+      <p class="muted" style="font-size:13px">${__('Money others owe you counts as an asset in your net worth. Record each repayment you receive.')}</p></section>
+      <div class="stack" style="margin-top:20px">${activeLent().map((l) => loanCard(l, vc, 'lent')).join('') || ('<div class="card empty">' + __('Nothing lent out. Add money you lent to a friend or family member to track repayments.') + '</div>')}</div>${growth}`;
   } else {
     const monthly = activeLoans().reduce((a, l) => a + toUSD(l.monthly_minor, l.currency), 0);
-    body = `<section class="card"><div class="card-head"><div><h2>Loans you owe</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(L[5])}</div>
-        <small class="muted">${monthly ? `${m(monthly)} due each month` : 'No monthly payments set'}</small></div><button class="btn" data-act="add-loan">+ Loan</button></div>
-      <p class="muted" style="font-size:13px">Loans count against your net worth. Record each payment to bring the balance down.</p></section>
-      <div class="stack" style="margin-top:20px">${activeLoans().map((l) => loanCard(l, vc)).join('') || '<div class="card empty">No loans. Add a mortgage, car loan or credit card balance to include it in your net worth.</div>'}</div>${growth}`;
+    body = `<section class="card"><div class="card-head"><div><h2>${__('Loans you owe')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(L[5])}</div>
+        <small class="muted">${monthly ? __('{amount} due each month', { amount: m(monthly) }) : __('No monthly payments set')}</small></div><button class="btn" data-act="add-loan">${__('+ Loan')}</button></div>
+      <p class="muted" style="font-size:13px">${__('Loans count against your net worth. Record each payment to bring the balance down.')}</p></section>
+      <div class="stack" style="margin-top:20px">${activeLoans().map((l) => loanCard(l, vc)).join('') || ('<div class="card empty">' + __('No loans. Add a mortgage, car loan or credit card balance to include it in your net worth.') + '</div>')}</div>${growth}`;
   }
 
-  const tabBtn = (id, label) => `<button class="tab ${tab === id ? 'on' : ''}" data-act="pf-tab" data-tab="${id}">${label}</button>`;
-  return `${topbar('Portfolio', `Net worth across savings, investments and loans · shown in ${vc}`)}
+  const tabBtn = (id, label) => `<button class="tab ${tab === id ? 'on' : ''}" data-act="pf-tab" data-tab="${id}">${__(label)}</button>`;
+  return `${topbar('Portfolio', __('Net worth across savings, investments and loans · shown in {cur}', { cur: vc }))}
   <div class="grid">
-    <section class="card hero"><div class="label">Net worth <span>${activeLoans().length ? 'after loans' : 'no loans'}</span></div>
+    <section class="card hero"><div class="label">${__('Net worth')} <span>${activeLoans().length ? __('after loans') : __('no loans')}</span></div>
       <div class="amount num" style="--len:${m(now).length}">${moneyHtml(usdToMinor(now, vc), vc)}</div>
-      <div class="delta"><b>${pctFmt(mom)}</b><span>vs last month</span></div>
-      <p style="font-size:12px;opacity:.85">${api.fx ? `1 USD = ${new Intl.NumberFormat('en', { maximumFractionDigits: 4 }).format(RATES[base] || 1)} ${base} · live rate (${esc(api.fx.source)}, ${esc(api.fx.date)})` : 'Exchange rates are demo values (no live feed).'}</p>
-      <label class="hero-cur">Preferred currency<select data-setting="currency" aria-label="Preferred currency">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
-    <section class="card"><div class="card-head"><h2>Breakdown</h2></div>
+      <div class="delta"><b>${pctFmt(mom)}</b><span>${__('vs last month')}</span></div>
+      <p style="font-size:12px;opacity:.85">${api.fx ? __('1 USD = {rate} {cur} · live rate ({source}, {date})', { rate: new Intl.NumberFormat(locale(), { maximumFractionDigits: 4 }).format(RATES[base] || 1), cur: base, source: esc(api.fx.source), date: esc(api.fx.date) }) : __('Exchange rates are demo values (no live feed).')}</p>
+      <label class="hero-cur">${__('Preferred currency')}<select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
+    <section class="card"><div class="card-head"><h2>${__('Breakdown')}</h2></div>
       <div class="alloc"><i style="flex:${Math.max(S[5], 0.0001)};background:#4A44C6"></i><i style="flex:${Math.max(I[5], 0.0001)};background:#F5B800"></i><i style="flex:${Math.max(LT[5], 0.0001)};background:#1fa971"></i></div>
       <div class="alloc-legend">
-        <div><span class="key"><i style="background:#4A44C6"></i>Savings</span><b class="num">${m(S[5])}</b><span class="muted">${share(S[5])}%</span></div>
-        <div><span class="key"><i style="background:#F5B800"></i>Investments</span><b class="num">${m(I[5])}</b><span class="muted">${share(I[5])}%</span></div>
-        <div><span class="key"><i style="background:#1fa971"></i>Lent to others</span><b class="num">${m(LT[5])}</b><span class="muted">${share(LT[5])}%</span></div>
-        <div><span class="key"><i style="background:#E5484D"></i>Loans</span><b class="num">−${m(L[5])}</b><span class="muted"></span></div></div></section>
+        <div><span class="key"><i style="background:#4A44C6"></i>${__('Savings')}</span><b class="num">${m(S[5])}</b><span class="muted">${share(S[5])}%</span></div>
+        <div><span class="key"><i style="background:#F5B800"></i>${__('Investments')}</span><b class="num">${m(I[5])}</b><span class="muted">${share(I[5])}%</span></div>
+        <div><span class="key"><i style="background:#1fa971"></i>${__('Lent to others')}</span><b class="num">${m(LT[5])}</b><span class="muted">${share(LT[5])}%</span></div>
+        <div><span class="key"><i style="background:#E5484D"></i>${__('Loans')}</span><b class="num">−${m(L[5])}</b><span class="muted"></span></div></div></section>
   </div>
   <div class="tabs" role="tablist" style="margin:20px 0">${tabBtn('savings', 'Savings')}${tabBtn('investment', 'Investment')}${tabBtn('lent', 'Lent')}${tabBtn('loan', 'Loan')}</div>
   ${body}`;
 }
 
 function loanDialog(l) {
-  open(`<h2>${l ? 'Edit' : 'Add'} loan</h2><form data-form="loan" data-id="${l?.id || ''}" style="display:contents">
-    <label class="field">Name<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="e.g. Car loan" autofocus></label>
-    <div class="two"><label class="field">Type<select name="type">${Object.entries(LOAN_TYPES).map(([k, v]) => `<option value="${k}" ${k === (l?.type || 'car') ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
-      <label class="field">Currency<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
-    <div class="two"><label class="field">${l ? 'Original amount' : 'Amount owed now'}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
-      <label class="field">Monthly payment<input name="monthly" type="number" min="0" step="any" value="${l ? toMajor(l.monthly_minor, l.currency) : ''}"></label></div>
-    <label class="field">Interest rate (% per year, optional)<input name="rate" type="number" min="0" step="any" value="${l?.rate || ''}"></label>
-    <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-loan" data-id="${l.id}">Archive</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+  open(`<h2>${l ? __('Edit loan') : __('Add loan')}</h2><form data-form="loan" data-id="${l?.id || ''}" style="display:contents">
+    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Car loan')}" autofocus></label>
+    <div class="two"><label class="field">${__('Type')}<select name="type">${Object.entries(LOAN_TYPES).map(([k, v]) => `<option value="${k}" ${k === (l?.type || 'car') ? 'selected' : ''}>${__(v)}</option>`).join('')}</select></label>
+      <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
+    <div class="two"><label class="field">${l ? __('Original amount') : __('Amount owed now')}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
+      <label class="field">${__('Monthly payment')}<input name="monthly" type="number" min="0" step="any" value="${l ? toMajor(l.monthly_minor, l.currency) : ''}"></label></div>
+    <label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" min="0" step="any" value="${l?.rate || ''}"></label>
+    <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-loan" data-id="${l.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function lentDialog(l) {
-  open(`<h2>${l ? 'Edit' : 'Add'} money lent</h2><form data-form="lent" data-id="${l?.id || ''}" style="display:contents">
-    <label class="field">Who borrowed it<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="e.g. Budi" autofocus></label>
-    <div class="two"><label class="field">Amount lent<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
-      <label class="field">Currency<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
-    <div class="two"><label class="field">Due date (optional)<input name="due" type="date" value="${esc(l?.due || '')}"></label>
-      <label class="field">Note (optional)<input name="note" maxlength="60" value="${esc(l?.note || '')}" placeholder="e.g. Laptop repair"></label></div>
-    <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-lent" data-id="${l.id}">Archive</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+  open(`<h2>${l ? __('Edit money lent') : __('Add money lent')}</h2><form data-form="lent" data-id="${l?.id || ''}" style="display:contents">
+    <label class="field">${__('Who borrowed it')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Budi')}" autofocus></label>
+    <div class="two"><label class="field">${__('Amount lent')}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
+      <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
+    <div class="two"><label class="field">${__('Due date (optional)')}<input name="due" type="date" value="${esc(l?.due || '')}"></label>
+      <label class="field">${__('Note (optional)')}<input name="note" maxlength="60" value="${esc(l?.note || '')}" placeholder="${__('e.g. Laptop repair')}"></label></div>
+    <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-lent" data-id="${l.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function paymentDialog(l, kind = 'loan') {
   const lent = kind === 'lent';
-  open(`<h2>${lent ? 'Record repayment' : 'Record payment'}</h2><p class="muted" style="margin-top:-10px">${esc(l.name)} · ${money(loanBalance(l), l.currency)} ${lent ? 'still owed to you' : 'remaining'}</p>
+  open(`<h2>${lent ? __('Record repayment') : __('Record payment')}</h2><p class="muted" style="margin-top:-10px">${esc(l.name)} · ${money(loanBalance(l), l.currency)} ${lent ? __('still owed to you') : __('remaining')}</p>
   <form data-form="payment" data-kind="${kind}" data-id="${l.id}" style="display:contents">
-    <div class="two"><label class="field">Amount (${esc(l.currency)})<input name="amount" type="number" min="0" step="any" required value="${l.monthly_minor ? toMajor(l.monthly_minor, l.currency) : ''}" autofocus></label>
-      <label class="field">Date<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
-    <p class="hint">${lent ? 'Repayments lower what you are owed. They are not counted as income.' : 'Payments lower the loan balance and your debt in net worth. They are not counted as spending.'}</p>
-    <div class="actions"><button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save ${lent ? 'repayment' : 'payment'}</button></div></form>`);
+    <div class="two"><label class="field">${__('Amount ({cur})', { cur: esc(l.currency) })}<input name="amount" type="number" min="0" step="any" required value="${l.monthly_minor ? toMajor(l.monthly_minor, l.currency) : ''}" autofocus></label>
+      <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
+    <p class="hint">${lent ? __('Repayments lower what you are owed. They are not counted as income.') : __('Payments lower the loan balance and your debt in net worth. They are not counted as spending.')}</p>
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">Save ${lent ? 'repayment' : 'payment'}</button></div></form>`);
 }
 
 /* ---------- views ---------- */
 function sidebar() {
   const r = route();
-  const link = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}<span>${label}</span></a>`;
+  const link = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}<span>${__(label)}</span></a>`;
   return `<aside class="sidebar"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
-    <div class="nav-label">MENU</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'swap', 'Transactions')}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'trend', 'Portfolio')}</nav>
-    <div class="nav-label">ACCOUNT</div><nav class="nav">${link('settings', 'gear', 'Settings')}</nav></aside>`;
+    <div class="nav-label">${__('MENU')}</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'swap', 'Transactions')}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'trend', 'Portfolio')}</nav>
+    <div class="nav-label">${__('ACCOUNT')}</div><nav class="nav">${link('settings', 'gear', 'Settings')}</nav></aside>`;
 }
 function bottomNav() {
   const r = route();
-  const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${label}</a>`;
+  const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
   return `<nav class="bottom-nav">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Activity')}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}${l('settings', 'gear', 'Settings')}</nav>
-    <button class="fab" data-act="add-txn" aria-label="Add transaction">${icon('plus')}</button>`;
+    <button class="fab" data-act="add-txn" aria-label="${__('Add transaction')}">${icon('plus')}</button>`;
 }
 function topbar(title, sub) {
   const p = D().profile, hour = new Date().getHours();
-  const greet = title || `Good ${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}, ${esc(p.name.split(' ')[0])}`;
-  return `<header class="topbar"><div><h1>${greet}</h1><p>${esc(sub)}</p></div>
-    <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="Search transactions" aria-label="Search transactions"></label>
-    <div class="profile"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · signed in</small></div></div></div></header>`;
+  const first = esc(p.name.split(' ')[0]);
+  const greet = title ? __(title) : hour < 12 ? __('Good morning, {name}', { name: first }) : hour < 18 ? __('Good afternoon, {name}', { name: first }) : __('Good evening, {name}', { name: first });
+  return `<header class="topbar"><div><h1>${greet}</h1><p>${esc(__(sub))}</p></div>
+    <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="${__('Search transactions')}" aria-label="${__('Search transactions')}"></label>
+    <div class="profile"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></div></div></header>`;
 }
 
 function viewOverview() {
@@ -606,24 +607,24 @@ function viewOverview() {
   const recent = D().transactions.slice(0, 6);
   return `${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
-    <section class="card hero"><div class="label">Total Balance <span>${D().wallets.filter((w) => !w.archived).length} wallets</span></div>
+    <section class="card hero"><div class="label">${__('Total Balance')} <span>${__('{n} wallets', { n: D().wallets.filter((w) => !w.archived).length })}</span></div>
       <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
-      <div class="delta"><b>${saved >= 0 ? '+' : ''}${saved}%</b><span>${net >= 0 ? '+' : '−'}${money(Math.abs(net), cur())} this month</span></div>
+      <div class="delta"><b>${saved >= 0 ? '+' : ''}${saved}%</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       ${sparkline(bal)}
-      <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} Expense</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} Income</button><button class="ghost" data-act="invest">${icon('plus')} Invest</button><button class="ghost" data-act="transfer">${icon('swap')} Transfer</button></div>
+      <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
-    <section class="card"><div class="card-head"><h2>Money Flow</h2><span class="chip">6 months</span></div>
-      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">Saved in ${esc(monthLabel(k))}</p>
+    <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
+      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
       ${flowChart(months, incs, exps)}</section>
-    <section class="card"><div class="card-head"><h2>Spending</h2><div class="tools"><button class="chip" data-act="breakdown">Details</button>${monthSelect()}</div></div>
+    <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools"><button class="chip" data-act="breakdown">${__('Details')}</button>${monthSelect()}</div></div>
       ${halfDonut(cats, exp)}
-      <div class="cat-legend">${cats.slice(0, 3).map((c) => `<button class="legend-btn" data-act="breakdown" data-id="${c.id || ''}">${tile({ icon: c.icon, color: c.color }, true)}${esc(c.name)}</button>`).join('') || '<div>No spending this month</div>'}</div></section>
-    <section class="card"><div class="card-head"><h2>Budgets</h2><a class="chip" href="#/budgets">Manage</a></div>
-      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">of ${money(global.budget, cur())} monthly budget</p>` : '<div class="big">No monthly budget</div><p class="muted">Set one to track your month</p>'}
-      <div class="tiles">${tiles.map((b) => `<div class="btile"><div class="well" style="--h:${b.pct > 0 ? Math.max(4, Math.min(100, b.pct)) : 0}"><div class="fill ${b.status}" style="height:${b.pct > 0 ? Math.max(4, Math.min(100, b.pct)) : 0}%"></div><span class="pct">${Math.round(b.pct)}%</span></div><b>${esc(b.name)}</b><small class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</small></div>`).join('') || (occs.length ? '' : '<p class="muted">No budgets yet.</p>')}</div>
-      ${occs.length ? `<h3 class="ov-h">Special occasions</h3>${occs.map((o) => `<div class="ov-occ"><div class="meta"><span>🎉 ${esc(o.name)}</span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div><div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div></div>`).join('')}${moreOcc ? `<p class="muted" style="margin-top:10px"><a href="#/budgets">+${moreOcc} more on the Budgets page</a></p>` : ''}` : ''}</section>
+      <div class="cat-legend">${cats.slice(0, 3).map((c) => `<button class="legend-btn" data-act="breakdown" data-id="${c.id || ''}">${tile({ icon: c.icon, color: c.color }, true)}${esc(c.name)}</button>`).join('') || ('<div>' + __('No spending this month') + '</div>')}</div></section>
+    <section class="card"><div class="card-head"><h2>${__('Budgets')}</h2><a class="chip" href="#/budgets">${__('Manage')}</a></div>
+      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })}</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
+      <div class="tiles">${tiles.map((b) => `<div class="btile"><div class="well" style="--h:${b.pct > 0 ? Math.max(4, Math.min(100, b.pct)) : 0}"><div class="fill ${b.status}" style="height:${b.pct > 0 ? Math.max(4, Math.min(100, b.pct)) : 0}%"></div><span class="pct">${Math.round(b.pct)}%</span></div><b>${esc(b.name)}</b><small class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</small></div>`).join('') || (occs.length ? '' : ('<p class="muted">' + __('No budgets yet.') + '</p>'))}</div>
+      ${occs.length ? `<h3 class="ov-h">${__('Special occasions')}</h3>${occs.map((o) => `<div class="ov-occ"><div class="meta"><span>🎉 ${esc(o.name)}</span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div><div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div></div>`).join('')}${moreOcc ? `<p class="muted" style="margin-top:10px"><a href="#/budgets">${__('+{n} more on the Budgets page', { n: moreOcc })}</a></p>` : ''}` : ''}</section>
   </div>
-  <section class="card" style="margin-top:20px"><div class="card-head"><h2>Recent transactions</h2><a class="chip" href="#/transactions">View all</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>`;
+  <section class="card" style="margin-top:20px"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>`;
 }
 
 function txnRow(t) {
@@ -631,14 +632,14 @@ function txnRow(t) {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
     return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
-    <div><div class="title">${esc(t.note)}<span class="badge">${xfer ? 'Transfer' : 'Investment'}</span></div>
-    <div class="sub">Transfer · ${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' }))}</div></div>
+    <div><div class="title">${esc(t.note)}<span class="badge">${xfer ? __('Transfer') : __('Investment')}</span></div>
+    <div class="sub">${__('Transfer')} · ${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div>
     <div class="amt num">${t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div></div>`;
   }
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
-    <div><div class="title">${esc(t.note || c?.name || 'Transaction')}${t.category_source === 'ai' ? '<span class="badge ai" title="Tagged by AI">AI</span>' : ''}${!c ? '<span class="badge">Uncategorized</span>' : ''}${t.transfer_id ? '<span class="badge">Transfer fee</span>' : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
-    <div class="sub">${esc(c ? catPath(c.id) : 'No category')} ·${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' }))}</div></div>
+    <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${!c ? ('<span class="badge">' + __('Uncategorized') + '</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
+    <div class="sub">${esc(c ? catPath(c.id) : __('No category'))} ·${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div>
     <div class="amt num ${t.type}">${sign}${money(t.amount_minor, t.currency)}</div></div>`;
 }
 function filteredTxns() {
@@ -649,41 +650,41 @@ function filteredTxns() {
 }
 function txnListHtml() {
   const rows = filteredTxns();
-  return rows.length ? rows.map(txnRow).join('') : '<div class="empty">No transactions match.</div>';
+  return rows.length ? rows.map(txnRow).join('') : ('<div class="empty">' + __('No transactions match.') + '</div>');
 }
 function viewTransactions() {
   const list = inMonth(state.ui.month);
-  return `${topbar('Transactions', `${list.length} in ${monthLabel(state.ui.month)} · income ${money(sumBy(list, 'income'), cur())} · spent ${money(sumBy(list, 'expense'), cur())}`)}
-  <section class="card"><div class="card-head"><h2>Activity</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-txn">+ Add</button></div></div>
-    <div class="filters"><input data-filter="q" placeholder="Search note or category" value="${esc(state.ui.q)}">
-      <select data-filter="cat" aria-label="Category"><option value="">All categories</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
-      ${D().occasions.length ? `<select data-filter="occ" aria-label="Occasion"><option value="">All occasions</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" aria-label="Wallet"><option value="">All wallets</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></div>
+  return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
+  <section class="card"><div class="card-head"><h2>${__('Activity')}</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-txn">${__('+ Add')}</button></div></div>
+    <div class="filters"><input data-filter="q" placeholder="${__('Search note or category')}" value="${esc(state.ui.q)}">
+      <select data-filter="cat" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
+      ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
+      <select data-filter="wallet" aria-label="${__('Wallet')}"><option value="">${__('All wallets')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></div>
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 
 function viewBudgets() {
   const bs = budgetStatus(state.ui.month), g = bs.find((b) => b.category_id === null), rest = bs.filter((b) => b.category_id);
   const over = bs.filter((b) => b.status === 'exceeded').length;
-  const cap = (b) => `<span class="badge ${b.status}">${b.status === 'ok' ? 'On track' : b.status === 'warning' ? 'Almost there' : 'Over budget'}</span>`;
-  return `${topbar('Budgets', over ? `${over} budget${over > 1 ? 's' : ''} exceeded in ${monthLabel(state.ui.month)}` : `Monthly limits for ${monthLabel(state.ui.month)}`)}
+  const cap = (b) => `<span class="badge ${b.status}">${b.status === 'ok' ? __('On track') : b.status === 'warning' ? __('Almost there') : __('Over budget')}</span>`;
+  return `${topbar('Budgets', over ? __(over > 1 ? '{n} budgets exceeded in {month}' : '{n} budget exceeded in {month}', { n: over, month: monthLabel(state.ui.month) }) : __('Monthly limits for {month}', { month: monthLabel(state.ui.month) }))}
   <div class="stack">
-  <section class="card"><div class="card-head"><h2>Overall budget</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-budget">+ Budget</button></div></div>
-    ${g ? `<div class="big num">${money(g.spent, cur())} <span class="muted" style="font-size:18px;font-weight:500">of ${money(g.budget, cur())}</span></div>
+  <section class="card"><div class="card-head"><h2>${__('Overall budget')}</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-budget">${__('+ Budget')}</button></div></div>
+    ${g ? `<div class="big num">${money(g.spent, cur())} <span class="muted" style="font-size:18px;font-weight:500">${__('of {amount}', { amount: money(g.budget, cur()) })}</span></div>
       <div class="bar" style="margin:14px 0 10px"><i class="${g.status}" style="width:${Math.min(100, g.pct)}%"></i></div>
-      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span class="muted">${g.remaining >= 0 ? `${money(g.remaining, cur())} left` : `${money(-g.remaining, cur())} over`} · ${Math.round(g.pct)}% used</span>${cap(g)}<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">Edit</button></div>`
-      : '<p class="muted">No overall budget yet. Add one to cap total monthly spending.</p>'}</section>
-  <section class="card"><div class="card-head"><h2>By category</h2></div>
-    ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">Edit</button></div>`).join('') : '<div class="empty">No category budgets yet.</div>'}</section>
-  <section class="card"><div class="card-head"><h2>Special occasions</h2><button class="btn" data-act="add-occasion">+ Occasion</button></div>
-    <p class="muted" style="margin-bottom:8px">A one-off budget for a trip, a party or a dinner. Tag expenses to it when you add them.</p>
-    ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : '<div class="empty">No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".</div>') + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">Past occasions</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span class="muted">${g.remaining >= 0 ? __('{amount} left', { amount: money(g.remaining, cur()) }) : __('{amount} over', { amount: money(-g.remaining, cur()) })} · ${__('{pct}% used', { pct: Math.round(g.pct) })}</span>${cap(g)}<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">${__('Edit')}</button></div>`
+      : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>
+  <section class="card"><div class="card-head"><h2>${__('By category')}</h2></div>
+    ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
+  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Occasion')}</button></div>
+    <p class="muted" style="margin-bottom:8px">${__('A one-off budget for a trip, a party or a dinner. Tag expenses to it when you add them.')}</p>
+    ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
 }
 const occasionRow = (o) => {
-  const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
-  return `<div class="brow wrap"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? 'On track' : o.status === 'warning' ? 'Almost there' : 'Over budget'}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div>
-    <div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div><small class="muted">${o.count} expense${o.count === 1 ? '' : 's'}${dates ? ' · ' + esc(dates) : ''}${o.remaining < 0 ? ` · ${money(-o.remaining, cur())} over` : ` · ${money(o.remaining, cur())} left`}</small></div>
-    <div class="tools"><button class="btn" data-act="add-occasion-txn" data-id="${o.id}">+ Expense</button><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">Expenses</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">Edit</button></div></div>`;
+  const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
+  return `<div class="brow wrap"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)} <span class="badge ${o.status}">${o.status === 'ok' ? __('On track') : o.status === 'warning' ? __('Almost there') : __('Over budget')}</span></span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div>
+    <div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div><small class="muted">${__(o.count === 1 ? '{n} expense' : '{n} expenses', { n: o.count })}${dates ? ' · ' + esc(dates) : ''}${o.remaining < 0 ? ` · ${__('{amount} over', { amount: money(-o.remaining, cur()) })}` : ` · ${__('{amount} left', { amount: money(o.remaining, cur()) })}`}</small></div>
+    <div class="tools"><button class="btn" data-act="add-occasion-txn" data-id="${o.id}">${__('+ Expense')}</button><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">${__('Expenses')}</button><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">${__('Edit')}</button></div></div>`;
 };
 
 /* Settings > Categories: collapsed by default; each parent with sub-categories expands on its own */
@@ -692,12 +693,12 @@ function categoriesCard() {
   const open = state.ui.catsOpen;
   const rows = roots.map((c) => {
     const kids = childrenOf(c.id), isOpen = state.ui.openCats.has(c.id);
-    return `<div class="brow wrap">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${c.type}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${kids.length} sub-categor${kids.length === 1 ? 'y' : 'ies'} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
-      <div class="tools"><button class="btn secondary" data-act="add-cat" data-parent="${c.id}">+ Sub</button><button class="btn secondary" data-act="edit-cat" data-id="${c.id}">Edit</button></div></div>`
-      + (isOpen ? kids.map((k) => `<div class="brow indent wrap">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">Edit</button></div></div>`).join('') : '');
+    return `<div class="brow wrap">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${c.type}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${__(kids.length === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids.length })} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
+      <div class="tools"><button class="btn secondary" data-act="add-cat" data-parent="${c.id}">${__('+ Sub')}</button><button class="btn secondary" data-act="edit-cat" data-id="${c.id}">${__('Edit')}</button></div></div>`
+      + (isOpen ? kids.map((k) => `<div class="brow indent wrap">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">${__('Edit')}</button></div></div>`).join('') : '');
   }).join('');
-  return `<section class="card"><div class="card-head"><button type="button" class="legend-btn card-toggle" data-act="toggle-cats" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><h2>Categories</h2></button><button class="btn" data-act="add-cat">+ Category</button></div>
-    <p class="muted" style="margin-top:4px">${roots.length} categories · ${subs} sub-categories${open ? '. Totals and budgets roll sub-categories up into their parent.' : ''}</p>
+  return `<section class="card"><div class="card-head"><button type="button" class="legend-btn card-toggle" data-act="toggle-cats" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><h2>${__('Categories')}</h2></button><button class="btn" data-act="add-cat">${__('+ Category')}</button></div>
+    <p class="muted" style="margin-top:4px">${__('{n} categories · {m} sub-categories', { n: roots.length, m: subs })}${open ? '. ' + __('Totals and budgets roll sub-categories up into their parent.') : ''}</p>
     ${open ? `<div style="margin-top:6px">${rows}</div>` : ''}</section>`;
 }
 function viewSettings() {
@@ -705,17 +706,17 @@ function viewSettings() {
   return `${topbar('Settings', 'Profile, currency and privacy')}
   <div class="stack">
   ${categoriesCard()}
-  <section class="card"><div class="card-head"><h2>Profile</h2></div>
-    <div class="form-row"><div>Display name<small>Shown in the greeting</small></div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="Display name"></div></div>
-    <div class="form-row"><div>Reporting currency<small>Used for totals, budgets and charts. Wallets keep their own currency; budgets convert at demo rates.</small></div><div class="field"><select data-setting="currency" aria-label="Currency">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
-  <section class="card"><div class="card-head"><h2>Smart tagging</h2></div>
-    <div class="form-row"><div>AI category suggestions<small>After about 30 labeled transactions, uncategorized ones are tagged from your history. If unsure it stays empty.</small></div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="AI tagging"></label></div></section>
-  <section class="card"><div class="card-head"><h2>Account</h2></div>
-    <div class="form-row"><div>Signed in as<small>${esc(state.auth.email)}</small></div><span class="badge ok">Active now</span></div>
-    <div class="form-row"><div>Sign out<small>Ends the session on this device</small></div><button class="btn secondary" data-act="signout">Sign out</button></div>
-    <div class="form-row"><div>Sign out everywhere else<small>Revokes every other device</small></div><button class="btn secondary" data-act="revoke">Sign out others</button></div>
-    <div class="form-row"><div>Use sample data<small>Switch between your own data and a demo account full of sample wallets, transactions, budgets and a portfolio. Your own data stays untouched, and nothing you do in the demo is saved.</small></div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="Use sample data"></label></div>
-    ${p.sample ? `<div class="form-row"><div>Sample data saved earlier<small>Demo rows that an older version added to your account. Remove them to clean up; anything you added yourself stays.</small></div><button class="btn danger" data-act="remove-sample">Remove</button></div>` : ''}</section></div>`;
+  <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
+    <div class="form-row"><div>${__('Display name')}<small>${__('Shown in the greeting')}</small></div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
+    <div class="form-row"><div>${__('Reporting currency')}<small>${__('Used for totals, budgets and charts. Wallets keep their own currency; budgets convert at demo rates.')}</small></div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
+  <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
+    <div class="form-row"><div>${__('AI category suggestions')}<small>${__('After about 30 labeled transactions, uncategorized ones are tagged from your history. If unsure it stays empty.')}</small></div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
+  <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
+    <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div>
+    <div class="form-row"><div>${__('Sign out')}<small>${__('Ends the session on this device')}</small></div><button class="btn secondary" data-act="signout">${__('Sign out')}</button></div>
+    <div class="form-row"><div>${__('Sign out everywhere else')}<small>${__('Revokes every other device')}</small></div><button class="btn secondary" data-act="revoke">${__('Sign out others')}</button></div>
+    <div class="form-row"><div>${__('Use sample data')}<small>${__('Switch between your own data and a demo account full of sample wallets, transactions, budgets and a portfolio. Your own data stays untouched, and nothing you do in the demo is saved.')}</small></div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="${__('Use sample data')}"></label></div>
+    ${p.sample ? `<div class="form-row"><div>${__('Sample data saved earlier')}<small>${__('Demo rows that an older version added to your account. Remove them to clean up; anything you added yourself stays.')}</small></div><button class="btn danger" data-act="remove-sample">${__('Remove')}</button></div>` : ''}</section></div>`;
 }
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
@@ -738,44 +739,44 @@ function mountCaptcha() {
   const sc = document.createElement('script'); sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; sc.async = true; sc.onload = draw; sc.onerror = () => { captchaLoading = false; };
   document.head.appendChild(sc);
 }
-const authLink = (view, text) => `<button type="button" class="legend-btn" data-act="auth-view" data-view="${view}">${text}</button>`;
+const authLink = (view, text) => `<button type="button" class="legend-btn" data-act="auth-view" data-view="${view}">${__(text)}</button>`;
 function viewAuth() {
   const a = state.auth, v = a.view, logo = '<div class="logo"><img src="icon.svg" alt="">Stiver</div>';
-  const emailField = `<label class="field">Email<input name="email" type="email" required autocomplete="email" placeholder="you@example.com" value="${esc(a.email)}"></label>`;
-  const google = `<button type="button" class="btn secondary lg google" data-act="auth-google">${GOOGLE_LOGO} Continue with Google</button><div class="or"><span>or</span></div>`;
+  const emailField = `<label class="field">${__('Email')}<input name="email" type="email" required autocomplete="email" placeholder="${__('you@example.com')}" value="${esc(a.email)}"></label>`;
+  const google = `<button type="button" class="btn secondary lg google" data-act="auth-google">${GOOGLE_LOGO} ${__('Continue with Google')}</button><div class="or"><span>${__('or')}</span></div>`;
   let body;
   if (v === 'signup') body = `<form class="card" data-form="signup">${logo}
-    <div><h2 style="font-size:24px">Create your account</h2><p class="muted">Your data is private to you and saved to your account.</p></div>
+    <div><h2 style="font-size:24px">${__('Create your account')}</h2><p class="muted">${__('Your data is private to you and saved to your account.')}</p></div>
     ${google}${authMsg(a)}
-    <label class="field">Name<input name="name" required placeholder="Ari Nolan" autocomplete="name"></label>
+    <label class="field">${__('Name')}<input name="name" required placeholder="${__('Ari Nolan')}" autocomplete="name"></label>
     ${emailField}
-    <label class="field">Password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label>
-    <label class="field">Reporting currency<select name="currency">${Object.keys(RATES).map((c) => `<option>${c}</option>`).join('')}</select></label>
-    ${captchaBox()}<button class="btn lg" type="submit">Create account</button>
-    <p class="muted" style="text-align:center">We'll email you a link to confirm your address. Already have an account? ${authLink('signin', 'Sign in')}</p></form>`;
+    <label class="field">${__('Password')}<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"></label>
+    <label class="field">${__('Reporting currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option>${c}</option>`).join('')}</select></label>
+    ${captchaBox()}<button class="btn lg" type="submit">${__('Create account')}</button>
+    <p class="muted" style="text-align:center">${__("We'll email you a link to confirm your address. Already have an account?")} ${authLink('signin', 'Sign in')}</p></form>`;
   else if (v === 'forgot') body = `<form class="card" data-form="forgot">${logo}
-    <div><h2 style="font-size:24px">Reset your password</h2><p class="muted">Enter your email and we'll send you a reset link.</p></div>
-    ${authMsg(a)}${emailField}${captchaBox()}<button class="btn lg" type="submit">Send reset link</button>
+    <div><h2 style="font-size:24px">${__('Reset your password')}</h2><p class="muted">${__('Enter your email and we\'ll send you a reset link.')}</p></div>
+    ${authMsg(a)}${emailField}${captchaBox()}<button class="btn lg" type="submit">${__('Send reset link')}</button>
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></form>`;
   else if (v === 'recovery') body = `<form class="card" data-form="recovery">${logo}
-    <div><h2 style="font-size:24px">Choose a new password</h2></div>${authMsg(a)}
-    <label class="field">New password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label>
-    <button class="btn lg" type="submit">Save password</button></form>`;
+    <div><h2 style="font-size:24px">${__('Choose a new password')}</h2></div>${authMsg(a)}
+    <label class="field">${__('New password')}<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"></label>
+    <button class="btn lg" type="submit">${__('Save password')}</button></form>`;
   else if (v === 'sent') body = `<div class="card">${logo}
-    <div><h2 style="font-size:24px">Check your email</h2><p class="muted">We sent a link to <b>${esc(a.email)}</b>. Open it to confirm your address, then sign in. If you already have an account, just sign in.</p></div>
-    ${authMsg(a)}<p class="hint" role="status">Waiting for you to confirm. Open the link on any device, and this page signs you in on its own.</p>
-    ${captchaBox()}<button class="btn lg" data-act="auth-check">I've confirmed my email</button><button class="btn secondary lg" data-act="auth-resend">Resend the email</button>
+    <div><h2 style="font-size:24px">${__('Check your email')}</h2><p class="muted">${__('We sent a link to {email}. Open it to confirm your address, then sign in. If you already have an account, just sign in.', { email: '<b>' + esc(a.email) + '</b>' })}</p></div>
+    ${authMsg(a)}<p class="hint" role="status">${__('Waiting for you to confirm. Open the link on any device, and this page signs you in on its own.')}</p>
+    ${captchaBox()}<button class="btn lg" data-act="auth-check">${__('I\'ve confirmed my email')}</button><button class="btn secondary lg" data-act="auth-resend">${__('Resend the email')}</button>
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></div>`;
   else body = `<form class="card" data-form="signin">${logo}
-    <div><h2 style="font-size:24px">Welcome back</h2><p class="muted">Sign in to see your spending, budgets and net worth.</p></div>
+    <div><h2 style="font-size:24px">${__('Welcome back')}</h2><p class="muted">${__('Sign in to see your spending, budgets and net worth.')}</p></div>
     ${google}${authMsg(a)}${emailField}
-    <label class="field">Password<input name="password" type="password" required autocomplete="current-password"></label>
-    ${captchaBox()}<button class="btn lg" type="submit">Sign in</button>
+    <label class="field">${__('Password')}<input name="password" type="password" required autocomplete="current-password"></label>
+    ${captchaBox()}<button class="btn lg" type="submit">${__('Sign in')}</button>
     <p class="muted" style="text-align:center">${authLink('forgot', 'Forgot password?')}</p>
-    <p class="muted" style="text-align:center">New here? ${authLink('signup', 'Create an account')}</p></form>`;
-  return `<div class="onboard">${body}</div>`;
+    <p class="muted" style="text-align:center">${__('New here?')} ${authLink('signup', 'Create an account')}</p></form>`;
+  return `<div class="onboard">${body}<p class="legal-links"><a href="privacy.html">${__('Privacy Policy')}</a> · <a href="terms.html">${__('Terms of Service')}</a></p></div>`;
 }
-const viewSplash = (msg) => `<div class="onboard"><div class="card" role="status"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="muted">${esc(msg)}</p></div></div>`;
+const viewSplash = (msg) => `<div class="onboard"><div class="card" role="status"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="muted">${esc(__(msg))}</p></div></div>`;
 
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: viewTransactions, budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
@@ -786,7 +787,7 @@ function render() {
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
   if (!D()) {
     app.innerHTML = a.loadError
-      ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="auth-err" role="alert">Couldn't load your data: ${esc(a.loadError)}</p><button class="btn lg" data-act="retry-load">Try again</button><button class="btn secondary lg" data-act="signout">Sign out</button></div></div>`
+      ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="auth-err" role="alert">${__("Couldn't load your data: {error}", { error: esc(a.loadError) })}</p><button class="btn lg" data-act="retry-load">${__('Try again')}</button><button class="btn secondary lg" data-act="signout">${__('Sign out')}</button></div></div>`
       : viewSplash('Loading your data…');
     return;
   }
@@ -803,10 +804,10 @@ function render() {
 const dlg = () => $('#dlg');
 function open(html) { dlg().innerHTML = `<div class="dlg">${html}</div>`; if (!dlg().open) dlg().showModal(); }
 const close = () => dlg().open && dlg().close();
-const catOptions = (type, sel) => `<option value="">— None (AI may suggest) —</option>${catTree(type).map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}`;
+const catOptions = (type, sel) => `<option value="">${__('— None (AI may suggest) —')}</option>${catTree(type).map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}`;
 
 /* parents a new category can live in: none (a new top-level category) or an existing top-level one of this type */
-const quickParentOptions = (type) => `<option value="">Nothing: a new top-level category</option>${D().categories.filter((c) => !c.parent_id && !c.archived && c.type === type).map((c) => `<option value="${c.id}">${c.icon} ${esc(c.name)} (as a sub-category)</option>`).join('')}`;
+const quickParentOptions = (type) => `<option value="">${__('Nothing: a new top-level category')}</option>${D().categories.filter((c) => !c.parent_id && !c.archived && c.type === type).map((c) => `<option value="${c.id}">${c.icon} ${esc(c.name)} (as a sub-category)</option>`).join('')}`;
 /* add a category without leaving the transaction form, then select it */
 function quickAddCategory(form) {
   const type = form.type.value === 'income' ? 'income' : 'expense', name = form.qc_name.value.trim(), parent = form.qc_parent.value ? catOf(form.qc_parent.value) : null;
@@ -821,7 +822,7 @@ function quickAddCategory(form) {
 /* active occasions whose dates include this day (an occasion without dates never matches by date) */
 const occasionOn = (date) => D().occasions.filter((o) => !o.archived && o.start && date >= o.start && date <= (o.end || o.start));
 /* the four ways to add money movement; the active one is highlighted and the others switch dialogs */
-const kindSeg = (active) => `<div class="seg seg4">${[['expense', 'Expense'], ['income', 'Income'], ['invest', 'Invest'], ['transfer', 'Transfer']].map(([k, n]) => `<label><input type="radio" name="txkind" value="${k}" ${k === active ? 'checked' : ''}>${n}</label>`).join('')}</div>`;
+const kindSeg = (active) => `<div class="seg seg4">${[['expense', 'Expense'], ['income', 'Income'], ['invest', 'Invest'], ['transfer', 'Transfer']].map(([k, n]) => `<label><input type="radio" name="txkind" value="${k}" ${k === active ? 'checked' : ''}>${__(n)}</label>`).join('')}</div>`;
 
 /* ---------- transfers between wallets ----------
    Stored as linked transactions sharing a transfer_id: an 'out' leg on the source wallet, an 'in' leg on the
@@ -832,40 +833,40 @@ function transferDialog(preset) {
   if (ws.length < 2) { toast('Add a second wallet first to transfer between wallets'); return; }
   const from = preset?.from || ws[0], to = ws.find((w) => w.id !== from.id);
   const opt = (w, sel) => `<option value="${w.id}" ${w.id === sel ? 'selected' : ''}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`;
-  open(`<h2>Transfer between wallets</h2><form data-form="transfer" style="display:contents">
+  open(`<h2>${__('Transfer between wallets')}</h2><form data-form="transfer" style="display:contents">
     ${kindSeg('transfer')}
-    <div class="two"><label class="field">From<select name="from">${ws.map((w) => opt(w, from.id)).join('')}</select></label>
-      <label class="field">To<select name="to">${ws.map((w) => opt(w, to.id)).join('')}</select></label></div>
-    <div class="two"><label class="field"><span data-send-label>Amount sent</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required autofocus></label>
-      <label class="field">Date<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
-    <label class="field" data-recv hidden><span data-recv-label>Amount received</span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
-    <label class="field"><span data-fee-label>Transfer fee (optional)</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
-    <label class="field">Note (optional)<input name="note" maxlength="140" placeholder="e.g. Top up e-wallet"></label>
-    <p class="hint">A transfer is not income or spending. If you enter a fee it is taken from the source wallet on top of the amount and counts as spending.</p>
-    <div class="actions"><button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Transfer</button></div></form>`);
+    <div class="two"><label class="field">${__('From')}<select name="from">${ws.map((w) => opt(w, from.id)).join('')}</select></label>
+      <label class="field">${__('To')}<select name="to">${ws.map((w) => opt(w, to.id)).join('')}</select></label></div>
+    <div class="two"><label class="field"><span data-send-label>${__('Amount sent')}</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required autofocus></label>
+      <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
+    <label class="field" data-recv hidden><span data-recv-label>${__('Amount received')}</span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
+    <label class="field"><span data-fee-label>${__('Transfer fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    <label class="field">${__('Note (optional)')}<input name="note" maxlength="140" placeholder="${__('e.g. Top up e-wallet')}"></label>
+    <p class="hint">${__('A transfer is not income or spending. If you enter a fee it is taken from the source wallet on top of the amount and counts as spending.')}</p>
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Transfer')}</button></div></form>`);
   syncTransfer($('#dlg form'));
 }
 /* keep labels in the right currency; when the two wallets differ, show and prefill the received amount */
 function syncTransfer(form) {
   const A = walletOf(form.from.value), B = walletOf(form.to.value), cross = A.currency !== B.currency;
-  $('[data-send-label]', form).textContent = `Amount sent (${A.currency})`;
-  $('[data-fee-label]', form).textContent = `Transfer fee, optional (${A.currency})`;
+  $('[data-send-label]', form).textContent = __('Amount sent ({cur})', { cur: A.currency });
+  $('[data-fee-label]', form).textContent = __('Transfer fee, optional ({cur})', { cur: A.currency });
   $('[data-recv]', form).hidden = !cross;
   if (cross) {
-    $('[data-recv-label]', form).textContent = `Amount received (${B.currency}) · estimated, edit if different`;
+    $('[data-recv-label]', form).textContent = __('Amount received ({cur}) · estimated, edit if different', { cur: B.currency });
     const a = parseFloat(form.amount.value);
     if (!form.received.dataset.touched) form.received.value = a > 0 ? toMajor(convert(toMinor(a, A.currency), A.currency, B.currency), B.currency).toFixed(expOf(B.currency)) : '';
   }
 }
 function transferDetail(gid) {
   const legs = D().transactions.filter((t) => t.transfer_id === gid), out = legs.find((t) => t.flow === 'out'), inn = legs.find((t) => t.flow === 'in'), fee = legs.find((t) => t.type === 'expense');
-  const row = (k, v) => `<div class="form-row"><div>${k}</div><b class="num">${v}</b></div>`;
-  open(`<h2>Transfer</h2>
+  const row = (k, v) => `<div class="form-row"><div>${__(k)}</div><b class="num">${v}</b></div>`;
+  open(`<h2>${__('Transfer')}</h2>
     ${row('From', esc(walletOf(out?.wallet_id)?.name || '—'))}${row('To', esc(walletOf(inn?.wallet_id)?.name || '—'))}
     ${out ? row('Sent', money(out.amount_minor, out.currency)) : ''}${inn ? row('Received', money(inn.amount_minor, inn.currency)) : ''}${fee ? row('Fee', money(fee.amount_minor, fee.currency)) : ''}
-    ${row('Date', esc(new Date((out || inn || fee).occurred_at + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })))}
-    <p class="hint">Deleting removes the transfer and its fee, and both wallet balances go back to what they were.</p>
-    <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">Delete transfer</button><button type="button" class="btn secondary" data-act="close">Close</button></div>`);
+    ${row('Date', esc(new Date((out || inn || fee).occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })))}
+    <p class="hint">${__('Deleting removes the transfer and its fee, and both wallet balances go back to what they were.')}</p>
+    <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">${__('Delete transfer')}</button><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
 }
 function txnDialog(t, presetType, presetOccasion) {
   const type = t?.type || presetType || 'expense', ws = D().wallets.filter((w) => !w.archived);
@@ -873,56 +874,56 @@ function txnDialog(t, presetType, presetOccasion) {
   const date0 = t?.occurred_at || (presetOccasion?.start && presetOccasion.start > isoDate(new Date()) ? presetOccasion.start : isoDate(new Date()));
   // the amount is entered in the chosen wallet's currency
   const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = expOf(c) ? '0.01' : '1';
-  open(`<h2>${t ? 'Edit' : 'Add'} transaction</h2>
+  open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
-    <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>Expense</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>Income</label>${t ? '' : '<label><input type="radio" name="type" value="invest">Invest</label><label><input type="radio" name="type" value="transfer">Transfer</label>'}</div>
-    <div class="two"><label class="field"><span data-amt-label>Amount (${esc(c)})</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}" autofocus></label>
-      <label class="field">Date<input name="date" type="date" required value="${date0}"></label></div>
-    <label class="field">Category<select name="category">${catOptions(type, t?.category_id)}</select></label>
-    <button type="button" class="legend-btn" data-act="quick-cat" style="align-self:flex-start;margin-top:-6px">+ New category or sub-category</button>
+    <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
+    <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(c) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}" autofocus></label>
+      <label class="field">${__('Date')}<input name="date" type="date" required value="${date0}"></label></div>
+    <label class="field">${__('Category')}<select name="category">${catOptions(type, t?.category_id)}</select></label>
+    <button type="button" class="legend-btn" data-act="quick-cat" style="align-self:flex-start;margin-top:-6px">${__('+ New category or sub-category')}</button>
     <div class="quick-cat" hidden>
-      <div class="two"><label class="field">Name<input name="qc_name" maxlength="40" placeholder="e.g. Gym, or Snacks" autocomplete="off"></label>
-        <label class="field">Icon<input name="qc_icon" maxlength="4" placeholder="🏷️" autocomplete="off"></label></div>
-      <label class="field">Inside<select name="qc_parent">${quickParentOptions(type)}</select></label>
-      <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">Cancel</button><button type="button" class="btn" data-act="quick-cat-add">Add category</button></div></div>
-    ${live.length ? `<label class="field">🎉 Special occasion (optional)<select name="occasion"><option value="">None</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
-    <label class="field">Wallet<select name="wallet">${ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select></label>
-    <label class="field">Note<textarea name="note" maxlength="140" placeholder="e.g. Coffee shop">${esc(t?.note || '')}</textarea></label>
-    <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + '">Delete</button>' : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+      <div class="two"><label class="field">${__('Name')}<input name="qc_name" maxlength="40" placeholder="${__('e.g. Gym, or Snacks')}" autocomplete="off"></label>
+        <label class="field">${__('Icon')}<input name="qc_icon" maxlength="4" placeholder="🏷️" autocomplete="off"></label></div>
+      <label class="field">${__('Inside')}<select name="qc_parent">${quickParentOptions(type)}</select></label>
+      <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">${__('Cancel')}</button><button type="button" class="btn" data-act="quick-cat-add">${__('Add category')}</button></div></div>
+    ${live.length ? `<label class="field">${__('🎉 Special occasion (optional)')}<select name="occasion"><option value="">${__('None')}</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
+    <label class="field">${__('Wallet')}<select name="wallet">${ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select></label>
+    <label class="field">${__('Note')}<textarea name="note" maxlength="140" placeholder="${__('e.g. Coffee shop')}">${esc(t?.note || '')}</textarea></label>
+    <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + ('">' + __('Delete') + '</button>') : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function budgetDialog(b) {
   const used = new Set(D().budgets.map((x) => x.category_id));
   const opts = [{ id: '', name: '💰 All spending (global)' }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: `${c.icon} ${c.name}` }))];
-  open(`<h2>${b ? 'Edit' : 'Add'} budget</h2><form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
-    <label class="field">Applies to<select name="category" ${b ? 'disabled' : ''}>${opts.map((o) => `<option value="${o.id}" ${o.id === (b?.category_id || '') ? 'selected' : ''}>${esc(o.name)}${!b && used.has(o.id || null) ? ' (replace)' : ''}</option>`).join('')}</select></label>
-    <label class="field">Monthly limit (${esc(cur())})<input name="amount" type="number" min="1" step="${expOf(cur()) ? '0.01' : '1'}" required value="${b ? toMajor(b.budget, cur()) : ''}"></label>
-    <p class="hint">Applies from ${esc(monthLabel(state.ui.month))} onward until you set a new amount.</p>
-    <div class="actions">${b ? `<button type="button" class="btn danger" data-act="delete-budget" data-id="${b.id}">Delete</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+  open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2><form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
+    <label class="field">${__('Applies to')}<select name="category" ${b ? 'disabled' : ''}>${opts.map((o) => `<option value="${o.id}" ${o.id === (b?.category_id || '') ? 'selected' : ''}>${esc(o.name)}${!b && used.has(o.id || null) ? ' (replace)' : ''}</option>`).join('')}</select></label>
+    <label class="field">${__('Monthly limit ({cur})', { cur: esc(cur()) })}<input name="amount" type="number" min="1" step="${expOf(cur()) ? '0.01' : '1'}" required value="${b ? toMajor(b.budget, cur()) : ''}"></label>
+    <p class="hint">${__('Applies from {month} onward until you set a new amount.', { month: esc(monthLabel(state.ui.month)) })}</p>
+    <div class="actions">${b ? `<button type="button" class="btn danger" data-act="delete-budget" data-id="${b.id}">${__('Delete')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function occasionDialog(o) {
-  open(`<h2>${o ? 'Edit' : 'New'} special occasion</h2><form data-form="occasion" data-id="${o?.id || ''}" style="display:contents">
-    <label class="field">Name<input name="name" required maxlength="40" value="${esc(o?.name || '')}" placeholder="e.g. Bali Trip, Birthday Dinner" autofocus></label>
-    <div class="two">${o ? '' : `<label class="field">Currency<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
+  open(`<h2>${o ? __('Edit special occasion') : __('New special occasion')}</h2><form data-form="occasion" data-id="${o?.id || ''}" style="display:contents">
+    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}" autofocus></label>
+    <div class="two">${o ? '' : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
       <label class="field">Budget${o ? ` (${esc(o.currency)})` : ''}<input name="amount" type="number" min="1" step="any" required value="${o ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
-    <div class="two"><label class="field">Starts (optional)<input name="start" type="date" value="${esc(o?.start || '')}"></label>
-      <label class="field">Ends (optional)<input name="end" type="date" value="${esc(o?.end || '')}"></label></div>
-    <p class="hint">Expenses you tag to this occasion still count in your monthly budgets. This budget is an extra view of what the occasion costs.</p>
-    <div class="actions">${o ? `<button type="button" class="btn danger" data-act="delete-occasion" data-id="${o.id}">Delete</button><button type="button" class="btn secondary" data-act="archive-occasion" data-id="${o.id}">${o.archived ? 'Reopen' : 'Archive'}</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+    <div class="two"><label class="field">${__('Starts (optional)')}<input name="start" type="date" value="${esc(o?.start || '')}"></label>
+      <label class="field">${__('Ends (optional)')}<input name="end" type="date" value="${esc(o?.end || '')}"></label></div>
+    <p class="hint">${__('Expenses you tag to this occasion still count in your monthly budgets. This budget is an extra view of what the occasion costs.')}</p>
+    <div class="actions">${o ? `<button type="button" class="btn danger" data-act="delete-occasion" data-id="${o.id}">${__('Delete')}</button><button type="button" class="btn secondary" data-act="archive-occasion" data-id="${o.id}">${o.archived ? __('Reopen') : __('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 const SWATCHES = ['#4A44C6', '#8B8FF0', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#EF4444', '#0EA5E9', '#22C55E', '#94A3B8'];
 function catDialog(c, parentId) {
   const parent = catOf(c ? c.parent_id : parentId) || null;
   const hasKids = c && childrenOf(c.id).length > 0;
   const tops = D().categories.filter((x) => !x.parent_id && !x.archived && (!c || x.id !== c.id));
-  open(`<h2>${c ? 'Edit' : 'New'} ${parent ? 'sub-category' : 'category'}</h2>
+  open(`<h2>${c ? (parent ? __('Edit sub-category') : __('Edit category')) : (parent ? __('New sub-category') : __('New category'))}</h2>
   <form data-form="cat" data-id="${c?.id || ''}" style="display:contents">
-    <label class="field">Name<input name="name" required maxlength="30" value="${esc(c?.name || '')}" placeholder="e.g. Pets" autofocus></label>
-    <div class="two"><label class="field">Icon (emoji)<input name="icon" maxlength="4" value="${esc(c?.icon || '🏷️')}"></label>
-      <label class="field">Color<input name="color" type="color" value="${esc(c?.color || parent?.color || SWATCHES[0])}"></label></div>
-    <label class="field">Parent category<select name="parent" ${hasKids ? 'disabled' : ''}><option value="">None (top-level)</option>${tops.map((x) => `<option value="${x.id}" ${parent && x.id === parent.id ? 'selected' : ''}>${x.icon} ${esc(x.name)}</option>`).join('')}</select></label>
-    <label class="field">Type<select name="type" ${parent || c ? 'disabled' : ''}><option value="expense" ${c?.type === 'expense' || !c ? 'selected' : ''}>Expense</option><option value="income" ${c?.type === 'income' ? 'selected' : ''}>Income</option></select></label>
-    <p class="hint">${hasKids ? 'This category has sub-categories, so it stays top-level.' : 'Sub-categories show up in the spending breakdown and roll up into their parent.'}</p>
-    <div class="actions">${c ? `<button type="button" class="btn danger" data-act="archive-cat" data-id="${c.id}">Archive</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+    <label class="field">${__('Name')}<input name="name" required maxlength="30" value="${esc(c?.name || '')}" placeholder="${__('e.g. Pets')}" autofocus></label>
+    <div class="two"><label class="field">${__('Icon (emoji)')}<input name="icon" maxlength="4" value="${esc(c?.icon || '🏷️')}"></label>
+      <label class="field">${__('Color')}<input name="color" type="color" value="${esc(c?.color || parent?.color || SWATCHES[0])}"></label></div>
+    <label class="field">${__('Parent category')}<select name="parent" ${hasKids ? 'disabled' : ''}><option value="">${__('None (top-level)')}</option>${tops.map((x) => `<option value="${x.id}" ${parent && x.id === parent.id ? 'selected' : ''}>${x.icon} ${esc(x.name)}</option>`).join('')}</select></label>
+    <label class="field">${__('Type')}<select name="type" ${parent || c ? 'disabled' : ''}><option value="expense" ${c?.type === 'expense' || !c ? 'selected' : ''}>${__('Expense')}</option><option value="income" ${c?.type === 'income' ? 'selected' : ''}>${__('Income')}</option></select></label>
+    <p class="hint">${hasKids ? __('This category has sub-categories, so it stays top-level.') : __('Sub-categories show up in the spending breakdown and roll up into their parent.')}</p>
+    <div class="actions">${c ? `<button type="button" class="btn danger" data-act="archive-cat" data-id="${c.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 
 /* month breakdown: parent categories, each expandable to its sub-categories */
@@ -933,69 +934,69 @@ function breakdownDialog(selId) {
     const has = n.subs.length > 0, pct = total ? Math.round((n.value / total) * 100) : 0;
     const head = `<span class="bk-name">${tile({ icon: n.icon, color: n.color }, true)}<b>${esc(n.name)}</b></span><span class="bk-amt num">${money(n.value, c$)} <small class="muted">${pct}%</small></span>`;
     if (!has) return `<div class="bk-item"><div class="bk-sum nochev">${head}</div>${bar(n.value, total, n.color)}
-      ${n.id ? `<div class="bk-subs"><button class="legend-btn" data-act="add-cat" data-parent="${n.id}">+ Add sub-category</button></div>` : ''}</div>`;
+      ${n.id ? `<div class="bk-subs"><button class="legend-btn" data-act="add-cat" data-parent="${n.id}">${__('+ Add sub-category')}</button></div>` : ''}</div>`;
     return `<details class="bk-item" ${String(n.id) === selId ? 'open' : ''}><summary class="bk-sum">${head}</summary>${bar(n.value, total, n.color)}
       <div class="bk-subs">${n.subs.map((s) => `<div class="bk-sub"><span>${s.icon} ${esc(s.name)}</span><span class="num">${money(s.value, c$)} <small class="muted">${Math.round((s.value / n.value) * 100)}%</small></span></div>${bar(s.value, n.value, n.color)}`).join('')}
-        ${n.direct ? `<div class="bk-sub"><span class="muted">Not in a sub-category</span><span class="num">${money(n.direct, c$)}</span></div>` : ''}
-        <button class="legend-btn" data-act="add-cat" data-parent="${n.id}">+ Add sub-category</button></div></details>`;
+        ${n.direct ? `<div class="bk-sub"><span class="muted">${__('Not in a sub-category')}</span><span class="num">${money(n.direct, c$)}</span></div>` : ''}
+        <button class="legend-btn" data-act="add-cat" data-parent="${n.id}">${__('+ Add sub-category')}</button></div></details>`;
   };
-  open(`<h2>Spending breakdown</h2><p class="muted" style="margin-top:-10px">${esc(monthLabel(k))} · ${money(total, c$)} total</p>
-    <div class="bk">${tree.map(row).join('') || '<div class="empty">No spending this month.</div>'}</div>
-    <div class="actions"><button type="button" class="btn secondary" data-act="close">Close</button></div>`);
+  open(`<h2>${__('Spending breakdown')}</h2><p class="muted" style="margin-top:-10px">${esc(monthLabel(k))} · ${money(total, c$)} total</p>
+    <div class="bk">${tree.map(row).join('') || ('<div class="empty">' + __('No spending this month.') + '</div>')}</div>
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
 }
 
 function walletDialog(w) {
   const types = [['cash', 'Cash'], ['bank', 'Bank'], ['ewallet', 'E-wallet'], ['card', 'Card']];
-  open(`<h2>${w ? 'Edit' : 'Add'} wallet</h2><form data-form="wallet" data-id="${w?.id || ''}" style="display:contents">
-    <label class="field">Name<input name="name" required maxlength="40" placeholder="Savings" value="${esc(w?.name || '')}"></label>
-    <div class="two"><label class="field">Type<select name="type">${types.map(([k, n]) => `<option value="${k}" ${k === w?.type ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-    ${w ? `<label class="field">Currency<input value="${esc(w.currency)}" disabled></label>`
-      : `<label class="field">Currency<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''}>${x}</option>`).join('')}</select></label>`}</div>
-    <label class="field">${w ? `Current balance (${esc(w.currency)})` : 'Opening balance'}<input name="${w ? 'balance' : 'opening'}" type="number" step="any" required value="${w ? toMajor(walletBalance(w), w.currency) : 0}"></label>
-    <p class="hint">${w ? 'Changing the balance adjusts this wallet\'s starting amount, so your past transactions stay exactly as they are. The currency can\'t be changed because existing transactions use it.' : `Pick any currency, for example USD for savings. Totals convert to your reporting currency (${esc(cur())}).`}</p>
-    <div class="actions">${w ? `<button type="button" class="btn danger" data-act="archive-wallet" data-id="${w.id}">Archive</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">${w ? 'Save' : 'Add'}</button></div></form>`);
+  open(`<h2>${w ? __('Edit wallet') : __('Add wallet')}</h2><form data-form="wallet" data-id="${w?.id || ''}" style="display:contents">
+    <label class="field">${__('Name')}<input name="name" required maxlength="40" placeholder="${__('Savings')}" value="${esc(w?.name || '')}"></label>
+    <div class="two"><label class="field">${__('Type')}<select name="type">${types.map(([k, n]) => `<option value="${k}" ${k === w?.type ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+    ${w ? `<label class="field">${__('Currency')}<input value="${esc(w.currency)}" disabled></label>`
+      : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''}>${x}</option>`).join('')}</select></label>`}</div>
+    <label class="field">${w ? __('Current balance ({cur})', { cur: esc(w.currency) }) : __('Opening balance')}<input name="${w ? 'balance' : 'opening'}" type="number" step="any" required value="${w ? toMajor(walletBalance(w), w.currency) : 0}"></label>
+    <p class="hint">${w ? __("Changing the balance adjusts this wallet's starting amount, so your past transactions stay exactly as they are. The currency can't be changed because existing transactions use it.") : __('Pick any currency, for example USD for savings. Totals convert to your reporting currency ({cur}).', { cur: esc(cur()) })}</p>
+    <div class="actions">${w ? `<button type="button" class="btn danger" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${w ? __('Save') : __('Add')}</button></div></form>`);
 }
 
 /* ---------- investment dialogs ---------- */
 function accountDialog(a) {
-  open(`<h2>${a ? 'Edit' : 'New'} investment account</h2><form data-form="account" data-id="${a?.id || ''}" style="display:contents">
-    <label class="field">Name<input name="name" required maxlength="40" value="${esc(a?.name || '')}" placeholder="e.g. Crypto Exchange, US Brokerage" autofocus></label>
-    <p class="hint">An account can hold several assets: crypto, US stocks and ETFs.</p>
-    <div class="actions">${a ? `<button type="button" class="btn danger" data-act="archive-account" data-id="${a.id}">Archive</button>` : ''}<button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+  open(`<h2>${a ? __('Edit investment account') : __('New investment account')}</h2><form data-form="account" data-id="${a?.id || ''}" style="display:contents">
+    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(a?.name || '')}" placeholder="${__('e.g. Crypto Exchange, US Brokerage')}" autofocus></label>
+    <p class="hint">${__('An account can hold several assets: crypto, US stocks and ETFs.')}</p>
+    <div class="actions">${a ? `<button type="button" class="btn danger" data-act="archive-account" data-id="${a.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function holdingDialog(h, accId, opts = {}) {
   const accounts = activeAccounts(), info = h && assetInfo(h.symbol), invest = !!opts.invest;
   const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
-  open(`<h2>${h ? `Edit ${esc(info.symbol)}` : invest ? 'Add transaction' : 'Add asset'}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
+  open(`<h2>${h ? __('Edit {symbol}', { symbol: esc(info.symbol) }) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
     ${invest ? kindSeg('invest') : ''}
-    <label class="field">Account<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
+    <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(info.type)}</span></p>` : `
     <div class="field" id="picker">Asset
-      <div class="pills" role="group" aria-label="Asset type"><button type="button" class="pill on" data-act="pick-type" data-type="">All</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">Crypto</button><button type="button" class="pill" data-act="pick-type" data-type="stock">US stocks &amp; ETFs</button></div>
-      <input name="assetq" autocomplete="off" placeholder="Search name or ticker, e.g. BTC, AAPL, VOO" autofocus>
+      <div class="pills" role="group" aria-label="${__('Asset type')}"><button type="button" class="pill on" data-act="pick-type" data-type="">${__('All')}</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">${__('Crypto')}</button><button type="button" class="pill" data-act="pick-type" data-type="stock">${__('US stocks &amp; ETFs')}</button></div>
+      <input name="assetq" autocomplete="off" placeholder="${__('Search name or ticker, e.g. BTC, AAPL, VOO')}" autofocus>
       <div class="results" id="asset-results" role="listbox" hidden></div>
       <div class="picked" id="picked" hidden></div>
-      <small>${api.finnhub ? 'Searching the full Finnhub list of US stocks, ETFs and crypto.' : 'Live list unavailable (run tools/dev_server.py with a Finnhub key). Showing built-in assets.'}</small>
+      <small>${api.finnhub ? __('Searching the full Finnhub list of US stocks, ETFs and crypto.') : __('Live list unavailable (run tools/dev_server.py with a Finnhub key). Showing built-in assets.')}</small>
       <input type="hidden" name="asset"><input type="hidden" name="assetmeta">
-      <label class="field price-fallback" hidden>Price (USD)<input name="price" type="number" min="0" step="any" placeholder="Live price unavailable, enter it"></label>
-      <button type="button" class="legend-btn" data-act="manual-asset">Not listed? Add an asset manually</button></div>
-    <div class="custom-fields" hidden><div class="two"><label class="field">Symbol<input name="symbol" maxlength="10" placeholder="e.g. GOLD"></label><label class="field">Name<input name="cname" maxlength="40" placeholder="Name"></label></div>
-      <div class="two"><label class="field">Type<select name="ctype"><option value="crypto">Crypto</option><option value="stock">Stock</option><option value="etf">ETF</option><option value="manual">Other</option></select></label><label class="field">Price (USD)<input name="cprice" type="number" min="0" step="any"></label></div></div>`}
-    ${h ? `<div class="holding-now"><div><small class="muted">You hold</small><b class="num">${qtyFmt(h.quantity)} ${esc(info.symbol)}</b></div>
-      <div class="tools"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">Buy</button><button type="button" class="btn secondary" data-act="trade" data-side="sell" data-id="${h.id}">Sell</button></div></div>
+      <label class="field price-fallback" hidden>${__('Price (USD)')}<input name="price" type="number" min="0" step="any" placeholder="${__('Live price unavailable, enter it')}"></label>
+      <button type="button" class="legend-btn" data-act="manual-asset">${__('Not listed? Add an asset manually')}</button></div>
+    <div class="custom-fields" hidden><div class="two"><label class="field">${__('Symbol')}<input name="symbol" maxlength="10" placeholder="${__('e.g. GOLD')}"></label><label class="field">${__('Name')}<input name="cname" maxlength="40" placeholder="${__('Name')}"></label></div>
+      <div class="two"><label class="field">${__('Type')}<select name="ctype"><option value="crypto">${__('Crypto')}</option><option value="stock">${__('Stock')}</option><option value="etf">${__('ETF')}</option><option value="manual">${__('Other')}</option></select></label><label class="field">${__('Price (USD)')}<input name="cprice" type="number" min="0" step="any"></label></div></div>`}
+    ${h ? `<div class="holding-now"><div><small class="muted">${__('You hold')}</small><b class="num">${qtyFmt(h.quantity)} ${esc(info.symbol)}</b></div>
+      <div class="tools"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${__('Buy')}</button><button type="button" class="btn secondary" data-act="trade" data-side="sell" data-id="${h.id}">${__('Sell')}</button></div></div>
       ${tradeList(h)}` : `
-    <label class="field">${invest ? 'Quantity bought' : 'Quantity you hold'}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.05"></label>
-    <div class="two"><label class="field">${invest ? 'Pay with' : 'Paid from'}<select name="fund">${invest ? '' : '<option value="">Already owned (no payment)</option>'}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
-      <label class="field"><span data-fund-amt>Amount paid</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="amount"></label></div>
-    ${invest ? `<label class="field">Date<input name="date" type="date" required value="${isoDate(new Date())}"></label>` : ''}
-    <p class="hint">${invest ? 'The money leaves the wallet (or your USDT/USDC balance) and the asset is added to your investments. It is not counted as spending.' : 'Choose a payment source if you just bought it. Leave it as "Already owned" for assets you held before.'}</p>`}
-    <div class="actions">${h ? `<button type="button" class="btn danger" data-act="delete-holding" data-id="${h.id}">Remove</button>` : ''}<button type="button" class="btn secondary" data-act="close">${h ? 'Close' : 'Cancel'}</button><button class="btn" type="submit">${h ? 'Save' : invest ? 'Invest' : 'Add asset'}</button></div></form>`);
+    <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
+    <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
+      <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
+    ${invest ? `<label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>` : ''}
+    <p class="hint">${invest ? __('The money leaves the wallet (or your USDT/USDC balance) and the asset is added to your investments. It is not counted as spending.') : __('Choose a payment source if you just bought it. Leave it as "Already owned" for assets you held before.')}</p>`}
+    <div class="actions">${h ? `<button type="button" class="btn danger" data-act="delete-holding" data-id="${h.id}">${__('Remove')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${h ? __('Close') : __('Cancel')}</button><button class="btn" type="submit">${h ? __('Save') : invest ? __('Invest') : __('Add asset')}</button></div></form>`);
   if (!h) syncFund($('#dlg form'));
 }
 /* the amount's unit follows the payment source: a wallet's currency, or coins for a stablecoin */
 function syncFund(form) {
   const src = parseSource(form.fund.value), label = $('[data-fund-amt]', form);
-  label.textContent = src ? `Amount paid (${sourceUnit(src)})` : 'Amount paid';
+  label.textContent = src ? __('Amount paid ({unit})', { unit: sourceUnit(src) }) : __('Amount paid');
 }
 
 /* ---------- trades ----------
@@ -1028,14 +1029,14 @@ const parseAmount = (src, text) => (src.kind === 'wallet' ? toMinor(parseFloat(t
 /* returns a message when the paying side can't cover a buy; null when it is fine */
 function payShortfall(src, side, amount) {
   if (side !== 'buy') return null;
-  if (src.kind === 'wallet' && amount > walletBalance(src.wallet)) return `${src.wallet.name} doesn't have enough balance`;
-  if (src.kind === 'holding' && amount > src.holding.quantity + 1e-12) return `You only hold ${qtyFmt(src.holding.quantity)} ${assetInfo(src.holding.symbol).symbol}`;
-  if (src.kind === 'new') return `You don't hold any ${src.symbol} to pay with`;
+  if (src.kind === 'wallet' && amount > walletBalance(src.wallet)) return __("{name} doesn't have enough balance", { name: src.wallet.name });
+  if (src.kind === 'holding' && amount > src.holding.quantity + 1e-12) return __('You only hold {qty} {symbol}', { qty: qtyFmt(src.holding.quantity), symbol: assetInfo(src.holding.symbol).symbol });
+  if (src.kind === 'new') return __("You don't hold any {symbol} to pay with", { symbol: src.symbol });
   return null;
 }
 
 function recordTrade(h, { side, quantity, source, amount, date }) {
-  const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? 'Bought' : 'Sold';
+  const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
   const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && tr.date.slice(0, 7) < hh.since) hh.since = tr.date.slice(0, 7); };
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
   if (source.kind === 'wallet') {
@@ -1067,24 +1068,24 @@ function removeTrade(h, tr) {
 
 function tradeList(h) {
   const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), sym = assetInfo(h.symbol).symbol;
-  if (!trades.length) return '<p class="muted" style="font-size:13px">No buys or sells recorded yet.</p>';
+  if (!trades.length) return ('<p class="muted" style="font-size:13px">' + __('No buys or sells recorded yet.') + '</p>');
   return `<div class="list">${trades.map((tr) => {
-    const tail = tr.via ? `in exchange for ${qtyFmt(tr.via.quantity)} ${esc(tr.via.symbol)}` : `${tr.side === 'buy' ? 'paid' : 'received'} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || 'wallet')}`;
-    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString('en', { month: 'short', day: 'numeric' }))} · ${tr.side === 'buy' ? 'Bought' : 'Sold'} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="Remove trade">×</button></div>`;
+    const tail = tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('wallet'))}`;
+    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))} · ${tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
   }).join('')}</div>`;
 }
 
 function tradeDialog(h, side) {
   const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), first = ws.find((w) => w.currency === cur()) || ws[0];
-  open(`<h2>${side === 'buy' ? 'Buy' : 'Sell'} ${esc(info.symbol)}</h2><p class="muted" style="margin-top:-10px">You hold ${qtyFmt(h.quantity)} ${esc(info.symbol)}</p>
+  open(`<h2>${side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(h.quantity), symbol: esc(info.symbol) })}</p>
   <form data-form="trade" data-id="${h.id}" style="display:contents">
-    <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>Buy</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>Sell</label></div>
-    <div class="two"><label class="field">Quantity<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01" autofocus></label>
-      <label class="field"><span data-trade-amt></span><input name="amount" type="number" min="0" step="any" required placeholder="amount"></label></div>
+    <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>${__('Buy')}</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>${__('Sell')}</label></div>
+    <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01" autofocus></label>
+      <label class="field"><span data-trade-amt></span><input name="amount" type="number" min="0" step="any" required placeholder="${__('amount')}"></label></div>
     <label class="field"><span data-trade-wallet></span><select name="source">${sourceOptions(side, h, first ? 'w:' + first.id : '')}</select></label>
-    <label class="field">Date<input name="date" type="date" required value="${isoDate(new Date())}"></label>
+    <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>
     <p class="hint" id="trade-hint"></p>
-    <div class="actions"><button type="button" class="btn secondary" data-act="close">Cancel</button><button class="btn" type="submit">Save</button></div></form>`);
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
   syncTradeForm($('#dlg form'), false);
 }
 /* keep labels, the stablecoin options and the price hint in step with the side and the chosen source */
@@ -1092,8 +1093,8 @@ function syncTradeForm(form, rebuild) {
   const h = D().holdings.find((x) => x.id === form.dataset.id), buy = form.side.value === 'buy';
   if (rebuild) { const keep = form.source.value; form.source.innerHTML = sourceOptions(form.side.value, h, keep); }
   const src = parseSource(form.source.value);
-  $('[data-trade-wallet]', form).textContent = buy ? 'Pay with' : 'Receive into';
-  $('[data-trade-amt]', form).textContent = `${buy ? 'Amount paid' : 'Amount received'} (${src ? sourceUnit(src) : ''})`;
+  $('[data-trade-wallet]', form).textContent = buy ? __('Pay with') : __('Receive into');
+  $('[data-trade-amt]', form).textContent = `${buy ? __('Amount paid') : __('Amount received')} (${src ? sourceUnit(src) : ''})`;
   tradeHint(form);
 }
 /* price per unit implied by what was typed, next to the market price */
@@ -1105,7 +1106,7 @@ function tradeHint(form) {
   const info = assetInfo(h.symbol), month = monthKey(new Date());
   const usd = src.kind === 'wallet' ? a / RATES[src.wallet.currency] : a * assetInfo(src.kind === 'holding' ? src.holding.symbol : src.symbol).usd(month);
   const per = usd / q, market = info.usd(month), diff = market > 0 ? ((per - market) / market) * 100 : null;
-  hint.textContent = `About $${per.toLocaleString('en', { maximumFractionDigits: 4 })} per ${info.symbol}` + (market > 0 ? ` (market $${market.toLocaleString('en', { maximumFractionDigits: 4 })}, ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%). ` : '. ') + base;
+  hint.textContent = `About $${per.toLocaleString(locale(), { maximumFractionDigits: 4 })} per ${info.symbol}` + (market > 0 ? ` (market $${market.toLocaleString(locale(), { maximumFractionDigits: 4 })}, ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%). ` : '. ') + base;
 }
 
 /* ---------- events ---------- */
@@ -1226,7 +1227,7 @@ document.addEventListener('change', (e) => {
   }
   else if (t.name === 'wallet' && t.form?.dataset.form === 'txn') {
     const wc = walletOf(t.value).currency;
-    $('[data-amt-label]', t.form).textContent = `Amount (${wc})`; $('input[name=amount]', t.form).step = expOf(wc) ? '0.01' : '1';
+    $('[data-amt-label]', t.form).textContent = __('Amount ({cur})', { cur: wc }); $('input[name=amount]', t.form).step = expOf(wc) ? '0.01' : '1';
   }
 });
 /* asset picker: debounced search -> result list -> pick (then fetch its live price) */
@@ -1238,10 +1239,10 @@ function runAssetSearch() {
   const q = input.value.trim(), box = $('#asset-results');
   if (!q) { box.hidden = true; return; }
   searchTimer = setTimeout(async () => {
-    box.hidden = false; box.innerHTML = '<div class="res-note">Searching…</div>';
+    box.hidden = false; box.innerHTML = ('<div class="res-note">' + __('Searching…') + '</div>');
     try {
       state.pick = await searchAssets(q, state.ui.pickType);
-      box.innerHTML = state.pick.map((a, i) => `<button type="button" class="res" role="option" data-act="pick-asset" data-i="${i}"><b>${esc(a.symbol)}</b><span>${esc(a.name)}</span><span class="badge">${esc(a.type)}</span></button>`).join('') || '<div class="res-note">No matches. Try another name or ticker.</div>';
+      box.innerHTML = state.pick.map((a, i) => `<button type="button" class="res" role="option" data-act="pick-asset" data-i="${i}"><b>${esc(a.symbol)}</b><span>${esc(a.name)}</span><span class="badge">${esc(a.type)}</span></button>`).join('') || ('<div class="res-note">' + __('No matches. Try another name or ticker.') + '</div>');
     } catch (err) { box.innerHTML = `<div class="res-note">Search failed: ${esc(err.message)}</div>`; }
   }, 220);
 }
@@ -1252,7 +1253,7 @@ async function pickAsset(a, form) {
   chip.innerHTML = `<b>${esc(a.symbol)}</b> ${esc(a.name)} <span class="badge">${esc(a.type)}</span> <span class="muted" id="picked-price"></span>`;
   if (!a.fh) return; // built-in asset: priced from the mock catalog
   $('#picked-price').textContent = 'getting price…';
-  try { const p = await quote(a); form.price.value = p; $('#picked-price').textContent = `$${p.toLocaleString('en', { maximumFractionDigits: 6 })} live`; }
+  try { const p = await quote(a); form.price.value = p; $('#picked-price').textContent = `$${p.toLocaleString(locale(), { maximumFractionDigits: 6 })} live`; }
   catch { $('#picked-price').textContent = 'price unavailable'; fb.hidden = false; }
 }
 
@@ -1534,7 +1535,7 @@ async function setDemo(on) {
   Object.assign(state.ui, { pf: null, pfTab: 'savings', cat: '', wallet: '', occ: '', q: '' });
   render();
 }
-const demoBar = () => `<div class="demo-bar" role="status"><span>🧪 You're viewing <b>sample data</b>. Your own data is safe, and changes made here aren't saved.</span><button class="btn secondary" data-act="demo-off">Back to my data</button></div>`;
+const demoBar = () => `<div class="demo-bar" role="status"><span>${__('🧪 You\'re viewing')} <b>${__('sample data')}</b>${__('. Your own data is safe, and changes made here aren\'t saved.')}</span><button class="btn secondary" data-act="demo-off">${__('Back to my data')}</button></div>`;
 function removeSample() {
   const d = D(), smp = d.profile.sample; if (!smp) return;
   const is = (k, id) => (smp[k] || []).includes(id);

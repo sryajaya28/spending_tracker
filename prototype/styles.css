@@ -322,3 +322,7 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 /* demo-mode banner */
 .demo-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: #FFF4CC; color: #5A4300; border: 1px solid #F5D774; border-radius: 16px; padding: 10px 14px; margin-bottom: 18px; font-size: 14px; }
 .demo-bar .btn { height: 36px; padding: 0 16px; }
+
+.onboard { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.legal-links { margin-top: 18px; font-size: 12px; text-align: center; color: var(--muted); }
+.legal-links a { color: inherit; }

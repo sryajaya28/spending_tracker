@@ -8,4 +8,6 @@ window.STIVER = {
   // Canonical address of the live app. Links in emails and Google sign-in return here, even when someone signed up
   // on the old *.vercel.app address. Must also be allowed under Supabase > Authentication > URL Configuration.
   SITE_URL: 'https://stiver.io',
+  // Public contact address shown on the privacy policy and terms pages. Leave empty to show a generic line.
+  CONTACT_EMAIL: '',
 };

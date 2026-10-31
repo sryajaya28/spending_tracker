@@ -270,6 +270,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio account cards more compact: type and currency sit beside the name (they drop below only for long names), tighter padding.
+
 - 2026-10-31: Money not yet received/spent is left out of all analysis: `inMonth()` (month totals, Money Flow, "this month" change,
   saved %, spending donut and breakdown, budgets), special-occasion spent, loan/lent balances and payments all ignore entries dated
   after today. Such rows stay in the Transactions list with an **Upcoming** badge and count again on their day.

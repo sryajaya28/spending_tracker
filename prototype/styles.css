@@ -504,3 +504,8 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
   .land-nav-r select { max-width: 104px; }
   .land-nav-r .btn { padding: 0 14px; }
 }
+
+/* account cards: type and currency sit beside the name (one line less) */
+.wtitle { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 0 8px; }
+.wallet .bal { margin-top: 4px; }
+.wallet { padding: 12px 16px; }

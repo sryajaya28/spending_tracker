@@ -3,6 +3,18 @@
 Everything a new person (or a new AI session) needs to continue this project. It describes the project as it stands
 on 2026-10-31. It contains **no secrets**: it says where each secret lives, never what it is.
 
+## 0. Working agreement (read this first)
+
+1. **Before doing anything** on this project (code, database, config, docs, answering a question about the project),
+   read this file. If it disagrees with the code, trust the code, then fix this file.
+2. **After doing anything**, update this file in the same commit: edit the sections that changed (features, data model,
+   services, open items, decisions) and add a dated line to the **Changelog** at the bottom.
+3. **Also update `README.md`** whenever the change affects what it describes (features, how to run, how it is built,
+   deploying, release checklist), and `docs/NEXT_STEPS.md` when priorities or known gaps change.
+4. Never put secrets in this file, the README or any committed file: say where a secret lives, never what it is.
+
+`CLAUDE.md` at the repo root repeats this rule so assistant sessions load it automatically.
+
 ## 1. What this is
 
 Stiver is a personal finance app: record and categorize spending, track budgets, and see net worth across savings,
@@ -239,3 +251,18 @@ bash tests/e2e/run_all.sh [name]            # browser tests
 python3 tools/build_email_templates.py      # regenerate email templates
 git push origin HEAD:main                   # deploy (Vercel builds on push)
 ```
+
+## 18. Changelog
+
+Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: Added the working agreement (section 0) and `CLAUDE.md`; README gained a "Working on this project" note.
+- 2026-10-31: Added `context.md`, refreshed `README.md` and `docs/NEXT_STEPS.md`, moved the browser tests into `tests/e2e/`
+  (with `run_all.sh`), removed a stray wheel file from the repo root.
+- 2026-10-31: Dark mode (Settings > Appearance; `profiles.theme`; landing toggle). Overview budgets became horizontal bars.
+- 2026-10-31: Language option (English, Bahasa Indonesia; `profiles.language`); landing note removed; hero buttons on one
+  row; demo video re-recorded.
+- 2026-10-31: Landing page + demo video + privacy/terms pages; sample data became demo mode; wallet cards compacted with a
+  menu; wallet edit/archive/restore/delete; transfers with fees; special occasions; email confirmation auto sign-in;
+  Resend + custom domain; CSP + dormant CAPTCHA; email templates; Google sign-in published.
+

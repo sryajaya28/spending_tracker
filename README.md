@@ -57,6 +57,11 @@ Supabase dashboard settings the app relies on: Email provider with **Confirm ema
 URL Configuration (Site URL `https://stiver.io`, redirect URLs include `https://stiver.io/**` and `http://localhost:5173/**`),
 custom SMTP (Resend, sender on `stiver.io`), and the templates in `supabase/templates/`.
 
+## Working on this project
+
+Read `context.md` first: it holds the full project context (architecture, services, decisions, open items) and the working
+agreement. After any change, update `context.md` (and this README when the change affects it) in the same commit.
+
 ## Before wider release
 
 - Finnhub's free plan is for personal use. A public product needs a suitable plan or another data source.

@@ -195,9 +195,10 @@ function seed(name, cur) {
   return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions: [], investments: [exch, broker], holdings, customAssets: {}, livePrices: {}, loans, lent };
 }
 
-const state = { data: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), archOpen: false } };
+const state = { data: null, real: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), archOpen: false } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
 function save() {
+  if (state.real) return;   // demo mode: nothing is saved or synced
   try { localStorage.setItem(PRICES_KEY, JSON.stringify(state.data.livePrices)); } catch { /* storage unavailable */ }
   Cloud.save(state.data);   // sends only what changed since the last save
 }
@@ -713,8 +714,8 @@ function viewSettings() {
     <div class="form-row"><div>Signed in as<small>${esc(state.auth.email)}</small></div><span class="badge ok">Active now</span></div>
     <div class="form-row"><div>Sign out<small>Ends the session on this device</small></div><button class="btn secondary" data-act="signout">Sign out</button></div>
     <div class="form-row"><div>Sign out everywhere else<small>Revokes every other device</small></div><button class="btn secondary" data-act="revoke">Sign out others</button></div>
-    ${p.sample ? `<div class="form-row"><div>Sample data<small>Demo wallets, transactions, budgets and a portfolio are in your account. Remove them to start clean. Anything you added yourself stays.</small></div><button class="btn danger" data-act="remove-sample">Remove sample data</button></div>`
-      : `<div class="form-row"><div>Sample data<small>Fill an empty account with demo wallets, transactions, budgets and a portfolio so you can explore. You can remove it again afterwards.</small></div><button class="btn secondary" data-act="load-demo">Load sample data</button></div>`}</section></div>`;
+    <div class="form-row"><div>Use sample data<small>Switch between your own data and a demo account full of sample wallets, transactions, budgets and a portfolio. Your own data stays untouched, and nothing you do in the demo is saved.</small></div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="Use sample data"></label></div>
+    ${p.sample ? `<div class="form-row"><div>Sample data saved earlier<small>Demo rows that an older version added to your account. Remove them to clean up; anything you added yourself stays.</small></div><button class="btn danger" data-act="remove-sample">Remove</button></div>` : ''}</section></div>`;
 }
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
@@ -790,7 +791,7 @@ function render() {
     return;
   }
   const r = VIEWS[route()] ? route() : 'overview';
-  app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${VIEWS[r]()}</main></div>${bottomNav()}`;
+  app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${bottomNav()}`;
   if (r === 'portfolio') bindValue(state.chart.months, state.chart.series, state.chart.vc);
   if (r === 'overview') {
     const months = lastMonths(6);
@@ -1178,13 +1179,13 @@ document.addEventListener('click', (e) => {
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Wallet archived'); }
   else if (act === 'delete-txn') { D().transactions = D().transactions.filter((t) => t.id !== id); save(); close(); render(); toast('Transaction deleted'); }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
-  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.auth = { status: 'out', view: 'signin', email: '', notice: '', error: '' }; render(); });
+  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; state.auth = { status: 'out', view: 'signin', email: '', notice: '', error: '' }; render(); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
-  else if (act === 'load-demo') loadDemo();
+  else if (act === 'demo-off') setDemo(false);
   else if (act === 'remove-sample') { if (confirm('Remove the sample data? Anything you added yourself stays.')) removeSample(); }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); });
@@ -1204,6 +1205,7 @@ document.addEventListener('change', (e) => {
     else if (t.value === 'transfer') transferDialog();
     else { $('select[name=category]', t.form).innerHTML = catOptions(t.value); $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value); }
   }
+  else if (t.matches('[data-demo]')) setDemo(t.checked);
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
@@ -1492,7 +1494,7 @@ async function submitAuth(kind, v, f) {
 async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
-  if (!session) { state.data = null; Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); return; }
+  if (!session) { state.data = null; state.real = null; Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); return; }
   stopPolling(); a.email = session.user.email || a.email;
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
   Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
@@ -1500,9 +1502,11 @@ async function onAuth(event, session) {
 }
 async function loadUserData() {
   try {
+    state.real = null;   // leave demo mode while reloading; it is switched back on below if you had it on
     state.data = await Cloud.load();
     state.data.livePrices = loadPrices();
     if (api.finnhub) refreshPrices(true);
+    if (demoWanted()) await setDemo(true);
   } catch (err) { state.auth.loadError = err.message || 'network error'; }
   render();
 }
@@ -1512,32 +1516,25 @@ function onSaveError(err) {
   toast(`Couldn't save your last change (${String(err.message || err).slice(0, 80)}). Showing your saved data.`);
   loadUserData();
 }
-/* ---------- sample data (optional, removable) ----------
-   Loading adds demo wallets, transactions, budgets, a portfolio and loans next to the starter categories and
-   remembers the id of everything it added (profile.sample), so "Remove sample data" can take exactly that
-   back out and leave anything you added yourself. */
-const SAMPLE_KEYS = ['categories', 'wallets', 'transactions', 'budgets', 'investments', 'holdings', 'loans', 'lent'];
-function loadDemo() {
-  const d = D();
-  if (d.profile.sample) { toast('Sample data is already loaded'); return; }
-  if (d.transactions.length || d.budgets.length || d.holdings.length || d.loans.length || d.lent.length) { toast('Sample data can only be loaded into an empty account'); return; }
-  const s = seed(d.profile.name || 'You', cur());
-  // reuse the starter categories and Cash wallet instead of duplicating them (the database keeps category names unique)
-  const key = (c, list) => `${c.parent_id ? list.find((x) => x.id === c.parent_id)?.name : ''}/${c.name}/${c.type}`.toLowerCase();
-  const have = new Map(d.categories.map((c) => [key(c, d.categories), c.id])), remap = new Map(), added = [];
-  s.categories.forEach((c) => { const hit = have.get(key(c, s.categories)); if (hit) remap.set(c.id, hit); else added.push(c); });
-  added.forEach((c) => { if (c.parent_id && remap.has(c.parent_id)) c.parent_id = remap.get(c.parent_id); });
-  const wallets = s.wallets;   // sample wallets are always new ones: their history starts months back, unlike your own wallets
-  wallets.forEach((w) => { if (w.name === 'Cash') w.name = 'Cash (sample)'; });
-  s.transactions.forEach((t) => { t.category_id = remap.get(t.category_id) || t.category_id; t.wallet_id = remap.get(t.wallet_id) || t.wallet_id; });
-  s.budgets.forEach((b) => { b.category_id = remap.get(b.category_id) || b.category_id; });
-  d.categories.push(...added); d.wallets.push(...wallets);
-  d.transactions.push(...s.transactions); d.budgets.push(...s.budgets); d.investments.push(...s.investments); d.holdings.push(...s.holdings); d.loans.push(...s.loans); d.lent.push(...s.lent);
-  d.transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
-  d.profile.sample = { categories: added.map((c) => c.id), wallets: wallets.map((w) => w.id), transactions: s.transactions.map((t) => t.id), budgets: s.budgets.map((b) => b.id),
-    investments: s.investments.map((a) => a.id), holdings: s.holdings.map((h) => h.id), loans: s.loans.map((l) => l.id), lent: s.lent.map((l) => l.id) };
-  save(); render(); toast('Sample data loaded. Remove it any time in Settings.');
+/* ---------- sample data: a demo mode, not saved data ----------
+   Turning it on swaps in a ready-made demo account (wallets, transactions, budgets, a portfolio, loans) in memory.
+   Your own data is kept aside untouched, and nothing you do while the demo is on is saved or synced.
+   Turning it off brings your own data back. The choice is remembered on this device. */
+const DEMO_KEY = 'stiver.demo.v1';
+const demoWanted = () => { try { return localStorage.getItem(DEMO_KEY) === '1'; } catch { return false; } };
+async function setDemo(on) {
+  if (on === !!state.real || !state.data) return;
+  if (on) {
+    await Cloud.idle();   // let any pending save of your own data finish first
+    const own = state.data, d = seed(own.profile.name || 'You', own.profile.currency);
+    d.profile = { ...own.profile, sample: null }; d.livePrices = own.livePrices || {};
+    state.real = own; state.data = d;
+  } else { state.data = state.real; state.real = null; }
+  try { localStorage.setItem(DEMO_KEY, on ? '1' : '0'); } catch { /* storage unavailable */ }
+  Object.assign(state.ui, { pf: null, pfTab: 'savings', cat: '', wallet: '', occ: '', q: '' });
+  render();
 }
+const demoBar = () => `<div class="demo-bar" role="status"><span>🧪 You're viewing <b>sample data</b>. Your own data is safe, and changes made here aren't saved.</span><button class="btn secondary" data-act="demo-off">Back to my data</button></div>`;
 function removeSample() {
   const d = D(), smp = d.profile.sample; if (!smp) return;
   const is = (k, id) => (smp[k] || []).includes(id);

@@ -17,7 +17,7 @@ const Cloud = (() => {
     { name: 'categories', stage: 'categories_root', pick: (r) => !r.parent_id },
     { name: 'categories', stage: 'categories_child', pick: (r) => !!r.parent_id },
     { name: 'wallets' }, { name: 'occasions' }, { name: 'investment_accounts' }, { name: 'holdings' }, { name: 'holding_events' },
-    { name: 'transactions' }, { name: 'budgets' }, { name: 'debts' }, { name: 'debt_payments' },
+    { name: 'transactions' }, { name: 'budgets' }, { name: 'debts' }, { name: 'debt_payments' }, { name: 'recurring_rules' },
   ];
   const tradeSign = (tr) => (tr.side === 'buy' ? 1 : -1);
 
@@ -25,11 +25,12 @@ const Cloud = (() => {
   function rowsFromData(d, catalog, userId) {
     const R = {
       categories: [], wallets: [], occasions: [], investment_accounts: [], holdings: [], holding_events: [],
-      transactions: [], budgets: [], debts: [], debt_payments: [], manual_prices: [],
+      transactions: [], budgets: [], debts: [], debt_payments: [], manual_prices: [], recurring_rules: [],
     };
     d.categories.forEach((c) => R.categories.push({ id: c.id, parent_id: c.parent_id || null, name: c.name, type: c.type, icon: c.icon || null, color: c.color || null, archived: !!c.archived }));
     d.wallets.forEach((w) => R.wallets.push({ id: w.id, name: w.name, type: w.type, currency: w.currency, opening_balance_minor: w.opening_balance_minor, archived: !!w.archived, since_month: `${w.since || '1970-01'}-01` }));
     d.occasions.forEach((o) => R.occasions.push({ id: o.id, name: o.name, amount_minor: o.amount_minor, currency: o.currency, start_date: o.start || null, end_date: o.end || null, archived: !!o.archived }));
+    (d.recurring || []).forEach((r) => R.recurring_rules.push({ id: r.id, kind: r.kind, frequency: r.freq, start_date: r.start, next_date: r.next, end_date: r.end || null, active: r.active !== false, spec: r.spec || {} }));
     d.investments.forEach((a) => R.investment_accounts.push({ id: a.id, name: a.name, archived: !!a.archived }));
 
     const tradeIds = new Set();
@@ -83,6 +84,7 @@ const Cloud = (() => {
       occasions: S.occasions.map((o) => ({ id: o.id, name: o.name, amount_minor: +o.amount_minor, currency: o.currency, start: o.start_date || '', end: o.end_date || '', archived: o.archived })),
       budgets: S.budgets.map((b) => ({ id: b.id, category_id: b.category_id, amount_minor: +b.amount_minor, currency: b.currency, start_month: b.start_month })),
       investments: S.investment_accounts.map((a) => ({ id: a.id, name: a.name, archived: a.archived })),
+      recurring: (S.recurring_rules || []).map((r) => ({ id: r.id, kind: r.kind, freq: r.frequency, start: r.start_date, next: r.next_date, end: r.end_date || '', active: r.active, spec: r.spec || {} })),
       customAssets: {}, livePrices: {},
     };
     const txnByEvent = new Map(S.transactions.filter((t) => t.holding_event_id).map((t) => [t.holding_event_id, t]));
@@ -209,11 +211,11 @@ const Cloud = (() => {
     },
 
     async load() {
-      const [profile, categories, wallets, occasions, transactions, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, manual_prices] = await Promise.all([
+      const [profile, categories, wallets, occasions, transactions, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, manual_prices, recurring_rules] = await Promise.all([
         client.from('profiles').select('*').eq('id', userId).single().then(must),
-        ...['categories', 'wallets', 'occasions', 'transactions', 'budgets', 'investment_accounts', 'holdings', 'holding_events', 'debts', 'debt_payments', 'manual_prices'].map(fetchAll),
+        ...['categories', 'wallets', 'occasions', 'transactions', 'budgets', 'investment_accounts', 'holdings', 'holding_events', 'debts', 'debt_payments', 'manual_prices', 'recurring_rules'].map(fetchAll),
       ]);
-      const data = dataFromRows({ profile, categories, wallets, occasions, transactions, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, manual_prices }, catalog);
+      const data = dataFromRows({ profile, categories, wallets, occasions, transactions, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, manual_prices, recurring_rules }, catalog);
       synced = snapshot(rowsFromData(data, catalog, userId)); latest = data;
       return data;
     },

@@ -16,7 +16,7 @@ cd tests/e2e
 mkdir -p out out/dark
 export NODE_PATH="${NODE_PATH:-$(npm root -g)}"
 tests=("$@")
-[ ${#tests[@]} -eq 0 ] && tests=(sample run curdd cats quickcat transfer budgetbar wallet arch occtx daily donut pfrange ovocc ios confirm csp landshot langsave darkshots)
+[ ${#tests[@]} -eq 0 ] && tests=(sample run curdd cats quickcat transfer budgetbar wallet arch occtx daily donut pfrange recurring ovocc ios confirm csp landshot langsave darkshots)
 fail=0
 for t in "${tests[@]}"; do
   out=$(timeout 250 node "$t.js" 2>&1 | grep -E "^ok|^FAIL|landing ok|signed out|AssertionError" | head -1)

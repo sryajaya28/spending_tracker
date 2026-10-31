@@ -487,3 +487,7 @@ html { -webkit-text-size-adjust: 100%; }
 .mval .up { color: var(--good); font-weight: 600; }
 .mval .down { color: var(--bad); font-weight: 600; }
 :root[data-theme="dark"] .mval .up { color: #4fd9a0; }
+
+/* dialog fields never push past the dialog edge (the date box was cut off on phones) */
+.two > * { min-width: 0; }
+.dlg input[type="date"], .dlg select, .dlg input { min-width: 0; max-width: 100%; }

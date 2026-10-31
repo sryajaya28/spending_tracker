@@ -1,6 +1,19 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Recurring entry deleted": "Transaksi berulang dihapus",
+ "Buy {qty} {symbol}": "Beli {qty} {symbol}",
+ "{n} recurring entries added": "{n} transaksi berulang ditambahkan",
+ "{n} recurring entry added": "{n} transaksi berulang ditambahkan",
+ "Pause": "Jeda",
+ "Resume": "Lanjutkan",
+ "Next {date}": "Berikutnya {date}",
+ "Paused": "Dijeda",
+ "Recurring": "Berulang",
+ "Every month": "Setiap bulan",
+ "Every week": "Setiap minggu",
+ "Does not repeat": "Tidak berulang",
+ "Repeat": "Ulangi",
  "Time frame": "Rentang waktu",
  "All time": "Sepanjang waktu",
  "5 years": "5 tahun",

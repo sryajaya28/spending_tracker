@@ -13,7 +13,7 @@
     T.categories = [...roots, sub(by('Groceries'), 'Supermarket', '🏬'), sub(by('Groceries'), 'Fresh market', '🥬'), sub(by('Dining'), 'Coffee', '☕'), sub(by('Dining'), 'Restaurants', '🍴'), sub(by('Dining'), 'Delivery', '🛵'), sub(by('Transport'), 'Fuel', '⛽'), sub(by('Transport'), 'Ride-hailing', '🚕'), sub(by('Transport'), 'Public transit', '🚇'), sub(by('Entertainment'), 'Movies', '🎬'), sub(by('Entertainment'), 'Streaming', '📺'), sub(by('Entertainment'), 'Events', '🎟️')];
     T.wallets = [{ id: uuid(), name: 'Cash', type: 'cash', currency: 'IDR', opening_balance_minor: 0, archived: false, since_month: new Date().toISOString().slice(0, 7) + '-01' }];
     T.profiles = [{ id: uid, display_name: 'Test User', default_currency: 'IDR', ai_tagging_enabled: true }];
-    ['transactions','occasions','budgets','investment_accounts','holdings','holding_events','debts','debt_payments','manual_prices'].forEach((t) => (T[t] = []));
+    ['transactions','occasions','budgets','investment_accounts','holdings','holding_events','debts','debt_payments','manual_prices','recurring_rules'].forEach((t) => (T[t] = []));
   };
   window.__seedNewUser();
   class Q {

@@ -761,6 +761,7 @@ function viewSettings() {
   return `${topbar('Settings', 'Profile, currency and privacy')}
   <div class="stack">
   ${categoriesCard()}
+  ${recurringCard()}
   <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
     <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
     <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
@@ -941,6 +942,7 @@ function transferDialog(preset) {
     <label class="field" data-recv hidden><span data-recv-label>${__('Amount received')}</span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
     <label class="field"><span data-fee-label>${__('Transfer fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
     <label class="field">${__('Note (optional)')}<input name="note" maxlength="140" placeholder="${__('e.g. Top up e-wallet')}"></label>
+    ${repeatField()}
     <p class="hint">${__('A transfer is not income or spending. If you enter a fee it is taken from the source wallet on top of the amount and counts as spending.')}</p>
     <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Transfer')}</button></div></form>`);
   syncTransfer($('#dlg form'));
@@ -988,6 +990,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
     ${live.length ? `<label class="field">${__('🎉 Special occasion (optional)')}<select name="occasion"><option value="">${__('None')}</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
     <label class="field">${__('Wallet')}<select name="wallet">${ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select></label>
     <label class="field">${__('Note')}<textarea name="note" maxlength="140" placeholder="${__('e.g. Coffee shop')}">${esc(t?.note || '')}</textarea></label>
+    ${t ? '' : repeatField()}
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + ('">' + __('Delete') + '</button>') : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function budgetDialog(b) {
@@ -1088,6 +1091,7 @@ function holdingDialog(h, accId, opts = {}) {
     <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
       <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
     ${invest ? `<label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>` : ''}
+    ${invest ? repeatField() : ''}
     <p class="hint">${invest ? __('The money leaves the wallet (or your USDT/USDC balance) and the asset is added to your investments. It is not counted as spending.') : __('Choose a payment source if you just bought it. Leave it as "Already owned" for assets you held before.')}</p>`}
     <div class="actions">${h ? `<button type="button" class="btn danger" data-act="delete-holding" data-id="${h.id}">${__('Remove')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${h ? __('Close') : __('Cancel')}</button><button class="btn" type="submit">${h ? __('Save') : invest ? __('Invest') : __('Add asset')}</button></div></form>`);
   if (!h) syncFund($('#dlg form'));
@@ -1208,6 +1212,76 @@ function tradeHint(form) {
   hint.textContent = __('About ${price} per {symbol}', { price: per.toLocaleString(locale(), { maximumFractionDigits: 4 }), symbol: info.symbol }) + (market > 0 ? ' ' + __('(market ${price}, {diff}).', { price: market.toLocaleString(locale(), { maximumFractionDigits: 4 }), diff: `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%` }) + ' ' : '. ') + base;
 }
 
+/* ---------- recurring: a rule repeats an expense, income, transfer or investment buy every week or month ----------
+   The app has no server job, so due entries are created when the app opens (and when the tab returns to the
+   front), dated on the day they were due. Ids are derived from rule + date, so two devices never double-add. */
+const REPEATS = [['', 'Does not repeat'], ['weekly', 'Every week'], ['monthly', 'Every month']];
+const repeatField = () => `<label class="field">${__('Repeat')}<select name="repeat">${REPEATS.map(([v, l]) => `<option value="${v}">${__(l)}</option>`).join('')}</select></label>`;
+const dateOf = (iso) => new Date(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+function nthDate(start, freq, k) {   // the k-th repeat after `start`: +7k days, or the same day-of-month (clamped to short months)
+  const d = dateOf(start);
+  if (freq === 'weekly') return isoDate(new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7 * k));
+  const last = new Date(d.getFullYear(), d.getMonth() + k + 1, 0).getDate();
+  return isoDate(new Date(d.getFullYear(), d.getMonth() + k, Math.min(d.getDate(), last)));
+}
+function nextAfter(r, date) { for (let k = 1; k < 5000; k++) { const x = nthDate(r.start, r.freq, k); if (x > date) return x; } return date; }
+function detId(...parts) {   // stable uuid-shaped id from text (two 53-bit hashes)
+  const str = parts.join('|'); let a = 0xdeadbeef, b = 0x41c6ce57, c = 0x9e3779b9, e = 0x85ebca6b;
+  for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); a = Math.imul(a ^ ch, 2654435761); b = Math.imul(b ^ ch, 1597334677); c = Math.imul(c ^ ch, 2246822519); e = Math.imul(e ^ ch, 3266489917); }
+  const h = [a, b, c, e].map((n) => (n >>> 0).toString(16).padStart(8, '0')).join('');
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-8${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
+function addRule(kind, freq, start, spec) {
+  const r = { id: uid(), kind, freq, start, next: '', end: '', active: true, spec };
+  r.next = nextAfter(r, start);
+  (D().recurring = D().recurring || []).push(r);
+  return r;
+}
+function generateRecurring(r, date) {
+  const sp = r.spec, T = D().transactions, add = (row) => { if (!T.some((t) => t.id === row.id)) T.push(row); };
+  if (r.kind === 'txn') {
+    if (!walletOf(sp.wallet_id)) return;
+    add({ id: detId(r.id, date, 't'), type: sp.type, amount_minor: sp.amount_minor, currency: sp.currency, occurred_at: date, wallet_id: sp.wallet_id, note: sp.note || '', category_id: sp.category_id || null, category_source: 'user', ai_confidence: null, ...(sp.occasion_id && occasionOf(sp.occasion_id) ? { occasion_id: sp.occasion_id } : {}) });
+  } else if (r.kind === 'transfer') {
+    const A = walletOf(sp.from), B = walletOf(sp.to); if (!A || !B) return;
+    const base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: date, transfer_id: detId(r.id, date, 'g') }, extra = sp.note ? ` · ${sp.note}` : '';
+    add({ id: detId(r.id, date, 'o'), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: sp.amount_minor, currency: A.currency, note: __('Transfer to {name}', { name: B.name }) + extra, ...base });
+    add({ id: detId(r.id, date, 'i'), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: sp.received_minor, currency: B.currency, note: __('Transfer from {name}', { name: A.name }) + extra, ...base });
+    if (sp.fee_minor > 0) add({ id: detId(r.id, date, 'f'), wallet_id: A.id, type: 'expense', amount_minor: sp.fee_minor, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base });
+  } else if (r.kind === 'invest') {
+    const src = parseSource(sp.fund); if (!src || (src.kind === 'wallet' && !src.wallet) || (src.kind === 'holding' && !src.holding)) return;
+    let h = D().holdings.find((x) => x.account_id === sp.account && x.symbol === sp.symbol);
+    if (!h) { h = { id: uid(), account_id: sp.account, symbol: sp.symbol, quantity: 0, since: date.slice(0, 7), trades: [] }; D().holdings.push(h); }
+    recordTrade(h, { side: 'buy', quantity: sp.quantity, source: src, amount: parseAmount(src, sp.fundamount), date });
+  }
+}
+function runRecurring() {
+  const d = state.data; if (!d || state.real || !(d.recurring || []).length) return 0;
+  const today = isoDate(new Date()); let n = 0;
+  d.recurring.forEach((r) => {
+    if (r.active === false) return;
+    for (let guard = 0; r.next <= today && (!r.end || r.next <= r.end) && guard < 400; guard++) { generateRecurring(r, r.next); n++; r.next = nextAfter(r, r.next); }
+  });
+  if (n) { d.transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)); save(); }
+  return n;
+}
+function recurringNow() { const n = runRecurring(); if (n) { render(); toast(__(n === 1 ? '{n} recurring entry added' : '{n} recurring entries added', { n })); } }
+const ruleTitle = (r) => {
+  const sp = r.spec;
+  if (r.kind === 'txn') { const c = catOf(sp.category_id), w = walletOf(sp.wallet_id); return { icon: sp.type === 'income' ? '💵' : '🧾', name: sp.note || (c && c.name) || (sp.type === 'income' ? __('Income') : __('Expense')), amount: `${sp.type === 'income' ? '+' : '−'}${money(sp.amount_minor, sp.currency)}`, where: w ? w.name : '' }; }
+  if (r.kind === 'transfer') { const A = walletOf(sp.from), B = walletOf(sp.to); return { icon: '🔁', name: `${A ? A.name : '?'} → ${B ? B.name : '?'}`, amount: money(sp.amount_minor, A ? A.currency : cur()), where: sp.note || '' }; }
+  const info = assetInfo(sp.symbol), src = parseSource(sp.fund);
+  return { icon: '📈', name: __('Buy {qty} {symbol}', { qty: qtyFmt(sp.quantity), symbol: info.symbol }), amount: src ? `${qtyFmt(parseAmount(src, sp.fundamount))} ${sourceUnit(src)}` : '', where: '' };
+};
+function recurringCard() {
+  const list = D().recurring || []; if (!list.length) return '';
+  return `<section class="card"><div class="card-head"><h2>${__('Recurring')}</h2></div>${list.map((r) => {
+    const t = ruleTitle(r), freq = r.freq === 'weekly' ? __('Every week') : __('Every month');
+    return `<div class="brow cat-row"><span class="tile" style="--c:#8B8FF0">${t.icon}</span><div class="cat-main"><b class="cat-name">${esc(t.name)}</b><small class="muted">${esc(t.amount)}${t.where ? ' · ' + esc(t.where) : ''}</small><small class="muted">${freq} · ${r.active === false ? __('Paused') : __('Next {date}', { date: dateOf(r.next).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) })}</small></div>
+      <div class="tools"><button class="btn secondary" data-act="rec-toggle" data-id="${r.id}">${r.active === false ? __('Resume') : __('Pause')}</button><button class="btn secondary" data-act="rec-del" data-id="${r.id}" aria-label="${__('Delete')}">🗑</button></div></div>`;
+  }).join('')}</section>`;
+}
+
 /* ---------- events ---------- */
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
@@ -1224,6 +1298,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'view-transfer') transferDetail(id);
   else if (act === 'delete-transfer') { D().transactions = D().transactions.filter((t) => t.transfer_id !== id); save(); close(); render(); toast('Transfer deleted'); }
   else if (act === 'edit-txn') txnDialog(find(D().transactions));
+  else if (act === 'rec-toggle') { const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
+  else if (act === 'rec-del') { D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
   else if (act === 'add-budget') budgetDialog();
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
   else if (act === 'toggle-cats') { state.ui.catsOpen = !state.ui.catsOpen; render(); }
@@ -1406,6 +1482,7 @@ document.addEventListener('submit', (e) => {
       else { row.category_source = 'user'; msg = __(existing ? 'Saved · left uncategorized' : 'Transaction added · left uncategorized'); }
     }
     if (!existing) D().transactions.push(row);
+    if (!existing && v.repeat) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     state.ui.month = row.occurred_at.slice(0, 7) <= monthKey(new Date()) ? row.occurred_at.slice(0, 7) : state.ui.month;
     save(); close(); render(); toast(msg);
@@ -1422,6 +1499,7 @@ document.addEventListener('submit', (e) => {
     D().transactions.push({ id: uid(), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.currency, note: __('Transfer to {name}', { name: B.name }) + extra, ...base });
     D().transactions.push({ id: uid(), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.currency, note: __('Transfer from {name}', { name: A.name }) + extra, ...base });
     if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base });
+    if (v.repeat) addRule('transfer', v.repeat, v.date, { from: A.id, to: B.id, amount_minor: amount, received_minor: received, fee_minor: fee, note: v.note.trim() });
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     state.ui.month = v.date.slice(0, 7) <= monthKey(new Date()) ? v.date.slice(0, 7) : state.ui.month;
     save(); close(); render(); toast(__('Moved {amount} from {from} to {to}', { amount: money(amount, A.currency), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.currency) }) : '')); return;
@@ -1542,6 +1620,7 @@ document.addEventListener('submit', (e) => {
     let h = D().holdings.find((x) => x.account_id === v.account && x.symbol === sym);
     if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); }
     if (src) recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
+    if (src && v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
     else h.quantity += qty;
     if (f.dataset.invest) state.ui.pfTab = 'investment';
     save(); close(); render(); toast(`${assetInfo(sym).symbol} ${src ? 'bought' : 'added'}${src ? ` · ${qtyFmt(paid)} ${sourceUnit(src)} paid` : ''}`);
@@ -1571,7 +1650,7 @@ async function checkConfirmed(manual) {
   if (/not confirmed/i.test(error.message)) { if (manual) toast('Not confirmed yet. Open the link in the email, then try again.'); }
   else { stopPolling(); if (manual) { state.auth.error = friendlyAuthError(error); render(); } }
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) checkConfirmed(false); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkConfirmed(false); if (state.data && !state.real) recurringNow(); } });
 async function submitAuth(kind, v, f) {
   const a = state.auth, btn = $('button[type=submit]', f);
   if (btn) btn.disabled = true;
@@ -1617,6 +1696,7 @@ async function loadUserData() {
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
     if (demoWanted()) await setDemo(true);
+    else setTimeout(recurringNow, 300);
   } catch (err) { state.auth.loadError = err.message || 'network error'; }
   render();
 }

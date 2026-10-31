@@ -50,6 +50,10 @@ infrastructure names, see section 8).
 - **Transactions:** the list is grouped **by day** (one row per day: count, income, spent, net); clicking a day opens
   `#/transactions/YYYY-MM-DD` with that day's detailed rows (edit/delete, `+ Add` prefilled with the date). Expense/income with categories + one level of sub-categories, add a category inline from the form,
   AI-style auto-tagging (mock: history match, null when unsure), search/filter, special-occasion tag.
+- **Recurring:** a **Repeat** choice (does not repeat / every week / every month) on new expenses, income, transfers and
+  investment buys. A rule is saved (`recurring_rules`); due entries are created **when the app opens or the tab returns to the front**
+  (no server job), dated on their due day, with ids derived from rule+date so two devices never double-add. Settings > Recurring
+  lists rules with Pause/Resume (skips what was missed) and delete (past entries stay). Monthly keeps the day-of-month, clamped to short months.
 - **Budgets:** overall + per-category monthly budgets; Overview shows horizontal bars with percentages; **special
   occasions** (one-off budgets with optional dates, tagged expenses, archive/delete).
 - **Portfolio** tabs: Savings (wallets in any currency, compact cards with a ⋯ menu, archive/restore/delete, edit
@@ -127,6 +131,7 @@ Composite foreign keys `(id, user_id)` stop rows referencing another user's rows
 | `investment_accounts`, `holdings`, `holding_events` | holdings keyed by symbol (`AAPL.US` when a stock shares a symbol with a crypto); events carry `quantity_delta` and `pair_id` for stablecoin pairs; opening event has `note='opening'`; `since_month` |
 | `manual_prices` | user-entered USD prices for custom assets |
 | `price_snapshots`, `fx_rates` | shared market data, read-only for users (written by a future server job) |
+| `recurring_rules` | `kind` txn/transfer/invest, `frequency` weekly/monthly, `start_date`, `next_date`, `end_date`, `active`, `spec` jsonb (what to create) |
 | `debts`, `debt_payments` | `direction` owed/lent, `type`, `monthly_minor`, `interest_rate`, `due_date`, `note`, `start_month` |
 
 Views: `wallet_balances`, `debt_balances`. Functions: `spending_by_category`, `budget_status`, `portfolio_history`
@@ -135,7 +140,7 @@ from `options.data`), a **Cash** wallet, 12 default categories with emoji icons 
 
 Migrations (repo file names; applied through the Supabase tools with different recorded version numbers):
 1 schema, 2 RLS, 3 signup seed, 4 views+functions, 5 portfolio, 6 debts, 7 trades, 8 app seed + `holdings.since_month`,
-9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme.
+9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme, 14 `recurring_rules` (applied to the live project).
 
 ## 7. Business rules the code encodes
 
@@ -256,6 +261,11 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: Recurring transactions (migration 14 applied to production; `cloud.js` maps `recurring_rules` <-> `d.recurring`). `Repeat`
+  field on add expense/income, transfer and invest; `runRecurring()` runs after load and on tab focus; `recurringCard()` in Settings.
+  Dialog fields no longer overflow (date box). e2e `recurring`. Limits: entries appear only when the app is opened; recurring
+  investment buys repeat the same quantity and amount; the trade dialog for an existing holding has no Repeat yet.
 
 - 2026-10-31: Portfolio chart + history list have a time-frame dropdown (`state.ui.pfRange`, `PF_RANGES`, `pfMonths()`): 1 month (two
   points), 3, 6 (default), 9 months, 1, 3, 5 years, All time (from the earliest wallet/holding/loan/transaction month). Long ranges

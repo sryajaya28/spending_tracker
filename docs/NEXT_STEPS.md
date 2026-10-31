@@ -29,6 +29,9 @@ lines in one file) becomes hard to maintain: components, TypeScript, server-side
 - Saves must never delete-then-insert rows that share a unique key in one batch (upserts run before deletes).
 
 ## Known gaps
+
+- Recurring entries are created when the app is opened, not on a server schedule. A Supabase scheduled job could add them while nobody is signed in.
+- Recurring has no end date or edit screen yet (pause or delete and re-create), and no Repeat on the buy/sell dialog of an existing holding.
 - `budget_status` (SQL) only counts spending in the budget's own currency; the app converts, the database needs `fx_rates` filled.
 - No SQL tests yet for investments, debts, trades, occasions or transfers.
 - Advisor warning: `public.rls_auto_enable()` is callable by anon and signed-in users (not created by this repo).

@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Transactions controls compacted to two lines: search + `+ Add`, then month (short "Oct 2026"), category, occasion (if any)
+  and wallet sharing one row (long names cut with an ellipsis). The "Activity" card title was removed. New i18n key "Search".
+
 - 2026-10-31: Settings > Categories rows tidied (`.cat-row`): tile, name with type badge and sub-category toggle underneath, and compact
   `+ Sub` / `Edit` buttons right-aligned on the same line, on phone and desktop.
 

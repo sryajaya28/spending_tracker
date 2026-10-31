@@ -326,7 +326,7 @@ function toast(msg) {
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600);
 }
 const tile = (c, sm) => `<span class="tile ${sm ? 'sm' : ''}" style="--c:${c ? c.color : '#94A3B8'}">${c ? c.icon : '❔'}</span>`;
-const monthSelect = () => `<select class="pill-select" data-bind="month" aria-label="${__('Month')}">${lastMonths(6).reverse().map((k) => `<option value="${k}" ${k === state.ui.month ? 'selected' : ''}>${monthLabel(k)}</option>`).join('')}</select>`;
+const monthSelect = (short) => `<select class="pill-select" data-bind="month" aria-label="${__('Month')}">${lastMonths(6).reverse().map((k) => `<option value="${k}" ${k === state.ui.month ? 'selected' : ''}>${short ? new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }) : monthLabel(k)}</option>`).join('')}</select>`;
 const routeParts = () => (location.hash.replace('#/', '') || 'overview').split('?')[0].split('/');
 const route = () => { const r = routeParts()[0]; return r === 'wallets' ? 'portfolio' : r; };
 const routeArg = () => routeParts()[1] || '';
@@ -700,8 +700,8 @@ function viewDay(d) {
 function viewTransactions() {
   const list = inMonth(state.ui.month);
   return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
-  <section class="card"><div class="card-head"><h2>${__('Activity')}</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-txn">${__('+ Add')}</button></div></div>
-    <div class="filters"><input data-filter="q" placeholder="${__('Search note or category')}" value="${esc(state.ui.q)}">
+  <section class="card"><div class="txn-top"><input data-filter="q" placeholder="${__('Search note or category')}" value="${esc(state.ui.q)}" aria-label="${__('Search')}"><button class="btn" data-act="add-txn">${__('+ Add')}</button></div>
+    <div class="filters scroll-row">${monthSelect(true)}
       <select data-filter="cat" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
       ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
       <select data-filter="wallet" aria-label="${__('Wallet')}"><option value="">${__('All wallets')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></div>

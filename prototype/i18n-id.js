@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Search": "Cari",
  "of total spending": "dari total pengeluaran",
  "1 transaction": "1 transaksi",
  "{n} transactions": "{n} transaksi",

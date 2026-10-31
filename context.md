@@ -257,6 +257,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Removed descriptive text for a cleaner, phone-friendly UI: page subtitles under titles (`topbar` now renders only the
+  title), Settings row descriptions, the Categories count line, and the explainer paragraphs on Lent, Loan and Special occasions.
+  Keep new screens free of helper text; hints inside dialogs stay.
+
 - 2026-10-31: Transactions page is now a daily cumulative view; a day opens a detail page (`#/transactions/<date>`, `viewDay`,
   `route()` now reads only the first path segment, `routeArg()` the second). New e2e test `daily`; `run`/`transfer` updated.
 

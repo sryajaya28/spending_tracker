@@ -520,14 +520,12 @@ function viewPortfolio() {
   } else if (tab === 'lent') {
     const owed = activeLent().reduce((a, l) => a + toUSD(loanBalance(l), l.currency), 0);
     body = `<section class="card"><div class="card-head"><div><h2>${__('Money you lent')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(LT[5])}</div>
-        <small class="muted">${__('{n} open · {amount} still owed to you', { n: activeLent().length, amount: m(owed) })}</small></div><button class="btn" data-act="add-lent">${__('+ Lent')}</button></div>
-      <p class="muted" style="font-size:13px">${__('Money others owe you counts as an asset in your net worth. Record each repayment you receive.')}</p></section>
+        <small class="muted">${__('{n} open · {amount} still owed to you', { n: activeLent().length, amount: m(owed) })}</small></div><button class="btn" data-act="add-lent">${__('+ Lent')}</button></div></section>
       <div class="stack" style="margin-top:20px">${activeLent().map((l) => loanCard(l, vc, 'lent')).join('') || ('<div class="card empty">' + __('Nothing lent out. Add money you lent to a friend or family member to track repayments.') + '</div>')}</div>${growth}`;
   } else {
     const monthly = activeLoans().reduce((a, l) => a + toUSD(l.monthly_minor, l.currency), 0);
     body = `<section class="card"><div class="card-head"><div><h2>${__('Loans you owe')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(L[5])}</div>
-        <small class="muted">${monthly ? __('{amount} due each month', { amount: m(monthly) }) : __('No monthly payments set')}</small></div><button class="btn" data-act="add-loan">${__('+ Loan')}</button></div>
-      <p class="muted" style="font-size:13px">${__('Loans count against your net worth. Record each payment to bring the balance down.')}</p></section>
+        <small class="muted">${monthly ? __('{amount} due each month', { amount: m(monthly) }) : __('No monthly payments set')}</small></div><button class="btn" data-act="add-loan">${__('+ Loan')}</button></div></section>
       <div class="stack" style="margin-top:20px">${activeLoans().map((l) => loanCard(l, vc)).join('') || ('<div class="card empty">' + __('No loans. Add a mortgage, car loan or credit card balance to include it in your net worth.') + '</div>')}</div>${growth}`;
   }
 
@@ -598,7 +596,7 @@ function topbar(title, sub) {
   const p = D().profile, hour = new Date().getHours();
   const first = esc(p.name.split(' ')[0]);
   const greet = title ? __(title) : hour < 12 ? __('Good morning, {name}', { name: first }) : hour < 18 ? __('Good afternoon, {name}', { name: first }) : __('Good evening, {name}', { name: first });
-  return `<header class="topbar"><div><h1>${greet}</h1><p>${esc(__(sub))}</p></div>
+  return `<header class="topbar"><div><h1>${greet}</h1></div>
     <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="${__('Search transactions')}" aria-label="${__('Search transactions')}"></label>
     <div class="profile"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></div></div></header>`;
 }
@@ -705,7 +703,6 @@ function viewBudgets() {
   <section class="card"><div class="card-head"><h2>${__('By category')}</h2></div>
     ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
   <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Occasion')}</button></div>
-    <p class="muted" style="margin-bottom:8px">${__('A one-off budget for a trip, a party or a dinner. Tag expenses to it when you add them.')}</p>
     ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
 }
 const occasionRow = (o) => {
@@ -726,7 +723,6 @@ function categoriesCard() {
       + (isOpen ? kids.map((k) => `<div class="brow indent wrap">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">${__('Edit')}</button></div></div>`).join('') : '');
   }).join('');
   return `<section class="card"><div class="card-head"><button type="button" class="legend-btn card-toggle" data-act="toggle-cats" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><h2>${__('Categories')}</h2></button><button class="btn" data-act="add-cat">${__('+ Category')}</button></div>
-    <p class="muted" style="margin-top:4px">${__('{n} categories · {m} sub-categories', { n: roots.length, m: subs })}${open ? '. ' + __('Totals and budgets roll sub-categories up into their parent.') : ''}</p>
     ${open ? `<div style="margin-top:6px">${rows}</div>` : ''}</section>`;
 }
 function viewSettings() {
@@ -735,18 +731,18 @@ function viewSettings() {
   <div class="stack">
   ${categoriesCard()}
   <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
-    <div class="form-row"><div>${__('Display name')}<small>${__('Shown in the greeting')}</small></div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
-    <div class="form-row"><div>${__('Reporting currency')}<small>${__('Used for totals, budgets and charts. Wallets keep their own currency; budgets convert at demo rates.')}</small></div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
-    <div class="form-row"><div>${__('Language')}<small>${__('Language for menus and messages.')}</small></div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
-    <div class="form-row"><div>${__('Appearance')}<small>${__('Light, dark, or match your device.')}</small></div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
+    <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div></section>
+    <div class="form-row"><div>${__('Language')}</div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Appearance')}</div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div>
   <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
-    <div class="form-row"><div>${__('AI category suggestions')}<small>${__('After about 30 labeled transactions, uncategorized ones are tagged from your history. If unsure it stays empty.')}</small></div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
+    <div class="form-row"><div>${__('AI category suggestions')}</div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
   <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
     <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div>
-    <div class="form-row"><div>${__('Sign out')}<small>${__('Ends the session on this device')}</small></div><button class="btn secondary" data-act="signout">${__('Sign out')}</button></div>
-    <div class="form-row"><div>${__('Sign out everywhere else')}<small>${__('Revokes every other device')}</small></div><button class="btn secondary" data-act="revoke">${__('Sign out others')}</button></div>
-    <div class="form-row"><div>${__('Use sample data')}<small>${__('Switch between your own data and a demo account full of sample wallets, transactions, budgets and a portfolio. Your own data stays untouched, and nothing you do in the demo is saved.')}</small></div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="${__('Use sample data')}"></label></div>
-    ${p.sample ? `<div class="form-row"><div>${__('Sample data saved earlier')}<small>${__('Demo rows that an older version added to your account. Remove them to clean up; anything you added yourself stays.')}</small></div><button class="btn danger" data-act="remove-sample">${__('Remove')}</button></div>` : ''}</section></div>`;
+    <div class="form-row"><div>${__('Sign out')}</div><button class="btn secondary" data-act="signout">${__('Sign out')}</button></div>
+    <div class="form-row"><div>${__('Sign out everywhere else')}</div><button class="btn secondary" data-act="revoke">${__('Sign out others')}</button></div>
+    <div class="form-row"><div>${__('Use sample data')}</div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="${__('Use sample data')}"></label></div>
+    ${p.sample ? `<div class="form-row"><div>${__('Sample data saved earlier')}</div><button class="btn danger" data-act="remove-sample">${__('Remove')}</button></div>` : ''}</section></div>`;
 }
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';

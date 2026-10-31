@@ -15,7 +15,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.screenshot({ path: __dirname + '/out/hero_cur.png', clip: { x: 0, y: 0, width: 631, height: 420 } });
   await p.selectOption('.hero-cur select', 'USD'); await settle();
   const l = await log(); assert(l.some((o) => o.op === 'update' && o.table === 'profiles' && o.values.default_currency === 'USD'), JSON.stringify(l.map((o) => o.op + o.table)));
-  assert((await p.innerText('.hero .amount')).includes('$')); assert((await p.innerText('.topbar')).includes('shown in USD'), 'subtitle');
+  assert((await p.innerText('.hero .amount')).includes('$')); assert(!(await p.innerText('.topbar')).includes('shown in'), 'no subtitle');
   assert.equal(await p.inputValue('.hero-cur select'), 'USD');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.error('FAIL', e); process.exit(1); });

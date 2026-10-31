@@ -10,7 +10,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.waitForSelector('[data-act=toggle-cats]');
   assert.equal(await p.$$eval('.brow .badge', (e) => e.length), 0, 'collapsed: no category rows');
   const txt = () => p.evaluate(() => document.body.innerText);
-  assert((await txt()).includes('12 categories · 11 sub-categories'));
+  assert(!(await txt()).includes('12 categories · 11 sub-categories'), 'no summary line');
   await p.screenshot({ path: __dirname + '/settings_collapsed.png' });
   await p.click('[data-act=toggle-cats]');
   assert((await p.$$('.brow.indent')).length === 0, 'subs hidden until expanded');

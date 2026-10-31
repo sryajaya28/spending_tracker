@@ -235,11 +235,11 @@ const Cloud = (() => {
     /* auth */
     redirect: () => location.origin + location.pathname,
     getSession: async () => must(await client.auth.getSession()).session,
-    signUp: (email, password, name, currency) => client.auth.signUp({ email, password, options: { data: { full_name: name, currency }, emailRedirectTo: location.origin + location.pathname } }),
-    signIn: (email, password) => client.auth.signInWithPassword({ email, password }),
+    signUp: (email, password, name, currency, captchaToken) => client.auth.signUp({ email, password, options: { data: { full_name: name, currency }, emailRedirectTo: location.origin + location.pathname, captchaToken } }),
+    signIn: (email, password, captchaToken) => client.auth.signInWithPassword({ email, password, options: { captchaToken } }),
     google: () => client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } }),
-    resend: (email) => client.auth.resend({ type: 'signup', email, options: { emailRedirectTo: location.origin + location.pathname } }),
-    reset: (email) => client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname }),
+    resend: (email, captchaToken) => client.auth.resend({ type: 'signup', email, options: { emailRedirectTo: location.origin + location.pathname, captchaToken } }),
+    reset: (email, captchaToken) => client.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname, captchaToken }),
     setPassword: (password) => client.auth.updateUser({ password }),
     signOut: (scope) => client.auth.signOut({ scope: scope || 'local' }),
   };

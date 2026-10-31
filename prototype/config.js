@@ -3,4 +3,6 @@
 window.STIVER = {
   SUPABASE_URL: 'https://ukoxkwxmkwtlihbutryc.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_pvHLAbOw-Q_qGKW4JTdhBA_h51EJPHC',
+  // Cloudflare Turnstile site key (public). Leave empty until CAPTCHA is also enabled in Supabase, then paste it here.
+  TURNSTILE_SITE_KEY: '',
 };

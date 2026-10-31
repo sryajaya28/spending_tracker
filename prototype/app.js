@@ -718,6 +718,24 @@ function viewSettings() {
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
 const authMsg = (a) => (a.error ? `<p class="auth-err" role="alert">${esc(a.error)}</p>` : '') + (a.notice ? `<p class="hint" role="status">${esc(a.notice)}</p>` : '');
+/* Bot check (Cloudflare Turnstile). Dormant until a site key is set in config.js; the key must be set
+   together with enabling CAPTCHA in Supabase, because Supabase then rejects requests without a token. */
+const CAPTCHA_KEY = (window.STIVER || {}).TURNSTILE_SITE_KEY || '';
+let captchaToken = '', captchaWidget = null, captchaLoading = false;
+const captchaBox = () => (CAPTCHA_KEY ? '<div id="captcha" class="captcha"></div>' : '');
+function mountCaptcha() {
+  const box = $('#captcha'); if (!CAPTCHA_KEY || !box) return;
+  const draw = () => {
+    captchaLoading = false; captchaToken = '';
+    try { if (captchaWidget !== null) window.turnstile.remove(captchaWidget); } catch { /* the old widget was already removed with the page */ }
+    captchaWidget = window.turnstile.render(box, { sitekey: CAPTCHA_KEY, theme: 'light', callback: (t) => { captchaToken = t; }, 'expired-callback': () => { captchaToken = ''; }, 'error-callback': () => { captchaToken = ''; } });
+  };
+  if (window.turnstile) { draw(); return; }
+  if (captchaLoading) return;
+  captchaLoading = true;
+  const sc = document.createElement('script'); sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; sc.async = true; sc.onload = draw; sc.onerror = () => { captchaLoading = false; };
+  document.head.appendChild(sc);
+}
 const authLink = (view, text) => `<button type="button" class="legend-btn" data-act="auth-view" data-view="${view}">${text}</button>`;
 function viewAuth() {
   const a = state.auth, v = a.view, logo = '<div class="logo"><img src="icon.svg" alt="">Stiver</div>';
@@ -731,11 +749,11 @@ function viewAuth() {
     ${emailField}
     <label class="field">Password<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters"></label>
     <label class="field">Reporting currency<select name="currency">${Object.keys(RATES).map((c) => `<option>${c}</option>`).join('')}</select></label>
-    <button class="btn lg" type="submit">Create account</button>
+    ${captchaBox()}<button class="btn lg" type="submit">Create account</button>
     <p class="muted" style="text-align:center">We'll email you a link to confirm your address. Already have an account? ${authLink('signin', 'Sign in')}</p></form>`;
   else if (v === 'forgot') body = `<form class="card" data-form="forgot">${logo}
     <div><h2 style="font-size:24px">Reset your password</h2><p class="muted">Enter your email and we'll send you a reset link.</p></div>
-    ${authMsg(a)}${emailField}<button class="btn lg" type="submit">Send reset link</button>
+    ${authMsg(a)}${emailField}${captchaBox()}<button class="btn lg" type="submit">Send reset link</button>
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></form>`;
   else if (v === 'recovery') body = `<form class="card" data-form="recovery">${logo}
     <div><h2 style="font-size:24px">Choose a new password</h2></div>${authMsg(a)}
@@ -743,13 +761,13 @@ function viewAuth() {
     <button class="btn lg" type="submit">Save password</button></form>`;
   else if (v === 'sent') body = `<div class="card">${logo}
     <div><h2 style="font-size:24px">Check your email</h2><p class="muted">We sent a link to <b>${esc(a.email)}</b>. Open it to confirm your address, then sign in. If you already have an account, just sign in.</p></div>
-    ${authMsg(a)}<button class="btn secondary lg" data-act="auth-resend">Resend the email</button>
+    ${authMsg(a)}${captchaBox()}<button class="btn secondary lg" data-act="auth-resend">Resend the email</button>
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></div>`;
   else body = `<form class="card" data-form="signin">${logo}
     <div><h2 style="font-size:24px">Welcome back</h2><p class="muted">Sign in to see your spending, budgets and net worth.</p></div>
     ${google}${authMsg(a)}${emailField}
     <label class="field">Password<input name="password" type="password" required autocomplete="current-password"></label>
-    <button class="btn lg" type="submit">Sign in</button>
+    ${captchaBox()}<button class="btn lg" type="submit">Sign in</button>
     <p class="muted" style="text-align:center">${authLink('forgot', 'Forgot password?')}</p>
     <p class="muted" style="text-align:center">New here? ${authLink('signup', 'Create an account')}</p></form>`;
   return `<div class="onboard">${body}</div>`;
@@ -762,7 +780,7 @@ function render() {
   const app = $('#app');
   const a = state.auth;
   if (a.status === 'loading') { app.innerHTML = viewSplash('Loading…'); return; }
-  if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); return; }
+  if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
   if (!D()) {
     app.innerHTML = a.loadError
       ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="auth-err" role="alert">Couldn't load your data: ${esc(a.loadError)}</p><button class="btn lg" data-act="retry-load">Try again</button><button class="btn secondary lg" data-act="signout">Sign out</button></div></div>`
@@ -1161,7 +1179,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.auth = { status: 'out', view: 'signin', email: '', notice: '', error: '' }; render(); });
   else if (act === 'auth-view') { Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
-  else if (act === 'auth-resend') Cloud.resend(state.auth.email).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); });
+  else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
   else if (act === 'load-demo') loadDemo();
 });
@@ -1425,19 +1443,20 @@ async function submitAuth(kind, v, f) {
   const a = state.auth, btn = $('button[type=submit]', f);
   if (btn) btn.disabled = true;
   Object.assign(a, { error: '', notice: '' }); if (v.email) a.email = v.email.trim();
+  if (CAPTCHA_KEY && kind !== 'recovery' && !captchaToken) { a.error = 'Please complete the verification first.'; render(); return; }
   try {
     if (kind === 'signin') {
-      const { error } = await Cloud.signIn(a.email, v.password);
+      const { error } = await Cloud.signIn(a.email, v.password, captchaToken || undefined);
       if (error) {
         if (/not confirmed/i.test(error.message)) Object.assign(a, { view: 'sent', notice: 'Your email is not confirmed yet. Open the link we sent you, or resend it below.' });
         else a.error = friendlyAuthError(error);
       }
     } else if (kind === 'signup') {
-      const { data, error } = await Cloud.signUp(a.email, v.password, v.name.trim(), v.currency);
+      const { data, error } = await Cloud.signUp(a.email, v.password, v.name.trim(), v.currency, captchaToken || undefined);
       if (error) a.error = friendlyAuthError(error);
       else if (!data.session) a.view = 'sent';   // email confirmation is on: wait for the link
     } else if (kind === 'forgot') {
-      const { error } = await Cloud.reset(a.email);
+      const { error } = await Cloud.reset(a.email, captchaToken || undefined);
       if (error) a.error = error.message; else a.notice = 'If that email has an account, a reset link is on its way.';
     } else if (kind === 'recovery') {
       const { error } = await Cloud.setPassword(v.password);

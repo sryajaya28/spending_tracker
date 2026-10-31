@@ -290,6 +290,19 @@ const portfolioUSD = (k, accId) => D().holdings
 const qtyFmt = (q) => new Intl.NumberFormat(locale(), { maximumFractionDigits: 8 }).format(q);
 const pctFmt = (p) => (p === null ? '—' : `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`);
 const pf = () => state.ui.pf || cur();
+/* time frame of the Portfolio chart and history list (month granularity) */
+const PF_RANGES = [['1m', 1, '1 month'], ['3m', 3, '3 months'], ['6m', 6, '6 months'], ['9m', 9, '9 months'], ['1y', 12, '1 year'], ['3y', 36, '3 years'], ['5y', 60, '5 years'], ['all', 0, 'All time']];
+const monthsBetween = (a, b) => (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7));
+function earliestMonth() {
+  const d = D(), all = [...d.wallets.map((w) => w.since), ...d.holdings.map((h) => h.since), ...d.loans.map((l) => l.since), ...(d.lent || []).map((l) => l.since), ...d.transactions.map((t) => t.occurred_at.slice(0, 7))].filter((x) => x && /^\d{4}-\d{2}/.test(x)).map((x) => x.slice(0, 7));
+  return all.length ? all.sort()[0] : monthKey(new Date());
+}
+function pfMonths() {
+  const sel = PF_RANGES.find((r) => r[0] === (state.ui.pfRange || '6m')) || PF_RANGES[2], now = monthKey(new Date());
+  const n = sel[1] ? Math.max(sel[1], 2) : Math.min(Math.max(monthsBetween(earliestMonth(), now) + 1, 2), 600);   // 1 month still needs two points to draw a line
+  return lastMonths(n);
+}
+const pfRangeSelect = () => `<select class="chip pill-select" data-bind="pfRange" aria-label="${__('Time frame')}">${PF_RANGES.map((r) => `<option value="${r[0]}" ${r[0] === (state.ui.pfRange || '6m') ? 'selected' : ''}>${__(r[2])}</option>`).join('')}</select>`;
 
 /* ---------- savings, loans and net worth (everything is compared in USD, shown in a chosen currency) ---------- */
 const toUSD = (minor, c) => toMajor(minor, c) / RATES[c];
@@ -434,7 +447,7 @@ function valueChart(months, usd, vc) {
     ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--line)"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">${cmp(t)}</text>`).join('')}
     <path d="${line} L${x(vals.length - 1)},${H - pb} L${x(0)},${H - pb} Z" fill="url(#pfg)"/>
     <path d="${line}" fill="none" stroke="#4A44C6" stroke-width="2.5" stroke-linejoin="round"/>
-    ${vals.map((v, i) => `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#4A44C6"/><text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${monthLabel(months[i], 'short')}</text>`).join('')}
+    ${vals.map((v, i) => { const step = Math.ceil(months.length / 6), last = months.length - 1, show = i === last || (i % step === 0 && last - i >= step / 2), lbl = months.length > 12 ? new Date(+months[i].slice(0, 4), +months[i].slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: '2-digit' }) : monthLabel(months[i], 'short'); return (months.length <= 14 || i === last ? `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#4A44C6"/>` : '') + (show ? `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${lbl}</text>` : ''); }).join('')}
     <line id="pf-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" style="stroke:var(--ink)" stroke-width="1.5" opacity="0"/></svg><div class="tip" id="pf-tip"></div></div>`;
 }
 function bindValue(months, usd, vc) {
@@ -446,7 +459,7 @@ function bindValue(months, usd, vc) {
     const cx = pl + ((W - pl - pr) * i) / (months.length - 1);
     cursor.setAttribute('x1', cx); cursor.setAttribute('x2', cx); cursor.setAttribute('opacity', 1);
     const mom = i && usd[i - 1] > 0 ? ((usd[i] - usd[i - 1]) / usd[i - 1]) * 100 : null;
-    tip.textContent = `${monthLabel(months[i], 'short')}: ${money(usdToMinor(usd[i], vc), vc)} (${pctFmt(mom)} MoM)`;
+    tip.textContent = `${new Date(+months[i].slice(0, 4), +months[i].slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' })}: ${money(usdToMinor(usd[i], vc), vc)} (${pctFmt(mom)} MoM)`;
     tip.style.left = `${(cx / W) * r.width}px`; tip.style.top = `${r.height * 0.3}px`; tip.style.opacity = 1;
   });
   svg.addEventListener('pointerleave', () => { tip.style.opacity = 0; cursor.setAttribute('opacity', 0); });
@@ -502,10 +515,10 @@ function viewPortfolio() {
   const m = (usd) => money(usdToMinor(usd, vc), vc);
   const assets = S[5] + I[5] + LT[5];
   const share = (v) => (assets > 0 ? Math.round((v / assets) * 100) : 0);
-  const series = { savings: S, investment: I, lent: LT, loan: L }[tab];
-  state.chart = { months, series, vc };
+  const rm = pfMonths(), series = rm.map({ savings: savingsUSD, investment: (k) => portfolioUSD(k), lent: lentUSD, loan: loanUSD }[tab]);
+  state.chart = { months: rm, series, vc };
   const titles = { savings: __('Savings over time'), investment: __('Investment growth month over month'), lent: __('Money lent over time'), loan: __('Loan balance over time') };
-  const months6 = months.map((k, i) => {
+  const months6 = rm.map((k, i) => {
     const d = i ? series[i] - series[i - 1] : null, p = i && series[i - 1] > 0 ? (d / series[i - 1]) * 100 : null;
     const good = p === null ? '' : (tab === 'loan' ? p <= 0 : p >= 0) ? 'up' : 'down';
     // a list, not a table: the value gets its own line, so figures of any size (hundreds of billions) never push other columns off screen
@@ -513,10 +526,10 @@ function viewPortfolio() {
     return `<div class="mrow"><span class="mname">${esc(new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }))}</span><div class="mval"><b class="num">${m(series[i])}</b><small class="num">${chg}${p === null ? '' : ` · <span class="${good}">${pctFmt(p)}</span>`}</small></div></div>`;
   }).reverse().join('');
   const noData = series.every((v) => !v);   // nothing to chart yet: say so instead of a flat line and a table of zeros
-  const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">${__('6 months')}</span></div>
+  const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
     <div class="empty sm">${__('Nothing to chart yet. This fills in as you add {what}.', { what: { savings: __('wallets'), investment: __('investments'), lent: __('money you lent'), loan: __('loans') }[tab] })}</div></section>`
-    : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">${__('6 months')}</span></div>
-    ${valueChart(months, series, vc)}<div class="mlist">${months6}</div></section>`;
+    : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2>${pfRangeSelect()}</div>
+    ${valueChart(rm, series, vc)}<div class="mlist">${months6}</div></section>`;
 
   let body = '';
   if (tab === 'savings') {
@@ -1291,6 +1304,7 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
+  else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
   else if (t.matches('[data-filter]')) { state.ui[t.dataset.filter] = t.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
   else if (t.name === 'type' && t.form?.dataset.form === 'txn') {
     if (t.value === 'invest') holdingDialog(null, null, { invest: true });

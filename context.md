@@ -257,6 +257,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio chart + history list have a time-frame dropdown (`state.ui.pfRange`, `PF_RANGES`, `pfMonths()`): 1 month (two
+  points), 3, 6 (default), 9 months, 1, 3, 5 years, All time (from the earliest wallet/holding/loan/transaction month). Long ranges
+  thin the axis labels and hide dots. The net-worth card and breakdown stay on the current month. New e2e test `pfrange`; new i18n keys.
+
 - 2026-10-31: Portfolio history under the chart is now a list (`.mlist`/`.mrow`: month left, value with change and % stacked right)
   instead of a 4-column table, so very large amounts (checked up to tens of trillions on a 390px phone) never overflow.
 

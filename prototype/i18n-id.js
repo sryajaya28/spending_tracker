@@ -1,6 +1,14 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Time frame": "Rentang waktu",
+ "All time": "Sepanjang waktu",
+ "5 years": "5 tahun",
+ "3 years": "3 tahun",
+ "1 year": "1 tahun",
+ "9 months": "9 bulan",
+ "3 months": "3 bulan",
+ "1 month": "1 bulan",
  "Search": "Cari",
  "of total spending": "dari total pengeluaran",
  "1 transaction": "1 transaksi",

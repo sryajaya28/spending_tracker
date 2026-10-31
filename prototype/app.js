@@ -134,7 +134,7 @@ async function refreshPrices(silent) {
     try { D().livePrices[key] = await quote(info); ok++; } catch { /* keep the previous price */ }
   }
   save(); if (route() === 'portfolio') render();
-  if (!silent) toast(`Updated ${ok} of ${keys.length} prices`);
+  if (!silent) toast(__('Updated {ok} of {n} prices', { ok, n: keys.length }));
 }
 
 function seed(name, cur) {
@@ -255,7 +255,7 @@ function spendTree(k) {
   });
   return [...tree.values()].map((n) => {
     const c = catOf(n.id);
-    return { id: n.id, name: c ? c.name : 'Uncategorized', color: c ? c.color : '#CBD0E8', icon: c ? c.icon : '❔', value: n.value, direct: n.direct,
+    return { id: n.id, name: c ? c.name : __('Uncategorized'), color: c ? c.color : '#CBD0E8', icon: c ? c.icon : '❔', value: n.value, direct: n.direct,
       subs: [...n.subs].map(([sid, value]) => ({ id: sid, name: catOf(sid)?.name || '?', icon: catOf(sid)?.icon || '•', value })).sort((a, b) => b.value - a.value) };
   }).sort((a, b) => b.value - a.value);
 }
@@ -299,6 +299,7 @@ const loanUSD = (k) => activeLoans().reduce((a, l) => (k < l.since ? a : a + toU
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
 const activeLent = () => D().lent.filter((l) => !l.archived);
 const lentUSD = (k) => activeLent().reduce((a, l) => (k < l.since ? a : a + toUSD(loanBalance(l, `${k}-31`), l.currency)), 0);
+const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', manual: 'Other' }[t] || t);
 const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Car loan', card: 'Credit card', personal: 'Personal loan', other: 'Other' };
 
 /* mock of the AI tagging described in the plan: history match first, null when unsure */
@@ -380,7 +381,7 @@ function bindFlow(months, inc, exp) {
 function halfDonut(items, total) {
   const N = 26, cx = 220, cy = 224, R = 204, r = 134, gap = 0.045;
   const top = items.slice(0, 5), rest = items.slice(5).reduce((a, i) => a + i.value, 0);
-  const parts = rest ? [...top, { name: 'Others', color: '#CBD0E8', value: rest }] : top;
+  const parts = rest ? [...top, { name: __('Others'), color: '#CBD0E8', value: rest }] : top;
   // largest-remainder allocation of N segments
   const alloc = parts.map((p) => ({ p, exact: total ? (p.value / total) * N : 0 }));
   alloc.forEach((a) => { a.n = Math.floor(a.exact); });
@@ -433,7 +434,7 @@ function bindValue(months, usd, vc) {
 function holdingRow(h, vc, accTotal) {
   const info = assetInfo(h.symbol), k = lastMonths(6)[5], price = info.usd(k), value = h.quantity * price;
   return `<div class="row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
-    <div><div class="title">${esc(info.name)} <span class="badge">${esc(info.type)}</span></div><div class="sub num">${qtyFmt(h.quantity)} ${esc(info.symbol)} ×${money(usdToMinor(price, vc), vc)}</div></div>
+    <div><div class="title">${esc(info.name)} <span class="badge">${esc(typeLabel(info.type))}</span></div><div class="sub num">${qtyFmt(h.quantity)} ${esc(info.symbol)} ×${money(usdToMinor(price, vc), vc)}</div></div>
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${accTotal ? Math.round((value / accTotal) * 100) : 0}%</div></div></div>`;
 }
 
@@ -441,12 +442,12 @@ function holdingRow(h, vc, accTotal) {
 function archivedWallets() {
   const list = D().wallets.filter((w) => w.archived); if (!list.length) return '';
   const open = state.ui.archOpen;
-  return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>Archived wallets (${list.length})</b></button>
+  return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>${__('Archived wallets ({n})', { n: list.length })}</b></button>
     ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
-      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(w.type)} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
+      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
         <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">${__('Restore')}</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">${__('Delete')}</button></div></div>`; }).join('') : ''}</div>`;
 }
-const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(w.type)} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">${__('Edit')}</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button></div></div>`).join('');
+const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">${__('Edit')}</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button></div></div>`).join('');
 
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
 function loanCard(l, vc, kind = 'loan') {
@@ -693,7 +694,7 @@ function categoriesCard() {
   const open = state.ui.catsOpen;
   const rows = roots.map((c) => {
     const kids = childrenOf(c.id), isOpen = state.ui.openCats.has(c.id);
-    return `<div class="brow wrap">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${c.type}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${__(kids.length === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids.length })} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
+    return `<div class="brow wrap">${tile(c)}<div><b>${esc(c.name)}</b> <span class="badge">${typeLabel(c.type)}</span>${kids.length ? ` <button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${__(kids.length === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids.length })} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="add-cat" data-parent="${c.id}">${__('+ Sub')}</button><button class="btn secondary" data-act="edit-cat" data-id="${c.id}">${__('Edit')}</button></div></div>`
       + (isOpen ? kids.map((k) => `<div class="brow indent wrap">${tile(k, true)}<div><b>${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">${__('Edit')}</button></div></div>`).join('') : '');
   }).join('');
@@ -720,7 +721,7 @@ function viewSettings() {
 }
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';
-const authMsg = (a) => (a.error ? `<p class="auth-err" role="alert">${esc(a.error)}</p>` : '') + (a.notice ? `<p class="hint" role="status">${esc(a.notice)}</p>` : '');
+const authMsg = (a) => (a.error ? `<p class="auth-err" role="alert">${esc(__(a.error))}</p>` : '') + (a.notice ? `<p class="hint" role="status">${esc(__(a.notice))}</p>` : '');
 /* Bot check (Cloudflare Turnstile). Dormant until a site key is set in config.js; the key must be set
    together with enabling CAPTCHA in Supabase, because Supabase then rejects requests without a token. */
 const CAPTCHA_KEY = (window.STIVER || {}).TURNSTILE_SITE_KEY || '';
@@ -771,7 +772,6 @@ function viewLanding() {
       ${feat('🤝', 'Loans and money you lent', "Know what you owe and what you're owed, and record each payment as it happens.")}
       ${feat('🌱', 'Net worth over time', 'See everything together and how it changes month by month.')}
     </div></section>
-  <section class="land-priv"><h2>${__('Private by design')}</h2><p>${__('Your data belongs to you. No ads, no selling your information, and no bank logins required.')}</p></section>
   <section class="land-sec"><h2>${__('How it works')}</h2>
     <ol class="steps">${step(1, 'Create your account with email or Google.')}${step(2, 'Add your wallets and your first transactions.')}${step(3, 'See your full picture on every device.')}</ol></section>
   <section class="land-final"><h2>${__('Ready to take control of your money?')}</h2><button class="btn lg" data-act="auth-view" data-view="signup">${__('Create your account')}</button></section>
@@ -858,7 +858,7 @@ function quickAddCategory(form) {
   D().categories.push(c); save();
   $('select[name=category]', form).innerHTML = catOptions(type, c.id);
   form.qc_name.value = ''; form.qc_icon.value = ''; $('.quick-cat', form).hidden = true;
-  toast(parent ? `Added ${name} under ${parent.name}` : `Added ${name}`);
+  toast(parent ? __('Added {name} under {parent}', { name, parent: parent.name }) : __('Added {name}', { name }));
 }
 /* active occasions whose dates include this day (an occasion without dates never matches by date) */
 const occasionOn = (date) => D().occasions.filter((o) => !o.archived && o.start && date >= o.start && date <= (o.end || o.start));
@@ -1011,7 +1011,7 @@ function holdingDialog(h, accId, opts = {}) {
   open(`<h2>${h ? __('Edit {symbol}', { symbol: esc(info.symbol) }) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
     ${invest ? kindSeg('invest') : ''}
     <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
-    ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(info.type)}</span></p>` : `
+    ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(typeLabel(info.type))}</span></p>` : `
     <div class="field" id="picker">Asset
       <div class="pills" role="group" aria-label="${__('Asset type')}"><button type="button" class="pill on" data-act="pick-type" data-type="">${__('All')}</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">${__('Crypto')}</button><button type="button" class="pill" data-act="pick-type" data-type="stock">${__('US stocks &amp; ETFs')}</button></div>
       <input name="assetq" autocomplete="off" placeholder="${__('Search name or ticker, e.g. BTC, AAPL, VOO')}" autofocus>
@@ -1142,12 +1142,12 @@ function syncTradeForm(form, rebuild) {
 function tradeHint(form) {
   const h = D().holdings.find((x) => x.id === form.dataset.id), src = parseSource(form.source.value), q = parseFloat(form.quantity.value), a = parseFloat(form.amount.value);
   const hint = $('#trade-hint', form), buy = form.side.value === 'buy';
-  const base = `The ${src?.kind === 'wallet' ? 'money ' + (buy ? 'leaves' : 'goes into') + ' that wallet' : (buy ? 'coins are taken from' : 'coins are added to') + ' your stablecoin balance'}. Not counted as spending or income.`;
+  const base = src?.kind === 'wallet' ? (buy ? __('The money leaves that wallet. Not counted as spending or income.') : __('The money goes into that wallet. Not counted as spending or income.')) : (buy ? __('The coins are taken from your stablecoin balance. Not counted as spending or income.') : __('The coins are added to your stablecoin balance. Not counted as spending or income.'));
   if (!h || !src || !(q > 0) || !(a > 0)) { hint.textContent = base; return; }
   const info = assetInfo(h.symbol), month = monthKey(new Date());
   const usd = src.kind === 'wallet' ? a / RATES[src.wallet.currency] : a * assetInfo(src.kind === 'holding' ? src.holding.symbol : src.symbol).usd(month);
   const per = usd / q, market = info.usd(month), diff = market > 0 ? ((per - market) / market) * 100 : null;
-  hint.textContent = `About $${per.toLocaleString(locale(), { maximumFractionDigits: 4 })} per ${info.symbol}` + (market > 0 ? ` (market $${market.toLocaleString(locale(), { maximumFractionDigits: 4 })}, ${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%). ` : '. ') + base;
+  hint.textContent = __('About ${price} per {symbol}', { price: per.toLocaleString(locale(), { maximumFractionDigits: 4 }), symbol: info.symbol }) + (market > 0 ? ' ' + __('(market ${price}, {diff}).', { price: market.toLocaleString(locale(), { maximumFractionDigits: 4 }), diff: `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%` }) + ' ' : '. ') + base;
 }
 
 /* ---------- events ---------- */
@@ -1185,7 +1185,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'pay-lent') paymentDialog(find(D().lent), 'lent');
   else if (act === 'archive-lent') { find(D().lent).archived = true; save(); close(); render(); toast('Archived'); }
   else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); }
-  else if (act === 'refresh-prices') { el.textContent = 'Refreshing…'; refreshPrices(false); }
+  else if (act === 'refresh-prices') { el.textContent = __('Refreshing…'); refreshPrices(false); }
   else if (act === 'pick-type') { state.ui.pickType = el.dataset.type; $$('.pill', el.parentElement).forEach((b) => b.classList.toggle('on', b === el)); runAssetSearch(); }
   else if (act === 'pick-asset') pickAsset(state.pick[+el.dataset.i], el.closest('form'));
   else if (act === 'manual-asset') { const f = el.closest('form'); f.asset.value = '__custom'; f.assetmeta.value = ''; $('#picker', f).hidden = true; $('.custom-fields', f).hidden = false; }
@@ -1214,8 +1214,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Wallet restored'); }
   else if (act === 'delete-wallet') {
     const w = walletOf(id), n = D().transactions.filter((t) => t.wallet_id === id).length;
-    if (n) { toast(`Can't delete: ${n} transaction${n === 1 ? '' : 's'} use this wallet. Restore it instead.`); return; }
-    if (!confirm(`Delete "${w.name}" permanently? This can't be undone.`)) return;
+    if (n) { toast(__(n === 1 ? "Can't delete: {n} transaction uses this wallet. Restore it instead." : "Can't delete: {n} transactions use this wallet. Restore it instead.", { n })); return; }
+    if (!confirm(__('Delete "{name}" permanently? This can\'t be undone.', { name: w.name }))) return;
     D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Wallet deleted');
   }
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Wallet archived'); }
@@ -1228,7 +1228,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
   else if (act === 'demo-off') setDemo(false);
-  else if (act === 'remove-sample') { if (confirm('Remove the sample data? Anything you added yourself stays.')) removeSample(); }
+  else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); });
 
@@ -1294,9 +1294,9 @@ async function pickAsset(a, form) {
   const chip = $('#picked'), fb = $('.price-fallback', form); chip.hidden = false; fb.hidden = true;
   chip.innerHTML = `<b>${esc(a.symbol)}</b> ${esc(a.name)} <span class="badge">${esc(a.type)}</span> <span class="muted" id="picked-price"></span>`;
   if (!a.fh) return; // built-in asset: priced from the mock catalog
-  $('#picked-price').textContent = 'getting price…';
+  $('#picked-price').textContent = __('getting price…');
   try { const p = await quote(a); form.price.value = p; $('#picked-price').textContent = `$${p.toLocaleString(locale(), { maximumFractionDigits: 6 })} live`; }
-  catch { $('#picked-price').textContent = 'price unavailable'; fb.hidden = false; }
+  catch { $('#picked-price').textContent = __('price unavailable'); fb.hidden = false; }
 }
 
 document.addEventListener('input', (e) => {
@@ -1317,7 +1317,7 @@ function applySetting(el) {
     // only the reporting currency changes; wallets and transactions keep their own currency
     const from = p.currency, to = el.value;
     D().budgets.forEach((b) => { b.amount_minor = convert(b.amount_minor, from, to); b.currency = to; });
-    p.currency = to; state.ui.pf = null; toast(`Reporting currency changed to ${to}`);
+    p.currency = to; state.ui.pf = null; toast(__('Reporting currency changed to {cur}', { cur: to }));
   }
   save(); render();
 }
@@ -1337,8 +1337,8 @@ document.addEventListener('submit', (e) => {
     if (v.category) { row.category_source = 'user'; row.ai_confidence = null; }
     else {
       const tag = aiTag(row.note, type);
-      if (tag) { row.category_id = tag.category_id; row.category_source = 'ai'; row.ai_confidence = tag.confidence; msg = `AI tagged it as ${catOf(tag.category_id).name}`; }
-      else { row.category_source = 'user'; msg += ' · left uncategorized'; }
+      if (tag) { row.category_id = tag.category_id; row.category_source = 'ai'; row.ai_confidence = tag.confidence; msg = __('AI tagged it as {name}', { name: catOf(tag.category_id).name }); }
+      else { row.category_source = 'user'; msg = __(existing ? 'Saved · left uncategorized' : 'Transaction added · left uncategorized'); }
     }
     if (!existing) D().transactions.push(row);
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
@@ -1352,14 +1352,14 @@ document.addEventListener('submit', (e) => {
     const received = cross ? toMinor(parseFloat(v.received), B.currency) : amount;
     if (!(amount > 0) || !(received > 0)) { toast(cross && !(received > 0) ? 'Enter the amount received' : 'Enter an amount above zero'); return; }
     if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
-    if (A.type !== 'card' && amount + fee > walletBalance(A)) { toast(`${A.name} doesn't have enough balance`); return; }
+    if (A.type !== 'card' && amount + fee > walletBalance(A)) { toast(__("{name} doesn't have enough balance", { name: A.name })); return; }
     const gid = uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: v.date, transfer_id: gid }, extra = v.note.trim() ? ` · ${v.note.trim()}` : '';
-    D().transactions.push({ id: uid(), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.currency, note: `Transfer to ${B.name}${extra}`, ...base });
-    D().transactions.push({ id: uid(), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.currency, note: `Transfer from ${A.name}${extra}`, ...base });
-    if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: `Transfer fee (${A.name} → ${B.name})`, ...base });
+    D().transactions.push({ id: uid(), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.currency, note: __('Transfer to {name}', { name: B.name }) + extra, ...base });
+    D().transactions.push({ id: uid(), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.currency, note: __('Transfer from {name}', { name: A.name }) + extra, ...base });
+    if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base });
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     state.ui.month = v.date.slice(0, 7) <= monthKey(new Date()) ? v.date.slice(0, 7) : state.ui.month;
-    save(); close(); render(); toast(`Moved ${money(amount, A.currency)} from ${A.name} to ${B.name}${fee > 0 ? ` (fee ${money(fee, A.currency)})` : ''}`); return;
+    save(); close(); render(); toast(__('Moved {amount} from {from} to {to}', { amount: money(amount, A.currency), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.currency) }) : '')); return;
   }
   if (kind === 'occasion') {
     const existing = f.dataset.id && occasionOf(f.dataset.id), c = existing ? existing.currency : v.currency, minor = toMinor(parseFloat(v.amount), c), name = v.name.trim();
@@ -1403,7 +1403,7 @@ document.addEventListener('submit', (e) => {
   }
   if (kind === 'wallet') {
     D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), since: monthKey(new Date()), archived: false });
-    save(); close(); render(); toast(`Wallet added in ${v.currency}`);
+    save(); close(); render(); toast(__('Wallet added in {cur}', { cur: v.currency }));
   }
   if (kind === 'loan') {
     const existing = f.dataset.id && D().loans.find((x) => x.id === f.dataset.id), c = existing ? existing.currency : v.currency;
@@ -1429,7 +1429,7 @@ document.addEventListener('submit', (e) => {
     const owed = loanBalance(l); const applied = Math.min(amount, owed);
     if (applied <= 0) { toast('Nothing left to pay'); return; }
     l.payments.push({ id: uid(), date: v.date, amount_minor: applied });
-    save(); close(); render(); toast(applied < amount ? `Recorded ${money(applied, l.currency)} (the remaining balance)` : 'Recorded'); return;
+    save(); close(); render(); toast(applied < amount ? __('Recorded {amount} (the remaining balance)', { amount: money(applied, l.currency) }) : 'Recorded'); return;
   }
   if (kind === 'account') {
     const name = v.name.trim(); if (!name) return;
@@ -1441,10 +1441,10 @@ document.addEventListener('submit', (e) => {
     const h = D().holdings.find((x) => x.id === f.dataset.id), info = assetInfo(h.symbol), src = parseSource(v.source), side = v.side;
     const qty = parseFloat(v.quantity), amount = parseAmount(src, v.amount);
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
-    if (side === 'sell' && qty > h.quantity + 1e-12) { toast(`You only hold ${qtyFmt(h.quantity)} ${info.symbol}`); return; }
+    if (side === 'sell' && qty > h.quantity + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(h.quantity), symbol: info.symbol })); return; }
     const short = payShortfall(src, side, amount); if (short) { toast(short); return; }
     recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date });
-    save(); close(); render(); toast(`${side === 'buy' ? 'Bought' : 'Sold'} ${qtyFmt(qty)} ${info.symbol}`); return;
+    save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty)} ${info.symbol}`); return;
   }
   if (kind === 'holding') {
     if (f.dataset.id) {
@@ -1556,7 +1556,7 @@ async function loadUserData() {
 /* a failed save leaves the screen ahead of the database, so show the server's truth again */
 function onSaveError(err) {
   console.error(err);
-  toast(`Couldn't save your last change (${String(err.message || err).slice(0, 80)}). Showing your saved data.`);
+  toast(__("Couldn't save your last change ({error}). Showing your saved data.", { error: String(err.message || err).slice(0, 80) }));
   loadUserData();
 }
 /* ---------- sample data: a demo mode, not saved data ----------
@@ -1594,7 +1594,7 @@ function removeSample() {
   const keepCat = (c) => usedCats.has(c.id) || d.categories.some((k) => k.parent_id === c.id && (usedCats.has(k.id)));
   d.categories = d.categories.filter((c) => { if (!is('categories', c.id)) return true; if (keepCat(c)) { kept++; return true; } return false; });
   d.profile.sample = null;
-  save(); render(); toast(kept ? `Sample data removed. Kept ${kept} item${kept === 1 ? '' : 's'} you have since used.` : 'Sample data removed.');
+  save(); render(); toast(kept ? __(kept === 1 ? 'Sample data removed. Kept {n} item you have since used.' : 'Sample data removed. Kept {n} items you have since used.', { n: kept }) : 'Sample data removed.');
 }
 setLang(initialLang());
 if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);

@@ -18,3 +18,7 @@ supabase/.temp/
 
 # local tool settings
 .claude/settings.local.json
+
+# local test output
+tests/e2e/out/
+tests/e2e/*_ops.json

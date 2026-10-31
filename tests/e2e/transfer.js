@@ -1,0 +1,59 @@
+const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
+(async () => {
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 1000 } });
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.route('**/vendor/supabase.js', (r) => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(__dirname + '/fake_supabase.js', 'utf8') }));
+  await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+  await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
+  await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
+  const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle()), txt = () => p.evaluate(() => document.body.innerText);
+  const bal = (name) => p.evaluate((n) => { const w = D().wallets.find((x) => x.name === n); return walletBalance(w); }, name);
+  // only one wallet: refused with a message
+  await p.click('[data-act=transfer]'); await p.waitForTimeout(100); assert((await txt()).includes('Add a second wallet'));
+  await p.evaluate(() => { const m = monthKey(new Date()); D().wallets[0].name = 'Cash'; D().wallets[0].opening_balance_minor = 50000;
+    D().wallets.push({ id: uid(), name: 'Bank', type: 'bank', currency: 'IDR', opening_balance_minor: 1000000, since: m, archived: false }, { id: uid(), name: 'USD Savings', type: 'bank', currency: 'USD', opening_balance_minor: 100000, since: m, archived: false }); save(); render(); });
+  await settle(); await log();
+  // same-currency transfer with a fee
+  await p.click('[data-act=transfer]'); await p.waitForSelector('form[data-form=transfer]');
+  assert((await p.$$('.seg input[name=txkind]')).length === 4);
+  await p.selectOption('select[name=from]', { label: await p.$eval('select[name=from]', (s) => [...s.options].find((o) => /^Bank/.test(o.textContent)).textContent) });
+  await p.selectOption('select[name=to]', { label: await p.$eval('select[name=to]', (s) => [...s.options].find((o) => /^Cash/.test(o.textContent)).textContent) });
+  assert(await p.$eval('[data-recv]', (e) => e.hidden), 'no received field for same currency');
+  await p.fill('input[name=amount]', '200000'); await p.fill('input[name=fee]', '6500'); await p.fill('input[name=note]', 'Top up');
+  await p.screenshot({ path: __dirname + '/out/transfer_dialog.png' });
+  await p.click('#dlg button[type=submit]'); await settle();
+  let l = await log(); const rows = l.filter((o) => o.table === 'transactions').flatMap((o) => o.rows); assert.equal(rows.length, 3, JSON.stringify(rows));
+  const gid = rows[0].transfer_group_id; assert(gid && rows.every((r) => r.transfer_group_id === gid));
+  assert.equal(rows.find((r) => r.transfer_direction === 'out').amount_minor, 200000); assert.equal(rows.find((r) => r.transfer_direction === 'in').amount_minor, 200000);
+  const fee = rows.find((r) => r.type === 'expense'); assert.equal(fee.amount_minor, 6500); assert.equal(fee.transfer_direction, null);
+  assert.equal(await bal('Bank'), 1000000 - 200000 - 6500); assert.equal(await bal('Cash'), 50000 + 200000);
+  const spend = await p.evaluate(() => sumBy(inMonth(monthKey(new Date())), 'expense')); assert.equal(spend, 6500, 'only the fee counts as spending'); 
+  // refused: more than the balance
+  await p.click('[data-act=transfer]'); await p.selectOption('select[name=from]', { index: 0 }); await p.fill('input[name=amount]', '99999999'); await p.click('#dlg button[type=submit]');
+  assert((await p.evaluate(() => document.getElementById('toast').textContent)).includes("doesn't have enough")); await p.click('[data-act=close]');
+  // cross-currency: Bank -> USD Savings, received estimated then edited
+  await p.click('[data-act=transfer]');
+  await p.selectOption('select[name=from]', await p.$eval('select[name=from]', (s) => [...s.options].find((o) => /^Bank/.test(o.textContent)).value));
+  await p.selectOption('select[name=to]', await p.$eval('select[name=to]', (s) => [...s.options].find((o) => /^USD Savings/.test(o.textContent)).value));
+  assert(!(await p.$eval('[data-recv]', (e) => e.hidden)), 'received field shown');
+  await p.fill('input[name=amount]', '155000'); await p.dispatchEvent('input[name=amount]', 'input');
+  assert.equal(await p.inputValue('input[name=received]'), '10.00', 'estimated at the demo rate');
+  await p.fill('input[name=received]', '9.5'); await p.dispatchEvent('input[name=received]', 'input'); await p.fill('input[name=amount]', '155000'); await p.dispatchEvent('input[name=amount]', 'input');
+  assert.equal(await p.inputValue('input[name=received]'), '9.5', 'manual value is kept');
+  await p.screenshot({ path: __dirname + '/out/transfer_cross.png' });
+  await p.click('#dlg button[type=submit]'); await settle(); l = await log();
+  const x = l.filter((o) => o.table === 'transactions').flatMap((o) => o.rows); assert.equal(x.length, 2);
+  const inn = x.find((r) => r.transfer_direction === 'in'); assert.equal(inn.amount_minor, 950); assert.equal(inn.currency, 'USD');
+  // list + detail + delete restores the balances
+  await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('#txn-list .row');
+  assert((await txt()).includes('Transfer to Cash')); const before = await bal('Bank');
+  await p.click('#txn-list .row:has-text("Transfer to Cash")'); assert((await p.innerText('#dlg')).includes('Delete transfer')); assert((await p.innerText('#dlg')).includes('Fee'));
+  await p.click('[data-act=delete-transfer]'); await settle(); l = await log();
+  assert(l.some((o) => o.op === 'delete' && o.table === 'transactions' && o.where[0][1].length === 3), JSON.stringify(l.map((o) => o.op + o.table)));
+  assert.equal(await bal('Bank'), before + 200000 + 6500); assert.equal(await bal('Cash'), 50000);
+  // reload keeps the remaining transfer linked
+  await p.evaluate(() => loadUserData()); await p.waitForSelector('.shell');
+  const kept = await p.evaluate(() => D().transactions.filter((t) => t.transfer_id).map((t) => [t.type, t.flow || null]));
+  assert.deepStrictEqual(kept.sort(), [['transfer', 'in'], ['transfer', 'out']].sort());
+  console.log('ok', JSON.stringify(errs)); await b.close();
+})().catch((e) => { console.error('FAIL', e); process.exit(1); });

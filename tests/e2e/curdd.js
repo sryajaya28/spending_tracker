@@ -1,0 +1,21 @@
+const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
+(async () => {
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 631, height: 700 } });
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.route('**/vendor/supabase.js', (r) => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(__dirname + '/fake_supabase.js', 'utf8') }));
+  await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+  await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
+  await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell, .app, #app');
+  await p.waitForSelector('.shell');
+  const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
+  await p.evaluate(() => { D().profile.name = 'Surya'; }); await p.waitForTimeout(100); await log();
+  await p.evaluate(() => { location.hash = '#/portfolio'; }); await p.waitForSelector('.hero-cur select');
+  assert.equal(await p.inputValue('.hero-cur select'), 'IDR');
+  assert.deepStrictEqual(await p.$$eval('.hero-cur option', (o) => o.map((x) => x.textContent)), ['IDR', 'USD', 'EUR', 'GBP', 'SGD', 'AUD', 'JPY']);
+  await p.screenshot({ path: __dirname + '/out/hero_cur.png', clip: { x: 0, y: 0, width: 631, height: 420 } });
+  await p.selectOption('.hero-cur select', 'USD'); await settle();
+  const l = await log(); assert(l.some((o) => o.op === 'update' && o.table === 'profiles' && o.values.default_currency === 'USD'), JSON.stringify(l.map((o) => o.op + o.table)));
+  assert((await p.innerText('.hero .amount')).includes('$')); assert((await p.innerText('.topbar')).includes('shown in USD'), 'subtitle');
+  assert.equal(await p.inputValue('.hero-cur select'), 'USD');
+  console.log('ok', JSON.stringify(errs)); await b.close();
+})().catch((e) => { console.error('FAIL', e); process.exit(1); });

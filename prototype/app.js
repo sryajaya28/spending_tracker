@@ -191,7 +191,7 @@ function seed(name, cur) {
   return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions: [], investments: [exch, broker], holdings, customAssets: {}, livePrices: {}, loans, lent };
 }
 
-const state = { data: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set() } };
+const state = { data: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), archOpen: false } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
 function save() {
   try { localStorage.setItem(PRICES_KEY, JSON.stringify(state.data.livePrices)); } catch { /* storage unavailable */ }
@@ -431,6 +431,15 @@ function holdingRow(h, vc, accTotal) {
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${accTotal ? Math.round((value / accTotal) * 100) : 0}%</div></div></div>`;
 }
 
+/* archived wallets: hidden from totals; can be restored, or deleted for good when no transaction uses them */
+function archivedWallets() {
+  const list = D().wallets.filter((w) => w.archived); if (!list.length) return '';
+  const open = state.ui.archOpen;
+  return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>Archived wallets (${list.length})</b></button>
+    ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
+      return `<div class="brow"><div><b>${esc(w.name)}</b> <span class="badge">${esc(w.type)} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
+        <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">Restore</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">Delete</button></div></div>`; }).join('') : ''}</div>`;
+}
 const walletCards = () => D().wallets.filter((w) => !w.archived).map((w) => `<div class="wallet"><span class="kind">${esc(w.type)} · ${esc(w.currency)}</span><b class="num">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}<span>${esc(w.name)}</span><div class="tools" style="margin-top:8px"><button class="btn secondary" data-act="edit-wallet" data-id="${w.id}">Edit</button><button class="btn secondary" data-act="archive-wallet" data-id="${w.id}">Archive</button></div></div>`).join('');
 
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
@@ -474,7 +483,7 @@ function viewPortfolio() {
   let body = '';
   if (tab === 'savings') {
     body = `<section class="card"><div class="card-head"><div><h2>Savings and wallets</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(S[5])}</div></div><button class="btn" data-act="add-wallet">+ Wallet</button></div>
-      <div class="wallets">${walletCards()}</div></section>${growth}`;
+      <div class="wallets">${walletCards()}</div>${archivedWallets()}</section>${growth}`;
   } else if (tab === 'investment') {
     const byType = {};
     D().holdings.filter((h) => activeAccounts().some((a) => a.id === h.account_id)).forEach((h) => { const t = assetInfo(h.symbol).type; byType[t] = (byType[t] || 0) + holdingUSD(h, months[5]); });
@@ -1054,6 +1063,14 @@ document.addEventListener('click', (e) => {
   else if (act === 'notify') toast(budgetStatus(state.ui.month).some((b) => b.status !== 'ok') ? 'Some budgets are near or over their limit' : 'All budgets on track');
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
+  else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
+  else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Wallet restored'); }
+  else if (act === 'delete-wallet') {
+    const w = walletOf(id), n = D().transactions.filter((t) => t.wallet_id === id).length;
+    if (n) { toast(`Can't delete: ${n} transaction${n === 1 ? '' : 's'} use this wallet. Restore it instead.`); return; }
+    if (!confirm(`Delete "${w.name}" permanently? This can't be undone.`)) return;
+    D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Wallet deleted');
+  }
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Wallet archived'); }
   else if (act === 'delete-txn') { D().transactions = D().transactions.filter((t) => t.id !== id); save(); close(); render(); toast('Transaction deleted'); }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }

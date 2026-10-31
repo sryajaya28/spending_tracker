@@ -274,6 +274,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: The Transactions period dropdown shows the custom period ("Oct 25–Nov 24", `periodShort`) instead of a calendar month; the
+  list already filtered by period. e2e `period` covers it.
+
 - 2026-10-31: Period customization (migration 16 applied to production): Settings > Profile > Budget period starts on. All month logic
   goes through the period helpers; `render()` re-selects the current period when the start day changes. e2e `period`.
 

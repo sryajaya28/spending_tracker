@@ -570,7 +570,7 @@ function viewPortfolio() {
 
 function loanDialog(l) {
   open(`<h2>${l ? __('Edit loan') : __('Add loan')}</h2><form data-form="loan" data-id="${l?.id || ''}" style="display:contents">
-    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Car loan')}" autofocus></label>
+    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Car loan')}"></label>
     <div class="two"><label class="field">${__('Type')}<select name="type">${Object.entries(LOAN_TYPES).map(([k, v]) => `<option value="${k}" ${k === (l?.type || 'car') ? 'selected' : ''}>${__(v)}</option>`).join('')}</select></label>
       <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
     <div class="two"><label class="field">${l ? __('Original amount') : __('Amount owed now')}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
@@ -580,7 +580,7 @@ function loanDialog(l) {
 }
 function lentDialog(l) {
   open(`<h2>${l ? __('Edit money lent') : __('Add money lent')}</h2><form data-form="lent" data-id="${l?.id || ''}" style="display:contents">
-    <label class="field">${__('Who borrowed it')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Budi')}" autofocus></label>
+    <label class="field">${__('Who borrowed it')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Budi')}"></label>
     <div class="two"><label class="field">${__('Amount lent')}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
       <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
     <div class="two"><label class="field">${__('Due date (optional)')}<input name="due" type="date" value="${esc(l?.due || '')}"></label>
@@ -591,7 +591,7 @@ function paymentDialog(l, kind = 'loan') {
   const lent = kind === 'lent';
   open(`<h2>${lent ? __('Record repayment') : __('Record payment')}</h2><p class="muted" style="margin-top:-10px">${esc(l.name)} · ${money(loanBalance(l), l.currency)} ${lent ? __('still owed to you') : __('remaining')}</p>
   <form data-form="payment" data-kind="${kind}" data-id="${l.id}" style="display:contents">
-    <div class="two"><label class="field">${__('Amount ({cur})', { cur: esc(l.currency) })}<input name="amount" type="number" min="0" step="any" required value="${l.monthly_minor ? toMajor(l.monthly_minor, l.currency) : ''}" autofocus></label>
+    <div class="two"><label class="field">${__('Amount ({cur})', { cur: esc(l.currency) })}<input name="amount" type="number" min="0" step="any" required value="${l.monthly_minor ? toMajor(l.monthly_minor, l.currency) : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
     <p class="hint">${lent ? __('Repayments lower what you are owed. They are not counted as income.') : __('Payments lower the loan balance and your debt in net worth. They are not counted as spending.')}</p>
     <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${lent ? __('Save repayment') : __('Save payment')}</button></div></form>`);
@@ -887,7 +887,8 @@ function render() {
 
 /* ---------- dialogs ---------- */
 const dlg = () => $('#dlg');
-function open(html) { dlg().innerHTML = `<div class="dlg">${html}</div>`; if (!dlg().open) dlg().showModal(); }
+// no field is focused on open, so the phone keyboard stays down until the user taps an input
+function open(html) { dlg().innerHTML = `<div class="dlg" tabindex="-1">${html}</div>`; if (!dlg().open) dlg().showModal(); $('.dlg', dlg()).focus({ preventScroll: true }); }
 const close = () => dlg().open && dlg().close();
 const catOptions = (type, sel) => `<option value="">${__('— None (AI may suggest) —')}</option>${catTree(type).map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}`;
 
@@ -922,7 +923,7 @@ function transferDialog(preset) {
     ${kindSeg('transfer')}
     <div class="two"><label class="field">${__('From')}<select name="from">${ws.map((w) => opt(w, from.id)).join('')}</select></label>
       <label class="field">${__('To')}<select name="to">${ws.map((w) => opt(w, to.id)).join('')}</select></label></div>
-    <div class="two"><label class="field"><span data-send-label>${__('Amount sent')}</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required autofocus></label>
+    <div class="two"><label class="field"><span data-send-label>${__('Amount sent')}</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
     <label class="field" data-recv hidden><span data-recv-label>${__('Amount received')}</span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
     <label class="field"><span data-fee-label>${__('Transfer fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
@@ -962,7 +963,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
   open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
-    <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(c) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}" autofocus></label>
+    <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(c) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${date0}"></label></div>
     <label class="field">${__('Category')}<select name="category">${catOptions(type, t?.category_id)}</select></label>
     <button type="button" class="legend-btn" data-act="quick-cat" style="align-self:flex-start;margin-top:-6px">${__('+ New category or sub-category')}</button>
@@ -987,7 +988,7 @@ function budgetDialog(b) {
 }
 function occasionDialog(o) {
   open(`<h2>${o ? __('Edit special occasion') : __('New special occasion')}</h2><form data-form="occasion" data-id="${o?.id || ''}" style="display:contents">
-    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}" autofocus></label>
+    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}"></label>
     <div class="two">${o ? '' : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
       <label class="field">${o ? __('Budget ({cur})', { cur: esc(o.currency) }) : __('Budget')}<input name="amount" type="number" min="1" step="any" required value="${o ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
     <div class="two"><label class="field">${__('Starts (optional)')}<input name="start" type="date" value="${esc(o?.start || '')}"></label>
@@ -1002,7 +1003,7 @@ function catDialog(c, parentId) {
   const tops = D().categories.filter((x) => !x.parent_id && !x.archived && (!c || x.id !== c.id));
   open(`<h2>${c ? (parent ? __('Edit sub-category') : __('Edit category')) : (parent ? __('New sub-category') : __('New category'))}</h2>
   <form data-form="cat" data-id="${c?.id || ''}" style="display:contents">
-    <label class="field">${__('Name')}<input name="name" required maxlength="30" value="${esc(c?.name || '')}" placeholder="${__('e.g. Pets')}" autofocus></label>
+    <label class="field">${__('Name')}<input name="name" required maxlength="30" value="${esc(c?.name || '')}" placeholder="${__('e.g. Pets')}"></label>
     <div class="two"><label class="field">${__('Icon (emoji)')}<input name="icon" maxlength="4" value="${esc(c?.icon || '🏷️')}"></label>
       <label class="field">${__('Color')}<input name="color" type="color" value="${esc(c?.color || parent?.color || SWATCHES[0])}"></label></div>
     <label class="field">${__('Parent category')}<select name="parent" ${hasKids ? 'disabled' : ''}><option value="">${__('None (top-level)')}</option>${tops.map((x) => `<option value="${x.id}" ${parent && x.id === parent.id ? 'selected' : ''}>${x.icon} ${esc(x.name)}</option>`).join('')}</select></label>
@@ -1045,7 +1046,7 @@ function walletDialog(w) {
 /* ---------- investment dialogs ---------- */
 function accountDialog(a) {
   open(`<h2>${a ? __('Edit investment account') : __('New investment account')}</h2><form data-form="account" data-id="${a?.id || ''}" style="display:contents">
-    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(a?.name || '')}" placeholder="${__('e.g. Crypto Exchange, US Brokerage')}" autofocus></label>
+    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(a?.name || '')}" placeholder="${__('e.g. Crypto Exchange, US Brokerage')}"></label>
     <p class="hint">${__('An account can hold several assets: crypto, US stocks and ETFs.')}</p>
     <div class="actions">${a ? `<button type="button" class="btn danger" data-act="archive-account" data-id="${a.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
@@ -1058,7 +1059,7 @@ function holdingDialog(h, accId, opts = {}) {
     ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(typeLabel(info.type))}</span></p>` : `
     <div class="field" id="picker">${__('Asset')}
       <div class="pills" role="group" aria-label="${__('Asset type')}"><button type="button" class="pill on" data-act="pick-type" data-type="">${__('All')}</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">${__('Crypto')}</button><button type="button" class="pill" data-act="pick-type" data-type="stock">${__('US stocks &amp; ETFs')}</button></div>
-      <input name="assetq" autocomplete="off" placeholder="${__('Search name or ticker, e.g. BTC, AAPL, VOO')}" autofocus>
+      <input name="assetq" autocomplete="off" placeholder="${__('Search name or ticker, e.g. BTC, AAPL, VOO')}">
       <div class="results" id="asset-results" role="listbox" hidden></div>
       <div class="picked" id="picked" hidden></div>
       <small>${api.finnhub ? __('Searching the full Finnhub list of US stocks, ETFs and crypto.') : __('Live list unavailable (run tools/dev_server.py with a Finnhub key). Showing built-in assets.')}</small>
@@ -1165,7 +1166,7 @@ function tradeDialog(h, side) {
   open(`<h2>${side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(h.quantity), symbol: esc(info.symbol) })}</p>
   <form data-form="trade" data-id="${h.id}" style="display:contents">
     <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>${__('Buy')}</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>${__('Sell')}</label></div>
-    <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01" autofocus></label>
+    <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01"></label>
       <label class="field"><span data-trade-amt></span><input name="amount" type="number" min="0" step="any" required placeholder="${__('amount')}"></label></div>
     <label class="field"><span data-trade-wallet></span><select name="source">${sourceOptions(side, h, first ? 'w:' + first.id : '')}</select></label>
     <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>

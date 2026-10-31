@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Dialogs no longer autofocus a field (removed every `autofocus`; `open()` focuses the dialog box itself), so the phone
+  keyboard stays down until the user taps an input. e2e `daily` checks it.
+
 - 2026-10-31: Removed the top-3 category buttons under the Overview Spending donut (the donut hover/tap and Details cover it).
 
 - 2026-10-31: Transactions controls compacted to two lines: search + `+ Add`, then month (short "Oct 2026"), category, occasion (if any)

@@ -24,7 +24,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert((await p.innerText('.sidebar a.active')).includes('Transactions'));
   await p.screenshot({ path: __dirname + '/out/daily_detail.png' });
   await p.click('#day-list .row'); assert((await p.$$('#dlg')).length >= 1); await p.click('[data-act=close]');
-  await p.click('[data-act=add-txn]'); assert.equal(await p.inputValue('input[name=date]'), m + '-05'); await p.click('[data-act=close]');
+  await p.click('[data-act=add-txn]'); assert.equal(await p.inputValue('input[name=date]'), m + '-05'); assert(!(await p.evaluate(() => document.activeElement.matches('input, select, textarea'))), 'no field focused on open (keeps the phone keyboard down)'); await p.click('[data-act=close]');
   await p.click('.back-link'); await p.waitForSelector('#txn-list .day-row');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

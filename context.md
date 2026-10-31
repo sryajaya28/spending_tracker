@@ -270,6 +270,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Money not yet received/spent is left out of all analysis: `inMonth()` (month totals, Money Flow, "this month" change,
+  saved %, spending donut and breakdown, budgets), special-occasion spent, loan/lent balances and payments all ignore entries dated
+  after today. Such rows stay in the Transactions list with an **Upcoming** badge and count again on their day.
+
 - 2026-10-31: Stop phone zoom/pan: viewport locked (`maximum-scale=1, user-scalable=no`), `touch-action: manipulation`, `overflow-x: clip`,
   and the real cause fixed: the Portfolio tab bar (402px) and the landing header (498px) were wider than a 390px screen. e2e `noscroll`
   checks every page and tab at 360 and 390px. Keep new layouts within the screen width.

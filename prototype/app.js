@@ -212,14 +212,14 @@ const occasionOf = (id) => D().occasions.find((o) => o.id === id);
 const occasionInMonth = (o, k) => !o.start || (k >= o.start.slice(0, 7) && k <= (o.end || o.start).slice(0, 7)) || D().transactions.some((t) => t.occasion_id === o.id && t.occurred_at.startsWith(k));
 function occasionStatus() {
   return D().occasions.map((o) => {
-    const txns = D().transactions.filter((t) => t.occasion_id === o.id && t.type === 'expense');
+    const txns = D().transactions.filter((t) => t.occasion_id === o.id && t.type === 'expense' && t.occurred_at <= todayIso());
     const budget = convert(o.amount_minor, o.currency, cur()), spent = txns.reduce((a, t) => a + amt(t), 0), pct = (spent * 100) / budget;
     return { ...o, count: txns.length, budget, spent, remaining: budget - spent, pct, status: spent > budget ? 'exceeded' : pct >= 80 ? 'warning' : 'ok' };
   });
 }
 const catOf = (id) => D().categories.find((c) => c.id === id);
 const walletOf = (id) => D().wallets.find((w) => w.id === id);
-const inMonth = (k) => D().transactions.filter((t) => t.occurred_at.startsWith(k));
+const inMonth = (k) => D().transactions.filter((t) => t.occurred_at.startsWith(k) && t.occurred_at <= todayIso());   // money not yet received or spent is left out of every total
 /* a transaction's amount in the reporting currency (each wallet keeps its own currency) */
 const amt = (t) => convert(t.amount_minor, t.currency, cur());
 const sumBy = (list, type) => list.filter((t) => t.type === type).reduce((a, t) => a + amt(t), 0);
@@ -313,11 +313,11 @@ const toUSD = (minor, c) => toMajor(minor, c) / RATES[c];
 const savingsUSD = (k) => toUSD(balanceAtEnd(k), cur());
 const activeLoans = () => D().loans.filter((l) => !l.archived);
 const paidOf = (l, upto) => l.payments.filter((p) => !upto || p.date <= upto).reduce((a, p) => a + p.amount_minor, 0);
-const loanBalance = (l, upto) => Math.max(0, l.original_minor - paidOf(l, upto));
-const loanUSD = (k) => activeLoans().reduce((a, l) => (k < l.since ? a : a + toUSD(loanBalance(l, `${k}-31`), l.currency)), 0);
+const loanBalance = (l, upto) => Math.max(0, l.original_minor - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
+const loanUSD = (k) => activeLoans().reduce((a, l) => (k < l.since ? a : a + toUSD(loanBalance(l, [`${k}-31`, todayIso()].sort()[0]), l.currency)), 0);
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
 const activeLent = () => D().lent.filter((l) => !l.archived);
-const lentUSD = (k) => activeLent().reduce((a, l) => (k < l.since ? a : a + toUSD(loanBalance(l, `${k}-31`), l.currency)), 0);
+const lentUSD = (k) => activeLent().reduce((a, l) => (k < l.since ? a : a + toUSD(loanBalance(l, [`${k}-31`, todayIso()].sort()[0]), l.currency)), 0);
 const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', manual: 'Other' }[t] || t);
 const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Car loan', card: 'Credit card', personal: 'Personal loan', other: 'Other' };
 
@@ -680,7 +680,7 @@ function txnRow(t) {
   }
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
-    <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${!c ? ('<span class="badge">' + __('Uncategorized') + '</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
+    <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${!c ? ('<span class="badge">' + __('Uncategorized') + '</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
     <div class="sub">${esc(c ? catPath(c.id) : __('No category'))} ·${esc(txnWhere(t))} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div>
     <div class="amt num ${t.type}">${sign}${money(t.amount_minor, t.currency)}</div></div>`;
 }

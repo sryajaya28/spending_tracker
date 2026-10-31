@@ -48,6 +48,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const fut = await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'USDT'), d = new Date(); d.setDate(d.getDate() + 5); const date = isoDate(d), w = D().wallets[0];
     const before = { held: heldNow(h), nw: portfolioUSD(monthKey(new Date())), cash: walletBalance(w) };
     recordCoinTxn(h, { type: 'income', quantity: 500, date, note: 'Later' }); D().transactions.push({ id: uid(), type: 'income', amount_minor: 777000, currency: 'IDR', occurred_at: date, wallet_id: w.id, note: 'Later cash', category_id: null, category_source: 'user' });
+    const lst = inMonth(date.slice(0, 7)); if (lst.some((x) => x.note === 'Later' || x.note === 'Later cash')) throw new Error('future entries must not count in month totals');
     return { before, after: { held: heldNow(h), nw: portfolioUSD(monthKey(new Date())), cash: walletBalance(w) }, total: h.quantity, h: h.id }; });
   assert.deepEqual(fut.after, fut.before, JSON.stringify(fut)); assert(fut.total >= fut.before.held + 500);
   await p.evaluate((id) => { const h = D().holdings.find((x) => x.id === id); h.trades.filter((t) => t.date > isoDate(new Date())).forEach((t) => removeTrade(h, t)); D().transactions = D().transactions.filter((t) => t.note !== 'Later cash'); }, fut.h);

@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Upcoming": "Akan datang",
  "new investment account": "akun investasi baru",
  "new": "baru",
  "USDT / USDC in an investment account": "USDT / USDC di akun investasi",

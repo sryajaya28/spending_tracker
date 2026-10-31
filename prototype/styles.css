@@ -257,8 +257,7 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
   .main { padding: 18px 16px 110px; }
   .search { display: none; }
   .topbar h1 { font-size: 24px; }
-  .profile div { display: none; }
-  .profile { padding: 5px; }
+  .profile { display: none; }   /* the name pill is desktop-only; on phones it left an empty bar */
   .hero .amount { font-size: 38px; }
   .big { font-size: 28px; }
   .tiles { gap: 8px; }

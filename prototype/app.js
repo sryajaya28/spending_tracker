@@ -37,7 +37,6 @@ const ICON = {
   pie: '<path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
   wallet: '<path d="M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1H5a2 2 0 0 1-2-1zM16 14h2"/>',
   gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
-  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7M10 20a2 2 0 0 0 4 0"/>',
   search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-5-5"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
 };
@@ -582,7 +581,6 @@ function topbar(title, sub) {
   const greet = title || `Good ${hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'}, ${esc(p.name.split(' ')[0])}`;
   return `<header class="topbar"><div><h1>${greet}</h1><p>${esc(sub)}</p></div>
     <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="Search transactions" aria-label="Search transactions"></label>
-    <button class="icon-btn" data-act="notify" aria-label="Notifications">${icon('bell')}<span class="dot"></span></button>
     <div class="profile"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · signed in</small></div></div></div></header>`;
 }
 
@@ -1060,7 +1058,6 @@ document.addEventListener('click', (e) => {
     [id, ...childrenOf(id).map((c) => c.id)].forEach((cid) => { catOf(cid).archived = true; });
     save(); close(); render(); toast('Category archived. Past transactions keep it.');
   }
-  else if (act === 'notify') toast(budgetStatus(state.ui.month).some((b) => b.status !== 'ok') ? 'Some budgets are near or over their limit' : 'All budgets on track');
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }

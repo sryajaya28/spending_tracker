@@ -257,6 +257,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio currency dropdown made smaller (28px tall pill, 12px text).
+
 - 2026-10-31: Portfolio net-worth card made smaller: removed the "1 USD = ... live rate" line and the "Preferred currency" label; the
   currency dropdown is now a small pill in the card's top-right corner.
 

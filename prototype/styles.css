@@ -473,3 +473,5 @@ html { -webkit-text-size-adjust: 100%; }
 .hero:has(.hero-cur) { padding-bottom: 14px; }
 .hero-cur { position: absolute; top: 12px; right: 14px; margin: 0; }
 .hero-cur select { height: 32px; padding: 0 28px 0 12px; font-size: 13px; }
+.hero-cur { top: 14px; right: 16px; }
+.hero-cur select { min-width: 0; width: auto; height: 28px; padding: 0 24px 0 10px; font-size: 12px; background-position: right 8px center; background-size: 9px; }

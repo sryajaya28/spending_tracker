@@ -601,6 +601,7 @@ function viewOverview() {
   const global = bs.find((b) => b.category_id === null);
   const tiles = [...(global ? [global] : []), ...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct)].slice(0, 3);
   const saved = inc > 0 ? Math.round((net / inc) * 100) : 0;
+  const allOcc = occasionStatus().filter((o) => !o.archived).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999')), occs = allOcc.slice(0, 3), moreOcc = allOcc.length - occs.length;
   const recent = D().transactions.slice(0, 6);
   return `${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
@@ -617,8 +618,9 @@ function viewOverview() {
       ${halfDonut(cats, exp)}
       <div class="cat-legend">${cats.slice(0, 3).map((c) => `<button class="legend-btn" data-act="breakdown" data-id="${c.id || ''}">${tile({ icon: c.icon, color: c.color }, true)}${esc(c.name)}</button>`).join('') || '<div>No spending this month</div>'}</div></section>
     <section class="card"><div class="card-head"><h2>Budgets</h2><a class="chip" href="#/budgets">Manage</a></div>
-      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">of ${money(global.budget, cur())} monthly budget</p>` : '<div class="big">No budget</div><p class="muted">Set one to track your month</p>'}
-      <div class="tiles">${tiles.map((b) => `<div class="btile"><div class="well"><div class="fill ${b.status}" style="height:${Math.max(14, Math.min(100, b.pct))}%"><span class="pct">${Math.round(b.pct)}%</span></div></div><b>${esc(b.name)}</b><small class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</small></div>`).join('') || '<p class="muted">No budgets yet.</p>'}</div></section>
+      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">of ${money(global.budget, cur())} monthly budget</p>` : '<div class="big">No monthly budget</div><p class="muted">Set one to track your month</p>'}
+      <div class="tiles">${tiles.map((b) => `<div class="btile"><div class="well"><div class="fill ${b.status}" style="height:${Math.max(14, Math.min(100, b.pct))}%"><span class="pct">${Math.round(b.pct)}%</span></div></div><b>${esc(b.name)}</b><small class="num">${money(b.spent, cur())} / ${money(b.budget, cur())}</small></div>`).join('') || (occs.length ? '' : '<p class="muted">No budgets yet.</p>')}</div>
+      ${occs.length ? `<h3 class="ov-h">Special occasions</h3>${occs.map((o) => `<div class="ov-occ"><div class="meta"><span>🎉 ${esc(o.name)}</span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())}</span></div><div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div></div>`).join('')}${moreOcc ? `<p class="muted" style="margin-top:10px"><a href="#/budgets">+${moreOcc} more on the Budgets page</a></p>` : ''}` : ''}</section>
   </div>
   <section class="card" style="margin-top:20px"><div class="card-head"><h2>Recent transactions</h2><a class="chip" href="#/transactions">View all</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>`;
 }

@@ -274,6 +274,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Overview on desktop: Recent transactions moved into the card grid, next to Budgets (no empty cell); phones still stack it.
+
 - 2026-10-31: Budgets > Overall budget footer: the status badge and Edit button now share one vertically centred line (`.budget-foot`/`.budget-end`).
   Reminder: Vercel is on Pro; push to `main` only (the session branch makes a second build per change).
 

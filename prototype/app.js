@@ -683,8 +683,8 @@ function viewOverview() {
       ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })}</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
       <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('') || (occs.length ? '' : ('<p class="muted">' + __('No budgets yet.') + '</p>'))}</div>
       ${occs.length ? `<h3 class="ov-h">${__('Special occasions')}</h3>${occs.map((o) => `<div class="ov-occ"><div class="meta"><span>🎉 ${esc(o.name)}</span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div><div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div></div>`).join('')}${moreOcc ? `<p class="muted" style="margin-top:10px"><a href="#/budgets">${__('+{n} more on the Budgets page', { n: moreOcc })}</a></p>` : ''}` : ''}</section>
-  </div>
-  <section class="card" style="margin-top:20px"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>`;
+  <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>
+  </div>`;
 }
 
 function txnRow(t) {

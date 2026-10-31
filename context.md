@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Overview Budgets card got a month picker next to Manage. The month is shared state (`state.ui.month`), so it also
+  switches the Spending chart on the same page. e2e `donut` covers it.
+
 - 2026-10-31: Overview Spending chart is now a donut (`halfDonut()` in `app.js`, name kept; SVG circles with dash arcs, top 5 categories +
   Others). Hover (mouse) or tap (pins) an arc to show category, amount and % of total in the centre; tap elsewhere to clear.
   New e2e test `donut`; new i18n key "of total spending".

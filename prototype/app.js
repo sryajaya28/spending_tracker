@@ -508,13 +508,15 @@ function viewPortfolio() {
   const months6 = months.map((k, i) => {
     const d = i ? series[i] - series[i - 1] : null, p = i && series[i - 1] > 0 ? (d / series[i - 1]) * 100 : null;
     const good = p === null ? '' : (tab === 'loan' ? p <= 0 : p >= 0) ? 'up' : 'down';
-    return `<tr><td>${esc(monthLabel(k))}</td><td class="num">${m(series[i])}</td><td class="num">${d === null ? '—' : `${d >= 0 ? '+' : '−'}${m(Math.abs(d))}`}</td><td class="num ${good}">${pctFmt(p)}</td></tr>`;
+    // a list, not a table: the value gets its own line, so figures of any size (hundreds of billions) never push other columns off screen
+    const chg = d === null ? '—' : `${d >= 0 ? '+' : '−'}${m(Math.abs(d))}`;
+    return `<div class="mrow"><span class="mname">${esc(new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }))}</span><div class="mval"><b class="num">${m(series[i])}</b><small class="num">${chg}${p === null ? '' : ` · <span class="${good}">${pctFmt(p)}</span>`}</small></div></div>`;
   }).reverse().join('');
   const noData = series.every((v) => !v);   // nothing to chart yet: say so instead of a flat line and a table of zeros
   const growth = noData ? `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">${__('6 months')}</span></div>
     <div class="empty sm">${__('Nothing to chart yet. This fills in as you add {what}.', { what: { savings: __('wallets'), investment: __('investments'), lent: __('money you lent'), loan: __('loans') }[tab] })}</div></section>`
     : `<section class="card" style="margin-top:20px"><div class="card-head"><h2>${titles[tab]}</h2><span class="chip">${__('6 months')}</span></div>
-    ${valueChart(months, series, vc)}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>${__('Month')}</th><th>${__('Value')}</th><th>${__('Change')}</th><th>${tab === 'investment' ? __('MoM') : __('Change %')}</th></tr></thead><tbody>${months6}</tbody></table></div></section>`;
+    ${valueChart(months, series, vc)}<div class="mlist">${months6}</div></section>`;
 
   let body = '';
   if (tab === 'savings') {

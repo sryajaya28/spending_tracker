@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Portfolio history under the chart is now a list (`.mlist`/`.mrow`: month left, value with change and % stacked right)
+  instead of a 4-column table, so very large amounts (checked up to tens of trillions on a 390px phone) never overflow.
+
 - 2026-10-31: Portfolio currency dropdown made smaller (28px tall pill, 12px text).
 
 - 2026-10-31: Portfolio net-worth card made smaller: removed the "1 USD = ... live rate" line and the "Preferred currency" label; the

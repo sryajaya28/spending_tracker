@@ -26,6 +26,6 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('input[name=date]', '2026-11-20'); await p.dispatchEvent('input[name=date]', 'change'); // out of range: leaves the choice alone
   // progress on the budgets page
   await p.click('[data-act=close]'); await p.evaluate(() => { location.hash = '#/budgets'; });
-  assert((await p.innerText('.brow.wrap')).includes('1 expense'));
+  assert((await p.innerText('.brow.wrap')).replace(/\u00a0/g, ' ').includes('IDR 350,000 / IDR 5,000,000'));
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.error('FAIL', e); process.exit(1); });

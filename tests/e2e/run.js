@@ -74,7 +74,7 @@ const assert = require('assert');
   l = await log(); assert(l.some((o) => o.table === 'transactions' && o.rows[0].occasion_id === occId), 'txn tagged');
   assert(!l.some((o) => o.table === 'occasions'), 'occasion untouched');
   await page.evaluate(() => { location.hash = '#/budgets'; });
-  const bt = await text(); assert(bt.includes('1 expense'), 'shows 1 expense'); assert(bt.includes('Special occasions'));
+  const bt = await text(); assert(!bt.includes('1 expense'), 'occasion row keeps only the dates'); assert(bt.includes('Special occasions'));
   await page.click('[data-act=view-occasion]'); await page.waitForSelector('#txn-list .row');
   assert((await page.$$('#txn-list .row')).length === 1);
   await page.evaluate(() => { location.hash = '#/budgets'; });

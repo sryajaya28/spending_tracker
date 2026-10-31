@@ -257,6 +257,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-10-31: Budgets > Special occasions rows now show only the date range under the bar (no expense count, no amount left/over);
+  nothing is shown when the occasion has no dates.
+
 - 2026-10-31: Bottom bar Add button: label now shares the other tabs' baseline (button is the same 50px height; the 60px circle
   rises above the bar with an 8px gap above the label).
 

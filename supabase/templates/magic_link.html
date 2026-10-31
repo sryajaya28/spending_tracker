@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<title>Sign in to Stiver</title>
+<style>
+  @media (max-width: 620px) {
+    .container { width: 100% !important; }
+    .px { padding-left: 24px !important; padding-right: 24px !important; }
+    .h1 { font-size: 26px !important; }
+    .btn-table { width: 100% !important; }
+    .btn a { display: block !important; text-align: center; }
+  }
+  @media (prefers-color-scheme: dark) {
+    body, .bg { background: #12112B !important; }
+    .card { background: #1E1B4B !important; }
+    .h1, .text { color: #F2F3FB !important; }
+    .muted { color: #A9ACCB !important; }
+    .link { color: #A8A5FF !important; }
+    .code { background: #2A2766 !important; color: #FFFFFF !important; }
+    .divider { border-color: #34307A !important; }
+  }
+</style>
+</head>
+<body class="bg" style="margin:0;padding:0;background:#F2F3FB;-webkit-text-size-adjust:100%;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all;">Tap to sign in. No password needed.&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;&#8203;&zwnj;</div>
+<table role="presentation" class="bg" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F2F3FB" style="background:#F2F3FB;">
+<tr><td align="center" style="padding:32px 16px;">
+  <table role="presentation" class="container" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:560px;">
+    <tr><td class="px" bgcolor="#4A44C6" style="background:#4A44C6;border-radius:20px 20px 0 0;padding:26px 40px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td width="40" height="40" align="center" valign="middle" bgcolor="#FFFFFF" style="width:40px;height:40px;border-radius:12px;background:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;font-weight:800;line-height:40px;color:#4A44C6;">S</td>
+        <td style="padding-left:12px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:24px;font-weight:800;letter-spacing:-0.02em;color:#FFFFFF;">Stiver</td>
+      </tr></table>
+    </td></tr>
+    <tr><td class="card px" bgcolor="#FFFFFF" style="background:#FFFFFF;border-radius:0 0 20px 20px;padding:40px 40px 36px;">
+      <h1 class="h1" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:30px;line-height:1.2;font-weight:800;letter-spacing:-0.02em;color:#1E1B4B;">Sign in to Stiver</h1>
+      <p class="text" style="margin:18px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.65;color:#1E1B4B;">Use the button below to sign in as <strong>{{ .Email }}</strong>. No password needed.</p>
+<table role="presentation" class="btn-table" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 8px;">
+  <tr><td class="btn" align="center" bgcolor="#4A44C6" style="border-radius:999px;background:#4A44C6;">
+    <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:16px 34px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;font-weight:700;line-height:1;color:#FFFFFF;text-decoration:none;border-radius:999px;">Sign in to Stiver</a>
+  </td></tr>
+</table><p class="muted" style="margin:14px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.65;color:#5C6085;">This link works once and expires soon.</p>
+<p class="muted" style="margin:18px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#5C6085;">
+  Button not working? Copy this link into your browser:<br>
+  <a href="{{ .ConfirmationURL }}" target="_blank" class="link" style="color:#4A44C6;word-break:break-all;">{{ .ConfirmationURL }}</a>
+</p><hr class="divider" style="border:0;border-top:1px solid #E7E8F5;margin:28px 0 20px;"><p class="muted" style="margin:0px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.65;color:#5C6085;">If you didn&rsquo;t try to sign in, you can safely ignore this email. Nobody can get in without this link.</p>
+    </td></tr>
+    <tr><td class="px" style="padding:22px 40px 0;">
+      <p class="muted" style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#5C6085;">
+        Stiver helps you track spending, budgets and net worth in one place.<br>
+        This is an automated message sent to {{ .Email }}. Please don&rsquo;t reply to it.
+      </p>
+    </td></tr>
+  </table>
+</td></tr>
+</table>
+</body>
+</html>

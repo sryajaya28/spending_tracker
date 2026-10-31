@@ -195,7 +195,7 @@ function seed(name, cur) {
   return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions: [], investments: [exch, broker], holdings, customAssets: {}, livePrices: {}, loans, lent };
 }
 
-const state = { data: null, real: null, auth: { status: 'loading', view: 'signin', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), archOpen: false } };
+const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), archOpen: false } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
 function save() {
   if (state.real) return;   // demo mode: nothing is saved or synced
@@ -739,9 +739,49 @@ function mountCaptcha() {
   const sc = document.createElement('script'); sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'; sc.async = true; sc.onload = draw; sc.onerror = () => { captchaLoading = false; };
   document.head.appendChild(sc);
 }
+/* ---------- landing page (what signed-out visitors see first) ---------- */
+const langSelect = () => `<select class="lang-select" data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+function viewLanding() {
+  const feat = (ic, title, text) => `<div class="feat"><span class="feat-ic" aria-hidden="true">${ic}</span><h3>${__(title)}</h3><p>${__(text)}</p></div>`;
+  const step = (n, text) => `<li><span class="step-n">${n}</span><span>${__(text)}</span></li>`;
+  return `<div class="land">
+  <header class="land-nav"><a class="logo" href="#"><img src="icon.svg" alt="">Stiver</a>
+    <div class="land-nav-r">${langSelect()}<button class="btn secondary" data-act="auth-view" data-view="signin">${__('Sign in')}</button><button class="btn" data-act="auth-view" data-view="signup">${__('Get started')}</button></div></header>
+  <section class="land-hero">
+    <div class="land-copy">
+      <h1>${__('Your money, finally in one place.')}</h1>
+      <p class="land-sub">${__('Track spending, set budgets, and watch your net worth grow across savings, investments and loans. Simple, private and built for how you actually live.')}</p>
+      <div class="land-cta"><button class="btn lg" data-act="auth-view" data-view="signup">${__('Get started')}</button><button class="btn secondary lg" data-act="auth-view" data-view="signin">${__('Sign in')}</button></div>
+      <p class="land-note">${__('Sign up with email or Google. No bank login needed.')}</p>
+    </div>
+    <div class="land-mock" aria-hidden="true">
+      <div class="mock-card"><div class="mock-label">${__('Net worth')}</div><div class="mock-amt">IDR 54,328,869</div><div class="mock-delta"><b>+12.4%</b> ${__('vs last month')}</div>
+        <svg viewBox="0 0 300 70" preserveAspectRatio="none" class="mock-spark"><polyline points="4,58 54,50 104,54 154,38 204,30 254,22 296,10" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="mock-bud"><div class="mock-row"><span>🛒 ${__('Groceries')}</span><span>63%</span></div><div class="bar"><i class="ok" style="width:63%"></i></div>
+        <div class="mock-row"><span>🍽️ ${__('Dining')}</span><span>86%</span></div><div class="bar"><i class="warning" style="width:86%"></i></div>
+        <div class="mock-row"><span>🎉 ${__('Bali Trip')}</span><span>41%</span></div><div class="bar"><i class="ok" style="width:41%"></i></div></div>
+    </div>
+  </section>
+  <section class="land-sec"><h2>${__('Everything you need, nothing you don’t')}</h2>
+    <div class="feats">
+      ${feat('💸', 'Spending that makes sense', 'Log expenses and income in seconds, with categories and sub-categories that roll up into clear monthly totals.')}
+      ${feat('🎯', 'Budgets that keep you honest', "Set an overall limit or one per category, and see at a glance when you're close. Add special budgets for trips and celebrations.")}
+      ${feat('👛', 'Savings across wallets and currencies', 'Cash, bank accounts and e-wallets in any currency, with easy transfers between them.')}
+      ${feat('📈', 'Investments with live prices', 'Track stocks, ETFs and crypto with current prices, buys and sells.')}
+      ${feat('🤝', 'Loans and money you lent', "Know what you owe and what you're owed, and record each payment as it happens.")}
+      ${feat('🌱', 'Net worth over time', 'See everything together and how it changes month by month.')}
+    </div></section>
+  <section class="land-priv"><h2>${__('Private by design')}</h2><p>${__('Your data belongs to you. No ads, no selling your information, and no bank logins required.')}</p></section>
+  <section class="land-sec"><h2>${__('How it works')}</h2>
+    <ol class="steps">${step(1, 'Create your account with email or Google.')}${step(2, 'Add your wallets and your first transactions.')}${step(3, 'See your full picture on every device.')}</ol></section>
+  <section class="land-final"><h2>${__('Ready to take control of your money?')}</h2><button class="btn lg" data-act="auth-view" data-view="signup">${__('Create your account')}</button></section>
+  <footer class="land-foot"><span>© ${new Date().getFullYear()} Stiver</span><span><a href="privacy.html">${__('Privacy Policy')}</a> · <a href="terms.html">${__('Terms of Service')}</a></span></footer>
+</div>`;
+}
+
 const authLink = (view, text) => `<button type="button" class="legend-btn" data-act="auth-view" data-view="${view}">${__(text)}</button>`;
 function viewAuth() {
-  const a = state.auth, v = a.view, logo = '<div class="logo"><img src="icon.svg" alt="">Stiver</div>';
+  const a = state.auth, v = a.view, logo = `<button type="button" class="logo logo-btn" data-act="auth-view" data-view="landing" aria-label="${__('Back to home')}"><img src="icon.svg" alt="">Stiver</button>`;
   const emailField = `<label class="field">${__('Email')}<input name="email" type="email" required autocomplete="email" placeholder="${__('you@example.com')}" value="${esc(a.email)}"></label>`;
   const google = `<button type="button" class="btn secondary lg google" data-act="auth-google">${GOOGLE_LOGO} ${__('Continue with Google')}</button><div class="or"><span>${__('or')}</span></div>`;
   let body;
@@ -784,6 +824,7 @@ function render() {
   const app = $('#app');
   const a = state.auth;
   if (a.status === 'loading') { app.innerHTML = viewSplash('Loading…'); return; }
+  if (a.status === 'out' && a.view === 'landing') { app.innerHTML = viewLanding(); return; }
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
   if (!D()) {
     app.innerHTML = a.loadError
@@ -1180,7 +1221,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Wallet archived'); }
   else if (act === 'delete-txn') { D().transactions = D().transactions.filter((t) => t.id !== id); save(); close(); render(); toast('Transaction deleted'); }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
-  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; state.auth = { status: 'out', view: 'signin', email: '', notice: '', error: '' }; render(); });
+  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
@@ -1206,6 +1247,7 @@ document.addEventListener('change', (e) => {
     else if (t.value === 'transfer') transferDialog();
     else { $('select[name=category]', t.form).innerHTML = catOptions(t.value); $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value); }
   }
+  else if (t.matches('[data-lang]')) { setLang(t.value); render(); }
   else if (t.matches('[data-demo]')) setDemo(t.checked);
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
@@ -1554,6 +1596,7 @@ function removeSample() {
   d.profile.sample = null;
   save(); render(); toast(kept ? `Sample data removed. Kept ${kept} item${kept === 1 ? '' : 's'} you have since used.` : 'Sample data removed.');
 }
+setLang(initialLang());
 if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);
 else { Object.assign(state.auth, { status: 'out', error: 'The app is not connected to Supabase (missing config).' }); render(); }
 /* live fiat rates replace the demo ones (works without a Finnhub key; falls back silently) */

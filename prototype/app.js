@@ -677,13 +677,13 @@ function txnRow(t) {
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
     <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${!c ? ('<span class="badge">' + __('Uncategorized') + '</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
-    <div class="sub">${esc(c ? catPath(c.id) : __('No category'))} ·${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div>
+    <div class="sub">${esc(c ? catPath(c.id) : __('No category'))} ·${esc(txnWhere(t))} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div>
     <div class="amt num ${t.type}">${sign}${money(t.amount_minor, t.currency)}</div></div>`;
 }
 function filteredTxns() {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
   return D().transactions.filter((t) => (occ || t.occurred_at.startsWith(state.ui.month))
-    && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet) && (!occ || t.occasion_id === occ)
+    && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
 }
 const dayTitle = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
@@ -716,7 +716,7 @@ function viewTransactions() {
     <div class="filters scroll-row">${monthSelect(true)}
       <select data-filter="cat" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
       ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" aria-label="${__('Wallet')}"><option value="">${__('All wallets')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></div>
+      <select data-filter="wallet" aria-label="${__('Wallet')}"><option value="">${__('All wallets')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))}</option>`).join('')}</select></div>
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 
@@ -969,16 +969,33 @@ function transferDetail(gid) {
     <p class="hint">${__('Deleting removes the transfer and its fee, and both wallet balances go back to what they were.')}</p>
     <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">${__('Delete transfer')}</button><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
 }
+/* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
+   linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
+const coinOf = (t) => (t && !t.wallet_id && t.trade_id ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
+const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; const h = coinOf(t); return h ? `${assetInfo(h.symbol).symbol} · ${accountName(h.account_id)}` : ''; };
+const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))} · ${qtyFmt(h.quantity)}</option>`;
+function recordCoinTxn(h, { type, quantity, date, note, category_id, category_source, ai_confidence, occasion_id, id, tradeId }) {
+  const tid = tradeId || uid(), side = type === 'income' ? 'buy' : 'sell', amount_minor = Math.max(1, Math.round(quantity * 100));
+  h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
+  h.trades.push({ id: tid, date, side, kind: type, quantity, amount_minor, currency: 'USD', wallet_id: null });
+  if (side === 'buy' && date.slice(0, 7) < h.since) h.since = date.slice(0, 7);
+  const row = { id: id || uid(), type, amount_minor, currency: 'USD', occurred_at: date, wallet_id: null, trade_id: tid, note: note || '', category_id: category_id || null, category_source: category_source || 'user', ai_confidence: ai_confidence ?? null };
+  if (type === 'expense' && occasion_id && occasionOf(occasion_id)) row.occasion_id = occasion_id;
+  D().transactions.push(row);
+  return row;
+}
 function txnDialog(t, presetType, presetOccasion, presetDate) {
   const type = t?.type || presetType || 'expense', ws = D().wallets.filter((w) => !w.archived);
   const live = D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id), occ0 = t ? t.occasion_id : presetOccasion?.id || (occasionOn(isoDate(new Date()))[0]?.id);
   const date0 = t?.occurred_at || presetDate || (presetOccasion?.start && presetOccasion.start > isoDate(new Date()) ? presetOccasion.start : isoDate(new Date()));
   // the amount is entered in the chosen wallet's currency
-  const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = expOf(c) ? '0.01' : '1';
+  const tcoin = coinOf(t), coins = stableHoldings();
+  const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = tcoin ? 'any' : expOf(c) ? '0.01' : '1';
+  const unit = tcoin ? assetInfo(tcoin.symbol).symbol : c;
   open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
-    <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(c) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${t ? toMajor(t.amount_minor, c) : ''}"></label>
+    <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(unit) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${tcoin ? tcoin.trades.find((x) => x.id === t.trade_id).quantity : t ? toMajor(t.amount_minor, c) : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${date0}"></label></div>
     <label class="field">${__('Category')}<select name="category">${catOptions(type, t?.category_id)}</select></label>
     <button type="button" class="legend-btn" data-act="quick-cat" style="align-self:flex-start;margin-top:-6px">${__('+ New category or sub-category')}</button>
@@ -988,7 +1005,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
       <label class="field">${__('Inside')}<select name="qc_parent">${quickParentOptions(type)}</select></label>
       <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">${__('Cancel')}</button><button type="button" class="btn" data-act="quick-cat-add">${__('Add category')}</button></div></div>
     ${live.length ? `<label class="field">${__('🎉 Special occasion (optional)')}<select name="occasion"><option value="">${__('None')}</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
-    <label class="field">${__('Wallet')}<select name="wallet">${ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select></label>
+    <label class="field">${tcoin ? __('Paid from / received in') : __('Wallet')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : ''}${tcoin ? '' : ws.map((w) => `<option value="${w.id}" ${t ? (w.id === t.wallet_id ? 'selected' : '') : (w.currency === c && w === ws.find((x) => x.currency === c) ? 'selected' : '')}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}${!tcoin && coins.length ? `<optgroup label="${__('Investment accounts (USDT/USDC)')}">${coins.map((h) => coinOption(h)).join('')}</optgroup>` : ''}</select></label>
     <label class="field">${__('Note')}<textarea name="note" maxlength="140" placeholder="${__('e.g. Coffee shop')}">${esc(t?.note || '')}</textarea></label>
     ${t ? '' : repeatField()}
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + ('">' + __('Delete') + '</button>') : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -1173,8 +1190,8 @@ function tradeList(h) {
   const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), sym = assetInfo(h.symbol).symbol;
   if (!trades.length) return ('<p class="muted" style="font-size:13px">' + __('No buys or sells recorded yet.') + '</p>');
   return `<div class="list">${trades.map((tr) => {
-    const tail = tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('wallet'))}`;
-    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))} · ${tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
+    const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('wallet'))}`;
+    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
   }).join('')}</div>`;
 }
 
@@ -1240,6 +1257,11 @@ function addRule(kind, freq, start, spec) {
 function generateRecurring(r, date) {
   const sp = r.spec, T = D().transactions, add = (row) => { if (!T.some((t) => t.id === row.id)) T.push(row); };
   if (r.kind === 'txn') {
+    if (String(sp.wallet_id).startsWith('h:')) {   // USDT/USDC in an investment account
+      const h = D().holdings.find((x) => x.id === sp.wallet_id.slice(2)); if (!h || T.some((t) => t.id === detId(r.id, date, 't'))) return;
+      if (sp.type === 'expense' && h.quantity < sp.quantity - 1e-12) return;   // not enough coins: skip this one
+      recordCoinTxn(h, { type: sp.type, quantity: sp.quantity, date, note: sp.note, category_id: sp.category_id, occasion_id: sp.occasion_id, id: detId(r.id, date, 't'), tradeId: detId(r.id, date, 'e') }); return;
+    }
     if (!walletOf(sp.wallet_id)) return;
     add({ id: detId(r.id, date, 't'), type: sp.type, amount_minor: sp.amount_minor, currency: sp.currency, occurred_at: date, wallet_id: sp.wallet_id, note: sp.note || '', category_id: sp.category_id || null, category_source: 'user', ai_confidence: null, ...(sp.occasion_id && occasionOf(sp.occasion_id) ? { occasion_id: sp.occasion_id } : {}) });
   } else if (r.kind === 'transfer') {
@@ -1268,7 +1290,7 @@ function runRecurring() {
 function recurringNow() { const n = runRecurring(); if (n) { render(); toast(__(n === 1 ? '{n} recurring entry added' : '{n} recurring entries added', { n })); } }
 const ruleTitle = (r) => {
   const sp = r.spec;
-  if (r.kind === 'txn') { const c = catOf(sp.category_id), w = walletOf(sp.wallet_id); return { icon: sp.type === 'income' ? '💵' : '🧾', name: sp.note || (c && c.name) || (sp.type === 'income' ? __('Income') : __('Expense')), amount: `${sp.type === 'income' ? '+' : '−'}${money(sp.amount_minor, sp.currency)}`, where: w ? w.name : '' }; }
+  if (r.kind === 'txn') { const c = catOf(sp.category_id), w = walletOf(sp.wallet_id) || (String(sp.wallet_id).startsWith('h:') ? { name: accountName((D().holdings.find((x) => x.id === sp.wallet_id.slice(2)) || {}).account_id) } : null); return { icon: sp.type === 'income' ? '💵' : '🧾', name: sp.note || (c && c.name) || (sp.type === 'income' ? __('Income') : __('Expense')), amount: `${sp.type === 'income' ? '+' : '−'}${money(sp.amount_minor, sp.currency)}`, where: w ? w.name : '' }; }
   if (r.kind === 'transfer') { const A = walletOf(sp.from), B = walletOf(sp.to); return { icon: '🔁', name: `${A ? A.name : '?'} → ${B ? B.name : '?'}`, amount: money(sp.amount_minor, A ? A.currency : cur()), where: sp.note || '' }; }
   const info = assetInfo(sp.symbol), src = parseSource(sp.fund);
   return { icon: '📈', name: __('Buy {qty} {symbol}', { qty: qtyFmt(sp.quantity), symbol: info.symbol }), amount: src ? `${qtyFmt(parseAmount(src, sp.fundamount))} ${sourceUnit(src)}` : '', where: '' };
@@ -1358,7 +1380,12 @@ document.addEventListener('click', (e) => {
     D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Wallet deleted');
   }
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Wallet archived'); }
-  else if (act === 'delete-txn') { D().transactions = D().transactions.filter((t) => t.id !== id); save(); close(); render(); toast('Transaction deleted'); }
+  else if (act === 'delete-txn') {
+    const tx = find(D().transactions), coin = coinOf(tx);
+    if (coin) { if (!removeTrade(coin, coin.trades.find((x) => x.id === tx.trade_id))) { toast(__("Can't delete: the {symbol} has already been spent", { symbol: assetInfo(coin.symbol).symbol })); return; } }
+    else D().transactions = D().transactions.filter((t) => t.id !== id);
+    save(); close(); render(); toast('Transaction deleted');
+  }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); });
   else if (act === 'auth-check') checkConfirmed(true);
@@ -1409,8 +1436,8 @@ document.addEventListener('change', (e) => {
     const hit = occasionOn(t.value)[0]; if (hit) t.form.occasion.value = hit.id;   // a date inside an occasion tags it automatically
   }
   else if (t.name === 'wallet' && t.form?.dataset.form === 'txn') {
-    const wc = walletOf(t.value).currency;
-    $('[data-amt-label]', t.form).textContent = __('Amount ({cur})', { cur: wc }); $('input[name=amount]', t.form).step = expOf(wc) ? '0.01' : '1';
+    const coin = t.value.startsWith('h:') ? D().holdings.find((x) => x.id === t.value.slice(2)) : null, wc = coin ? assetInfo(coin.symbol).symbol : walletOf(t.value).currency;
+    $('[data-amt-label]', t.form).textContent = __('Amount ({cur})', { cur: wc }); $('input[name=amount]', t.form).step = coin ? 'any' : expOf(wc) ? '0.01' : '1';
   }
 });
 /* asset picker: debounced search -> result list -> pick (then fetch its live price) */
@@ -1469,10 +1496,11 @@ document.addEventListener('submit', (e) => {
   const v = Object.fromEntries(new FormData(f));
   if (['signin', 'signup', 'forgot', 'recovery'].includes(kind)) { submitAuth(kind, v, f); return; }
   if (kind === 'txn') {
-    const type = v.type, wc = walletOf(v.wallet).currency, minor = toMinor(parseFloat(v.amount), wc), existing = f.dataset.id && D().transactions.find((t) => t.id === f.dataset.id);
+    const coin = v.wallet.startsWith('h:') ? D().holdings.find((x) => x.id === v.wallet.slice(2)) : null, type = v.type;
+    const wc = coin ? 'USD' : walletOf(v.wallet).currency, minor = coin ? Math.round(parseFloat(v.amount) * 100) : toMinor(parseFloat(v.amount), wc), existing = f.dataset.id && D().transactions.find((t) => t.id === f.dataset.id);
     if (!(minor > 0)) { toast('Enter an amount above zero'); return; }
     const row = existing || { id: uid(), category_source: 'user', ai_confidence: null };
-    Object.assign(row, { type, amount_minor: minor, currency: wc, occurred_at: v.date, wallet_id: v.wallet, note: v.note.trim(), category_id: v.category || null });
+    Object.assign(row, { type, amount_minor: minor, currency: wc, occurred_at: v.date, wallet_id: coin ? null : v.wallet, note: v.note.trim(), category_id: v.category || null });
     if (type === 'expense' && v.occasion) row.occasion_id = v.occasion; else delete row.occasion_id;
     let msg = existing ? 'Saved' : 'Transaction added';
     if (v.category) { row.category_source = 'user'; row.ai_confidence = null; }
@@ -1481,8 +1509,15 @@ document.addEventListener('submit', (e) => {
       if (tag) { row.category_id = tag.category_id; row.category_source = 'ai'; row.ai_confidence = tag.confidence; msg = __('AI tagged it as {name}', { name: catOf(tag.category_id).name }); }
       else { row.category_source = 'user'; msg = __(existing ? 'Saved · left uncategorized' : 'Transaction added · left uncategorized'); }
     }
-    if (!existing) D().transactions.push(row);
-    if (!existing && v.repeat) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
+    if (coin) {   // paid from / received in USDT or USDC: the coins move as a trade linked to this transaction
+      const qty = parseFloat(v.amount), tr = existing && coin.trades.find((x) => x.id === existing.trade_id), oldQ = tr ? tr.side === 'buy' ? tr.quantity : -tr.quantity : 0;
+      const newQ = type === 'income' ? qty : -qty, after = r12(coin.quantity - oldQ + newQ);
+      if (after < -1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(coin.quantity - oldQ), symbol: assetInfo(coin.symbol).symbol })); return; }
+      if (tr) { coin.quantity = after; Object.assign(tr, { date: v.date, side: type === 'income' ? 'buy' : 'sell', kind: type, quantity: qty, amount_minor: minor }); if (type === 'income' && v.date.slice(0, 7) < coin.since) coin.since = v.date.slice(0, 7); }
+      else recordCoinTxn(coin, { type, quantity: qty, date: v.date, note: row.note, category_id: row.category_id, category_source: row.category_source, ai_confidence: row.ai_confidence, occasion_id: row.occasion_id });
+      if (v.repeat && !existing) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, quantity: qty, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
+    } else if (!existing) D().transactions.push(row);
+    if (!coin && !existing && v.repeat) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     state.ui.month = row.occurred_at.slice(0, 7) <= monthKey(new Date()) ? row.occurred_at.slice(0, 7) : state.ui.month;
     save(); close(); render(); toast(msg);

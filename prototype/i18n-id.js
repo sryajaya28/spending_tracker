@@ -1,6 +1,9 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Can't delete: the {symbol} has already been spent": "Tidak bisa dihapus: {symbol} sudah terpakai",
+ "Investment accounts (USDT/USDC)": "Akun investasi (USDT/USDC)",
+ "Paid from / received in": "Dibayar dari / diterima di",
  "Recurring entry deleted": "Transaksi berulang dihapus",
  "Buy {qty} {symbol}": "Beli {qty} {symbol}",
  "{n} recurring entries added": "{n} transaksi berulang ditambahkan",

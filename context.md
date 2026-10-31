@@ -50,6 +50,12 @@ infrastructure names, see section 8).
 - **Transactions:** the list is grouped **by day** (one row per day: count, income, spent, net); clicking a day opens
   `#/transactions/YYYY-MM-DD` with that day's detailed rows (edit/delete, `+ Add` prefilled with the date). Expense/income with categories + one level of sub-categories, add a category inline from the form,
   AI-style auto-tagging (mock: history match, null when unsure), search/filter, special-occasion tag.
+- **USDT/USDC as a wallet for income and expenses:** the Wallet field of the add-transaction dialog also lists stablecoin holdings
+  ("USDT · account · balance"). Income received there raises the coin quantity; an expense paid from it lowers it (refused if you hold less).
+  Stored as a holding trade with `kind` income/expense (holding_events.note) linked to a normal income/expense transaction with
+  `wallet_id` null, currency USD, 1 coin = 1 USD (amount in cents). It counts in income/spending, budgets, categories and net
+  worth (via the holding); it does not touch any wallet balance. Edit changes the trade too; delete reverses it (`removeTrade`).
+  Transactions can be filtered by the coin, and recurring rules can use it.
 - **Recurring:** a **Repeat** choice (does not repeat / every week / every month) on new expenses, income, transfers and
   investment buys. A rule is saved (`recurring_rules`); due entries are created **when the app opens or the tab returns to the front**
   (no server job), dated on their due day, with ids derived from rule+date so two devices never double-add. Settings > Recurring
@@ -125,7 +131,7 @@ Composite foreign keys `(id, user_id)` stop rows referencing another user's rows
 | `profiles` | `id = auth.users.id`, `display_name`, `default_currency`, `ai_tagging_enabled`, `sample_ids` (legacy), `language`, `theme` |
 | `wallets` | `type` cash/bank/ewallet/card, `currency`, `opening_balance_minor`, `archived`, `since_month` |
 | `categories` | one level of `parent_id`, `type` expense/income, emoji `icon`, `color`, unique sibling names |
-| `transactions` | `type` expense/income/transfer, `amount_minor`, `currency`, `occurred_at`, `category_source` user/ai/rule, `transfer_direction` in/out, `holding_event_id`, `occasion_id`, `transfer_group_id` |
+| `transactions` | `wallet_id` is null for USDT/USDC income/expense (then `holding_event_id` is set; check `transactions_source_chk`), `type` expense/income/transfer, `amount_minor`, `currency`, `occurred_at`, `category_source` user/ai/rule, `transfer_direction` in/out, `holding_event_id`, `occasion_id`, `transfer_group_id` |
 | `budgets` | `category_id` null = global, `start_month` (first of month), unique per scope+month |
 | `occasions` | name, `amount_minor`, `currency`, optional `start_date`/`end_date`, `archived` |
 | `investment_accounts`, `holdings`, `holding_events` | holdings keyed by symbol (`AAPL.US` when a stock shares a symbol with a crypto); events carry `quantity_delta` and `pair_id` for stablecoin pairs; opening event has `note='opening'`; `since_month` |
@@ -140,7 +146,7 @@ from `options.data`), a **Cash** wallet, 12 default categories with emoji icons 
 
 Migrations (repo file names; applied through the Supabase tools with different recorded version numbers):
 1 schema, 2 RLS, 3 signup seed, 4 views+functions, 5 portfolio, 6 debts, 7 trades, 8 app seed + `holdings.since_month`,
-9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme, 14 `recurring_rules` (applied to the live project).
+9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme, 14 `recurring_rules`, 15 nullable `transactions.wallet_id` for coin income/expense (14 and 15 applied to the live project).
 
 ## 7. Business rules the code encodes
 
@@ -261,6 +267,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-10-31: USDT/USDC income and expenses (migration 15 applied to production). `recordCoinTxn`, `coinOf`, `txnWhere`; the cloud layer
+  stores trade `kind` in `holding_events.note`. e2e `coin`. Amounts are USD at 1 coin = 1 USD (no live peg price).
 
 - 2026-10-31: Recurring transactions (migration 14 applied to production; `cloud.js` maps `recurring_rules` <-> `d.recurring`). `Repeat`
   field on add expense/income, transfer and invest; `runRecurring()` runs after load and on tab focus; `recurringCard()` in Settings.

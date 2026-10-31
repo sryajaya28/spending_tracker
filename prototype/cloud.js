@@ -47,7 +47,7 @@ const Cloud = (() => {
       }
       h.trades.forEach((tr) => {
         tradeIds.add(tr.id);
-        R.holding_events.push({ id: tr.id, holding_id: h.id, occurred_at: tr.date, quantity_delta: r12(tradeSign(tr) * tr.quantity), note: null, pair_id: tr.via ? (tr.id < tr.via.pair ? tr.id : tr.via.pair) : null });
+        R.holding_events.push({ id: tr.id, holding_id: h.id, occurred_at: tr.date, quantity_delta: r12(tradeSign(tr) * tr.quantity), note: tr.kind || null, pair_id: tr.via ? (tr.id < tr.via.pair ? tr.id : tr.via.pair) : null });
       });
     });
     d.transactions.forEach((t) => R.transactions.push({
@@ -107,6 +107,7 @@ const Cloud = (() => {
       const open = evs.find((e) => e.note === 'opening');
       const trades = evs.filter((e) => e.note !== 'opening').map((e) => {
         const delta = +e.quantity_delta, side = delta > 0 ? 'buy' : 'sell', tr = { id: e.id, date: e.occurred_at, side, quantity: Math.abs(delta) };
+        if (e.note === 'income' || e.note === 'expense') tr.kind = e.note;
         const pair = e.pair_id && S.holding_events.find((x) => x.pair_id === e.pair_id && x.id !== e.id);
         if (pair) {
           const oh = holdingById.get(pair.holding_id);

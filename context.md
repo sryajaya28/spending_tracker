@@ -287,6 +287,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: The Overview sample-data offer now uses the yellow banner style (`.demo-bar.sample-promo`) at the top of the page instead of a white card.
+
 - 2026-11-01: `overscroll-behavior: none` on html/body for every display mode (was installed-app only) so a downward pull at the top of a page in a phone browser does not trigger
   pull-to-refresh. Not verifiable from the sandbox. If Chrome on iOS still refreshes (it ignores overscroll-behavior), the fallback is to make `#app` the scroll container
   (position: fixed; overflow-y: auto) so the document itself never scrolls; that touches `window.scrollTo` uses and the e2e scroll checks.

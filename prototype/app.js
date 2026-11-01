@@ -1805,10 +1805,14 @@ async function onAuth(event, session) {
   Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
   render(); loadUserData();
 }
+let loadSeq = 0;
 async function loadUserData() {
+  const mine = ++loadSeq;   // a reload can start twice (sign-in events arrive in pairs); only the newest one may apply its result
   try {
     state.real = null;   // leave demo mode while reloading; it is switched back on below if you had it on
-    state.data = await Cloud.load();
+    const loaded = await Cloud.load();
+    if (mine !== loadSeq) return;   // a newer load took over
+    state.real = null; state.data = loaded;
     state.data.livePrices = loadPrices();
     if (api.finnhub || api.yahoo) refreshPrices(true);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);

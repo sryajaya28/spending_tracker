@@ -287,6 +287,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Fix: after a reload with sample mode on, the app could show the sample banner over your own (empty) data. Two `loadUserData()` runs overlapped (sign-in events
+  arrive in pairs); the later one overwrote the demo data while `state.real` was already set, so `setDemo(true)` was skipped. `loadUserData` now has a sequence guard
+  (`loadSeq`, only the newest load applies) and clears `state.real` before assigning. e2e `sample` simulates the overlap (verified to fail on the old code).
+
 - 2026-11-01: (1) The Overview sample-data banner has a short "Try" button (description stays next to the question), (`data-act=demo-on`), not a switch. (2) Reverted the global `overscroll-behavior: none`: pull-to-refresh
   stays enabled in phone browsers (still disabled in the installed app); only lists/dialogs contain their scroll. (3) Transaction rows: title and amount on one line, date under
   the amount (`.amt-col`), the "Uncategorized" badge removed.

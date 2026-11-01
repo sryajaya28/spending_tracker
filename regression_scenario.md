@@ -218,6 +218,7 @@ Automated: `pfrange`, `wallet`, `arch`, `curdd`, `idx`, `run`, `ios`.
 | ST-04 | Smart tagging toggle | Off: no AI tagging; on: tags only after enough labelled history, otherwise stays empty. |
 | ST-05 | Recurring card | Appears only when rules exist (see section 6). |
 | ST-06 | Account card | Signed-in email, Sign out, Sign out others, Use sample data. |
+| ST-07b | Reload while sample data is on | After refreshing the page (any page, phone browser or desktop) sample mode comes back **with the sample data**: the yellow "Sample data" banner is never shown together with your own empty data (regression: two overlapping loads at sign-in left banner + own data). |
 | ST-07 | Sample data toggle | On: a **compact one-line banner** on phones ("Sample data · not saved" + Back to my data; the long sentence on desktop) (at the top of the page, **not pinned**: it scrolls away with the content), demo account in memory, nothing saved; off: your own data returns untouched. Old "sample data saved earlier" rows can be removed. |
 | ST-08 | Legal pages | Privacy and Terms open from the landing and sign-in screens. |
 
@@ -326,5 +327,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: OV-06: transaction rows show only the sub-category name.
 - 2026-11-01: UI-04b: no pull-to-refresh in phone browsers.
 - 2026-11-01: OV-05b/OV-06/UI-04b: Try sample data button, new transaction row layout, pull-to-refresh left on in browsers.
+- 2026-11-01: ST-07b: sample mode survives a reload.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

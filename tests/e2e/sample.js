@@ -17,7 +17,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('.sample-promo [data-act=demo-on]'); await p.waitForSelector('.demo-bar'); assert.equal(await p.$$('.sample-promo').then((a) => a.length), 0, 'promo disappears in sample mode'); assert.equal(await p.$$('.demo-bar').then((a) => a.length), 1); assert((await snap()).demo);
   await p.click('[data-act=demo-off]'); await p.waitForFunction(() => !state.real); await p.waitForSelector('.sample-promo [data-act=demo-on]');
   await p.evaluate(() => { D().wallets[0].opening_balance_minor = 50000000; render(); }); assert.equal(await p.$$('.sample-promo').then((a) => a.length), 0, 'no promo once there is a real balance'); await p.evaluate(() => { D().wallets[0].opening_balance_minor = 0; });
-  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-demo]');
+  // sample mode survives a reload even when the data load starts twice (two sign-in events arrive together): never banner + own data
+  await p.evaluate(() => { localStorage.setItem('stiver.demo.v1', '1'); const orig = Cloud.load.bind(Cloud); let n = 0; Cloud.load = async () => { const my = ++n, d = await orig(); if (my === 1) await new Promise((r) => setTimeout(r, 400)); return d; }; const both = Promise.all([loadUserData(), (async () => { await new Promise((r) => setTimeout(r, 150)); return loadUserData(); })()]); return both.then(() => { Cloud.load = orig; }); }); await p.waitForFunction(() => state.real && D().transactions.length > 50, null, { timeout: 8000 });
+  assert.equal(await p.evaluate(() => !!document.querySelector('.demo-bar') && D().wallets.length > 3), true, 'banner and sample data go together');
+  await p.evaluate(() => setDemo(false)); await p.waitForFunction(() => !state.real); await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-demo]');
   assert(!(await p.$('.demo-bar')));
   // toggle ON: demo data shows, banner appears, own data untouched
   await p.check('[data-demo]'); await p.waitForSelector('.demo-bar');

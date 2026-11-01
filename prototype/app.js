@@ -75,7 +75,7 @@ const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const CATS = [
   ['Groceries', 'expense', '🛒', '#4A44C6'], ['Dining', 'expense', '🍽️', '#8B8FF0'], ['Transport', 'expense', '🚌', '#F5B800'],
   ['Shopping', 'expense', '🛍️', '#EC4899'], ['Bills & Utilities', 'expense', '🧾', '#14B8A6'], ['Entertainment', 'expense', '🎬', '#F97316'],
-  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'], ['Parents', 'expense', '👨‍👩‍👦', '#22C55E'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'], ['Other', 'expense', '⋯', '#94A3B8'],
   ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Other income', 'income', '➕', '#94A3B8'],
 ];
 // the sample account is Indonesian: amounts are in rupiah (converted when the reporting currency is another one)
@@ -185,8 +185,7 @@ function seed(name, cur) {
   const W = (n, type, target, c = cur) => ({ id: uid(), name: n, type, currency: c, opening_balance_minor: 0, since: wsince, archived: false, _target: target });
   const bca = W('BCA', 'bank', conv(742000000)), mandiri = W('Mandiri', 'bank', conv(455000000)), jago = W('Bank Jago', 'bank', conv(118000000)), cash = W('Cash', 'cash', conv(26000000));
   const gopay = W('Gopay', 'ewallet', conv(3400000)), shopee = W('ShopeePay', 'ewallet', conv(1250000)), ovo = W('OVO', 'ewallet', conv(2300000));
-  const sgd = W('DBS SG', 'bank', toMinor(6500, 'SGD'), 'SGD');   // a foreign-currency account
-  const wallets = [bca, mandiri, jago, cash, gopay, shopee, ovo, sgd];
+  const wallets = [bca, mandiri, jago, cash, gopay, shopee, ovo];
   const txns = [];
   const nowMonth = (back) => ({ y: today.getFullYear(), m: today.getMonth() - back });
   const add = (w, cat, type, date, idr, note, extra = {}) => {
@@ -206,7 +205,6 @@ function seed(name, cur) {
     // fixed items (also dated later this month: they show as Upcoming)
     add(bca, 'Salary', 'income', new Date(y, m, 25), 42000000, 'Monthly salary');
     if (back % 2 === 0) add(bca, 'Freelance', 'income', new Date(y, m, 12), 6500000 + Math.round(rnd() * 3000000), 'Design project');
-    add(bca, 'Parents', 'expense', new Date(y, m, 1), 5000000, 'Monthly allowance for parents');
     add(bca, 'Subscription', 'expense', new Date(y, m, 12), 186000, 'Netflix');
     add(bca, 'Subscription', 'expense', new Date(y, m, 5), 55000, 'Spotify');
     add(mandiri, 'Bills & Utilities', 'expense', new Date(y, m, 3), 1250000, 'Indihome + Telkomsel');
@@ -246,6 +244,7 @@ function seed(name, cur) {
   // loans: debts you owe. Balance = original - payments, so earlier months can be rebuilt.
   const payments = (monthly, n) => Array.from({ length: n }, (_, i) => ({ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - (n - 1 - i), 5)), amount_minor: monthly }));
   const loans = [
+    { id: uid(), name: 'Housing loan', type: 'mortgage', currency: cur, original_minor: conv(900000000), monthly_minor: conv(9500000), rate: 7.2, since, archived: false, payments: payments(conv(9500000), 6) },
     { id: uid(), name: 'Car loan', type: 'car', currency: cur, original_minor: conv(190000000), monthly_minor: conv(4500000), rate: 6.5, since, archived: false, payments: payments(conv(4500000), 6) },
     { id: uid(), name: 'Credit card', type: 'card', currency: cur, original_minor: conv(14000000), monthly_minor: conv(2500000), rate: 0, since, archived: false, payments: payments(conv(2500000), 3) },
   ];
@@ -255,7 +254,6 @@ function seed(name, cur) {
   const rule = (kind, freq, day, spec) => ({ id: uid(), kind, freq, start: isoDate(new Date(today.getFullYear(), today.getMonth() - 5, day)), next: next(day), end: '', active: true, spec });
   const recurring = [
     rule('txn', 'monthly', 25, { type: 'income', amount_minor: conv(42000000), currency: cur, wallet_id: bca.id, note: 'Monthly salary', category_id: catId.Salary }),
-    rule('txn', 'monthly', 1, { type: 'expense', amount_minor: conv(5000000), currency: cur, wallet_id: bca.id, note: 'Monthly allowance for parents', category_id: catId.Parents }),
     rule('txn', 'monthly', 12, { type: 'expense', amount_minor: conv(186000), currency: cur, wallet_id: bca.id, note: 'Netflix', category_id: catId['Entertainment/Streaming'] }),
     rule('txn', 'monthly', 5, { type: 'expense', amount_minor: conv(55000), currency: cur, wallet_id: bca.id, note: 'Spotify', category_id: catId.Subscription }),
     rule('transfer', 'monthly', 2, { from: bca.id, to: gopay.id, amount_minor: conv(1500000), received_minor: conv(1500000), fee_minor: 0, note: 'top up' }),
@@ -1880,7 +1878,7 @@ async function setDemo(on) {
   if (on) {
     await Cloud.idle();   // let any pending save of your own data finish first
     const own = state.data, d = seed(own.profile.name || 'You', own.profile.currency);
-    d.profile = { ...own.profile, sample: null }; d.livePrices = own.livePrices || {};
+    d.profile = { ...own.profile, sample: null, period: 25 }; d.livePrices = own.livePrices || {};
     state.real = own; state.data = d;
   } else { state.data = state.real; state.real = null; }
   try { localStorage.setItem(DEMO_KEY, on ? '1' : '0'); } catch { /* storage unavailable */ }

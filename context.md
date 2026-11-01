@@ -287,14 +287,19 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Sample data: removed the monthly allowance for parents (transactions, recurring rule and the Parents category); 5 recurring rules remain.
+
+- 2026-11-01: Sample data: removed the DBS SG (SGD) account, added a Housing loan (Rp 900 mn, 7.2%, mortgage type), and sample mode uses a budget period starting on the 25th
+  (`setDemo` sets `period: 25` on the demo profile only).
+
 - 2026-11-01: Tooltips (`.info-pop`) are smaller (12px text); the Total Balance one sits beside its icon on the blue card (it used to cover the amount).
 
 - 2026-11-01: Overview **Total Balance** = savings + investments (`totalBalance()`, `savingsTotal()`); money lent and loans are not included (Portfolio > Net worth covers them); an (i) tooltip next to the label says "Savings + investments". The hero
   "this month" % uses this total as its base.
 
 - 2026-11-01: (1) Sample data rebuilt as an Indonesian account (`seed()` in `app.js`, amounts in IDR, converted for other reporting currencies): BCA, Mandiri, Bank Jago, Cash,
-  Gopay/ShopeePay/OVO, DBS SG; Stockbit (IDX stocks) and Ajaib (IDX stock, US stocks, BTC, USDT, gold); ~Rp 5 bn of savings+investments; Indonesian merchants, fixed monthly items,
-  e-wallet top-ups, a Bali Trip occasion, budgets, 6 recurring rules; November is filled up to today with later items as Upcoming; every transaction is categorized. Opening balances are
+  Gopay/ShopeePay/OVO, DBS SG; Stockbit (IDX stocks) and Ajaib (IDX stock, US stocks, BTC, USDT, gold); ~Rp 5 bn of savings+investments; Indonesian merchants, fixed monthly items (salary, subscriptions),
+  e-wallet top-ups, a Bali Trip occasion, budgets, 5 recurring rules; November is filled up to today with later items as Upcoming; every transaction is categorized. Opening balances are
   derived so each account ends at its target. (2) Dropdown popover now uses the Popover API (top layer) but stays inside the dialog (outside it everything is inert), so a long list is
   not clipped by the dialog edge; "Add new category" is the last item of the scrolling list again (not fixed/sticky), as requested.
 

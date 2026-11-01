@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: In the category dropdown the "Add new category" entry is `position: sticky; bottom: 0` (always visible), after a screen recording showed it cut off / hard to reach
+  at the end of a long list on a phone browser.
+
 - 2026-11-01: Fix: after a reload with sample mode on, the app could show the sample banner over your own (empty) data. Two `loadUserData()` runs overlapped (sign-in events
   arrive in pairs); the later one overwrote the demo data while `state.real` was already set, so `setDemo(true)` was skipped. `loadUserData` now has a sequence guard
   (`loadSeq`, only the newest load applies) and clears `state.real` before assigning. e2e `sample` simulates the overlap (verified to fail on the old code).

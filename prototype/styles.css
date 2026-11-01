@@ -631,3 +631,7 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 /* transaction rows: title and amount on one line; category/account on the left, date under the amount */
 .row .amt-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
 .row .amt-col .sub { font-size: 12px; white-space: nowrap; }
+
+/* "Add new category" stays pinned to the bottom edge of the list, so it is always visible without scrolling to the end */
+.cs-opt.cs-cta { position: sticky; bottom: -6px; z-index: 1; margin-top: 6px; border-radius: 0 0 10px 10px; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 10px -6px var(--surface); }
+.cs-opt.cs-cta.act { background: var(--soft); }

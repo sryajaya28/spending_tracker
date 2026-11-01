@@ -39,7 +39,6 @@
     const add = (opt, parent) => {   // data-list: a short label in the field can have a fuller one in the list
       const cta = opt.hasAttribute('data-cta');
       if (cta && empty) parent.appendChild(empty);   // "not found" note sits just above the add button
-      if (cta) { const hr = document.createElement('div'); hr.className = 'cs-sep'; parent.appendChild(hr); }
       const el = document.createElement('div'); el.className = 'cs-opt' + (opt.selected && !cta ? ' on' : '') + (opt.disabled ? ' dis' : '') + (cta ? ' cs-cta' : ''); el.setAttribute('role', 'option');
       el.setAttribute('aria-selected', String(opt.selected)); const t = document.createElement('span'); t.textContent = opt.dataset.list || opt.textContent; el.appendChild(t);
       const i = rows.length; rows.push({ opt, el, cta, hidden: false, key: (opt.dataset.s || opt.textContent).toLowerCase() });

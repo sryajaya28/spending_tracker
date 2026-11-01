@@ -29,6 +29,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // the Category list: searchable, with "Add new category" as the last entry
   await tap('#dlg select[name=category]'); await p.waitForSelector('#dlg .cs-search');
   assert((await p.innerText('#dlg .cs-cta')).includes('Add new category')); assert.equal(await p.$$eval('#dlg .cs-opt', (e) => e[e.length - 1].classList.contains('cs-cta')), true, 'the add entry is last');
+  { const pb = await p.$eval('#dlg .cs-pop', (e) => e.getBoundingClientRect().bottom), cb = await p.$eval('#dlg .cs-cta', (e) => e.getBoundingClientRect().bottom); assert(cb <= pb + 1 && cb > pb - 60, 'Add new category is visible at the list bottom without scrolling: ' + [cb, pb]); }
   assert(!(await p.evaluate(() => document.activeElement.matches('input'))), 'the search box does not grab focus by itself');
   // tapping the search box (phone keyboard => resize/scroll events) keeps the list open
   await tap('#dlg .cs-search'); assert(await p.evaluate(() => document.activeElement.matches('.cs-search')), 'search focused');

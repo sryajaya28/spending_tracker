@@ -635,3 +635,9 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 /* "Add new category" stays pinned to the bottom edge of the list, so it is always visible without scrolling to the end */
 .cs-opt.cs-cta { position: sticky; bottom: -6px; z-index: 1; margin-top: 6px; border-radius: 0 0 10px 10px; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -8px 10px -6px var(--surface); }
 .cs-opt.cs-cta.act { background: var(--soft); }
+
+/* the list: search on top (fixed), options in the middle (the only scrolling part), "Add new category" at the bottom (fixed) */
+.cs-pop { display: flex; flex-direction: column; overflow: hidden; }
+.cs-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+.cs-opt.cs-cta { position: static; flex: none; margin-top: 4px; box-shadow: none; border-radius: 10px; border-top: 1px solid var(--line); }
+.cs-search { flex: none; position: static; }

@@ -287,6 +287,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Dropdown popover restructured (`dropdown.js`): `.cs-pop` is a flex column with a fixed search box, a `.cs-scroll` area that is the only scrolling part, and a fixed
+  footer for `data-cta` entries ("Add new category"), sized with `visualViewport` and 28px bottom margin. The sticky-bottom approach was not enough on iOS: the end of the list could
+  not be scrolled into view (rubber-band). Not testable on a real phone from the sandbox.
+
 - 2026-11-01: In the category dropdown the "Add new category" entry is `position: sticky; bottom: 0` (always visible), after a screen recording showed it cut off / hard to reach
   at the end of a long list on a phone browser.
 

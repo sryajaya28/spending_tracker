@@ -1190,7 +1190,12 @@ function render() {
 /* ---------- dialogs ---------- */
 const dlg = () => $('#dlg');
 // no field is focused on open, so the phone keyboard stays down until the user taps an input
-function open(html) { dlg().innerHTML = `<div class="dlg" tabindex="-1">${html}</div>`; if (!dlg().open) dlg().showModal(); $('.dlg', dlg()).focus({ preventScroll: true }); }
+/* while a modal is open the page behind must not scroll (on iPhone the background still moves with overflow:hidden alone): the body is pinned in place and the scroll position restored on close */
+let lockY = null;
+const lockScroll = () => { if (lockY !== null) return; lockY = window.scrollY; document.body.style.setProperty('--lock-top', `-${lockY}px`); document.body.classList.add('scroll-locked'); };
+const unlockScroll = () => { if (lockY === null) return; const y = lockY; lockY = null; document.body.classList.remove('scroll-locked'); document.body.style.removeProperty('--lock-top'); window.scrollTo(0, y); };
+dlg().addEventListener('close', unlockScroll);
+function open(html) { dlg().innerHTML = `<div class="dlg" tabindex="-1">${html}</div>`; if (!dlg().open) { lockScroll(); dlg().showModal(); } $('.dlg', dlg()).focus({ preventScroll: true }); }
 const close = () => dlg().open && dlg().close();
 dlg().addEventListener('click', (e) => { if (e.target === dlg() && $('[data-close-outside]', dlg())) close(); });   // the install dialog has no Done button: tap outside to close
 const catOptions = (type, sel, withNew) => `<option value="">${__('— None (AI may suggest) —')}</option>${catTree(type).map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}${withNew ? `<option value="__new" data-cta>＋ ${__('Add new category')}</option>` : ''}`;

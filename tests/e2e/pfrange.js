@@ -26,7 +26,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await pick('1y'); assert.equal(await rows(), 12);
   await pick('3y'); assert.equal(await rows(), 36);
   await pick('5y'); assert.equal(await rows(), 60);
-  await pick('all'); const all = await rows(); assert.equal(all, 32, 'all time starts at the first wallet month (Mar 2024)');
+  await pick('all'); const all = await rows(); assert.equal(all, await p.evaluate(() => monthsBetween('2024-03', currentPeriod()) + 1), 'all time starts at the first wallet month (Mar 2024)');
   assert.equal(await p.innerText('select[data-bind=pfRange] option:checked'), 'All time');
   assert.equal(await hero(), h0, 'net worth card unchanged by the time frame');
   await p.screenshot({ path: __dirname + '/out/pf_range.png' });

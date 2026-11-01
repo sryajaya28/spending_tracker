@@ -7,7 +7,7 @@
 const Cloud = (() => {
   const cfg = window.STIVER || {};
   const r12 = (x) => Math.round(x * 1e12) / 1e12;
-  const baseSym = (key) => key.replace(/\.US$/, '');
+  const baseSym = (key) => key.replace(/\.(US|JK)$/, '');
   /* where auth links (email confirmation, password reset, Google) should send people back to */
   const appUrl = (host = location.hostname) => (cfg.SITE_URL && /\.vercel\.app$/.test(host) ? cfg.SITE_URL.replace(/\/$/, '') + '/' : location.origin + location.pathname);
 
@@ -37,8 +37,8 @@ const Cloud = (() => {
     d.holdings.forEach((h) => {
       const cat = catalog.get(h.symbol), meta = d.customAssets[h.symbol] || {};
       R.holdings.push({
-        id: h.id, account_id: h.account_id, symbol: h.symbol, provider_symbol: cat ? null : meta.fh || null,
-        name: cat ? cat[0] : meta.name || h.symbol, asset_type: cat ? cat[1] : meta.type || 'manual', archived: false, since_month: `${h.since}-01`,
+        id: h.id, account_id: h.account_id, symbol: h.symbol, provider_symbol: cat ? null : meta.yh ? `yh:${meta.yh}|${meta.mult || 1}|${meta.type || 'stock'}` : meta.fh || null,
+        name: cat ? cat[0] : meta.name || h.symbol, asset_type: cat ? cat[1] : meta.type === 'commodity' ? 'manual' : meta.type || 'manual', archived: false, since_month: `${h.since}-01`,
       });
       const opening = r12(h.quantity - h.trades.reduce((a, tr) => a + tradeSign(tr) * tr.quantity, 0));
       if (Math.abs(opening) > 1e-12) {
@@ -66,7 +66,7 @@ const Cloud = (() => {
     });
     // prices typed in by hand for assets no feed covers (one row per symbol)
     Object.entries(d.customAssets).forEach(([key, m]) => {
-      if (m.fh || !(m.price > 0) || !d.holdings.some((h) => h.symbol === key)) return;
+      if (m.fh || m.yh || !(m.price > 0) || !d.holdings.some((h) => h.symbol === key)) return;
       m.price_date ||= new Date().toISOString().slice(0, 10);
       R.manual_prices.push({ id: key, user_id: userId, symbol: key, price_date: m.price_date, price_usd: m.price });
     });
@@ -123,7 +123,8 @@ const Cloud = (() => {
       if (!catalog.has(h.symbol)) {
         const m = latestManual.get(h.symbol);
         d.customAssets[h.symbol] = { symbol: baseSym(h.symbol), name: h.name || h.symbol, type: h.asset_type };
-        if (h.provider_symbol) Object.assign(d.customAssets[h.symbol], { fh: h.provider_symbol, source: 'finnhub' });
+        if (h.provider_symbol && h.provider_symbol.startsWith('yh:')) { const [yh, mult, type] = h.provider_symbol.slice(3).split('|'); Object.assign(d.customAssets[h.symbol], { yh, mult: +mult || 1, type: type || h.asset_type, source: 'yahoo' }); }   // IDX stock or commodity priced from Yahoo
+        else if (h.provider_symbol) Object.assign(d.customAssets[h.symbol], { fh: h.provider_symbol, source: 'finnhub' });
         else if (m) Object.assign(d.customAssets[h.symbol], { price: +m.price_usd, price_date: m.price_date });
       }
       return out;

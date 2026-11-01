@@ -140,6 +140,97 @@ def price(symbol, kind, fh):
     return float(q["c"])
 
 
+# ---------------------------------------------------------------------------------------------
+# Indonesian stocks (IDX) and commodities, priced through Yahoo Finance's public (unofficial) endpoints.
+# No key is needed, but it is not an official API: it can change, rate-limit, or refuse some server IPs.
+# Everything here is best effort: a failure only means "price unavailable" in the app (a typed-in price still works).
+YH = "https://query1.finance.yahoo.com"
+OZ_G = 31.1034768   # grams per troy ounce
+
+# [key, name, Yahoo symbol, multiplier applied to the Yahoo price]
+COMMODITIES = [
+    ("XAU", "Gold (per troy oz)", "GC=F", 1.0), ("XAUG", "Gold (per gram)", "GC=F", 1 / OZ_G),
+    ("XAG", "Silver (per troy oz)", "SI=F", 1.0), ("XAGG", "Silver (per gram)", "SI=F", 1 / OZ_G),
+    ("XPT", "Platinum (per troy oz)", "PL=F", 1.0), ("WTI", "Crude oil WTI (per barrel)", "CL=F", 1.0),
+    ("BRENT", "Crude oil Brent (per barrel)", "BZ=F", 1.0), ("NG", "Natural gas (per MMBtu)", "NG=F", 1.0),
+    ("HG", "Copper (per lb)", "HG=F", 1.0),
+]
+# well-known IDX tickers, so search works even when Yahoo's search is unreachable
+IDX_COMMON = [
+    ("BBCA", "Bank Central Asia"), ("BBRI", "Bank Rakyat Indonesia"), ("BMRI", "Bank Mandiri"), ("BBNI", "Bank Negara Indonesia"),
+    ("BRIS", "Bank Syariah Indonesia"), ("TLKM", "Telkom Indonesia"), ("ASII", "Astra International"), ("UNVR", "Unilever Indonesia"),
+    ("GOTO", "GoTo Gojek Tokopedia"), ("BREN", "Barito Renewables Energy"), ("AMMN", "Amman Mineral Internasional"), ("ICBP", "Indofood CBP Sukses Makmur"),
+    ("INDF", "Indofood Sukses Makmur"), ("ADRO", "Alamtri Resources Indonesia"), ("ANTM", "Aneka Tambang"), ("MDKA", "Merdeka Copper Gold"),
+    ("PGAS", "Perusahaan Gas Negara"), ("KLBF", "Kalbe Farma"), ("SMGR", "Semen Indonesia"), ("CPIN", "Charoen Pokphand Indonesia"),
+    ("TPIA", "Chandra Asri Pacific"), ("MAPI", "Mitra Adiperkasa"), ("EXCL", "XL Axiata"), ("ISAT", "Indosat Ooredoo Hutchison"),
+    ("INKP", "Indah Kiat Pulp & Paper"), ("PTBA", "Bukit Asam"), ("ITMG", "Indo Tambangraya Megah"), ("MEDC", "Medco Energi Internasional"),
+    ("ACES", "Aspirasi Hidup Indonesia"), ("ARTO", "Bank Jago"), ("BUKA", "Bukalapak.com"), ("EMTK", "Elang Mahkota Teknologi"),
+]
+
+
+def yahoo_get(path, **params):
+    url = f"{YH}{path}?{urllib.parse.urlencode(params)}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (compatible; stiver)", "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=12) as r:
+        return json.load(r)
+
+
+def asset_idx(code, name):
+    code = code.upper().removesuffix(".JK")
+    return {"key": f"{code}.JK", "symbol": code, "name": name, "type": "stock", "yh": f"{code}.JK", "mult": 1.0}
+
+
+def asset_commodity(row):
+    return {"key": row[0], "symbol": row[0], "name": row[1], "type": "commodity", "yh": row[2], "mult": row[3]}
+
+
+def search_commodities(q, limit):
+    q = q.strip().upper()
+    out = [asset_commodity(r) for r in COMMODITIES if not q or q in r[0] or q in r[1].upper() or q in r[2]]
+    # people search by everyday words too
+    words = {"EMAS": "XAU", "PERAK": "XAG", "MINYAK": "WTI", "OIL": "WTI", "GOLD": "XAU", "SILVER": "XAG"}
+    for w, key in words.items():
+        if q and (q in w or w in q):
+            for r in COMMODITIES:
+                if r[0].startswith(key) and all(o["key"] != r[0] for o in out):
+                    out.append(asset_commodity(r))
+    return out[:limit]
+
+
+def search_idx(q, limit, live=True):
+    q = q.strip().upper()
+    if not q:
+        return []
+    out = [asset_idx(c, n) for c, n in IDX_COMMON if c.startswith(q) or q in n.upper()]
+    if live and len(out) < limit:
+        try:
+            j = yahoo_get("/v1/finance/search", q=q, quotesCount=15, newsCount=0, lang="en-US")
+            for it in j.get("quotes", []):
+                sym = it.get("symbol", "")
+                if sym.endswith(".JK") and it.get("quoteType") in ("EQUITY", "ETF") and all(o["yh"] != sym for o in out):
+                    out.append(asset_idx(sym, it.get("longname") or it.get("shortname") or sym))
+        except Exception:
+            pass   # Yahoo search unreachable: the built-in list above still works
+    return out[:limit]
+
+
+def yahoo_price(yh, mult):
+    j = yahoo_get(f"/v8/finance/chart/{urllib.parse.quote(yh)}", range="5d", interval="1d")
+    res = (j.get("chart", {}).get("result") or [None])[0]
+    if not res:
+        raise ValueError("no price returned for this symbol")
+    meta = res["meta"]
+    p = meta.get("regularMarketPrice")
+    if not p:
+        raise ValueError("no price returned for this symbol")
+    cur = meta.get("currency") or "USD"
+    native = float(p) * mult
+    if cur == "GBp":          # pence
+        native, cur = native / 100, "GBP"
+    usd = native if cur == "USD" else native / fx_rates([cur])["rates"][cur]
+    return {"price": usd, "native": native, "currency": cur}
+
+
 # Fiat exchange rates (units per 1 USD). Finnhub's free plan has no forex data (403, and no IDR pair),
 # so use free public sources, tried in order, cached for 6 hours.
 FX_SOURCES = [
@@ -190,16 +281,25 @@ class Handler(SimpleHTTPRequestHandler):
         qs = {k: v[0] for k, v in urllib.parse.parse_qs(u.query).items()}
         try:
             if u.path == "/api/status":
-                return self.send_json({"finnhub": bool(KEY)})
+                return self.send_json({"finnhub": bool(KEY), "yahoo": True})
             if u.path == "/api/fx":
                 # fiat rates need no Finnhub key (its free tier has no forex/IDR data)
                 want = [c for c in qs.get("currencies", "").upper().split(",") if c]
                 return self.send_json(fx_rates(want))
+            if u.path == "/api/price" and qs.get("yh"):   # IDX stocks and commodities (no key needed)
+                return self.send_json(yahoo_price(qs["yh"], float(qs.get("mult") or 1)))
+            if u.path == "/api/assets" and qs.get("type") in ("idx", "commodity"):
+                limit = max(1, min(int(qs.get("limit", 20)), 50))
+                q = qs.get("q", "")
+                return self.send_json({"results": search_idx(q, limit) if qs["type"] == "idx" else search_commodities(q, limit)})
             if not KEY:
                 return self.send_json({"error": "FINNHUB_API_KEY is not set in .env.local"}, 503)
             if u.path == "/api/assets":
                 limit = max(1, min(int(qs.get("limit", 20)), 50))
-                return self.send_json({"results": search(qs.get("q", ""), qs.get("type", ""), limit)})
+                found = search(qs.get("q", ""), qs.get("type", ""), limit)
+                if not qs.get("type") and qs.get("q"):   # "All" also offers matching commodities and well-known IDX stocks
+                    found = (found + search_commodities(qs["q"], 5) + search_idx(qs["q"], 5, live=False))[:limit]
+                return self.send_json({"results": found})
             if u.path == "/api/price":
                 return self.send_json({"price": price(qs.get("symbol", ""), qs.get("type", ""), qs.get("fh"))})
             return self.send_json({"error": "not found"}, 404)

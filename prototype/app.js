@@ -111,7 +111,7 @@ const CATALOG = [
   ['AAPL', 'Apple', 'stock', 225, 0.05], ['MSFT', 'Microsoft', 'stock', 420, 0.045], ['NVDA', 'NVIDIA', 'stock', 130, 0.1], ['TSLA', 'Tesla', 'stock', 250, 0.12],
   ['VOO', 'Vanguard S&P 500 ETF', 'etf', 520, 0.03], ['VTI', 'Vanguard Total Market ETF', 'etf', 280, 0.03], ['QQQ', 'Invesco QQQ ETF', 'etf', 480, 0.04], ['SPY', 'SPDR S&P 500 ETF', 'etf', 570, 0.03],
 ];
-const TYPE_COLOR = { crypto: '#F5B800', stablecoin: '#14B8A6', stock: '#4A44C6', etf: '#8B8FF0', manual: '#94A3B8' };
+const TYPE_COLOR = { crypto: '#F5B800', stablecoin: '#14B8A6', stock: '#4A44C6', etf: '#8B8FF0', commodity: '#D97706', manual: '#94A3B8' };
 const SERIES = {};
 function priceSeries(sym) {
   if (SERIES[sym]) return SERIES[sym];
@@ -130,31 +130,37 @@ const assetInfo = (key) => {
   const c = CATALOG.find((x) => x[0] === key);
   if (c) return { key, symbol: key, name: c[1], type: c[2], usd: (k) => (k === thisMonth && live > 0 ? live : priceSeries(key)[Math.max(0, lastMonths(6).indexOf(k))]) };
   const m = D().customAssets[key] || { name: key, type: 'manual', price: 0 };
-  return { key, symbol: m.symbol || key, name: m.name, type: m.type, fh: m.fh, usd: () => (live > 0 ? live : m.price || 0) };
+  return { key, symbol: m.symbol || key, name: m.name, type: m.type, fh: m.fh, yh: m.yh, mult: m.mult, usd: () => (live > 0 ? live : m.price || 0) };
 };
 
 /* Finnhub proxy (tools/dev_server.py). Without it the picker falls back to the built-in catalog. */
-const api = { finnhub: false, fx: null };
+const api = { finnhub: false, yahoo: false, fx: null };   // yahoo = IDX stocks and commodities (no key needed)
 async function getJSON(url) {
   const r = await fetch(url); const j = await r.json();
   if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
   return j;
 }
 async function searchAssets(q, type) {
+  if (api.yahoo && (type === 'idx' || type === 'commodity')) return (await getJSON(`/api/assets?q=${encodeURIComponent(q)}&type=${type}&limit=25`)).results;
   if (api.finnhub) return (await getJSON(`/api/assets?q=${encodeURIComponent(q)}&type=${type}&limit=25`)).results;
   const ql = q.toUpperCase();
-  return CATALOG.filter((c) => (!type || (type === 'crypto' ? ['crypto', 'stablecoin'] : ['stock', 'etf']).includes(c[2])) && (c[0].includes(ql) || c[1].toUpperCase().includes(ql)))
+  const base = CATALOG.filter((c) => (!type || (type === 'crypto' ? ['crypto', 'stablecoin'] : ['stock', 'etf']).includes(c[2])) && (c[0].includes(ql) || c[1].toUpperCase().includes(ql)))
     .map((c) => ({ key: c[0], symbol: c[0], name: c[1], type: c[2] }));
+  if (api.yahoo && !type) { try { return [...base, ...(await getJSON(`/api/assets?q=${encodeURIComponent(q)}&type=commodity&limit=5`)).results]; } catch { /* just the built-in list */ } }
+  return base;
 }
 const priceClass = (type) => (type === 'crypto' || type === 'stablecoin' ? 'crypto' : 'stock');
-async function quote(a) {
-  return (await getJSON(`/api/price?symbol=${encodeURIComponent(a.symbol)}&type=${priceClass(a.type)}&fh=${encodeURIComponent(a.fh || '')}`)).price;
+async function quoteFull(a) {   // { price (USD), native, currency }
+  if (a.yh) return getJSON(`/api/price?symbol=${encodeURIComponent(a.symbol)}&yh=${encodeURIComponent(a.yh)}&mult=${a.mult || 1}`);
+  return getJSON(`/api/price?symbol=${encodeURIComponent(a.symbol)}&type=${priceClass(a.type)}&fh=${encodeURIComponent(a.fh || '')}`);
 }
+const quote = async (a) => (await quoteFull(a)).price;
 async function refreshPrices(silent) {
-  if (!api.finnhub) { if (!silent) toast('Live prices need the dev server and a Finnhub key'); return; }
+  if (!api.finnhub && !api.yahoo) { if (!silent) toast('Live prices need the dev server and a Finnhub key'); return; }
   const keys = [...new Set(D().holdings.map((h) => h.symbol))]; let ok = 0;
   for (const key of keys) {
     const info = assetInfo(key);
+    if (info.yh ? !api.yahoo : !api.finnhub) continue;   // that price source is not available
     try { D().livePrices[key] = await quote(info); ok++; } catch { /* keep the previous price */ }
   }
   save(); if (route() === 'portfolio') render();
@@ -342,7 +348,7 @@ const loanUSD = (k) => activeLoans().reduce((a, l) => (!liveIn(l.since, k) ? a :
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
 const activeLent = () => D().lent.filter((l) => !l.archived);
 const lentUSD = (k) => activeLent().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
-const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', manual: 'Other' }[t] || t);
+const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', commodity: 'Commodity', manual: 'Other' }[t] || t);
 const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Car loan', card: 'Credit card', personal: 'Personal loan', other: 'Other' };
 
 /* mock of the AI tagging described in the plan: history match first, null when unsure */
@@ -571,7 +577,7 @@ function viewPortfolio() {
         <div class="tools"><button class="btn secondary" data-act="refresh-prices">${__('Refresh prices')}</button><button class="btn" data-act="add-account">${__('+ Account')}</button></div></div>
       ${alloc.length ? `<div class="alloc">${alloc.map(([t, v]) => `<i style="flex:${v};background:${TYPE_COLOR[t]}" title="${esc(t)}"></i>`).join('')}</div>
       <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? __('Add assets to an account to see your allocation.') : __('No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.')}</div>`}
-      <p class="muted" style="font-size:12px;margin-top:12px">${api.finnhub ? __('Current prices are live from Finnhub.') : __('Prices are mock data (no Finnhub connection).')} ${__('Growth counts money you add.')}</p></section>
+      <p class="muted" style="font-size:12px;margin-top:12px">${api.finnhub || api.yahoo ? __('Current prices are live (Finnhub for US stocks and crypto, Yahoo Finance for Indonesian stocks and commodities).') : __('Prices are mock data (no Finnhub connection).')} ${__('Growth counts money you add.')}</p></section>
       ${growth}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
@@ -1133,7 +1139,7 @@ function holdingDialog(h, accId, opts = {}) {
     <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(typeLabel(info.type))}</span></p>` : `
     <div class="field" id="picker">${__('Asset')}
-      <div class="pills" role="group" aria-label="${__('Asset type')}"><button type="button" class="pill on" data-act="pick-type" data-type="">${__('All')}</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">${__('Crypto')}</button><button type="button" class="pill" data-act="pick-type" data-type="stock">${__('US stocks &amp; ETFs')}</button></div>
+      <div class="pills" role="group" aria-label="${__('Asset type')}"><button type="button" class="pill on" data-act="pick-type" data-type="">${__('All')}</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">${__('Crypto')}</button><button type="button" class="pill" data-act="pick-type" data-type="stock">${__('US stocks &amp; ETFs')}</button><button type="button" class="pill" data-act="pick-type" data-type="idx">${__('Indonesia (IDX)')}</button><button type="button" class="pill" data-act="pick-type" data-type="commodity">${__('Gold, oil &amp; more')}</button></div>
       <input name="assetq" autocomplete="off" placeholder="${__('Search name or ticker, e.g. BTC, AAPL, VOO')}">
       <div class="results" id="asset-results" role="listbox" hidden></div>
       <div class="picked" id="picked" hidden></div>
@@ -1506,9 +1512,13 @@ async function pickAsset(a, form) {
   $('#asset-results').hidden = true; form.assetq.value = '';
   const chip = $('#picked'), fb = $('.price-fallback', form); chip.hidden = false; fb.hidden = true;
   chip.innerHTML = `<b>${esc(a.symbol)}</b> ${esc(a.name)} <span class="badge">${esc(a.type)}</span> <span class="muted" id="picked-price"></span>`;
-  if (!a.fh) return; // built-in asset: priced from the mock catalog
+  if (!a.fh && !a.yh) return; // built-in asset: priced from the mock catalog
   $('#picked-price').textContent = __('getting price…');
-  try { const p = await quote(a); form.price.value = p; $('#picked-price').textContent = `$${p.toLocaleString(locale(), { maximumFractionDigits: 6 })} live`; }
+  try {
+    const q = await quoteFull(a), p = q.price; form.price.value = p;
+    const nat = q.currency && q.currency !== 'USD' ? ` (${money(toMinor(q.native, q.currency), q.currency)})` : '';
+    $('#picked-price').textContent = `$${p.toLocaleString(locale(), { maximumFractionDigits: 6 })}${nat} live`;
+  }
   catch { $('#picked-price').textContent = __('price unavailable'); fb.hidden = false; }
 }
 
@@ -1696,11 +1706,11 @@ document.addEventListener('submit', (e) => {
       // picked from the Finnhub list (or the built-in fallback)
       const meta = v.assetmeta ? JSON.parse(v.assetmeta) : null;
       if (!sym || !meta) { toast('Search and pick an asset first'); return; }
-      if (meta.fh) {
+      if (meta.fh || meta.yh) {
         const price = parseFloat(v.price);
         if (!(price > 0)) { toast('No live price yet. Enter one or wait a moment.'); return; }
         D().livePrices[sym] = price;
-        if (!CATALOG.some((c) => c[0] === sym)) D().customAssets[sym] = { symbol: meta.symbol, name: meta.name, type: meta.type, fh: meta.fh, source: 'finnhub' };
+        if (!CATALOG.some((c) => c[0] === sym)) D().customAssets[sym] = { symbol: meta.symbol, name: meta.name, type: meta.type, fh: meta.fh, yh: meta.yh, mult: meta.mult, source: meta.yh ? 'yahoo' : 'finnhub' };
       }
     }
     // paid from a wallet or a stablecoin: that side loses the money. No source = an asset you already owned.
@@ -1709,9 +1719,10 @@ document.addEventListener('submit', (e) => {
     if (src) { const short = payShortfall(src, 'buy', paid); if (short) { toast(short); return; } }
     let h = D().holdings.find((x) => x.account_id === v.account && x.symbol === sym);
     if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); }
-    if (src) recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
-    if (src && v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
-    else h.quantity += qty;
+    if (src) {
+      recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
+      if (v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
+    } else h.quantity += qty;
     if (f.dataset.invest) state.ui.pfTab = 'investment';
     save(); close(); render(); toast(`${assetInfo(sym).symbol} ${src ? 'bought' : 'added'}${src ? ` · ${qtyFmt(paid)} ${sourceUnit(src)} paid` : ''}`);
   }
@@ -1782,7 +1793,7 @@ async function loadUserData() {
     state.real = null;   // leave demo mode while reloading; it is switched back on below if you had it on
     state.data = await Cloud.load();
     state.data.livePrices = loadPrices();
-    if (api.finnhub) refreshPrices(true);
+    if (api.finnhub || api.yahoo) refreshPrices(true);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
     if (demoWanted()) await setDemo(true);
@@ -1842,7 +1853,7 @@ getJSON(`/api/fx?currencies=${Object.keys(RATES).join(',')}`).then((fx) => {
   if (D()) render();
 }).catch(() => { /* keep the built-in demo rates */ });
 getJSON('/api/status').then((s) => {
-  api.finnhub = !!s.finnhub;
-  if (api.finnhub && D()) refreshPrices(true); // pull current prices once per page load
+  api.finnhub = !!s.finnhub; api.yahoo = !!s.yahoo;
+  if ((api.finnhub || api.yahoo) && D()) refreshPrices(true); // pull current prices once per page load
 }).catch(() => { /* static hosting: no proxy, built-in catalog only */ });
 if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});

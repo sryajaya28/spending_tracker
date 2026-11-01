@@ -60,6 +60,12 @@ infrastructure names, see section 8).
   period everywhere: period key `YYYY-MM` is the one that STARTS in that month (start day 25: `2026-10` = 25 Oct to 24 Nov). Month totals, Money
   Flow, budgets, spending donut, occasions, balances/holdings history and the month pickers all follow it (`periodStart/End`, `inPeriod`,
   `periodKeyOf`, `currentPeriod`, `lastMonths`, period-aware `monthLabel`). Budgets keep `start_month` as the first of the period's month.
+- **Indonesian stocks (IDX) and commodities:** the asset picker has "Indonesia (IDX)" and "Gold, oil & more" pills. Prices come from Yahoo
+  Finance's public but **unofficial** endpoints through `tools/dev_server.py` (`/api/assets?type=idx|commodity`, `/api/price?yh=&mult=`; no key;
+  `yahoo_price` converts to USD with the existing fx rates, IDX quotes are in IDR). IDX holdings use the key `BBCA.JK` (shown as BBCA), type stock;
+  commodities are Gold/Silver per troy oz or per gram (`mult` = 1/31.1035), Platinum, WTI, Brent, natural gas, copper. Stored in
+  `holdings.provider_symbol` as `yh:<yahoo symbol>|<multiplier>|<type>` (commodity uses asset_type `manual`; the app restores type `commodity`), so no
+  migration. It can break or be blocked from Vercel's IPs; a typed-in price still works. The sandbox cannot reach Yahoo, so it was only tested with stubs.
 - **Recurring:** a **Repeat** choice (does not repeat / every week / every month) on new expenses, income, transfers and
   investment buys. A rule is saved (`recurring_rules`); due entries are created **when the app opens or the tab returns to the front**
   (no server job), dated on their due day, with ids derived from rule+date so two devices never double-add. Settings > Recurring
@@ -273,6 +279,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: Added IDX stocks and commodities (Yahoo Finance, unofficial) as investment assets; e2e `idx`, `tests/test_yahoo.py` (python, stubbed).
+  BUG FIX: since the recurring release (2026-10-31) a buy with a payment source also added its quantity a second time to the holding
+  (an `else` bound to the wrong `if` in the holding form). Fixed; production DB checked: no holding was affected.
 
 - 2026-10-31: See more / Show less (savings accounts, Portfolio month history) is phone-only: every item is rendered, the extras carry `.more-item`
   and are hidden by CSS under 900px while the list is `.collapsed`; on desktop all items show and the button is hidden.

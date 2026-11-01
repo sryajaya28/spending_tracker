@@ -17,6 +17,6 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const r = await p.evaluate(() => ({ exp: expOf('IDR'), m: money(54328869, 'IDR'), minor: toMinor(46600000, 'IDR'), major: toMajor(46600000, 'IDR'), usd: money(270196, 'USD') }));
   console.log(JSON.stringify(r));
-  assert.equal(r.exp, 0); assert.equal(r.m.replace(/\u00a0/g, ' '), 'IDR 54,328,869'); assert.equal(r.minor, 46600000); assert.equal(r.major, 46600000); assert.equal(r.usd, '$2,701.96');
+  assert.equal(r.exp, 0); assert.equal(r.m.replace(/\u00a0/g, ' '), 'Rp 54.328.869'); assert.equal(r.minor, 46600000); assert.equal(r.major, 46600000); assert.equal(r.usd, '$2,701.96');
   console.log('ok'); await b.close();
 })().catch((e) => { console.error('FAIL', e); process.exit(1); });

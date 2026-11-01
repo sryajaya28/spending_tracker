@@ -243,7 +243,7 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
   .topbar h1 { font-size: 22px; }
   .profile { padding: 0; border: 0; background: none; height: auto; }   /* phones: just the round avatar, tap for Settings */
   .profile > div:last-child { display: none; }
-  .hero .amount { font-size: 38px; }
+  .hero .amount { font-size: min(38px, calc(100cqw / (var(--len, 10) * .6))); }
   .big { font-size: 28px; }
     .bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 6px 6px calc(2px + env(safe-area-inset-bottom) * .4); z-index: 20; }   /* labels sit close to the bottom; only part of the home-indicator inset is kept */
   .bottom-nav a { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--muted); padding: 6px 0; border-radius: 12px; }
@@ -461,12 +461,11 @@ html { -webkit-text-size-adjust: 100%; }
 .dlg:focus { outline: 0; }
 :root[data-theme="dark"] .nav-add { color: var(--ink); }
 
-/* Portfolio hero: the currency dropdown is a small pill in the top-right corner, so the card is shorter */
-.hero:has(.hero-cur) { padding-bottom: 14px; }
-.hero-cur { position: absolute; top: 12px; right: 14px; margin: 0; }
-.hero-cur select { height: 32px; padding: 0 28px 0 12px; font-size: 13px; }
-.hero-cur { top: 14px; right: 16px; }
-.hero-cur select { min-width: 0; width: auto; height: 28px; padding: 0 24px 0 10px; font-size: 12px; background-position: right 8px center; background-size: 9px; }
+/* hero: the currency dropdown sits right next to the big amount */
+.amount-line { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.amount-line .amount { flex: 0 1 auto; min-width: 0; }
+.hero-cur { position: static; margin: 0; flex: none; display: block; }
+.hero-cur select { min-width: 0; width: auto; height: 28px; padding: 0 22px 0 10px; font-size: 12px; background-position: right 7px center; background-size: 9px; }
 
 /* month-by-month list under the Portfolio chart: month on the left, value and change stacked on the right */
 .mlist { margin-top: 12px; }

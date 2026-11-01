@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     save(); location.hash = '#/overview'; render(); }, m);
   const at = async (f) => { const r = await p.$eval('.donut svg', (e) => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, k: b.width / 260 }; }), a = f * 2 * Math.PI; return [r.x + (130 + 100 * Math.sin(a)) * r.k, r.y + (130 - 100 * Math.cos(a)) * r.k]; };
   // the hero's % is the period's change of the balance, with the same sign as the amount beside it (-500,000 of 10,500,000)
-  const hero = (await p.innerText('.hero .delta')).replace(/\u00a0/g, ' '); assert(/^−\d+\.\d%/.test(hero) && hero.includes('−IDR 500,000'), hero);
+  const hero = (await p.innerText('.hero .delta')).replace(/\u00a0/g, ' '); assert(/^−\d+\.\d%/.test(hero) && hero.includes('−Rp 500.000'), hero);
   const segs = await p.$$('.dseg'); assert.equal(segs.length, 3);
   const def = await p.innerText('.donut .center'); assert(def.includes('Spent in'));
   await p.mouse.move(...(await at(0.3))); const t = await p.innerText('.donut .center');

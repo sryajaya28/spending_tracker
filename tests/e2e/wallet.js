@@ -12,14 +12,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('#dlg button[type=submit]'); await settle();
   let l = await log(); const w = l.find((o) => o.table === 'wallets').rows[0];
   assert.equal(w.name, 'Main cash'); assert.equal(w.type, 'bank'); assert.equal(w.opening_balance_minor, 5000000);
-  assert((await p.innerText('.wallet')).includes('5,000,000'));
+  assert((await p.innerText('.wallet')).includes('5.000.000'));
   // with a transaction in the wallet: set the balance to 4,000,000 -> opening must become 3,900,000
   await p.evaluate(() => { D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'income', amount_minor: 100000, currency: D().wallets[0].currency, occurred_at: isoDate(new Date()), note: '', category_source: 'user', ai_confidence: null }); save(); render(); });
-  assert((await p.innerText('.wallet')).includes('5,100,000')); await settle(); await log();
+  assert((await p.innerText('.wallet')).includes('5.100.000')); await settle(); await log();
   await p.click('.wallet .dots'); await p.click('[data-act=edit-wallet]'); assert.equal(await p.inputValue('input[name=balance]'), '5100000');
   await p.fill('input[name=balance]', '4000000'); await p.click('#dlg button[type=submit]'); await settle();
   l = await log(); assert.equal(l.find((o) => o.table === 'wallets').rows[0].opening_balance_minor, 3900000);
-  assert((await p.innerText('.wallet')).includes('4,000,000'));
+  assert((await p.innerText('.wallet')).includes('4.000.000'));
   assert(!l.some((o) => o.table === 'transactions'), 'transactions untouched');
   // history: the wallet starts this month, so earlier months must not include it
   const hist = await p.evaluate(() => lastMonths(6).map((k) => balanceAtEnd(k)));

@@ -43,9 +43,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); await p.waitForSelector('.holding-row');
   assert(/[+−]\d/.test(await p.innerText('.holding-row .amt')), 'row shows profit or loss %');
   await p.click('.holding-row'); await p.waitForSelector('#dlg .hold-sum'); const sum = await p.innerText('#dlg .hold-sum');
-  assert(sum.includes('Average price') && sum.includes('USD 4') && sum.includes('Profit / loss') && sum.includes('Realized P&L') && sum.includes('Starting price'), sum);
+  assert(sum.includes('Average price') && sum.includes('$4') && sum.includes('Profit / loss') && sum.includes('Realized P&L') && sum.includes('Starting price'), sum);
   await p.click('#dlg [data-act=view-history]'); await p.waitForSelector('.back-link'); const hist = await p.innerText('.main');
-  assert(hist.includes('@ USD 600') && hist.includes('@ USD 500') && hist.includes('P&L'), hist.slice(0, 600));
+  assert(hist.includes('@ $600') && hist.includes('@ $500') && hist.includes('P&L'), hist.slice(0, 600));
   // 5. an asset added without a price has an unknown cost: P&L is "—" until a price is set
   await p.evaluate((id) => { const h = { id: uid(), account_id: id, symbol: 'AAPL', quantity: 4, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); save(); render(); holdingDialog(h); }, acc);
   const s2 = await p.innerText('#dlg .hold-sum'); assert(s2.includes('Set average price') && s2.includes('—'), s2);

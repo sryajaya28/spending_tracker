@@ -16,13 +16,16 @@ const PRICES_KEY = 'stiver.prices.v1';   // last live prices, only to avoid a fl
    amount read 100 times smaller on a phone. Amounts are stored in minor units using these exponents. */
 const ZERO_DECIMAL = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'UGX', 'XAF', 'XOF', 'PYG', 'RWF']);
 const expOf = (cur) => (ZERO_DECIMAL.has(cur) ? 0 : 2);
-const curFmt = (cur) => new Intl.NumberFormat(locale(), { style: 'currency', currency: cur, minimumFractionDigits: expOf(cur), maximumFractionDigits: expOf(cur) });
+/* each currency is written the way its own country writes it, whatever the app language is: Rp 1.234.567 and 1.234,50 for rupiah, $1,234.50 for dollars */
+const NATIVE_LOCALE = { IDR: 'id-ID', USD: 'en-US', EUR: 'de-DE', GBP: 'en-GB', SGD: 'en-US', AUD: 'en-US', JPY: 'en-US' };
+const nativeLocale = (cur) => NATIVE_LOCALE[cur] || locale();
+const curFmt = (cur) => new Intl.NumberFormat(nativeLocale(cur), { style: 'currency', currency: cur, minimumFractionDigits: expOf(cur), maximumFractionDigits: expOf(cur) });
 const toMinor = (major, cur) => Math.round(major * 10 ** expOf(cur));
 const toMajor = (minor, cur) => minor / 10 ** expOf(cur);
 const money = (minor, cur) => curFmt(cur).format(toMajor(minor, cur));
 const convert = (minor, from, to) => (from === to ? minor : Math.round((toMajor(minor, from) / RATES[from]) * RATES[to] * 10 ** expOf(to)));
 const usdToMinor = (usd, cur) => toMinor(usd * RATES[cur], cur);
-const compact = (minor, cur) => new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(toMajor(minor, cur));
+const compact = (minor, cur) => new Intl.NumberFormat(nativeLocale(cur), { notation: 'compact', maximumFractionDigits: 1 }).format(toMajor(minor, cur));
 function moneyHtml(minor, cur) {
   return curFmt(cur).formatToParts(toMajor(minor, cur))
     .map((p) => (p.type === 'fraction' || p.type === 'decimal' ? `<span class="dim">${p.value}</span>` : esc(p.value))).join('');
@@ -406,7 +409,7 @@ const usdOfCcy = (x, ccy) => x / RATES[ccy];
 const signed = (n, text) => (n > 0 ? '+' : n < 0 ? '−' : '') + text;
 const pctText = (p) => `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`;
 /* a per-unit price in its own currency (cents and small decimals kept) */
-const priceFmt = (x, ccy) => `${ccy} ${x.toLocaleString(locale(), { maximumFractionDigits: Math.abs(x) >= 1000 || expOf(ccy) === 0 ? 0 : Math.abs(x) >= 1 ? 2 : 6 })}`;
+const priceFmt = (x, ccy) => new Intl.NumberFormat(nativeLocale(ccy), { style: 'currency', currency: ccy, minimumFractionDigits: 0, maximumFractionDigits: Math.abs(x) >= 1000 || expOf(ccy) === 0 ? 0 : Math.abs(x) >= 1 ? 2 : 6 }).format(x);
 const holdingUSD = (h, k) => (!liveIn(h.since, k) ? 0 : Math.max(0, qtyAt(h, k)) * assetInfo(h.symbol).usd(k));
 const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))
@@ -647,6 +650,8 @@ function viewAsset(h) {
     <div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${info.cash ? __('Deposit') : __('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${info.cash ? __('Withdraw') : __('Sell')}</button></div></section>
   <section class="card"><div class="card-head"><h2>${__('History')}</h2></div>${tradeList(h)}</section>`;
 }
+/* the reporting-currency dropdown, right next to the big amount */
+const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`;
 function viewPortfolio() {
   const hid = routeArg(), ah = hid && D().holdings.find((x) => x.id === hid); if (ah) return viewAsset(ah);
   const months = lastMonths(6), vc = pf(), base = cur(), tab = state.ui.pfTab || 'savings';
@@ -711,9 +716,8 @@ function viewPortfolio() {
   return `${topbar('Portfolio', __('Net worth across savings, investments and loans · shown in {cur}', { cur: vc }))}
   <div class="grid">
     <section class="card hero"><div class="label">${__('Net worth')}</div>
-      <div class="amount num" style="--len:${m(now).length}">${moneyHtml(usdToMinor(now, vc), vc)}</div>
-      <div class="delta"><b>${pctFmt(mom)}</b><span>${__('vs last month')}</span></div>
-      <label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
+      <div class="amount-line"><div class="amount num" style="--len:${m(now).length + 6}">${moneyHtml(usdToMinor(now, vc), vc)}</div>${heroCurrency(base)}</div>
+      <div class="delta"><b>${pctFmt(mom)}</b><span>${__('vs last month')}</span></div></section>
     <section class="card"><div class="card-head"><h2>${__('Breakdown')}</h2></div>
       <div class="alloc-legend">
         <div><span class="key"><i style="background:#4A44C6"></i>${__('Savings')}</span><b class="num">${m(S[5])}</b><span class="muted">${share(S[5])}%</span></div>
@@ -788,7 +792,7 @@ function viewOverview() {
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
     <section class="card hero"><div class="label">${__('Total Balance')}${infoTip('ov-total', __('Savings + investments'))}</div>
-      <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
+      <div class="amount-line"><div class="amount num" style="--len:${money(totalBalance(), cur()).length + 6}">${moneyHtml(totalBalance(), cur())}</div>${heroCurrency(cur())}</div>
       <div class="delta"><b>${pctFmt(balChange)}</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
@@ -1502,7 +1506,7 @@ function tradeHint(form) {
   const info = assetInfo(h.symbol), month = currentPeriod();
   const usd = src.kind === 'wallet' ? a / RATES[src.wallet.currency] : a * assetInfo(src.kind === 'holding' ? src.holding.symbol : src.symbol).usd(month);
   const per = usd / q, market = info.usd(month), diff = market > 0 ? ((per - market) / market) * 100 : null;
-  hint.textContent = __('About ${price} per {symbol}', { price: per.toLocaleString(locale(), { maximumFractionDigits: 4 }), symbol: info.symbol }) + (market > 0 ? ' ' + __('(market ${price}, {diff}).', { price: market.toLocaleString(locale(), { maximumFractionDigits: 4 }), diff: `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%` }) + ' ' : '. ') + base + conv;
+  hint.textContent = __('About ${price} per {symbol}', { price: per.toLocaleString('en-US', { maximumFractionDigits: 4 }), symbol: info.symbol }) + (market > 0 ? ' ' + __('(market ${price}, {diff}).', { price: market.toLocaleString('en-US', { maximumFractionDigits: 4 }), diff: `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%` }) + ' ' : '. ') + base + conv;
 }
 
 /* ---------- recurring: a rule repeats an expense, income, transfer or investment buy every week or month ----------
@@ -1756,7 +1760,7 @@ async function pickAsset(a, form, quiet) {
   try {
     const q = await quoteFull(a), p = q.price; form.price.value = p;
     const nat = q.currency && q.currency !== 'USD' ? ` (${money(toMinor(q.native, q.currency), q.currency)})` : '';
-    $('#picked-price').textContent = `$${p.toLocaleString(locale(), { maximumFractionDigits: 6 })}${nat} live`;
+    $('#picked-price').textContent = `$${p.toLocaleString('en-US', { maximumFractionDigits: 6 })}${nat} live`;
   }
   catch { $('#picked-price').textContent = __('price unavailable'); fb.hidden = false; }
 }

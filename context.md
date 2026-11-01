@@ -79,6 +79,9 @@ infrastructure names, see section 8).
   Investment (accounts, holdings, buy/sell with a wallet or USDT/USDC counterpart, live prices via Finnhub),
   Lent, Loan (payments reduce balance).
 - **Net worth** with month-over-month change; preferred-currency dropdown (IDR, USD, EUR, GBP, SGD, AUD, JPY).
+- **Dropdowns:** every `<select>` opens an app-styled popover list (`prototype/dropdown.js`, `.cs-pop`) instead of the OS picker. The native select stays
+  as the visible field and value holder (so forms, `change` handlers and tests are unchanged) but gets `pointer-events: none`; the script finds the select under the
+  tap, builds the list (optgroups as headings), writes the value and dispatches `input` + `change`. Add `data-native` to a select to keep the OS picker.
 - **Language:** English and Bahasa Indonesia (about 510 strings). **Appearance:** match device / light / dark.
   Both saved to the profile and remembered per device.
 - **Sample data** is a demo mode (switch in Settings): a seeded demo account lives only in memory, saves are disabled,
@@ -121,7 +124,7 @@ Supabase (Auth + PostgREST + Postgres, RLS on every table)        Resend (SMTP f
 ## 5. Repo map
 
 ```
-prototype/          the app: index.html, app.js (UI, ~1.7k lines), cloud.js (auth + sync), config.js (public config),
+prototype/          the app: index.html, app.js (UI, ~1.7k lines), dropdown.js (custom select lists), cloud.js (auth + sync), config.js (public config),
                     i18n.js, i18n-id.js, styles.css, sw.js, manifest, icon.svg, privacy.html, terms.html, legal.js,
                     brand/ (logo svg/png 120+512), media/ (demo video mp4+webm, poster), vendor/supabase.js (v2.45.4)
 api/index.py        Vercel function for /api/* (Finnhub proxy, FX)
@@ -283,6 +286,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: App-styled dropdown lists for all selects (`dropdown.js`, CSS `.cs-*`, service worker cache `stiver-shell-v5`); e2e `dropdown`; regression UI-11.
 
 - 2026-11-01: Removed the "N accounts" label from the Overview hero card.
 

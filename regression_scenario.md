@@ -49,6 +49,7 @@ Automated: `run`, `sample`, `confirm`, `csp`, `landshot`.
 | UI-07 | Desktop | Left sidebar with Overview, Transactions, Budgets, Portfolio, Settings; top-right name pill opens Settings. No bottom bar. |
 | UI-08 | Open any add/edit dialog | The phone keyboard does **not** open until a field is tapped. |
 | UI-09 | Pages have no helper subtitles under titles | Titles stand alone; spacing is compact. |
+| UI-11 | Open any dropdown (account, category, month, language, currency, filters, asset type, repeat...) on phone and desktop | The list opens as an **app-styled popover** (rounded, themed, current choice ticked, group headings for optgroups), not the OS picker. It stays on screen (flips upward near the bottom), works inside dialogs, in light and dark. Tap an option: the field updates and the app reacts (e.g. the amount unit follows the account). Tapping outside or Esc closes it (Esc does not close the dialog); Arrow keys, Enter, Home/End and typing jump work; tapping the field again closes it. |
 | UI-10 | A very long name (account, category, note) | Wraps or truncates without breaking the layout. |
 
 Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
@@ -285,6 +286,7 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 | `period` | custom budget period |
 | `idx` | IDX and commodity assets (stubbed prices) |
 | `noscroll` | no sideways overflow at 360 and 390 px, zoom lock |
+| `dropdown` | app-styled dropdown lists: open, choose, Esc, outside tap, keyboard, groups, inside dialogs |
 | `ios`, `confirm`, `csp`, `landshot`, `langsave`, `darkshots`, `idcrawl` | phone rendering, email confirmation flow, CSP, landing, language and dark mode |
 | `tests/test_yahoo.py` | Yahoo price/search parsing and unit conversion (stubbed) |
 
@@ -299,4 +301,5 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: IV-08 now covers the price-refresh disclaimer on the Investment tab.
 - 2026-11-01: IV-08 rewritten for the 6-hour price cache and the single disclaimer (Refresh prices button removed).
 - 2026-11-01: IV-08 now describes the disclaimer as an (i) tooltip next to the Investments title.
+- 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

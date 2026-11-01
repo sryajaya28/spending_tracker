@@ -49,6 +49,7 @@ Automated: `run`, `sample`, `confirm`, `csp`, `landshot`.
 | UI-06 | Phone bottom bar | Overview, Activity, raised **Add**, Budgets, Portfolio. "Add" label is level with the other labels (same baseline, checked by `noscroll`). No floating + button. Settings is reached from the round profile icon top right. The labels sit close to the bottom edge (no big empty band under them, also on iPhones with a home indicator **(manual)**), and the last item of every page can scroll fully above the bar. |
 | UI-07 | Desktop | Left sidebar with Overview, Transactions, Budgets, Portfolio, Settings; top-right name pill opens Settings. No bottom bar. |
 | UI-08 | Open any add/edit dialog | The phone keyboard does **not** open until a field is tapped. |
+| UI-13 | Move between pages (tab bar, sidebar, opening a day, Back) after scrolling down | The new page always opens **at the top**; the previous page's scroll position is not kept. |
 | UI-09 | Pages have no helper subtitles under titles | Titles stand alone; spacing is compact. On a phone the title and the profile icon sit a little below the status bar (not touching it), in the installed app too **(manual)**. |
 | UI-11 | Open any dropdown (account, category, month, language, currency, filters, asset type, repeat...) on phone and desktop | The list opens as an **app-styled popover** (rounded, themed, current choice ticked, group headings for optgroups), not the OS picker. It stays on screen (flips upward near the bottom), works inside dialogs, in light and dark. Tap an option: the field updates and the app reacts (e.g. the amount unit follows the account). Tapping outside or Esc closes it (Esc does not close the dialog); Arrow keys, Enter, Home/End and typing jump work; tapping the field again closes it. |
 | UI-12 | Loading screens (opening the app, signing in, loading your data; throttle the network to see them **(manual)**) | The Stiver logo floats with a pulsing ring and an orbiting yellow coin, a short bar runs under it, and the line under the name changes every ~2.4 s ("Waking up Stiver…" / "Fetching your finances…", "Counting your coins…", "Lining up your budgets…", "Almost there…"). Works in light and dark and in Bahasa Indonesia; with reduced-motion enabled nothing animates and only the first line shows. |
@@ -76,7 +77,7 @@ Automated: `donut`, `ovocc`, `budgetbar`, `run`.
 | ID | Scenario | Expected |
 |---|---|---|
 | TX-01 | Open Activity | Line 1: the search box on the **left** (placeholder "Search") and the period dropdown on the **right**; **no `+ Add` button on phones** (the bottom bar Add does it), it stays at the end of line 1 on desktop. Line 2: the three filters keep their full labels **All categories / All occasions (only when occasions exist) / All accounts**, sized in proportion so none is cut off at 360-390 px. |
-| TX-02 | Daily list | One row per day, newest first: day number and month, weekday, count, income and spent, net (green/red). Transfers count in the number but not in income or spent. |
+| TX-02 | Daily list | One row per day, newest first: day number and month, the weekday with the **transaction count underneath** (nothing else), and the day's net amount on the right (green/red). Transfers count in the number but not in the net. |
 | TX-03 | Tap a day | Opens `#/transactions/YYYY-MM-DD`: that day's transactions, Back link with clear space between it and the date, a **Search** box under the header (filters that day's rows by note or category; "No transactions match." when none; cleared when you open another day), `+ Add` prefilled with that date. Edit/delete works; Back returns to the list. |
 | TX-04 | Search, category, account filters | List narrows; they combine; "Uncategorized" works; the account filter can pick a USDT/USDC holding. |
 | TX-05 | Add an expense: Account first, then amount | Amount label follows the account's currency (IDR, USD, USDT...). Date defaults to today. Repeat field present. Saved row appears under its day. |
@@ -335,5 +336,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: ST-07c (Indonesian sample data), IV-10 (category popup: scrollable, Add new category last, top layer).
 - 2026-11-01: OV-01: Total Balance = savings + investments, with an (i) tooltip.
 - 2026-11-01: ST-07c: no DBS SG, adds a housing loan, sample period starts on the 25th.
+- 2026-11-01: TX-02 (count only), UI-13 (pages open at the top).
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

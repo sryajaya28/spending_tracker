@@ -287,6 +287,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Activity day rows show only the weekday and the transaction count (no income/spent text); every route change scrolls to the top (`hashchange` handler).
+
 - 2026-11-01: Sample data: removed the monthly allowance for parents (transactions, recurring rule and the Parents category); 5 recurring rules remain.
 
 - 2026-11-01: Sample data: removed the DBS SG (SGD) account, added a Housing loan (Rp 900 mn, 7.2%, mortgage type), and sample mode uses a budget period starting on the 25th

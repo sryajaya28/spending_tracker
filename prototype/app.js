@@ -768,7 +768,7 @@ function txnListHtml() {
     const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = inc - exp;
     return `<div class="row day-row" data-act="open-day" data-id="${d}" tabindex="0" role="link"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
     <div><div class="title">${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long' }))}</div>
-    <div class="sub">${countLabel(l.length)}${inc ? ' · ' + __('Income') + ' ' + money(inc, cur()) : ''}${exp ? ' · ' + __('Spent') + ' ' + money(exp, cur()) : ''}</div></div>
+    <div class="sub">${countLabel(l.length)}</div></div>
     <div class="amt num ${net < 0 ? 'expense' : net > 0 ? 'income' : ''}">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div></div>`;
   }).join('');
 }
@@ -1784,7 +1784,7 @@ document.addEventListener('submit', (e) => {
   }
 });
 
-window.addEventListener('hashchange', render);
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });   // every page opens at its top, not where the previous page was scrolled
 window.addEventListener('beforeunload', (e) => { if (Cloud.pending > 0) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ---------- auth + data loading ---------- */

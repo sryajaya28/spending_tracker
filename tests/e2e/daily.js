@@ -15,10 +15,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     save(); location.hash = '#/transactions'; render(); }, m);
   await settle();
   const days = await p.$$('#txn-list .day-row'); assert.equal(days.length, 2, 'two days');
-  assert((await p.innerText('#txn-list')).includes('3 transactions'));
+  assert((await p.innerText('#txn-list')).includes('3 transactions')); assert(!/Spent|Income/.test(await p.innerText('#txn-list .day-row .sub')), 'the day row shows only the count');
   assert(!(await p.innerText('#txn-list')).includes('Lunch'), 'notes only on the day page');
   await p.screenshot({ path: __dirname + '/out/daily_list.png' });
-  await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); await p.waitForSelector('#day-list .row');
+  // a new page always opens at its top
+  await p.evaluate(() => { document.body.style.minHeight = '3000px'; window.scrollTo(0, 800); }); await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); assert.equal(await p.evaluate(() => Math.round(window.scrollY)), 0, 'scroll resets on a new page'); await p.evaluate(() => { document.body.style.minHeight = ''; });
+  await p.waitForSelector('#day-list .row'); if (false) await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); await p.waitForSelector('#day-list .row');
   assert.equal((await p.$$('#day-list .row')).length, 3);
   assert((await p.evaluate(() => location.hash)).endsWith('/transactions/' + m + '-05'));
   // the day page has its own search

@@ -163,7 +163,6 @@ async function refreshPrices(silent) {
     if (info.yh ? !api.yahoo : !api.finnhub) continue;   // that price source is not available
     try { D().livePrices[key] = await quote(info); ok++; } catch { /* keep the previous price */ }
   }
-  if (ok) state.pricesAt = Date.now();
   save(); if (route() === 'portfolio') render();
   if (!silent) toast(__('Updated {ok} of {n} prices', { ok, n: keys.length }));
 }
@@ -575,10 +574,10 @@ function viewPortfolio() {
     D().holdings.filter((h) => activeAccounts().some((a) => a.id === h.account_id)).forEach((h) => { const t = assetInfo(h.symbol).type; byType[t] = (byType[t] || 0) + holdingUSD(h, months[5]); });
     const alloc = Object.entries(byType).sort((a, b) => b[1] - a[1]);
     body = `<section class="card"><div class="card-head"><div><h2>${__('Investments')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(I[5])}</div></div>
-        <div class="tools"><button class="btn secondary" data-act="refresh-prices">${__('Refresh prices')}</button><button class="btn" data-act="add-account">${__('+ Account')}</button></div></div>
+        <div class="tools"><button class="btn" data-act="add-account">${__('+ Account')}</button></div></div>
       ${alloc.length ? `<div class="alloc">${alloc.map(([t, v]) => `<i style="flex:${v};background:${TYPE_COLOR[t]}" title="${esc(t)}"></i>`).join('')}</div>
       <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? __('Add assets to an account to see your allocation.') : __('No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.')}</div>`}
-      <p class="muted disclaimer">${__('Prices refresh when you open the app or tap Refresh prices, and quotes can be delayed by up to 15 minutes. Exchange rates refresh about every 6 hours. Values are estimates, not financial advice.')}${state.pricesAt ? ' ' + __('Last refreshed {time}.', { time: new Date(state.pricesAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) }) : ''}</p></section>
+      <p class="muted disclaimer">${__('Prices and exchange rates update every 6 hours and can be delayed. Values are estimates, not financial advice.')}</p></section>
       ${growth}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
@@ -1395,7 +1394,6 @@ document.addEventListener('click', (e) => {
   else if (act === 'pay-lent') paymentDialog(find(D().lent), 'lent');
   else if (act === 'archive-lent') { find(D().lent).archived = true; save(); close(); render(); toast('Archived'); }
   else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); }
-  else if (act === 'refresh-prices') { el.textContent = __('Refreshing…'); refreshPrices(false); }
   else if (act === 'pick-type-old') { state.ui.pickType = el.dataset.type; $$('.pill', el.parentElement).forEach((b) => b.classList.toggle('on', b === el)); runAssetSearch(); }
   else if (act === 'pick-asset') pickAsset(state.pick[+el.dataset.i], el.closest('form'));
   else if (act === 'manual-asset') { const f = el.closest('form'); f.asset.value = '__custom'; f.assetmeta.value = ''; $('#picker', f).hidden = true; $('.custom-fields', f).hidden = false; }

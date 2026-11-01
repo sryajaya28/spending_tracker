@@ -127,6 +127,10 @@ def search(q, kind, limit):
 
 
 def price(symbol, kind, fh):
+    return cached_price(("fh", symbol, kind, fh), lambda: _price(symbol, kind, fh))
+
+
+def _price(symbol, kind, fh):
     # stocks/ETFs quote by ticker; crypto by the exchange-qualified pair (e.g. BINANCE:BTCUSDT)
     if not fh:
         want_crypto = kind == "crypto"
@@ -166,6 +170,22 @@ IDX_COMMON = [
     ("INKP", "Indah Kiat Pulp & Paper"), ("PTBA", "Bukit Asam"), ("ITMG", "Indo Tambangraya Megah"), ("MEDC", "Medco Energi Internasional"),
     ("ACES", "Aspirasi Hidup Indonesia"), ("ARTO", "Bank Jago"), ("BUKA", "Bukalapak.com"), ("EMTK", "Elang Mahkota Teknologi"),
 ]
+
+
+# Live prices (Finnhub and Yahoo) are kept for 6 hours, like the exchange rates, so the app shows one consistent
+# "updated every 6 hours" rhythm and the upstream services are called rarely. Responses also tell Vercel's edge
+# cache to hold them for 6 hours.
+PRICE_TTL = 6 * 3600
+_price_cache = {}
+
+
+def cached_price(key, fn):
+    hit = _price_cache.get(key)
+    if hit and time.time() - hit[0] < PRICE_TTL:
+        return hit[1]
+    val = fn()
+    _price_cache[key] = (time.time(), val)
+    return val
 
 
 def yahoo_get(path, **params):
@@ -215,6 +235,10 @@ def search_idx(q, limit, live=True):
 
 
 def yahoo_price(yh, mult):
+    return cached_price(("yh", yh, mult), lambda: _yahoo_price(yh, mult))
+
+
+def _yahoo_price(yh, mult):
     j = yahoo_get(f"/v8/finance/chart/{urllib.parse.quote(yh)}", range="5d", interval="1d")
     res = (j.get("chart", {}).get("result") or [None])[0]
     if not res:
@@ -265,12 +289,12 @@ class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=str(WEB), **kw)
 
-    def send_json(self, obj, status=200):
+    def send_json(self, obj, status=200, cache=0):
         body = json.dumps(obj).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", f"public, s-maxage={cache}" if cache and status == 200 else "no-store")
         self.end_headers()
         self.wfile.write(body)
 
@@ -285,9 +309,9 @@ class Handler(SimpleHTTPRequestHandler):
             if u.path == "/api/fx":
                 # fiat rates need no Finnhub key (its free tier has no forex/IDR data)
                 want = [c for c in qs.get("currencies", "").upper().split(",") if c]
-                return self.send_json(fx_rates(want))
+                return self.send_json(fx_rates(want), cache=PRICE_TTL)
             if u.path == "/api/price" and qs.get("yh"):   # IDX stocks and commodities (no key needed)
-                return self.send_json(yahoo_price(qs["yh"], float(qs.get("mult") or 1)))
+                return self.send_json(yahoo_price(qs["yh"], float(qs.get("mult") or 1)), cache=PRICE_TTL)
             if u.path == "/api/assets" and qs.get("type") in ("idx", "commodity"):
                 limit = max(1, min(int(qs.get("limit", 20)), 50))
                 q = qs.get("q", "")
@@ -301,7 +325,7 @@ class Handler(SimpleHTTPRequestHandler):
                     found = (found + search_commodities(qs["q"], 5) + search_idx(qs["q"], 5, live=False))[:limit]
                 return self.send_json({"results": found})
             if u.path == "/api/price":
-                return self.send_json({"price": price(qs.get("symbol", ""), qs.get("type", ""), qs.get("fh"))})
+                return self.send_json({"price": price(qs.get("symbol", ""), qs.get("type", ""), qs.get("fh"))}, cache=PRICE_TTL)
             return self.send_json({"error": "not found"}, 404)
         except urllib.error.HTTPError as e:
             return self.send_json({"error": f"Finnhub returned {e.code}"}, 502)

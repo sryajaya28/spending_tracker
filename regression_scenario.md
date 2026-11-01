@@ -189,7 +189,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 | IV-05 | Commodities **(manual)** | Gold / Silver per troy oz or per gram, Platinum, WTI, Brent, natural gas, copper; searching "emas", "gold", "oil" works. Gold per gram with 10 g at a known price gives the right value. |
 | IV-06 | Pay with an account or USDT/USDC, or "Already owned" | Paid-from account decreases (transfer, not spending); "Already owned" leaves accounts untouched. Quantity is added **once**. |
 | IV-07 | Buy / Sell on an existing holding | Quantity and the other side (account or stablecoin) move together; selling more than held is refused; deleting a trade restores both sides. |
-| IV-08 | Refresh | IDX and commodity prices refresh on open and with **Refresh prices**; failures keep the previous price. The Investment tab shows a short disclaimer (prices refresh on open or on Refresh, quotes may be delayed up to 15 minutes, exchange rates about every 6 hours, estimates only, not advice) plus "Last refreshed HH:MM" after a successful refresh; the old "prices are live" sentence is gone. |
+| IV-08 | Price freshness | Prices (Finnhub and Yahoo) and exchange rates are cached on the server for **6 hours**; they load when the app opens (no Refresh button). Failures keep the previous price. The Investment tab shows one disclaimer: prices and exchange rates update every 6 hours and can be delayed; estimates, not financial advice. |
 | IV-09 | Reload | Holdings keep type, name and price source (IDX = stock, commodity = Commodity). |
 
 ### 9.5 Lent and loans
@@ -297,3 +297,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 - 2026-11-01: First version, covering all features up to the Commodities asset type.
 - 2026-11-01: IV-08 now covers the price-refresh disclaimer on the Investment tab.
+- 2026-11-01: IV-08 rewritten for the 6-hour price cache and the single disclaimer (Refresh prices button removed).

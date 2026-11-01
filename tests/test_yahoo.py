@@ -41,4 +41,9 @@ live = d.search_idx("bbtn", 10)
 assert any(a["key"] == "BBTN.JK" and a["name"] == "Bank Tabungan Negara" for a in live) and all(a["key"].endswith(".JK") for a in live), live
 cm = d.search_commodities("gold", 10); assert [a["key"] for a in cm] == ["XAU", "XAUG"] and cm[0]["type"] == "commodity" and cm[1]["mult"] < 0.04, cm
 assert d.search_commodities("emas", 10)[0]["key"] == "XAU" and any(a["key"] == "BRENT" for a in d.search_commodities("oil", 10))
+# prices are cached for 6 hours: a second request does not call Yahoo again; after the TTL it does
+n = len(calls); d.yahoo_price("BBCA.JK", 1.0); assert len(calls) == n, "second call must come from the cache"
+d.yahoo_price("BBCA.JK", 1.0)
+for k in list(d._price_cache): d._price_cache[k] = (d._price_cache[k][0] - d.PRICE_TTL - 1, d._price_cache[k][1])
+d.yahoo_price("BBCA.JK", 1.0); assert len(calls) == n + 1, "after 6 hours it refetches"
 print("ok")

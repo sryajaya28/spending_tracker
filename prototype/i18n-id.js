@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Prices and exchange rates update every 6 hours and can be delayed. Values are estimates, not financial advice.": "Harga dan kurs diperbarui setiap 6 jam dan bisa tertunda. Nilai hanyalah perkiraan, bukan saran keuangan.",
  "Last refreshed {time}.": "Terakhir diperbarui {time}.",
  "Prices refresh when you open the app or tap Refresh prices, and quotes can be delayed by up to 15 minutes. Exchange rates refresh about every 6 hours. Values are estimates, not financial advice.": "Harga diperbarui saat Anda membuka aplikasi atau menekan Segarkan harga, dan kutipan bisa tertunda hingga 15 menit. Kurs diperbarui sekitar setiap 6 jam. Nilai hanyalah perkiraan, bukan saran keuangan.",
  "Name or ticker": "Nama atau kode",

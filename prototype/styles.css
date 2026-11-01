@@ -703,3 +703,6 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .install-steps li { display: flex; align-items: center; gap: 12px; font-size: 15px; }
 .handoff-code { font-size: 24px; font-weight: 800; letter-spacing: .12em; text-align: center; margin: 10px 0 6px; color: var(--ink); }
 .hint .handoff-code + small { display: block; text-align: center; }
+.land-cta-wrap { display: inline-flex; flex-direction: column; align-items: stretch; max-width: 100%; }
+.land-cta-wrap .land-install { width: 100%; }
+.land-cta-wrap .land-cta { margin-bottom: 0; } .land-cta-wrap .land-cta .btn { flex: 1; justify-content: center; }

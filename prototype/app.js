@@ -267,7 +267,16 @@ function seed(name, cur) {
 }
 const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), openDays: new Set(), archOpen: false } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
+/* transactions are ordered newest date first and, on the same date, the latest entered first (created_at; the database sets it
+   on insert and it is read back on load, new entries get the current time here) */
+const byRecent = (a, b) => b.occurred_at.localeCompare(a.occurred_at) || (b.created_at || '').localeCompare(a.created_at || '');
+function sortTxns(d = state.data) {
+  if (!d || !d.transactions) return; const now = new Date().toISOString();
+  d.transactions.forEach((t) => { if (!t.created_at) t.created_at = now; });
+  d.transactions.sort(byRecent);
+}
 function save() {
+  sortTxns();
   if (state.real) return;   // demo mode: nothing is saved or synced
   try { localStorage.setItem(PRICES_KEY, JSON.stringify(state.data.livePrices)); } catch { /* storage unavailable */ }
   Cloud.save(state.data);   // sends only what changed since the last save
@@ -1677,7 +1686,7 @@ function recordTrade(h, { side, quantity, source, amount, date, price }) {
     addTrade(h, { id, date, side, quantity, amount_minor: amount, currency: w.currency, wallet_id: w.id, ...px });
     D().transactions.push({ id: uid(), trade_id: id, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in',
       amount_minor: amount, currency: w.currency, occurred_at: date, note: `${word} ${qtyFmt(quantity)} ${sym}`, category_source: 'user', ai_confidence: null });
-    D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    sortTxns();
     return;
   }
   let s = source.holding;
@@ -1836,7 +1845,7 @@ function runRecurring() {
       generateRecurring(r, r.next); n++; r.next = nextAfter(r, r.next);
     }
   });
-  if (n) { d.transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)); save(); }
+  if (n) { sortTxns(d); save(); }
   return n;
 }
 function recurringNow() { const n = runRecurring(); if (n) { render(); toast(__(n === 1 ? '{n} recurring entry added' : '{n} recurring entries added', { n })); } }
@@ -2163,7 +2172,7 @@ document.addEventListener('submit', async (e) => {
       if (v.repeat && !existing) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: 'h:' + coin.id, quantity: qty, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
     } else if (!existing) D().transactions.push(row);
     if (!coin && !existing && v.repeat) { const rr = addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null }); if (rr.spec.first_made) rr.spec.first_tx = row.id; }
-    D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    sortTxns();
     state.ui.month = periodKeyOf(row.occurred_at) <= currentPeriod() ? periodKeyOf(row.occurred_at) : state.ui.month;
     if (!existing) rememberAcct(type, v.wallet);
     save(); close(); render(); toast(msg);
@@ -2181,7 +2190,7 @@ document.addEventListener('submit', async (e) => {
     D().transactions.push({ id: uid(), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.currency, note: __('Transfer from {name}', { name: A.name }) + extra, ...base });
     if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base });
     if (v.repeat) addRule('transfer', v.repeat, v.date, { from: A.id, to: B.id, amount_minor: amount, received_minor: received, fee_minor: fee, note: v.note.trim() });
-    D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    sortTxns();
     state.ui.month = periodKeyOf(v.date) <= currentPeriod() ? periodKeyOf(v.date) : state.ui.month;
     save(); close(); render(); toast(__('Moved {amount} from {from} to {to}', { amount: money(amount, A.currency), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.currency) }) : '')); return;
   }
@@ -2292,7 +2301,7 @@ document.addEventListener('submit', async (e) => {
     // a first payment that is still upcoming (entered by hand when the rule was created) follows the edit; one that already happened is left alone
     const first = sp.first_tx && D().transactions.find((t) => t.id === sp.first_tx);
     if (first && first.occurred_at > isoDate(new Date()) && r.kind === 'txn' && !String(sp.wallet_id).startsWith('h:') && !String(sp.wallet_id).startsWith('l:')) {
-      Object.assign(first, { occurred_at: r.next, wallet_id: sp.wallet_id, currency: sp.currency, amount_minor: sp.amount_minor, category_id: sp.category_id || null }); sp.first_made = r.next; D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+      Object.assign(first, { occurred_at: r.next, wallet_id: sp.wallet_id, currency: sp.currency, amount_minor: sp.amount_minor, category_id: sp.category_id || null }); sp.first_made = r.next; sortTxns();
     } else delete sp.first_made;
     save(); close(); render(); toast(__('Recurring updated. Entries already made are unchanged.')); return;
   }

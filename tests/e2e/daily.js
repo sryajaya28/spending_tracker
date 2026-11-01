@@ -44,5 +44,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { const w = D().wallets[0], d = new Date(); d.setDate(d.getDate() - 1); for (let i = 0; i < 3; i++) D().transactions.push({ id: uid(), type: 'expense', amount_minor: 1000 + i, currency: w.currency, wallet_id: w.id, category_id: null, note: 'Recent ' + i, occurred_at: isoDate(d) }); D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)); location.hash = '#/overview'; render(); });
   const signs = await p.$$eval('.main .card:has(h2) .list .row .amt', (e) => e.map((x) => x.textContent.trim()[0])); assert(signs.length >= 3 && signs.every((c) => c === '−' || c === '+'), JSON.stringify(signs)); assert.equal(await p.$$eval('.main .list .row .amt.expense, .main .list .row .amt', (e) => e.filter((x) => /Recent/.test(x.closest('.row').textContent) && !x.textContent.trim().startsWith('−')).length), 0, 'expenses show a minus on every row');
   assert(!(await p.innerText('.main')).includes('Future thing'), 'upcoming not in Recent transactions');
+  // on the same date, the latest entered transaction is listed first (also after loading from the server)
+  for (const note of ['First in', 'Second in', 'Third in']) {
+    await p.evaluate(() => { location.hash = '#/overview'; txnDialog(null, 'expense'); }); await p.waitForSelector('#dlg[open] [name=amount]');
+    await p.fill('#dlg [name=amount]', '1000'); await p.fill('#dlg [name=note]', note); await p.click('#dlg button[type=submit]'); await settle(); await p.waitForTimeout(20);
+  }
+  const order = async () => p.$$eval('.main .list .row .title', (e) => e.map((x) => x.textContent).filter((t) => / in$/.test(t)));
+  assert.deepEqual(await order(), ['Third in', 'Second in', 'First in'], 'latest first in Recent transactions');
+  await p.evaluate(() => loadUserData()); await p.waitForSelector('.shell'); await settle(); await p.evaluate(() => { location.hash = '#/overview'; render(); });
+  assert.deepEqual(await order(), ['Third in', 'Second in', 'First in'], 'latest first after a reload');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

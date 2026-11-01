@@ -108,7 +108,7 @@ const assert = require('assert');
   const before = await page.evaluate(() => JSON.parse(JSON.stringify(D())));
   await page.evaluate(() => loadUserData()); await page.waitForSelector('.shell'); await settle();
   const after = await page.evaluate(() => JSON.parse(JSON.stringify(D())));
-  const norm = (d) => { const c = JSON.parse(JSON.stringify(d)); delete c.livePrices; c.holdings.forEach((h) => { delete h.open_id; h.trades.sort((a, b) => a.id.localeCompare(b.id)); }); c.holdings.sort((a, b) => a.id.localeCompare(b.id)); ['categories','wallets','transactions','budgets','investments','loans','lent'].forEach((k) => c[k].sort((a, b) => a.id.localeCompare(b.id))); c.loans.concat(c.lent).forEach((x) => x.payments.sort((a, b) => a.id.localeCompare(b.id))); return c; };
+  const norm = (d) => { const c = JSON.parse(JSON.stringify(d)); delete c.livePrices; c.transactions.forEach((t) => delete t.created_at); c.holdings.forEach((h) => { delete h.open_id; h.trades.sort((a, b) => a.id.localeCompare(b.id)); }); c.holdings.sort((a, b) => a.id.localeCompare(b.id)); ['categories','wallets','transactions','budgets','investments','loans','lent'].forEach((k) => c[k].sort((a, b) => a.id.localeCompare(b.id))); c.loans.concat(c.lent).forEach((x) => x.payments.sort((a, b) => a.id.localeCompare(b.id))); return c; };
   const nb = norm(before), na = norm(after);
   for (const k of Object.keys(nb)) { try { assert.deepStrictEqual(na[k], nb[k]); } catch (e) { console.log('ROUNDTRIP DIFF in', k, String(e.message).slice(0, 1500)); } }
   console.log('reload round trip checked');

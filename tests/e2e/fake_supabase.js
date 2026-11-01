@@ -37,7 +37,7 @@
       }
       if (this.op === 'upsert') {
         log.push({ op: 'upsert', table: t, rows: JSON.parse(JSON.stringify(this.rows)), onConflict: this.o.onConflict });
-        this.rows.forEach((n) => { const i = rows.findIndex((r) => keyOf(t, r) === keyOf(t, n)); if (i >= 0) Object.assign(rows[i], n); else rows.push(JSON.parse(JSON.stringify(n))); });
+        this.rows.forEach((n) => { const i = rows.findIndex((r) => keyOf(t, r) === keyOf(t, n)); if (i >= 0) Object.assign(rows[i], n); else rows.push({ created_at: new Date().toISOString(), ...JSON.parse(JSON.stringify(n)) }); });   // like the database default (created_at = now() on insert, kept on update)
         return { data: null, error: null };
       }
       if (this.op === 'insert') {   // the database fills in the sender, like the real trigger

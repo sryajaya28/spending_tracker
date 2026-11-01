@@ -89,14 +89,14 @@ const Cloud = (() => {
     };
     const txnByEvent = new Map(S.transactions.filter((t) => t.holding_event_id).map((t) => [t.holding_event_id, t]));
     d.transactions = S.transactions.map((t) => {
-      const o = { id: t.id, wallet_id: t.wallet_id, category_id: t.category_id, type: t.type, amount_minor: +t.amount_minor, currency: t.currency, occurred_at: t.occurred_at, note: t.note || '', category_source: t.category_source, ai_confidence: t.ai_confidence == null ? null : +t.ai_confidence };
+      const o = { id: t.id, wallet_id: t.wallet_id, category_id: t.category_id, type: t.type, amount_minor: +t.amount_minor, currency: t.currency, occurred_at: t.occurred_at, note: t.note || '', category_source: t.category_source, ai_confidence: t.ai_confidence == null ? null : +t.ai_confidence, created_at: t.created_at ? new Date(t.created_at).toISOString() : '' };
       if (t.transfer_direction) o.flow = t.transfer_direction;
       if (t.holding_event_id) o.trade_id = t.holding_event_id;
       if (t.occasion_id) o.occasion_id = t.occasion_id;
       if (t.debt_id) o.loan_id = t.debt_id;
       if (t.transfer_group_id) o.transfer_id = t.transfer_group_id;
       return o;
-    }).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    }).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at) || b.created_at.localeCompare(a.created_at));   // same date: latest entered first
 
     const events = new Map();
     S.holding_events.forEach((e) => { if (!events.has(e.holding_id)) events.set(e.holding_id, []); events.get(e.holding_id).push(e); });

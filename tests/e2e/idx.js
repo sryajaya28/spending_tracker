@@ -35,6 +35,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // shows on the Investment tab with the right unit and value (gold: 10 g x $100 = $1,000)
   await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); const t = await p.innerText('main');
   assert(t.includes('Gold (per gram)') && t.includes('Commodity') && t.includes('Bank Central Asia'), t.slice(0, 400));
+  assert(t.includes('delayed by up to 15 minutes') && !t.includes('Growth counts'), 'price disclaimer replaces the old description');
   assert.equal(await p.evaluate(() => Math.round(holdingUSD(D().holdings.find((h) => h.symbol === 'XAUG'), currentPeriod()))), 1000);
   await p.screenshot({ path: __dirname + '/out/idx.png' });
   console.log('ok', JSON.stringify(errs)); await b.close();

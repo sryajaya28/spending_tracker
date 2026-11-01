@@ -284,6 +284,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Investment tab: removed the "Current prices are live..." description; added a disclaimer (prices refresh on open or Refresh prices, quotes up to
+  15 min delayed, FX about every 6 h, not advice) and "Last refreshed HH:MM" (`state.pricesAt`, in memory). There is no timed refresh while the app stays open.
+
 - 2026-11-01: Added `regression_scenario.md` (manual regression scenarios per area + automated coverage map) and made keeping it current part of
   the working agreement (section 0, `CLAUDE.md`, README).
 

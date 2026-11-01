@@ -163,6 +163,7 @@ async function refreshPrices(silent) {
     if (info.yh ? !api.yahoo : !api.finnhub) continue;   // that price source is not available
     try { D().livePrices[key] = await quote(info); ok++; } catch { /* keep the previous price */ }
   }
+  if (ok) state.pricesAt = Date.now();
   save(); if (route() === 'portfolio') render();
   if (!silent) toast(__('Updated {ok} of {n} prices', { ok, n: keys.length }));
 }
@@ -577,7 +578,7 @@ function viewPortfolio() {
         <div class="tools"><button class="btn secondary" data-act="refresh-prices">${__('Refresh prices')}</button><button class="btn" data-act="add-account">${__('+ Account')}</button></div></div>
       ${alloc.length ? `<div class="alloc">${alloc.map(([t, v]) => `<i style="flex:${v};background:${TYPE_COLOR[t]}" title="${esc(t)}"></i>`).join('')}</div>
       <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? __('Add assets to an account to see your allocation.') : __('No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.')}</div>`}
-      <p class="muted" style="font-size:12px;margin-top:12px">${api.finnhub || api.yahoo ? __('Current prices are live (Finnhub for US stocks and crypto, Yahoo Finance for Indonesian stocks and commodities).') : __('Prices are mock data (no Finnhub connection).')} ${__('Growth counts money you add.')}</p></section>
+      <p class="muted disclaimer">${__('Prices refresh when you open the app or tap Refresh prices, and quotes can be delayed by up to 15 minutes. Exchange rates refresh about every 6 hours. Values are estimates, not financial advice.')}${state.pricesAt ? ' ' + __('Last refreshed {time}.', { time: new Date(state.pricesAt).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' }) }) : ''}</p></section>
       ${growth}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);

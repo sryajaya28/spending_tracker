@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Last refreshed {time}.": "Terakhir diperbarui {time}.",
+ "Prices refresh when you open the app or tap Refresh prices, and quotes can be delayed by up to 15 minutes. Exchange rates refresh about every 6 hours. Values are estimates, not financial advice.": "Harga diperbarui saat Anda membuka aplikasi atau menekan Segarkan harga, dan kutipan bisa tertunda hingga 15 menit. Kurs diperbarui sekitar setiap 6 jam. Nilai hanyalah perkiraan, bukan saran keuangan.",
  "Name or ticker": "Nama atau kode",
  "Current prices are live (Finnhub for US stocks and crypto, Yahoo Finance for Indonesian stocks and commodities).": "Harga terkini bersifat langsung (Finnhub untuk saham AS dan kripto, Yahoo Finance untuk saham Indonesia dan komoditas).",
  "Commodity": "Komoditas",

@@ -43,6 +43,7 @@ Automated: `run`, `sample`, `confirm`, `csp`, `landshot`.
 | UI-01 | Settings > Profile > Language: Bahasa Indonesia | Menus, buttons, dialogs, toasts and empty states switch language; money and dates use Indonesian format; choice survives reload and is saved to the profile. |
 | UI-02 | Settings > Profile > Appearance: Light / Dark / Match device | Whole app (cards, charts, donut, dialogs, landing) switches without unreadable text; saved to the profile and remembered on the device. |
 | UI-03 | Phone: open every page (Overview, Activity, Budgets, Portfolio and its tabs, Settings, landing, sign-in, an open dialog) | No horizontal scroll or sideways panning; nothing is cut off at the right edge. |
+| UI-04b | Phone browser (Safari / Chrome, not only the installed app): scroll to the top of any page and keep pulling down | The page does **not** reload (no pull-to-refresh) and does not rubber-band **(manual, real phone; Chrome on iOS may still show its own refresh control, see context.md)**. |
 | UI-04 | Phone: double-tap and pinch | The page does not zoom; tapping a text field does not zoom. |
 | UI-05 | Phone, installed from Safari "Add to Home Screen" **(manual)** | Opens full screen with no browser bars; icon is the Stiver logo; status bar visible; no pull-down bounce. A link opened inside another app still shows that app's bar (expected). |
 | UI-06 | Phone bottom bar | Overview, Activity, raised **Add**, Budgets, Portfolio. "Add" label is level with the other labels (same baseline, checked by `noscroll`). No floating + button. Settings is reached from the round profile icon top right. The labels sit close to the bottom edge (no big empty band under them, also on iPhones with a home indicator **(manual)**), and the last item of every page can scroll fully above the bar. |
@@ -323,5 +324,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: AUTH-01: landing header spacing, outlined Sign in, no hero mock-up card, new demo video.
 - 2026-11-01: ST-07: compact phone banner, not sticky.
 - 2026-11-01: OV-06: transaction rows show only the sub-category name.
+- 2026-11-01: UI-04b: no pull-to-refresh in phone browsers.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

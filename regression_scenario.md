@@ -217,7 +217,7 @@ Automated: `pfrange`, `wallet`, `arch`, `curdd`, `idx`, `run`, `ios`.
 | ST-04 | Smart tagging toggle | Off: no AI tagging; on: tags only after enough labelled history, otherwise stays empty. |
 | ST-05 | Recurring card | Appears only when rules exist (see section 6). |
 | ST-06 | Account card | Signed-in email, Sign out, Sign out others, Use sample data. |
-| ST-07 | Sample data toggle | On: a **compact one-line banner** on phones ("Sample data · not saved" + Back to my data; the long sentence on desktop) (it **stays pinned at the top while you scroll**, including in a phone browser, so "Back to my data" is always reachable), demo account in memory, nothing saved; off: your own data returns untouched. Old "sample data saved earlier" rows can be removed. |
+| ST-07 | Sample data toggle | On: a **compact one-line banner** on phones ("Sample data · not saved" + Back to my data; the long sentence on desktop) (at the top of the page, **not pinned**: it scrolls away with the content), demo account in memory, nothing saved; off: your own data returns untouched. Old "sample data saved earlier" rows can be removed. |
 | ST-08 | Legal pages | Privacy and Terms open from the landing and sign-in screens. |
 
 Automated: `cats`, `quickcat`, `sample`, `curdd`, `langsave`.
@@ -321,7 +321,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: Added UI-12 (the new loading screen).
 - 2026-11-01: Added OV-01b (sample-data offer on Overview for empty accounts).
 - 2026-11-01: AUTH-01: landing header spacing, outlined Sign in, no hero mock-up card, new demo video.
-- 2026-11-01: ST-07: the sample-data banner is sticky.
+- 2026-11-01: ST-07: compact phone banner, not sticky.
 - 2026-11-01: OV-06: transaction rows show only the sub-category name.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

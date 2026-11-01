@@ -617,15 +617,13 @@ select:not([data-native]) { pointer-events: none; }
 .land-cta .btn.secondary:hover { background: var(--soft); }
 :root[data-theme="dark"] .land-cta .btn.secondary { background: transparent; border-color: rgba(255, 255, 255, .35); color: var(--ink); }
 
-/* the sample-data banner stays in view while scrolling, so "Back to my data" is always reachable */
-.demo-bar { position: sticky; top: 8px; z-index: 40; box-shadow: 0 8px 20px rgba(90, 67, 0, .14); }
 @media (max-width: 900px) { .demo-bar { padding: 8px 12px; font-size: 13px; gap: 8px; margin-bottom: 12px; } .demo-bar .btn { height: 32px; padding: 0 12px; font-size: 13px; } }
 
-/* phones: one compact line, solid and pinned, so it never makes the page look messy */
+/* phones: one compact line at the top of the page (not pinned) */
 .demo-short { display: none; }
 @media (max-width: 900px) {
   .demo-long { display: none; } .demo-short { display: inline; }
-  .demo-bar { flex-wrap: nowrap; top: 6px; padding: 6px 8px 6px 12px; margin: 0 0 10px; border-radius: 14px; background: #FFF4CC; }
+  .demo-bar { flex-wrap: nowrap; padding: 6px 8px 6px 12px; margin: 0 0 10px; border-radius: 14px; background: #FFF4CC; }
   :root[data-theme="dark"] .demo-bar { background: #3a3420; }
   .demo-bar .btn { height: 30px; padding: 0 12px; font-size: 13px; flex: none; }
 }

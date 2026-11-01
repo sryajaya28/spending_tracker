@@ -287,13 +287,12 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
-- 2026-11-01: Sample-data banner on phones is a single compact pinned line ("Sample data · not saved" + button; `.demo-short`), the long sentence stays on desktop (`.demo-long`);
+- 2026-11-01: The sample-data banner is NOT sticky (owner preference; it was briefly pinned). On phones it is a single compact line ("Sample data · not saved" + button; `.demo-short`), the long sentence stays on desktop (`.demo-long`);
   the 3-line version looked messy when it overlapped the content.
 
 - 2026-11-01: Transaction rows show just the category (sub-category) name, not "Parent › Child", to keep the detail line short (`catPath` is still used elsewhere).
 
-- 2026-11-01: The sample-data banner (`.demo-bar`) is sticky (top 8px, compact on phones) so the "Back to my data" button stays reachable even when the page cannot be scrolled
-  back to the top in a phone browser. e2e `sample` checks it.
+- 2026-11-01: The sample-data banner was briefly sticky; reverted (not sticky). The Overview sample-data card and Settings switch remain.
 
 - 2026-11-01: Landing page: more space above the header on phones, outlined Sign in button (`.land-cta .btn.secondary`), the hero product mock-up card removed (hero is
   now centred text), demo video re-recorded for the current UI (new `tests/e2e/encode_demo.sh`; the tour now shows the donut, category search, day page, Portfolio time frame)

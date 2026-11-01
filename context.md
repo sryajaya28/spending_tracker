@@ -290,6 +290,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: The Transactions filter pills (category, occasion, account) centre their text.
 - 2026-11-01: Added `learning.md` (mistakes made so far and how to avoid them) and made reading it a step of the working agreement (README, CLAUDE.md, §0).
 - 2026-11-01: Transactions: **Reset filters** link (left of Expand all / Hide all, also shown when nothing matches) appears while any of search, category, occasion or account is set and clears all four (the period is kept). Fixed on the way: a `change` event from a removed, focused search box used to bring its old text back after a re-render (the `[data-filter]` change handler now only handles selects).
 - 2026-11-01: **Scroll position is remembered per page within a session** (`scrollPos`, `pageKey`, `hashchange` handler; memory only): leaving a page saves where you were, coming back (tab, link or browser back) restores it; a page not visited yet opens at the top. Buttons that open Transactions with a new filter (trend bar, occasion/loan Details, global search) call `forgetScroll('#/transactions')` so that view starts at the top. Replaces the earlier "every page opens at the top" rule (UI-13). e2e `scrollpos`.

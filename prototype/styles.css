@@ -830,3 +830,5 @@ input[type="date"]:not([data-native]) { pointer-events: none; }
 .day-tools.has-reset { justify-content: space-between; }
 .day-tools-r { display: inline-flex; align-items: center; gap: 8px; }
 .reset-filters { color: var(--brand); font-weight: 600; padding-left: 4px; }
+/* the filter pills (category, occasion, account) centre their text */
+.filters select { text-align: center; text-align-last: center; -moz-text-align-last: center; }

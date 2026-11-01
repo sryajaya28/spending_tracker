@@ -153,21 +153,6 @@
     stocks: [['CBA.AX', 'Commonwealth Bank', 'CBA.AX', 115, 52000, 0.86], ['BHP.AX', 'BHP Group', 'BHP.AX', 30, 39000, 1.07], ['CSL.AX', 'CSL', 'CSL.AX', 190, 19000, 0.93], ['WES.AX', 'Wesfarmers', 'WES.AX', 52, 14000, 1.12]],
   });
 
-  SAMPLE.AED = mk({
-    pl: 1, names: ['Emirates NBD', 'ADCB', 'Wio Bank', 'Cash', 'Apple Pay', 'Careem Pay', 'Payit'],
-    subs: [['Netflix', 11, 'Entertainment/Streaming'], ['Anghami', 4, 'Subscription']], bill: ['du mobile & home internet', 75],
-    plan: [
-      ['Groceries', 5, 4, 42, ['Carrefour|Supermarket', 'Spinneys|Supermarket', 'Lulu Hypermarket|Supermarket', 'Fruit & veg market|Fresh market']],
-      ['Dining', 9, 1.5, 21, ['Tim Hortons|Coffee', 'Starbucks|Coffee', 'Talabat|Delivery', 'Deliveroo|Delivery', 'Shawarma|Restaurants', 'Karak chai|Coffee']],
-      ['Transport', 8, 0.8, 18, ['Nol card (Metro)|Public transit', 'Careem|Ride-hailing', 'Uber|Ride-hailing', 'ADNOC fuel|Fuel', 'Salik toll', 'Parking']],
-      ['Shopping', 2, 10, 115, ['Noon', 'Amazon.ae', 'Namshi']], ['Bills & Utilities', 3, 18, 80, ['DEWA utilities', 'du mobile & home internet', 'Chiller / cooling']],
-      ['Entertainment', 2, 3, 22, ['VOX Cinemas|Movies', 'Platinumlist tickets|Events']], ['Health', 1, 6, 35, ['Aster Pharmacy', 'Gym membership']],
-    ],
-    trip: ['Maldives Trip', 1500], lentName: 'Omar', home: [360000, 4.5], car: [28000, 4.8],
-    invest: { a: 'Sarwa', b: 'Interactive Brokers' },
-    stocks: [['EMAAR.AE', 'Emaar Properties', 'EMAAR.AE', 2.45, 52000, 0.86], ['FAB.AE', 'First Abu Dhabi Bank', 'FAB.AE', 3.8, 39000, 1.07], ['ALDAR.AE', 'Aldar Properties', 'ALDAR.AE', 1.7, 19000, 0.93], ['EAND.AE', 'e& (Etisalat)', 'EAND.AE', 4.4, 14000, 1.12]],
-  });
-
   SAMPLE.CNY = mk({
     pl: 0.7, names: ['ICBC', 'China Merchants Bank', 'Bank of China', 'Cash', 'Alipay', 'WeChat Pay', 'Meituan Pay'],
     subs: [['Tencent Video', 5, 'Entertainment/Streaming'], ['NetEase Cloud Music', 3, 'Subscription']], bill: ['China Mobile + broadband', 40],

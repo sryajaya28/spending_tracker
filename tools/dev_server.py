@@ -273,7 +273,6 @@ def fx_rates(want):
                 with urllib.request.urlopen(req, timeout=15) as r:
                     rates, date = parse(json.load(r))
                 rates["USD"] = 1.0
-                rates.setdefault("AED", 3.6725)   # pegged to the dollar; the ECB-based source does not list it
                 if "IDR" in rates:
                     _fx["data"], _fx["at"] = {"source": name, "date": date, "rates": rates}, time.time()
                     break

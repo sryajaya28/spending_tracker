@@ -25,7 +25,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/overview'; render(); window.scrollTo(0, 900); }); await p.waitForTimeout(200);
   const bt = await p.$eval('.demo-bar', (e) => Math.round(e.getBoundingClientRect().top)); assert(bt >= 0 && bt < 60, 'demo banner sticks to the top: ' + bt); await p.evaluate(() => { window.scrollTo(0, 0); location.hash = '#/settings'; render(); });
   const on = await snap(); assert(on.demo && on.txns > 50 && !on.wallets.includes('Main Bank') === false, JSON.stringify(on));
-  assert((await p.innerText('.demo-bar')).includes('sample data'));
+  assert((await p.$eval('.demo-bar', (e) => e.textContent)).includes('sample data'));
   assert(await p.isChecked('[data-demo]'));
   // changes in demo are not saved or synced
   await p.evaluate(() => { D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 1, currency: 'IDR', occurred_at: isoDate(new Date()), note: 'DEMO ONLY', category_source: 'user', ai_confidence: null }); save(); D().wallets[0].name = 'Renamed in demo'; save(); D().profile.currency = 'USD'; save(); render(); });

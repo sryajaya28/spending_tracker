@@ -1842,7 +1842,7 @@ async function setDemo(on) {
   Object.assign(state.ui, { pf: null, pfTab: 'savings', cat: '', wallet: '', occ: '', q: '' });
   render();
 }
-const demoBar = () => `<div class="demo-bar" role="status"><span>${__("🧪 You're viewing {sample}. Your own data is safe, and changes made here aren't saved.", { sample: '<b>' + __('sample data') + '</b>' })}</span><button class="btn secondary" data-act="demo-off">${__('Back to my data')}</button></div>`;
+const demoBar = () => `<div class="demo-bar" role="status"><span class="demo-long">${__("🧪 You're viewing {sample}. Your own data is safe, and changes made here aren't saved.", { sample: '<b>' + __('sample data') + '</b>' })}</span><span class="demo-short">🧪 <b>${__('Sample data')}</b> · ${__("not saved")}</span><button class="btn secondary" data-act="demo-off">${__('Back to my data')}</button></div>`;
 function removeSample() {
   const d = D(), smp = d.profile.sample; if (!smp) return;
   const is = (k, id) => (smp[k] || []).includes(id);

@@ -616,3 +616,7 @@ select:not([data-native]) { pointer-events: none; }
 .land-cta .btn.secondary { background: transparent; border: 1.5px solid rgba(30, 27, 75, .28); }
 .land-cta .btn.secondary:hover { background: var(--soft); }
 :root[data-theme="dark"] .land-cta .btn.secondary { background: transparent; border-color: rgba(255, 255, 255, .35); color: var(--ink); }
+
+/* the sample-data banner stays in view while scrolling, so "Back to my data" is always reachable */
+.demo-bar { position: sticky; top: 8px; z-index: 40; box-shadow: 0 8px 20px rgba(90, 67, 0, .14); }
+@media (max-width: 900px) { .demo-bar { padding: 8px 12px; font-size: 13px; gap: 8px; margin-bottom: 12px; } .demo-bar .btn { height: 32px; padding: 0 12px; font-size: 13px; } }

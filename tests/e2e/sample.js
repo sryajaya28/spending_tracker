@@ -21,6 +21,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(!(await p.$('.demo-bar')));
   // toggle ON: demo data shows, banner appears, own data untouched
   await p.check('[data-demo]'); await p.waitForSelector('.demo-bar');
+  // the banner stays visible while scrolling (so the exit is always reachable)
+  await p.evaluate(() => { location.hash = '#/overview'; render(); window.scrollTo(0, 900); }); await p.waitForTimeout(200);
+  const bt = await p.$eval('.demo-bar', (e) => Math.round(e.getBoundingClientRect().top)); assert(bt >= 0 && bt < 60, 'demo banner sticks to the top: ' + bt); await p.evaluate(() => { window.scrollTo(0, 0); location.hash = '#/settings'; render(); });
   const on = await snap(); assert(on.demo && on.txns > 50 && !on.wallets.includes('Main Bank') === false, JSON.stringify(on));
   assert((await p.innerText('.demo-bar')).includes('sample data'));
   assert(await p.isChecked('[data-demo]'));

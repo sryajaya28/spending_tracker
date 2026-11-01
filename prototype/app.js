@@ -972,14 +972,13 @@ async function installDialog() {
       if (code) { history.replaceState(null, '', location.pathname + location.search + '#/overview?handoff=' + code); setHandoffCookie(code); }
     } catch { code = ''; }
   }
-  const canShare = IS_IOS && !!navigator.share;   // the iPhone share sheet has Add to Home Screen; tapping outside the dialog closes it
   const steps = IS_IOS
-    ? [__('Tap the Share button (Safari: bottom bar; Chrome: address bar)'), __('Scroll down the list and tap "Add to Home Screen"'), __('Keep "Open as Web App" switched on, then tap Add'), __('Open Stiver from your Home Screen')]
+    ? [/CriOS/.test(navigator.userAgent) ? __('Tap the Share icon in the address bar (the square with an arrow, top right of the page)') : __('Tap the Share button in Safari (in the toolbar, or under the ⋯ button)'), __('Scroll down the list and tap "Add to Home Screen"'), __('Keep "Open as Web App" switched on, then tap Add'), __('Open Stiver from your Home Screen')]
     : [__('Open the browser menu (⋮)'), __('Choose "Install app" or "Add to Home screen"'), __('Open Stiver from your Home screen')];
   open(`<h2>${__('Use mobile app experience')}</h2><p class="muted" style="margin-top:-10px">${__('Full screen, faster to open, no browser bars.')}</p>
     <ol class="install-steps">${steps.map((t, i) => `<li><span class="step-n">${i + 1}</span><span>${t}</span></li>`).join('')}</ol>
     ${code ? `<div class="hint">${__("You're signed in here, so the app should open already signed in. If it asks you to sign in, tap \"Transfer from browser\" and enter this code:")}<div class="handoff-code num">${fmtHandoff(code)}</div><small>${__('Works once, for 15 minutes. The browser signs out after the app takes over.')}</small></div>` : ''}
-    <div class="actions">${canShare ? `<button type="button" class="btn lg wide" data-act="share-app">${__('Open share menu')}</button>` : `<button type="button" class="btn" data-act="close">${__('Done')}</button>`}</div><span data-close-outside hidden></span>`);
+    <div class="actions"><button type="button" class="btn" data-act="close">${__('Got it')}</button></div><span data-close-outside hidden></span>`);
 }
 function handoffDialog() {
   open(`<h2>${__('Transfer from browser')}</h2><p class="muted" style="margin-top:-10px">${__('Signed in on your phone browser? Open "Use mobile app experience" there and enter the code it shows.')}</p>
@@ -1730,7 +1729,6 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
-  else if (act === 'share-app') { navigator.share({ title: 'Stiver', url: location.href }).catch(() => {}); }   // opens the share sheet; Add to Home Screen is in its action list
   else if (act === 'transfer-dialog') handoffDialog();
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }

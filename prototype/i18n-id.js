@@ -1,6 +1,9 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Tap the Share button in Safari (in the toolbar, or under the ⋯ button)": "Ketuk tombol Bagikan di Safari (di bilah alat, atau di bawah tombol ⋯)",
+ "Tap the Share icon in the address bar (the square with an arrow, top right of the page)": "Ketuk ikon Bagikan di bilah alamat (kotak dengan panah, kanan atas halaman)",
+ "Got it": "Mengerti",
  "Keep \"Open as Web App\" switched on, then tap Add": "Pastikan \"Buka sebagai Aplikasi Web\" aktif, lalu ketuk Tambah",
  "Signed in on your browser? Transfer from browser": "Sudah masuk di browser? Transfer dari browser",
  "Scroll down the list and tap \"Add to Home Screen\"": "Gulir daftar ke bawah dan ketuk \"Tambah ke Layar Utama\"",

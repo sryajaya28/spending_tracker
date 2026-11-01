@@ -999,9 +999,9 @@ function viewBudgets() {
       <div class="bar" style="margin:14px 0 10px"><i class="${g.status}" style="width:${Math.min(100, g.pct)}%"></i></div>
       <div class="budget-foot"><span class="muted">${g.remaining >= 0 ? __('{amount} left', { amount: money(g.remaining, cur()) }) : __('{amount} over', { amount: money(-g.remaining, cur()) })} · ${__('{pct}% used', { pct: Math.round(g.pct) })}</span><span class="budget-end">${cap(g)}<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">${__('Edit')}</button></span></div>`
       : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>
-  <section class="card"><div class="card-head"><h2>${__('By category')}</h2></div>
+  <section class="card"><div class="card-head"><h2>${__('By category')}</h2><button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button></div>
     ${rest.length ? rest.map((b) => `<div class="brow">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
-  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Occasion')}</button></div>
+  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Add')}</button></div>
     ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived && occasionInMonth(o, state.ui.month)), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
 }
 const occasionRow = (o) => {
@@ -1418,11 +1418,12 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
     ${t ? '' : repeatField()}
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + ('">' + __('Delete') + '</button>') : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
-function budgetDialog(b) {
+function budgetDialog(b, preset) {
   const used = new Set(D().budgets.map((x) => x.category_id));
   const opts = [{ id: '', name: '💰 ' + __('All spending (global)') }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: `${c.icon} ${c.name}` }))];
+  const pick = !b && preset === 'category' ? (opts.find((o) => o.id && !used.has(o.id)) || { id: '' }).id : '';   // the "By category" Add button starts on a category without a budget yet
   open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2><form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
-    <label class="field">${__('Applies to')}<select name="category" data-search data-empty="${__('Category not found')}" ${b ? 'disabled' : ''}>${opts.map((o) => `<option value="${o.id}" ${o.id === (b?.category_id || '') ? 'selected' : ''}>${esc(o.name)}${!b && used.has(o.id || null) ? ' ' + __('(replace)') : ''}</option>`).join('')}</select></label>
+    <label class="field">${__('Applies to')}<select name="category" data-search data-empty="${__('Category not found')}" ${b ? 'disabled' : ''}>${opts.map((o) => `<option value="${o.id}" ${o.id === (b ? b.category_id || '' : pick) ? 'selected' : ''}>${esc(o.name)}${!b && used.has(o.id || null) ? ' ' + __('(replace)') : ''}</option>`).join('')}</select></label>
     <label class="field">${__('Monthly limit ({cur})', { cur: esc(cur()) })}<input name="amount" type="number" min="1" step="${expOf(cur()) ? '0.01' : '1'}" required value="${b ? toMajor(b.budget, cur()) : ''}"></label>
     <p class="hint">${__('Applies from {month} onward until you set a new amount.', { month: esc(monthLabel(state.ui.month)) })}</p>
     <div class="actions">${b ? `<button type="button" class="btn danger" data-act="delete-budget" data-id="${b.id}">${__('Delete')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -1883,7 +1884,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
   else if (act === 'rec-del') { close(); D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
-  else if (act === 'add-budget') budgetDialog();
+  else if (act === 'add-budget') budgetDialog(null, el.dataset.preset);
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
   else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }
   else if (act === 'quick-cat-cancel') $('.quick-cat', el.closest('form')).hidden = true;

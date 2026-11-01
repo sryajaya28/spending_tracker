@@ -77,6 +77,10 @@ const assert = require('assert');
   const bt = await text(); assert(!bt.includes('1 expense'), 'occasion row keeps only the dates'); assert(bt.includes('Special occasions'));
   await page.click('[data-act=view-occasion]'); await page.waitForSelector('#txn-list .day-row');
   assert((await page.$$('#txn-list .day-row')).length === 1);
+  // Budgets page: the By category card has its own + Add (starts on a category), Special occasions has + Add too
+  await page.evaluate(() => { location.hash = '#/budgets'; });
+  const adds = await page.$$eval('.card-head', (h) => h.map((x) => [x.querySelector('h2')?.textContent.trim(), x.querySelector('.btn')?.textContent.trim()])); const byCat = adds.find((x) => x[0] === 'By category'), occ = adds.find((x) => x[0] === 'Special occasions'); assert(byCat && byCat[1] === '+ Add' && occ && occ[1] === '+ Add', JSON.stringify(adds));
+  await page.click('.card-head:has(h2:text-is("By category")) [data-act=add-budget]'); await page.waitForSelector('form[data-form=budget]'); assert.notEqual(await page.inputValue('select[name=category]'), '', 'starts on a category, not All spending'); await page.click('[data-act=close]');
   await page.evaluate(() => { location.hash = '#/budgets'; });
   await page.click('[data-act=edit-occasion]'); await page.click('[data-act=archive-occasion]'); await settle();
   l = await log(); assert(l.some((o) => o.table === 'occasions' && o.rows[0].archived === true));

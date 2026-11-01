@@ -290,6 +290,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Budgets page: the Special occasions button reads **+ Add** (was + Occasion) and the **By category** card got its own **+ Add** (`add-budget` with `data-preset="category"`, `budgetDialog(null, 'category')` preselects the first category without a budget).
 - 2026-11-01: The special-occasion card button that opens the occasion's expenses is now labelled **Details** (was Expenses).
 - 2026-11-01: Amounts paid/received in a stablecoin are written as `USDT 5,584.00` / `USDC ...` (`coinAmount`) instead of `$5,584.00` in transaction rows and the Recurring list (totals and reports still convert to the reporting currency).
 - 2026-11-01: Overview > Recent transactions no longer lists upcoming (future-dated) entries either. Fixed a regression from the loan view: `txnRow(t, loanView)` was called through `.map(txnRow)`, so the array index became `loanView` and expenses after the first row showed `+`; calls now pass only the transaction (test `daily` checks the sign on every row).

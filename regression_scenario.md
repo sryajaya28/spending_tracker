@@ -60,7 +60,7 @@ Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| OV-01 | Hero card | Total Balance equals the sum of all non-archived accounts (and equals Portfolio > Savings). Shows the period's change in amount and as a **% of the balance it started with** (e.g. `−0.8%` next to `−IDR 680,886 this month`; both always have the same sign; `—` when the starting balance is zero or negative). No "N accounts" label. No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
+| OV-01 | Hero card | **Total Balance = savings accounts + investments** (money lent and loans are **not** included; Portfolio > Net worth covers them), so with no investments it equals Portfolio > Savings. A small **(i)** next to "Total Balance" shows "Savings + investments" (tap/hover; light icon on the blue card). Shows the period's change in amount and as a **% of the balance it started with** (e.g. `−0.8%` next to `−IDR 680,886 this month`; both always have the same sign; `—` when the starting balance is zero or negative). No "N accounts" label. No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
 | OV-01b | Sample-data offer on an empty account | When the total balance is **under 1 USD** (a new or empty account) and sample mode is off, the **yellow banner** (same look as the sample-mode banner) "Just looking around? · Test Stiver now with sample data" (description next to the question) and a short **Try** button (not a toggle) appears at the very top of Overview. Tapping the button shows the demo account and the sample banner (the card disappears; "Back to my data" restores the own data and the card). With a real balance of 1 USD or more the card is not shown. Settings > Account > Use sample data still works. |
 | OV-02 | Desktop layout | Hero spans the full width; below it a two-column grid: Money Flow and Spending, then Budgets and Recent transactions side by side with no empty cell. Phone: single column. |
 | OV-03 | Money Flow | Six periods of income and spending; hover/tap a point shows net for that period. Saved shows income minus spending of the selected period. |
@@ -333,5 +333,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: TX-07b: Add new category is pinned (sticky) at the bottom of the list.
 - 2026-11-01: TX-07b: list = fixed search + scrolling options + fixed Add new category footer.
 - 2026-11-01: ST-07c (Indonesian sample data), IV-10 (category popup: scrollable, Add new category last, top layer).
+- 2026-11-01: OV-01: Total Balance = savings + investments, with an (i) tooltip.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

@@ -52,6 +52,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     return { before, after: { held: heldNow(h), nw: portfolioUSD(monthKey(new Date())), cash: walletBalance(w) }, total: h.quantity, h: h.id }; });
   assert.deepEqual(fut.after, fut.before, JSON.stringify(fut)); assert(fut.total >= fut.before.held + 500);
   await p.evaluate((id) => { const h = D().holdings.find((x) => x.id === id); h.trades.filter((t) => t.date > isoDate(new Date())).forEach((t) => removeTrade(h, t)); D().transactions = D().transactions.filter((t) => t.note !== 'Later cash'); }, fut.h);
+  // Overview's Total Balance = savings + investments (lent money and loans are not included)
+  const tb = await p.evaluate(() => { const k = currentPeriod(), inv = usdToMinor(portfolioUSD(k), cur()); return { total: totalBalance(), sum: savingsTotal() + inv, inv }; });
+  assert(tb.inv > 0 && tb.total === tb.sum, JSON.stringify(tb));
   // recurring in USDT
   hid = await p.evaluate(() => D().holdings.find((x) => x.symbol === 'USDT').id); const base = await qty();
   const n = await p.evaluate((id) => { const r = addRule('txn', 'weekly', '2026-10-10', { type: 'income', amount_minor: 5000, currency: 'USD', wallet_id: 'h:' + id, quantity: 50, note: 'Retainer', category_id: null }); r.next = '2026-10-17'; return runRecurring(); }, hid);

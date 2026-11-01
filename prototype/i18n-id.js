@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Savings + investments": "Tabungan + investasi",
  "Try": "Coba",
  "Try sample data": "Coba data contoh",
  "not saved": "tidak disimpan",

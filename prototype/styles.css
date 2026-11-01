@@ -641,3 +641,18 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .cs-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding-bottom: 4px; }
 .cs-opt.cs-cta { position: static; margin-top: 6px; border-top: 1px solid var(--line); border-radius: 10px; box-shadow: none; }
 .cs-search { flex: none; position: static; }
+
+/* (i) on the blue balance card */
+.hero .label { position: relative; }
+.hero .info-wrap { position: static; display: inline-flex; align-items: center; margin-left: 2px; }
+.hero .info-btn { background: rgba(255, 255, 255, .22); color: #fff; border-color: rgba(255, 255, 255, .4); }
+.hero .info-btn:hover, .hero .info-wrap.open .info-btn { background: #fff; color: var(--brand); border-color: #fff; }
+.hero .info-pop { top: 30px; left: 0; }
+.hero .label { opacity: 1; z-index: 5; color: rgba(255, 255, 255, .95); }
+.hero .info-pop { background: #1e1b4b; color: #fff; }
+/* tooltips a bit smaller; on the blue card it sits beside the icon so it never covers the balance */
+.info-pop { font-size: 12px; line-height: 1.4; padding: 7px 10px; border-radius: 10px; width: min(220px, 70vw); }
+.hero .info-wrap { position: relative; }
+.hero .info-pop { top: -4px; left: 26px; width: max-content; max-width: 70vw; white-space: nowrap; background: #1e1b4b; border: 1px solid rgba(255, 255, 255, .25); }
+.hero .label .info-wrap, .hero .label .info-wrap .info-pop { padding: 0; background: none; font-size: 12px; border-radius: 0; }
+.hero .label .info-wrap .info-pop { padding: 6px 10px; background: #1e1b4b; border-radius: 10px; left: 28px; top: -3px; }

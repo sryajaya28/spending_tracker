@@ -302,7 +302,9 @@ function walletBalance(w) {
   const today = todayIso();
   return w.opening_balance_minor + D().transactions.filter((t) => t.wallet_id === w.id && t.occurred_at <= today).reduce((a, t) => a + cashSign(t) * t.amount_minor, 0);
 }
-const totalBalance = () => D().wallets.filter((w) => !w.archived).reduce((a, w) => a + convert(walletBalance(w), w.currency, cur()), 0);
+const savingsTotal = () => D().wallets.filter((w) => !w.archived).reduce((a, w) => a + convert(walletBalance(w), w.currency, cur()), 0);
+/* Total Balance on Overview = savings + investments (money lent and loans are not included; Portfolio > Net worth covers them) */
+const totalBalance = () => savingsTotal() + usdToMinor(portfolioUSD(currentPeriod()), cur());
 /* A wallet counts from the month it starts (w.since): its opening balance and its transactions do not
    appear in earlier months, so money added later never inflates past months. */
 function balanceAtEnd(k) {
@@ -718,7 +720,7 @@ function viewOverview() {
   const recent = D().transactions.slice(0, 6);
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
-    <section class="card hero"><div class="label">${__('Total Balance')}</div>
+    <section class="card hero"><div class="label">${__('Total Balance')}${infoTip('ov-total', __('Savings + investments'))}</div>
       <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
       <div class="delta"><b>${pctFmt(balChange)}</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>

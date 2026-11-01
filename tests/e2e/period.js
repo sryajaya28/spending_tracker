@@ -32,7 +32,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // a wallet created in the calendar month the period ends in still counts (Total Balance and Savings must agree)
   const agree = await p.evaluate(() => { const nm = monthKey(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)), k = currentPeriod();
     D().wallets.push({ id: uid(), name: 'Late', type: 'cash', currency: 'IDR', opening_balance_minor: 777000, archived: false, since: periodEnd(k).slice(0, 7) });
-    const total = D().wallets.filter((w) => !w.archived).reduce((a, w) => a + walletBalance(w), 0);
+    const total = savingsTotal();
     return { total, savings: Math.round(savingsUSD(k) * RATES.IDR) }; });
   assert(Math.abs(agree.total - agree.savings) < 2, JSON.stringify(agree));
   // reload from the saved profile row

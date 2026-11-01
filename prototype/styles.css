@@ -800,3 +800,6 @@ dialog { overscroll-behavior: contain; } .cs-scroll, .dlg { overscroll-behavior:
 .support-form h2 { margin: 0; } .support-form .sub { margin: -6px 0 0; }
 .support-form .field, .support-form .shots { margin: 0; }
 .support-form .seg { width: 100%; margin: 0; } .support-form .seg label { flex: 1; text-align: center; }
+/* dropdown groups (Savings / Investment / Loan accounts...): a tinted title band and a gap before each new group */
+.cs-group { background: var(--soft); border-radius: 8px; margin: 10px 6px 4px; padding: 6px 10px; color: var(--ink); font-weight: 700; }
+.cs-scroll .cs-group:first-child { margin-top: 4px; }

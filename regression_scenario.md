@@ -189,7 +189,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| IV-01 | + Account (investment) | Name; appears with its holdings and total. A holding row has three tidy lines: the asset name (one line, cut with … if long), `12,000 USDT`, and `@ IDR 18,139`; the value and the share % sit on the right. Tapping a row opens it **without a blue focus border**. |
+| IV-01 | + Account (investment) | Name; appears with its holdings and total. A holding row has two lines: the asset name (one line, cut with … if long) and `12,000 USDT`; the value and the share % sit on the right; **no price in the row**. Tapping a row opens it **without a blue focus border**. |
 | IV-02 | Add asset, picker | Account select, then a **type dropdown** (All, Crypto, US stocks & ETFs, Indonesia (IDX), Commodities) beside the search box; starts on All each time. |
 | IV-03 | Search a US stock / crypto | Needs the Finnhub key on the server; shows live price; built-in assets work without it. |
 | IV-04 | Search an IDX stock (BBCA) **(manual)** | Result "BBCA / Bank Central Asia"; a price appears (rupiah converted to USD). If Yahoo is unreachable: "price unavailable" and a typed price field. |
@@ -198,6 +198,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 | IV-07 | Buy / Sell on an existing holding | Quantity and the other side (account or stablecoin) move together; selling more than held is refused; deleting a trade restores both sides. |
 | IV-08 | Price freshness | Prices (Finnhub and Yahoo) and exchange rates are cached on the server for **6 hours**; they load when the app opens (no Refresh button). Failures keep the previous price. There is no description line on the Investment tab: an **(i)** button next to the "Investments" title opens a small popover (prices and exchange rates update every 6 hours and can be delayed; estimates, not financial advice). Tap/click toggles it, hover shows it on desktop, tapping elsewhere closes it; on a phone it stays inside the screen. |
 | IV-10 | Category list popup (phone browser) | The popup opens in the top layer (not clipped by the dialog edge). The Search box is fixed on top; the categories scroll; **Add new category is the last item of the scrolling list** (not pinned): scroll to the end and it is fully visible and tappable **(manual, real phone)**. |
+| IV-11 | Tap a holding | Opens its detail: summary card (symbol, type · account, **You hold**, **Current price**, **Total value**, **Share of account**), **Buy** and **Sell** buttons, recent buys/sells (deletable), **Move to account**, then Remove / Close / Save. Buy/Sell work as before. |
 | IV-09 | Reload | Holdings keep type, name and price source (IDX = stock, commodity = Commodity). |
 
 ### 9.5 Lent and loans
@@ -338,5 +339,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: ST-07c: no DBS SG, adds a housing loan, sample period starts on the 25th.
 - 2026-11-01: TX-02 (count only), UI-13 (pages open at the top).
 - 2026-11-01: IV-01: tidier holding rows, no focus ring on tap.
+- 2026-11-01: IV-01/IV-11: no price in holding rows; a detail view with price and actions.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

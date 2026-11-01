@@ -669,3 +669,11 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .holding-row .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
 .holding-row .amt { font-size: 14.5px; }
 .holding-row .amt .sub { font-size: 12.5px; }
+
+/* holding detail */
+.hold-sum { background: var(--soft); border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.hs-top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; } .hs-top > div { display: flex; flex-direction: column; }
+.hs-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; } .hs-row span { color: var(--muted); }
+.hold-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .hold-actions .btn { width: 100%; justify-content: center; }
+.btn.sell { background: #fde6e7; color: var(--bad); }
+:root[data-theme="dark"] .btn.sell { background: rgba(229, 72, 77, .18); color: #ff8b8f; }

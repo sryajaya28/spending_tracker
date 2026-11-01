@@ -37,6 +37,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(t.includes('Gold (per gram)') && t.includes('Bank Central Asia'), t.slice(0, 400));
   assert(!t.includes('update every 6 hours') && !t.includes('Refresh prices') && !t.includes('Growth counts'), 'no description line; the text lives in the tooltip');
   await p.click('.info-btn'); assert((await p.innerText('.info-pop')).includes('update every 6 hours'), 'tooltip text'); await p.click('h1'); assert.equal(await p.$$eval('.info-wrap.open', (e) => e.length), 0, 'tapping elsewhere closes it');
+  // rows show no price; tapping one opens the detail with the current price and the Buy / Sell actions
+  assert(!/@ /.test(await p.innerText('.holding-row')), 'no price in the row');
+  await p.click('.holding-row'); await p.waitForSelector('#dlg .hold-sum'); const dt = await p.innerText('#dlg');
+  assert(dt.includes('Current price') && dt.includes('Total value') && dt.includes('Share of account') && dt.includes('Buy') && dt.includes('Sell') && dt.includes('Move to account'), dt.slice(0, 300)); await p.click('[data-act=close]');
   assert.equal(await p.evaluate(() => Math.round(holdingUSD(D().holdings.find((h) => h.symbol === 'XAUG'), currentPeriod()))), 1000);
   await p.screenshot({ path: __dirname + '/out/idx.png' });
   console.log('ok', JSON.stringify(errs)); await b.close();

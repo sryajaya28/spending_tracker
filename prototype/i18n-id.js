@@ -1,6 +1,10 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Move to account": "Pindahkan ke akun",
+ "Share of account": "Porsi di akun",
+ "Total value": "Total nilai",
+ "Current price": "Harga saat ini",
  "Savings + investments": "Tabungan + investasi",
  "Try": "Coba",
  "Try sample data": "Coba data contoh",

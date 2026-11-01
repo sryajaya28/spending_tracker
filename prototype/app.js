@@ -528,9 +528,9 @@ function bindValue(months, usd, vc) {
 
 function holdingRow(h, vc, accTotal) {
   const info = assetInfo(h.symbol), k = lastMonths(6)[5], price = info.usd(k), value = heldNow(h) * price;
-  // name on top, then "quantity SYMBOL", then the unit price; value and share on the right
+  // name and "quantity SYMBOL"; value and share on the right. The price and actions are in the detail (tap a row).
   return `<div class="row holding-row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
-    <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h))} ${esc(info.symbol)}</div><div class="sub num">@ ${money(usdToMinor(price, vc), vc)}</div></div>
+    <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h))} ${esc(info.symbol)}</div></div>
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${accTotal ? Math.round((value / accTotal) * 100) : 0}%</div></div></div>`;
 }
 
@@ -1180,14 +1180,22 @@ function accountDialog(a) {
     <p class="hint">${__('An account can hold several assets: crypto, US stocks and ETFs.')}</p>
     <div class="actions">${a ? `<button type="button" class="btn danger" data-act="archive-account" data-id="${a.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
+/* detail of one holding: quantity, current price, value, share of its account (opened by tapping a row) */
+const vcOf = () => pf();
+function holdingSummary(h, info, vc) {
+  const k = lastMonths(6)[5], price = info.usd(k), qty = heldNow(h), value = qty * price, accTotal = portfolioUSD(k, h.account_id);
+  const row = (l, v) => `<div class="hs-row"><span>${l}</span><b class="num">${v}</b></div>`;
+  return `<div class="hold-sum"><div class="hs-top"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span><div><b>${esc(info.symbol)}</b><small class="muted">${esc(typeLabel(info.type))} · ${esc(accountName(h.account_id))}</small></div></div>
+    ${row(__('You hold'), `${qtyFmt(qty)} ${esc(info.symbol)}`)}${row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
+}
 function holdingDialog(h, accId, opts = {}) {
   if (!h) state.ui.pickType = '';   // the asset picker starts on All
   const accounts = activeAccounts(), info = h && assetInfo(h.symbol), invest = !!opts.invest;
   const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
-  open(`<h2>${h ? __('Edit {symbol}', { symbol: esc(info.symbol) }) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
+  open(`<h2>${h ? esc(info.name) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
     ${invest ? kindSeg('invest') : ''}
-    <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
-    ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(typeLabel(info.type))}</span></p>` : `
+    ${h ? '' : `<label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}
+    ${h ? '' : `
     <div class="field" id="picker">${__('Asset')}
       <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Commodities']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
       <input name="assetq" autocomplete="off" placeholder="${__('Name or ticker')}"></div>
@@ -1198,9 +1206,9 @@ function holdingDialog(h, accId, opts = {}) {
       <button type="button" class="legend-btn" data-act="manual-asset">${__('Not listed? Add an asset manually')}</button></div>
     <div class="custom-fields" hidden><div class="two"><label class="field">${__('Symbol')}<input name="symbol" maxlength="10" placeholder="${__('e.g. GOLD')}"></label><label class="field">${__('Name')}<input name="cname" maxlength="40" placeholder="${__('Name')}"></label></div>
       <div class="two"><label class="field">${__('Type')}<select name="ctype"><option value="crypto">${__('Crypto')}</option><option value="stock">${__('Stock')}</option><option value="etf">${__('ETF')}</option><option value="manual">${__('Other')}</option></select></label><label class="field">${__('Price (USD)')}<input name="cprice" type="number" min="0" step="any"></label></div></div>`}
-    ${h ? `<div class="holding-now"><div><small class="muted">${__('You hold')}</small><b class="num">${qtyFmt(heldNow(h))} ${esc(info.symbol)}</b></div>
-      <div class="tools"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${__('Buy')}</button><button type="button" class="btn secondary" data-act="trade" data-side="sell" data-id="${h.id}">${__('Sell')}</button></div></div>
-      ${tradeList(h)}` : `
+    ${h ? holdingSummary(h, info, vcOf(h)) + `<div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${__('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${__('Sell')}</button></div>
+      ${tradeList(h)}
+      <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
     <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
       <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>

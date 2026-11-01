@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Holding rows no longer show the unit price. Tapping a row opens a detail (`holdingSummary`, in `holdingDialog`): quantity, current price, value, share of the account, Buy / Sell
+  buttons, trade history, Move to account, Remove. (Profit/loss is not shown: the app does not track cost basis.)
+
 - 2026-11-01: Holding rows: name, `qty SYMBOL` and `@ price` on three clean lines (no type badge or type text); no focus outline on rows/buttons after a tap (`outline: none`).
 
 - 2026-11-01: Activity day rows show only the weekday and the transaction count (no income/spent text); every route change scrolls to the top (`hashchange` handler).

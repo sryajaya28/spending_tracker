@@ -1275,6 +1275,15 @@ function recordCoinTxn(h, { type, quantity, date, note, category_id, category_so
 }
 /* the Account list of the add-transaction form: wallets, USDT/USDC you hold, and (income only) USDT/USDC to start receiving
    into an investment account that does not hold it yet ("n:SYMBOL:accountId", created when you save) */
+/* the account used last, kept per kind (expense, income, invest) on this device, and offered first the next time */
+const ACCT_KEY = 'stiver.lastacct.v1';
+function rememberAcct(kind, value) {
+  if (state.real || !value) return;   // sample data never writes it
+  try { const m = JSON.parse(localStorage.getItem(ACCT_KEY) || '{}'); m[kind] = value; localStorage.setItem(ACCT_KEY, JSON.stringify(m)); } catch { /* storage unavailable */ }
+}
+function recallAcct(kind, optionsHtml) {   // only a value that is still one of the options (not archived or removed)
+  try { const v = (JSON.parse(localStorage.getItem(ACCT_KEY) || '{}'))[kind]; return v && optionsHtml.includes(`value="${v}"`) ? v : ''; } catch { return ''; }
+}
 function acctOptions(type, selected) {
   const ws = D().wallets.filter((w) => !w.archived), coins = stableHoldings(), accts = activeAccounts();
   const fresh = type === 'income' ? ['USDT', 'USDC'].flatMap((sym) => (accts.length ? accts : [{ id: '', name: '' }]).filter((a) => !D().holdings.some((h) => h.account_id === a.id && h.symbol === sym)).map((a) => ({ sym, a }))) : [];
@@ -1299,7 +1308,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
   open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
-    <label class="field">${__('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? t.wallet_id : (ws.find((w) => w.currency === cur()) || ws[0]).id)}</select></label>
+    <label class="field">${__('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? t.wallet_id : (recallAcct(type, acctOptions(type, '')) || (ws.find((w) => w.currency === cur()) || ws[0]).id))}</select></label>
     <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(unit) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${tcoin ? tcoin.trades.find((x) => x.id === t.trade_id).quantity : t ? toMajor(t.amount_minor, c) : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${date0}"></label></div>
     <label class="field">${__('Category')}<select name="category" data-search data-empty="${__('Category not found')}" data-prev="${t?.category_id || ''}">${catOptions(type, t?.category_id, true)}</select></label>
@@ -1416,7 +1425,7 @@ function holdingDialog(h, accId, opts = {}) {
   const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
   open(`<h2>${h ? esc(info.name) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
     ${invest ? kindSeg('invest') : ''}
-    ${h ? '' : `<label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}
+    ${h ? '' : `<label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId || (invest ? recallAcct('investacct', accounts.map((x) => `value="${x.id}"`).join('')) : '')) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}
     ${h ? '' : `
     <div class="field" id="picker">${__('Asset')}
       <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Commodities'], ['cash', 'Cash balance']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
@@ -1432,7 +1441,7 @@ function holdingDialog(h, accId, opts = {}) {
     ${h ? holdingSummary(h, info, vcOf(h)) + `<div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${info.cash ? __('Deposit') : __('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${info.cash ? __('Withdraw') : __('Sell')}</button></div>
       <button type="button" class="btn secondary wide" data-act="view-history" data-id="${h.id}">${__('View history')}</button>
       <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
-    <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
+    <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest ? (recallAcct('invest', sourceOptions('buy', null, '')) || (firstW ? 'w:' + firstW.id : '')) : '')}</select></label>
       <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
     <div class="two" data-own-price><label class="field">${__('Average price')}<input name="avgprice" type="number" min="0" step="any" placeholder="${__('optional')}"></label>
@@ -1845,7 +1854,7 @@ document.addEventListener('change', (e) => {
     else if (t.value === 'transfer') transferDialog();
     else {
       $('select[name=category]', t.form).innerHTML = catOptions(t.value, '', true); $('select[name=category]', t.form).dataset.prev = ''; $('.quick-cat', t.form).hidden = true; $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value);
-      if (!t.form.dataset.id) { const w = t.form.wallet, keep = w.value; w.innerHTML = acctOptions(t.value, keep); if (![...w.options].some((o) => o.value === keep)) w.selectedIndex = 0; syncTxnUnit(t.form); }   // "new" coin options exist for income only
+      if (!t.form.dataset.id) { const w = t.form.wallet, keep = recallAcct(t.value, acctOptions(t.value, '')) || w.value; w.innerHTML = acctOptions(t.value, keep); if (![...w.options].some((o) => o.value === keep)) w.selectedIndex = 0; syncTxnUnit(t.form); }   // "new" coin options exist for income only
     }
   }
   else if (t.matches('[data-pick-type]')) { state.ui.pickType = t.value; syncPickType(t.form); runAssetSearch(); }
@@ -1976,6 +1985,7 @@ document.addEventListener('submit', async (e) => {
     if (!coin && !existing && v.repeat) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     state.ui.month = periodKeyOf(row.occurred_at) <= currentPeriod() ? periodKeyOf(row.occurred_at) : state.ui.month;
+    if (!existing) rememberAcct(type, v.wallet);
     save(); close(); render(); toast(msg);
   }
   if (kind === 'transfer') {
@@ -2123,7 +2133,7 @@ document.addEventListener('submit', async (e) => {
       recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
       if (v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
     } else addOpening(h, qty, parseFloat(v.avgprice), v.pccy);
-    if (f.dataset.invest) state.ui.pfTab = 'investment';
+    if (f.dataset.invest) { state.ui.pfTab = 'investment'; rememberAcct('invest', v.fund); rememberAcct('investacct', v.account); }
     save(); close(); render(); toast(`${assetInfo(sym).symbol} ${src ? 'bought' : 'added'}${src ? ` · ${qtyFmt(paid)} ${sourceUnit(src)} paid` : ''}`);
   }
 });

@@ -287,7 +287,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
-- 2026-11-01: Investment account card header (`.acct-head`): long names wrap inside their own space and, on phones, Edit / + Cash / + Asset always sit in one even three-column row below the name.
+- 2026-11-01: Investment account card header (`.acct-head`): the Edit / + Cash / + Asset buttons always stay on the right (compact on phones) and a long name wraps in the space beside them.
 - 2026-11-01: The asset dialog no longer lists trades: a **View history** button opens a full page `#/portfolio/<holdingId>` (`viewAsset`, routed from `viewPortfolio` via `routeArg()`) with summary, Buy/Sell, Edit and the full trade list (`tradeList`, no limit, dates with year).
 - 2026-11-01: Investment accounts get a **+ Cash** button (opens Add asset on Cash balance); for the Cash balance type the asset box becomes a searchable currency dropdown (`select[data-cash-ccy]`, currencies = `RATES` keys) and the choice fills that field directly (`syncPickType`). `cashacct` test extended.
 - 2026-11-01: **WIP (not live in the UI):** migration 17 adds `holdings.cost_currency` and `holding_events.unit_price` for average-price / P&L tracking (already applied to production); `cloud.js` persists/loads them as `h.ccy`, `h.open_price`, `tr.price`. App-level cost engine and UI still to come.

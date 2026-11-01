@@ -971,7 +971,8 @@ function installGuide(kind) {
   const sheet = (rows, scroll) => `<div class="g-sheet"><div class="g-sheet-h"><img src="icon.svg" alt=""><span>Stiver<small>stiver.io</small></span></div><div class="g-clip"><div class="g-list ${scroll ? 'g-scroll' : ''}">${rows}</div></div></div>`;
   const hot = `<div class="g-row g-hot">Add to Home Screen ${ring}</div>`;
   const add = `<div class="g-add"><div class="g-add-h"><span>✕</span><b>Add to Home Screen</b><em class="g-hot">Add${ring}</em></div><div class="g-add-app"><img src="icon.svg" alt=""><span>Stiver<small>stiver.io</small></span></div><div class="g-tog"><span>Open as Web App</span><u class="g-hot"><i></i>${ring}</u></div></div>`;
-  const home = `<div class="g-home">${Array.from({ length: 7 }, () => '<i class="g-app"></i>').join('')}<span class="g-mine"><img src="icon.svg" alt=""><small>Stiver</small></span></div>`;
+  const dummy = (n) => Array.from({ length: n }, () => '<i class="g-app"></i>').join('');
+  const home = `<div class="g-home">${dummy(4)}<span class="g-mine"><img src="icon.svg" alt=""><small>Stiver</small>${ring}</span>${dummy(3)}</div>`;
   let scenes, caps;
   if (chrome) {   // Chrome: the Share icon sits in the address bar; Add to Home Screen is further down the list
     scenes = [`<div class="g-url"><span>stiver.io</span><b class="g-ic">${GUIDE_SHARE}${ring}</b></div>${page}`, sheet(rowsOf(['Add to Bookmarks', 'Create a QR code', 'Find in Page', 'Print']) + hot + rowsOf(['Add to Quick Note']), true), add, home];

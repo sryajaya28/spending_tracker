@@ -737,7 +737,7 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .g-add-app { display: flex; gap: 10px; align-items: center; background: #f2f3fb; border-radius: 12px; padding: 8px; }
 .g-tog { display: flex; align-items: center; justify-content: space-between; background: #f2f3fb; border-radius: 12px; padding: 10px; }
 .g-tog u { position: relative; width: 38px; height: 22px; border-radius: 11px; background: #34c759; } .g-tog u i { position: absolute; right: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
-.g-home { position: absolute; inset: 0; padding: 26px 14px; display: grid; grid-template-columns: repeat(4, 1fr); align-content: start; gap: 16px 8px; background: linear-gradient(160deg, #3b5bdb, #7048e8); }
+.g-home { position: absolute; inset: 0; padding: 26px 14px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: start; gap: 16px 10px; background: linear-gradient(160deg, #3b5bdb, #7048e8); }
 .g-app { display: block; aspect-ratio: 1; border-radius: 12px; background: rgba(255, 255, 255, .35); }
 .g-mine { display: grid; justify-items: center; gap: 2px; color: #fff; animation: g-pop 12s infinite; } .g-mine img { width: 100%; aspect-ratio: 1; border-radius: 12px; } .g-mine small { color: #fff; font-size: 9px; }
 @keyframes g-pop { 0%, 76% { transform: scale(.2); opacity: 0; } 82% { transform: scale(1.15); opacity: 1; } 86%, 100% { transform: scale(1); opacity: 1; } }
@@ -751,3 +751,4 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 @keyframes g-show5 { 0% { opacity: 0; } 2% { opacity: 1; } 18% { opacity: 1; } 20%, 100% { opacity: 0; } }
 .g-n5 .g-mine { animation: g-pop5 15s infinite; }
 @keyframes g-pop5 { 0%, 80% { transform: scale(.2); opacity: 0; } 86% { transform: scale(1.15); opacity: 1; } 90%, 100% { transform: scale(1); opacity: 1; } }
+.g-mine { position: relative; min-width: 0; } .g-mine .g-ring { inset: -5px -5px 8px -5px; border-radius: 15px; }

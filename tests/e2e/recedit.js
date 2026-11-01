@@ -28,6 +28,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const after = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort());
   assert.deepEqual(after, before, 'past entries untouched');
   assert((await p.innerText('.main')).includes('150.000') || (await p.innerText('.main')).includes('150,000'), 'the new amount shows');
+  // the payment account can be changed too (history stays)
+  await p.evaluate(() => { const w = { ...D().wallets[0], id: uid(), name: 'Other bank', currency: D().wallets[0].currency }; D().wallets.push(w); window.__w2 = w.id; save(); render(); });
+  const wid = await p.evaluate(() => window.__w2);
+  await p.click('[data-act=rec-manage]'); await p.selectOption('select[name=wallet]', wid); await p.click('#dlg button[type=submit]'); await settle();
+  assert.equal(await p.evaluate(() => D().recurring[0].spec.wallet_id), wid, 'the rule pays from the new account');
+  assert.deepEqual(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort()), before, 'past entries still on their old account and amounts');
+  assert.equal(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').every((t) => t.wallet_id !== window.__w2)), true);
+  // expenses show red, income green in the list
+  assert(await p.$('.cat-row .pl.down'), 'expense amount is red'); 
   // a date in the past is refused
   await p.click('[data-act=rec-manage]'); await p.evaluate(() => { document.querySelector('input[name=next]').removeAttribute('min'); }); await p.fill('input[name=next]', '2026-01-01'); await p.click('#dlg button[type=submit]'); assert.equal(await p.evaluate(() => D().recurring[0].next), newDate, 'a past date is not accepted'); await p.click('[data-act=close]');
   console.log('ok', JSON.stringify(errs)); await b.close();

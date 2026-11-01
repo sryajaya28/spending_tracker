@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Pick an account": "Pilih akun",
  "Recurring updated. Entries already made are unchanged.": "Pengulangan diperbarui. Catatan yang sudah dibuat tidak berubah.",
  "Pick a date from today on": "Pilih tanggal mulai hari ini",
  "Next payment": "Pembayaran berikutnya",

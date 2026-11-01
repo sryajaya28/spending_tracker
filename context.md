@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Settings > Categories: no collapse toggle; separate Expense and Income groups (`.cat-sec`, headings + counts, no type badge); on phones each shows the first
+  5 with See more / Show less (`state.ui['more_cat-<type>']`; the shared `toggle-more` action now takes any `data-key`). `catsOpen` removed.
+
 - 2026-11-01: Portfolio hero: removed the "after loans / no loans" label. Activity header: search (left) + period dropdown (right) on line 1 (`+ Add` only on desktop, `.add-desk`),
   filters "All categories / All occasions / All accounts" on line 2 sized by flex ratios so the text is not cut at 360-390 px (`dropdown.js` also supports a short field label with a fuller `data-list` label).
 

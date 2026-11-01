@@ -776,16 +776,22 @@ const occasionRow = (o) => {
 
 /* Settings > Categories: collapsed by default; each parent with sub-categories expands on its own */
 function categoriesCard() {
-  const roots = D().categories.filter((c) => !c.parent_id && !c.archived), subs = D().categories.filter((c) => c.parent_id && !c.archived).length;
-  const open = state.ui.catsOpen;
-  const rows = roots.map((c) => {
+  const row = (c) => {
     const kids = childrenOf(c.id), isOpen = state.ui.openCats.has(c.id);
-    return `<div class="brow cat-row">${tile(c)}<div class="cat-main"><b class="cat-name">${esc(c.name)}</b><div class="cat-meta"><span class="badge">${typeLabel(c.type)}</span>${kids.length ? `<button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${__(kids.length === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids.length })} <span class="chev" aria-hidden="true">›</span></button>` : ''}</div></div>
+    return `<div class="brow cat-row">${tile(c)}<div class="cat-main"><b class="cat-name">${esc(c.name)}</b>${kids.length ? `<div class="cat-meta"><button type="button" class="legend-btn" data-act="toggle-cat" data-id="${c.id}" aria-expanded="${isOpen}">${__(kids.length === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids.length })} <span class="chev" aria-hidden="true">›</span></button></div>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="add-cat" data-parent="${c.id}">${__('+ Sub')}</button><button class="btn secondary" data-act="edit-cat" data-id="${c.id}">${__('Edit')}</button></div></div>`
       + (isOpen ? kids.map((k) => `<div class="brow indent cat-row">${tile(k, true)}<div class="cat-main"><b class="cat-name">${esc(k.name)}</b></div><div class="tools"><button class="btn secondary" data-act="edit-cat" data-id="${k.id}">${__('Edit')}</button></div></div>`).join('') : '');
-  }).join('');
-  return `<section class="card"><div class="card-head"><button type="button" class="legend-btn card-toggle" data-act="toggle-cats" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><h2>${__('Categories')}</h2></button><button class="btn" data-act="add-cat">${__('+ Category')}</button></div>
-    ${open ? `<div style="margin-top:6px">${rows}</div>` : ''}</section>`;
+  };
+  // expenses and income are separate groups; on phones each shows its first 5 with See more / Show less
+  const section = (type, label, color) => {
+    const roots = D().categories.filter((c) => !c.parent_id && !c.archived && c.type === type); if (!roots.length) return '';
+    const more = !!state.ui['more_cat-' + type], rest = roots.length - 5;
+    return `<div class="cat-sec cat-sec-${type}"><div class="cat-sec-h"><i style="background:${color}"></i><b>${label}</b><span class="muted">${roots.length}</span></div>
+      <div class="cat-list ${more ? '' : 'collapsed'}">${roots.map((c, n) => (n >= 5 ? row(c).replace('<div class="brow cat-row">', '<div class="brow cat-row more-item">') : row(c))).join('')}
+      ${rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="cat-${type}" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : ''}</div></div>`;
+  };
+  return `<section class="card"><div class="card-head"><h2>${__('Categories')}</h2><button class="btn" data-act="add-cat">${__('+ Category')}</button></div>
+    ${section('expense', __('Expense'), '#E5484D')}${section('income', __('Income'), '#1fa971')}</section>`;
 }
 function viewSettings() {
   const p = D().profile;
@@ -1373,7 +1379,6 @@ document.addEventListener('click', (e) => {
   else if (act === 'rec-del') { D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
   else if (act === 'add-budget') budgetDialog();
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
-  else if (act === 'toggle-cats') { state.ui.catsOpen = !state.ui.catsOpen; render(); }
   else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }
   else if (act === 'quick-cat') { const q = $('.quick-cat', el.form || el.closest('form')); q.hidden = !q.hidden; if (!q.hidden) $('input[name=qc_name]', q).focus(); }
   else if (act === 'quick-cat-cancel') $('.quick-cat', el.closest('form')).hidden = true;
@@ -1419,7 +1424,7 @@ document.addEventListener('click', (e) => {
   }
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
-  else if (act === 'toggle-more') { const k = el.dataset.key === 'hist' ? 'histMore' : 'walletsMore'; state.ui[k] = !state.ui[k]; render(); }
+  else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'goto') location.hash = '#/' + el.dataset.route;
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
@@ -1635,7 +1640,7 @@ document.addEventListener('submit', (e) => {
     const fields = { name, icon: v.icon.trim() || '🏷️', color: v.color, parent_id: parent ? parent.id : null, type };
     if (existing) Object.assign(existing, fields);
     else D().categories.push({ id: uid(), archived: false, ...fields });
-    if (parent) { state.ui.catsOpen = true; state.ui.openCats.add(parent.id); }   // show the sub-category you just added
+    if (parent) { state.ui['more_cat-' + parent.type] = true; state.ui.openCats.add(parent.id); }   // show the sub-category you just added
     save(); close(); render(); toast(existing ? 'Category saved' : 'Category added');
     return;
   }

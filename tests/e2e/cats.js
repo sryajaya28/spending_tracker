@@ -7,12 +7,16 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   await p.evaluate(() => { location.hash = '#/settings'; });
-  await p.waitForSelector('[data-act=toggle-cats]');
-  assert.equal(await p.$$eval('.brow .badge', (e) => e.length), 0, 'collapsed: no category rows');
+  await p.waitForSelector('.cat-sec');
+  // expense and income are separate groups; on a phone each shows its first 5 with See more
+  assert.deepEqual(await p.$$eval('.cat-sec-h b', (e) => e.map((x) => x.textContent)), ['Expense', 'Income']);
+  const vis = () => p.$$eval('.cat-sec-expense .cat-row:not(.indent)', (e) => e.filter((x) => x.offsetParent).length);
+  await p.setViewportSize({ width: 390, height: 800 }); assert.equal(await vis(), 5, 'five shown by default on a phone');
+  assert((await p.innerText('.cat-sec-expense .see-more')).includes('See more (')); await p.click('.cat-sec-expense .see-more'); assert((await vis()) > 5, 'expanded'); assert((await p.innerText('.cat-sec-expense .see-more')).includes('Show less')); await p.click('.cat-sec-expense .see-more'); assert.equal(await vis(), 5, 'collapsed again');
+  await p.setViewportSize({ width: 1280, height: 800 }); assert((await vis()) > 5, 'desktop shows every category'); assert.equal(await p.$$eval('.see-more', (e) => e.filter((x) => x.offsetParent).length), 0, 'no See more on desktop');
   const txt = () => p.evaluate(() => document.body.innerText);
   assert(!(await txt()).includes('12 categories · 11 sub-categories'), 'no summary line');
   await p.screenshot({ path: __dirname + '/settings_collapsed.png' });
-  await p.click('[data-act=toggle-cats]');
   assert((await p.$$('.brow.indent')).length === 0, 'subs hidden until expanded');
   assert((await p.$$('[data-act=toggle-cat]')).length === 4, 'four parents have subs');
   await p.click('[data-act=toggle-cat]');

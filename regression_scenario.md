@@ -208,7 +208,7 @@ Automated: `pfrange`, `wallet`, `arch`, `curdd`, `idx`, `run`, `ios`.
 | ID | Scenario | Expected |
 |---|---|---|
 | ST-01 | Profile card | Display name, Reporting currency, **Budget period starts on**, Language, Appearance: label left, control flush right on one line, all inside the card. No description lines. |
-| ST-02 | Categories | Collapsed by default with a toggle; each parent expands to its sub-categories; `+ Sub`, `Edit` right-aligned on the same line; one level of sub-categories only. |
+| ST-02 | Categories | Always visible (no collapse toggle) in two clearly separated groups with headings and counts: **Expense** (red dot) and **Income** (green dot); no per-row type badge. On a phone each group shows its first **5** categories with **See more (n) / Show less**; desktop shows all. Each parent with sub-categories has an expandable "n sub-categories" toggle; `+ Sub` and `Edit` sit right-aligned on the same line. Adding a sub-category opens its parent and expands the list. |
 | ST-03 | Add / edit / archive a category | Top-level or sub-category; a parent with children stays top-level; names unique per level. |
 | ST-04 | Smart tagging toggle | Off: no AI tagging; on: tags only after enough labelled history, otherwise stays empty. |
 | ST-05 | Recurring card | Appears only when rules exist (see section 6). |
@@ -306,5 +306,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: UI-06 notes the tighter space under the bottom bar labels.
 - 2026-11-01: CN-01/02/08 use the `Investment Account` group and `Name (USDT)` format.
 - 2026-11-01: TX-01 (new Activity header) and PF-01 (no "after loans" label).
+- 2026-11-01: ST-02 rewritten for the Expense / Income groups and the phone-only top-5 limit.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

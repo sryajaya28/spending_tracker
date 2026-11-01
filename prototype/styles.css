@@ -574,3 +574,10 @@ select:not([data-native]) { pointer-events: none; }
 .filters.scroll-row select[data-filter="wallet"] { flex-grow: 31; }
 @media (max-width: 900px) { .add-desk { display: none; } }
 @media (max-width: 380px) { .filters.scroll-row select { font-size: 12px; padding: 0 6px; } }
+
+/* Settings > Categories: expense and income groups */
+.cat-sec { margin-top: 10px; }
+.cat-sec-h { display: flex; align-items: center; gap: 8px; padding: 8px 0 4px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); }
+.cat-sec-h i { width: 8px; height: 8px; border-radius: 50%; }
+.cat-sec-h b { color: var(--ink); font-weight: 700; }
+.cat-sec-h .muted { margin-left: auto; text-transform: none; letter-spacing: 0; }

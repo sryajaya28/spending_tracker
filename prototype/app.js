@@ -1140,7 +1140,7 @@ function holdingDialog(h, accId, opts = {}) {
     <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(typeLabel(info.type))}</span></p>` : `
     <div class="field" id="picker">${__('Asset')}
-      <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Gold, oil &amp; more']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
+      <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Commodities']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
       <input name="assetq" autocomplete="off" placeholder="${__('Name or ticker')}"></div>
       <div class="results" id="asset-results" role="listbox" hidden></div>
       <div class="picked" id="picked" hidden></div>

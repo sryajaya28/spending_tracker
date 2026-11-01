@@ -60,7 +60,7 @@ infrastructure names, see section 8).
   period everywhere: period key `YYYY-MM` is the one that STARTS in that month (start day 25: `2026-10` = 25 Oct to 24 Nov). Month totals, Money
   Flow, budgets, spending donut, occasions, balances/holdings history and the month pickers all follow it (`periodStart/End`, `inPeriod`,
   `periodKeyOf`, `currentPeriod`, `lastMonths`, period-aware `monthLabel`). Budgets keep `start_month` as the first of the period's month.
-- **Indonesian stocks (IDX) and commodities:** the asset picker has "Indonesia (IDX)" and "Gold, oil & more" pills. Prices come from Yahoo
+- **Indonesian stocks (IDX) and commodities:** the asset picker has "Indonesia (IDX)" and "Commodities" dropdown options. Prices come from Yahoo
   Finance's public but **unofficial** endpoints through `tools/dev_server.py` (`/api/assets?type=idx|commodity`, `/api/price?yh=&mult=`; no key;
   `yahoo_price` converts to USD with the existing fx rates, IDX quotes are in IDR). IDX holdings use the key `BBCA.JK` (shown as BBCA), type stock;
   commodities are Gold/Silver per troy oz or per gram (`mult` = 1/31.1035), Platinum, WTI, Brent, natural gas, copper. Stored in
@@ -279,6 +279,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: Asset type option "Gold, oil & more" renamed "Commodities".
 
 - 2026-11-01: Asset picker: the five type pills became a dropdown beside the search box (`.asset-search`, `[data-pick-type]`); the long hint line is gone.
 

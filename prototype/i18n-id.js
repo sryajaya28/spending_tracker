@@ -4,7 +4,7 @@ DICT.id = {
  "Name or ticker": "Nama atau kode",
  "Current prices are live (Finnhub for US stocks and crypto, Yahoo Finance for Indonesian stocks and commodities).": "Harga terkini bersifat langsung (Finnhub untuk saham AS dan kripto, Yahoo Finance untuk saham Indonesia dan komoditas).",
  "Commodity": "Komoditas",
- "Gold, oil &amp; more": "Emas, minyak &amp; lainnya",
+ "Commodities": "Komoditas",
  "Indonesia (IDX)": "Indonesia (IDX)",
  "See more ({n})": "Lihat lainnya ({n})",
  "Show less": "Tampilkan lebih sedikit",

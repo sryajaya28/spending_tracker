@@ -1895,14 +1895,14 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
   else if (act === 'delete-occasion') { D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
-  else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); state.ui.month = periodKeyOf(o.start || isoDate(new Date())); location.hash = '#/transactions'; render(); }
+  else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); state.ui.month = periodKeyOf(o.start || isoDate(new Date())); forgetScroll('#/transactions'); location.hash = '#/transactions'; render(); }
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
   else if (act === 'edit-loan') loanDialog(find(D().loans));
   else if (act === 'pay-loan') paymentDialog(find(D().loans), 'loan');
   else if (act === 'history-loan') {   // the Transactions page on that loan, in the period of its latest entry (change the period to go back in time)
     const l = find(D().loans), last = l.payments.filter((p) => p.date <= todayIso()).map((p) => p.date).sort().pop();
-    Object.assign(state.ui, { wallet: 'l:' + id, month: last ? periodKeyOf(last) : currentPeriod(), cat: '', occ: '', q: '' }); location.hash = '#/transactions';
+    Object.assign(state.ui, { wallet: 'l:' + id, month: last ? periodKeyOf(last) : currentPeriod(), cat: '', occ: '', q: '' }); forgetScroll('#/transactions'); location.hash = '#/transactions';
   }
   else if (act === 'history-lent') loanHistoryDialog(find(D().lent), 'lent');
   else if (act === 'archive-loan') { find(D().loans).archived = true; save(); close(); render(); toast('Loan archived'); }
@@ -1964,7 +1964,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'support') supportDialog();
   else if (act === 'shot-del') { supportShots.splice(+el.dataset.i, 1); $('#shots').innerHTML = supportShotsHtml(); }
   else if (act === 'trend-detail') trendDialog(el.dataset.k);
-  else if (act === 'trend-go') { state.ui.month = el.dataset.k; state.ui.cat = el.dataset.cat || ''; state.ui.occ = ''; state.ui.q = ''; state.ui.wallet = ''; close(); location.hash = '#/transactions'; }
+  else if (act === 'trend-go') { state.ui.month = el.dataset.k; state.ui.cat = el.dataset.cat || ''; state.ui.occ = ''; state.ui.q = ''; state.ui.wallet = ''; close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; }
   else if (act === 'guide-tab') { state.ui.guide = el.dataset.k; $('#install-guide').innerHTML = installGuide(state.ui.guide); }
   else if (act === 'transfer-dialog') handoffDialog();
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
@@ -2070,7 +2070,7 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.name?.startsWith('qc_')) { e.preventDefault(); quickAddCategory(e.target.form); return; }   // Enter adds the category, not the transaction
-  if (e.key === 'Enter' && e.target.id === 'gsearch') { state.ui.q = e.target.value; location.hash = '#/transactions'; }
+  if (e.key === 'Enter' && e.target.id === 'gsearch') { state.ui.q = e.target.value; forgetScroll('#/transactions'); location.hash = '#/transactions'; }
 });
 
 function applySetting(el) {
@@ -2325,7 +2325,14 @@ document.addEventListener('submit', async (e) => {
   }
 });
 
-window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });   // every page opens at its top, not where the previous page was scrolled
+/* within a session each page keeps its scroll position: leaving a page remembers where you were, coming back puts you there (a page you have not visited yet opens at the top) */
+const scrollPos = {}, pageKey = () => location.hash.split('?')[0] || '#/overview';
+let lastKey = pageKey();
+const forgetScroll = (key) => { delete scrollPos[key]; };   // used when a button opens a page with a new filter: that view starts at the top
+window.addEventListener('hashchange', () => {
+  scrollPos[lastKey] = lockY !== null ? lockY : window.scrollY; lastKey = pageKey();
+  render(); window.scrollTo(0, scrollPos[lastKey] || 0);
+});
 window.addEventListener('beforeunload', (e) => { if (Cloud.pending > 0) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ---------- auth + data loading ---------- */

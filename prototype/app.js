@@ -973,7 +973,7 @@ async function installDialog() {
     } catch { code = ''; }
   }
   const steps = IS_IOS
-    ? [__('Tap the Share button (Safari: bottom bar; Chrome: address bar)'), __('Scroll down the list and tap "Add to Home Screen"'), __('Open Stiver from your Home Screen')]
+    ? [__('Tap the Share button (Safari: bottom bar; Chrome: address bar)'), __('Scroll down the list and tap "Add to Home Screen"'), __('Keep "Open as Web App" switched on, then tap Add'), __('Open Stiver from your Home Screen')]
     : [__('Open the browser menu (⋮)'), __('Choose "Install app" or "Add to Home screen"'), __('Open Stiver from your Home screen')];
   open(`<h2>${__('Use mobile app experience')}</h2><p class="muted" style="margin-top:-10px">${__('Full screen, faster to open, no browser bars.')}</p>
     <ol class="install-steps">${steps.map((t, i) => `<li><span class="step-n">${i + 1}</span><span>${t}</span></li>`).join('')}</ol>

@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Keep \"Open as Web App\" switched on, then tap Add": "Pastikan \"Buka sebagai Aplikasi Web\" aktif, lalu ketuk Tambah",
  "Signed in on your browser? Transfer from browser": "Sudah masuk di browser? Transfer dari browser",
  "Scroll down the list and tap \"Add to Home Screen\"": "Gulir daftar ke bawah dan ketuk \"Tambah ke Layar Utama\"",
  "Open share menu": "Buka menu bagikan",

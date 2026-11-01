@@ -270,7 +270,7 @@ function seed(name, cur) {
   return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions, investments: [stockbit, ajaib], holdings, customAssets, livePrices: {}, loans, lent, recurring };
 }
 
-const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), archOpen: false } };
+const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), openDays: new Set(), archOpen: false } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
 function save() {
   if (state.real) return;   // demo mode: nothing is saved or synced
@@ -890,18 +890,22 @@ function filteredTxns() {
 const dayTitle = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions', { n });
 // one row per day with the day's totals (transfers are neither income nor spending)
+/* days are collapsible: tap a day to open its transactions in place; Expand all / Hide all for the whole list. A search opens every matching day. */
 function txnListHtml() {
   const rows = filteredTxns();
   if (!rows.length) return '<div class="empty">' + __('No transactions match.') + '</div>';
   const days = {};
   rows.forEach((t) => { (days[t.occurred_at] = days[t.occurred_at] || []).push(t); });
-  return Object.keys(days).sort().reverse().map((d) => {
-    const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = inc - exp;
-    return `<div class="row day-row" data-act="open-day" data-id="${d}" tabindex="0" role="link"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
+  const keys = Object.keys(days).sort().reverse(), searching = !!state.ui.q.trim();
+  const group = (d) => {
+    const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = inc - exp, open = searching || state.ui.openDays.has(d);
+    return `<div class="day-group ${open ? 'open' : ''}" data-day="${d}"><div class="row day-row" data-act="toggle-day" data-id="${d}" tabindex="0" role="button" aria-expanded="${open}"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
     <div><div class="title">${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long' }))}</div>
     <div class="sub">${countLabel(l.length)}</div></div>
-    <div class="amt num ${net < 0 ? 'expense' : net > 0 ? 'income' : ''}">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div></div>`;
-  }).join('');
+    <div class="amt num ${net < 0 ? 'expense' : net > 0 ? 'income' : ''}">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div><span class="day-chev" aria-hidden="true">›</span></div>
+    <div class="day-body">${l.map(txnRow).join('')}</div></div>`;
+  };
+  return `<div class="day-tools"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></div>${keys.map(group).join('')}`;
 }
 // the detail page for one day: every transaction on it
 const dayTxns = (d) => { const ql = (state.ui.dayQ || '').trim().toLowerCase(); return D().transactions.filter((t) => t.occurred_at === d && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql))); };
@@ -1736,6 +1740,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
   else if (act === 'add-txn') txnDialog(null, type, undefined, date);
   else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
+  else if (act === 'toggle-day') { const g = el.closest('.day-group'), on = !g.classList.contains('open'); g.classList.toggle('open', on); el.setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(id); else state.ui.openDays.delete(id); }
+  else if (act === 'days-all' || act === 'days-none') { $$('#txn-list .day-group').forEach((g) => { const on = act === 'days-all'; g.classList.toggle('open', on); $('.day-row', g).setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(g.dataset.day); else state.ui.openDays.delete(g.dataset.day); }); }
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
   else if (act === 'view-transfer') transferDetail(id);

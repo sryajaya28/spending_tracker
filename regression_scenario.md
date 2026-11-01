@@ -78,7 +78,7 @@ Automated: `donut`, `ovocc`, `budgetbar`, `run`.
 |---|---|---|
 | TX-01 | Open Activity | Line 1: the search box on the **left** (placeholder "Search") and the period dropdown on the **right**; **no `+ Add` button on phones** (the bottom bar Add does it), it stays at the end of line 1 on desktop. Line 2: the three filters keep their full labels **All categories / All occasions (only when occasions exist) / All accounts**, sized in proportion so none is cut off at 360-390 px. |
 | TX-02 | Daily list | One row per day, newest first: day number and month, the weekday with the **transaction count underneath** (nothing else), and the day's net amount on the right (green/red). Transfers count in the number but not in the net. |
-| TX-03 | Tap a day | Opens `#/transactions/YYYY-MM-DD`: that day's transactions, Back link with clear space between it and the date, a **Search** box under the header (filters that day's rows by note or category; "No transactions match." when none; cleared when you open another day), `+ Add` prefilled with that date. Edit/delete works; Back returns to the list. |
+| TX-03 | Expand a day | Tap a day row (chevron on the right): its transactions open right under it, indented, without leaving the page (the address stays `#/transactions`); tap again to hide. **Expand all** and **Hide all** (above the list, right-aligned) open or close every listed day. Typing in Search opens every matching day; clearing it returns to your own open/closed choices. Tapping a transaction inside opens it for editing; the open days stay open after saving. The old day page `#/transactions/YYYY-MM-DD` still works if opened by address but nothing links to it. |
 | TX-04 | Search, category, account filters | List narrows; they combine; "Uncategorized" works; the account filter can pick a USDT/USDC holding. |
 | TX-05 | Add an expense: Account first, then amount | Amount label follows the account's currency (IDR, USD, USDT...). Date defaults to today. Repeat field present. Saved row appears under its day. |
 | TX-06 | Add income / expense with no category | AI-style auto-tag if history matches (badge AI), otherwise "Uncategorized". With a category chosen: no AI badge. |
@@ -294,7 +294,7 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 | `cats`, `quickcat` | categories, sub-categories, inline category creation |
 | `transfer`, `wallet`, `arch` | transfers and fees, account edit, archive/restore/delete |
 | `budgetbar`, `occtx`, `ovocc` | budget bars, occasions and their periods |
-| `daily` | daily Transactions view and day page |
+| `daily` | collapsible days: expand one, expand all, hide all, search opens matches, edit inside |
 | `donut` | spending donut hover/tap, Budgets month picker |
 | `pfrange` | Portfolio time frames, sorting, See more, history list |
 | `recurring` | recurring rules, date maths, catch-up, pause/delete |

@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Hide all": "Tutup semua",
+ "Expand all": "Buka semua",
  "Tap Add to Home Screen": "Ketuk Tambah ke Layar Utama",
  "Tap ≡ in the address bar": "Ketuk ≡ di bilah alamat",
  "Tap Install, then open Stiver from your Home screen": "Ketuk Instal, lalu buka Stiver dari layar utama",

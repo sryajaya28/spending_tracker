@@ -757,3 +757,10 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .chart.trend .tbar { cursor: pointer; outline: none; } .chart.trend .tbar:hover rect:not(:first-child) { opacity: .85; } .chart.trend .tbar:focus-visible rect:first-child { stroke: var(--brand-2); stroke-width: 2; }
 .trend-cat { margin: -4px 0 12px; }
 .legend-row { flex-wrap: wrap; gap: 6px 14px; } .legend-row span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* collapsible days on Transactions */
+.day-tools { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 2px 4px 6px; font-size: 13px; }
+.day-row { cursor: pointer; }
+.day-chev { color: var(--muted); font-size: 20px; line-height: 1; transition: transform .15s; margin-left: 2px; }
+.day-group.open .day-chev { transform: rotate(90deg); }
+.day-body { display: none; margin: 2px 0 8px 12px; padding-left: 8px; border-left: 2px solid var(--line); }
+.day-group.open .day-body { display: block; }

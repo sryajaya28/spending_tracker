@@ -16,19 +16,22 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await settle();
   const days = await p.$$('#txn-list .day-row'); assert.equal(days.length, 2, 'two days');
   assert((await p.innerText('#txn-list')).includes('3 transactions')); assert(!/Spent|Income/.test(await p.innerText('#txn-list .day-row .sub')), 'the day row shows only the count');
-  assert(!(await p.innerText('#txn-list')).includes('Lunch'), 'notes only on the day page');
+  assert(!(await p.innerText('#txn-list')).includes('Lunch'), 'days start collapsed: no notes visible');
   await p.screenshot({ path: __dirname + '/out/daily_list.png' });
-  // a new page always opens at its top
-  await p.evaluate(() => { document.body.style.minHeight = '3000px'; window.scrollTo(0, 800); }); await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); assert.equal(await p.evaluate(() => Math.round(window.scrollY)), 0, 'scroll resets on a new page'); await p.evaluate(() => { document.body.style.minHeight = ''; });
-  await p.waitForSelector('#day-list .row'); if (false) await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); await p.waitForSelector('#day-list .row');
-  assert.equal((await p.$$('#day-list .row')).length, 3);
-  assert((await p.evaluate(() => location.hash)).endsWith('/transactions/' + m + '-05'));
-  // the day page has its own search
-  await p.fill('.txn-top input[data-filter=dayq]', 'lunch'); assert.equal((await p.$$('#day-list .row')).length, 1, 'search narrows the day'); await p.fill('.txn-top input[data-filter=dayq]', 'zzz'); assert((await p.innerText('#day-list')).includes('No transactions match')); await p.fill('.txn-top input[data-filter=dayq]', ''); assert.equal((await p.$$('#day-list .row')).length, 3);
+  // tap a day: it opens in place (no new page) and shows only that day's transactions
+  await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); assert((await p.evaluate(() => location.hash)).endsWith('/transactions'), 'stays on the list');
+  let t = await p.innerText('#txn-list'); assert(t.includes('Lunch') && t.includes('Taxi') && t.includes('Gift') && !t.includes('Coffee'), t);
+  assert.equal(await p.getAttribute('#txn-list .day-row[data-id="' + m + '-05"]', 'aria-expanded'), 'true');
+  await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); assert(!(await p.innerText('#txn-list')).includes('Lunch'), 'tap again hides it');
+  // Expand all / Hide all
+  await p.click('[data-act=days-all]'); t = await p.innerText('#txn-list'); assert(t.includes('Lunch') && t.includes('Coffee'), 'expand all'); assert.equal(await p.$$eval('#txn-list .day-group.open', (e) => e.length), 2);
+  await p.screenshot({ path: __dirname + '/out/daily_expanded.png' });
+  await p.click('[data-act=days-none]'); assert(!/Lunch|Coffee/.test(await p.innerText('#txn-list')), 'hide all'); assert.equal(await p.$$eval('#txn-list .day-group.open', (e) => e.length), 0);
+  // a search opens the matching days
+  await p.fill('input[data-filter=q]', 'coffee'); assert((await p.innerText('#txn-list')).includes('Coffee'), 'search shows its matches open'); await p.fill('input[data-filter=q]', '');
+  assert(!/Lunch|Coffee/.test(await p.innerText('#txn-list')), 'collapsed again after clearing the search');
+  // a transaction inside an open day opens for editing
+  await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); await p.click('#txn-list .day-group.open .day-body .row'); assert((await p.$$('#dlg')).length >= 1); await p.click('[data-act=close]');
   assert((await p.innerText('.sidebar a.active')).includes('Transactions'));
-  await p.screenshot({ path: __dirname + '/out/daily_detail.png' });
-  await p.click('#day-list .row'); assert((await p.$$('#dlg')).length >= 1); await p.click('[data-act=close]');
-  await p.click('[data-act=add-txn]'); assert.equal(await p.inputValue('input[name=date]'), m + '-05'); assert(!(await p.evaluate(() => document.activeElement.matches('input, select, textarea'))), 'no field focused on open (keeps the phone keyboard down)'); await p.click('[data-act=close]');
-  await p.click('.back-link'); await p.waitForSelector('#txn-list .day-row');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

@@ -218,6 +218,9 @@ function seed(name, cur) {
     }
   }
   const fut = (t) => t.occurred_at > isoDate(today);
+  // a few purchases are paid with the credit card (a loan account): the card's balance goes up by what was charged
+  const cardId = uid(), cardCharges = [], cardCats = new Set([catId.Shopping, catId.Entertainment, catId['Entertainment/Movies'], catId['Entertainment/Events']]);
+  txns.filter((t) => t.type === 'expense' && !fut(t) && cardCats.has(t.category_id)).slice(0, 6).forEach((t) => { t.wallet_id = null; t.loan_id = cardId; cardCharges.push({ id: uid(), date: t.occurred_at, amount_minor: t.amount_minor, kind: 'charge', txn_id: t.id }); });
   // balances: derive each opening balance so today's balance is the target (future-dated rows do not count)
   wallets.forEach((w) => { const net = txns.filter((t) => t.wallet_id === w.id && !fut(t)).reduce((a, t) => a + (t.type === 'income' || (t.type === 'transfer' && t.flow === 'in') ? 1 : -1) * t.amount_minor, 0); w.opening_balance_minor = w._target - net; delete w._target; });
   txns.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
@@ -246,7 +249,7 @@ function seed(name, cur) {
   const L = P.loans, loans = [
     { id: uid(), name: 'Housing loan', type: 'mortgage', currency: cur, original_minor: A(L.home[0]), monthly_minor: A(L.home[1]), rate: L.home[2], since, archived: false, payments: payments(A(L.home[1]), 6) },
     { id: uid(), name: 'Car loan', type: 'car', currency: cur, original_minor: A(L.car[0]), monthly_minor: A(L.car[1]), rate: L.car[2], since, archived: false, payments: payments(A(L.car[1]), 6) },
-    { id: uid(), name: 'Credit card', type: 'card', currency: cur, original_minor: A(L.card[0]), monthly_minor: A(L.card[1]), rate: 0, since, archived: false, payments: payments(A(L.card[1]), 3) },
+    { id: cardId, name: 'Credit card', type: 'card', currency: cur, original_minor: A(L.card[0]), monthly_minor: A(L.card[1]), rate: 0, since, archived: false, payments: [...payments(A(L.card[1]), 3), ...cardCharges] },
   ];
   const lent = [{ id: uid(), name: P.lent[0], currency: cur, original_minor: A(P.lent[1]), note: P.lent[3], due: isoDate(new Date(today.getFullYear(), today.getMonth() + 3, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 10)), amount_minor: A(P.lent[2]) }] }];
   // recurring rules (shown in Settings > Recurring; sample mode never creates entries from them)
@@ -427,8 +430,10 @@ const pfRangeSelect = () => `<select class="chip pill-select" data-bind="pfRange
 const toUSD = (minor, c) => toMajor(minor, c) / RATES[c];
 const savingsUSD = (k) => toUSD(balanceAtEnd(k), cur());
 const activeLoans = () => D().loans.filter((l) => !l.archived);
-const paidOf = (l, upto) => l.payments.filter((p) => !upto || p.date <= upto).reduce((a, p) => a + p.amount_minor, 0);
-const loanBalance = (l, upto) => Math.max(0, l.original_minor - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
+const paidOf = (l, upto) => l.payments.filter((p) => p.kind !== 'charge' && (!upto || p.date <= upto)).reduce((a, p) => a + p.amount_minor, 0);
+/* things paid with this loan as the account (expenses on a credit card...): they raise what is owed */
+const chargedOf = (l, upto) => l.payments.filter((p) => p.kind === 'charge' && (!upto || p.date <= upto)).reduce((a, p) => a + p.amount_minor, 0);
+const loanBalance = (l, upto) => Math.max(0, l.original_minor + chargedOf(l, upto || todayIso()) - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
 const loanUSD = (k) => activeLoans().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
 const activeLent = () => D().lent.filter((l) => !l.archived);
@@ -616,7 +621,7 @@ const walletCards = () => {
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
 function loanCard(l, vc, kind = 'loan') {
   const lent = kind === 'lent', coll = lent ? D().lent : D().loans;
-  const bal = loanBalance(l), paid = paidOf(l), pct = l.original_minor ? Math.min(100, Math.round((paid / l.original_minor) * 100)) : 0;
+  const bal = loanBalance(l), paid = paidOf(l), charged = chargedOf(l), total = l.original_minor + charged, pct = total ? Math.min(100, Math.round((paid / total) * 100)) : 0;
   const shown = (m) => money(convert(m, l.currency, vc), vc);
   const recent = [...l.payments].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   const word = lent ? __('repayment') : __('payment');
@@ -626,9 +631,10 @@ function loanCard(l, vc, kind = 'loan') {
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
     <div class="bar"><i style="width:${pct}%;${lent ? 'background:#1fa971' : ''}"></i></div>
-    <div class="loan-meta"><span>${__(lent ? '{pct}% repaid · {paid} of {total}' : '{pct}% paid · {paid} of {total}', { pct, paid: shown(paid), total: shown(l.original_minor) })}</span><span>${meta}</span></div>
+    <div class="loan-meta"><span>${__(lent ? '{pct}% repaid · {paid} of {total}' : '{pct}% paid · {paid} of {total}', { pct, paid: shown(paid), total: shown(total) })}</span><span>${meta}</span></div>
+    ${charged ? `<p class="muted" style="font-size:13px;margin-top:4px">${__('Includes {amount} charged to this account', { amount: shown(charged) })}</p>` : ''}
     ${bal === 0 ? `<p class="hint" style="margin-top:10px">${lent ? __('Fully repaid. You can archive this.') : __('Paid off. You can archive this.')}</p>` : ''}
-    ${recent.length ? `<div class="list" style="margin-top:10px">${recent.map((p) => `<div class="pay-row"><span>${esc(new Date(p.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }))}</span><span class="num">${shown(p.amount_minor)}</span><button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: word })}">×</button></div>`).join('')}</div>` : `<p class="muted" style="margin-top:10px">${__('No {what}s yet.', { what: word })}</p>`}</section>`;
+    ${recent.length ? `<div class="list" style="margin-top:10px">${recent.map((p) => `<div class="pay-row"><span>${esc(new Date(p.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }))}</span><span class="num">${p.kind === 'charge' ? '+' : ''}${shown(p.amount_minor)}${p.kind === 'charge' ? ` <small class="muted">${__('charged')}</small>` : ''}</span>${p.kind === 'charge' ? '<span></span>' : `<button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: word })}">×</button>`}</div>`).join('')}</div>` : `<p class="muted" style="margin-top:10px">${__('No {what}s yet.', { what: word })}</p>`}</section>`;
 }
 
 /* an (i) button with a small popover: tap/click toggles it, hover shows it on desktop, tapping elsewhere closes it */
@@ -1316,7 +1322,7 @@ function transferDetail(gid) {
 /* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
    linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
 const coinOf = (t) => (t && !t.wallet_id && t.trade_id ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
-const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; const h = coinOf(t); return h ? `${accountName(h.account_id)} (${assetInfo(h.symbol).symbol})` : ''; };
+const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; if (t.loan_id) return D().loans.find((l) => l.id === t.loan_id)?.name || '';  const h = coinOf(t); return h ? `${accountName(h.account_id)} (${assetInfo(h.symbol).symbol})` : ''; };
 const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`;
 function recordCoinTxn(h, { type, quantity, date, note, category_id, category_source, ai_confidence, occasion_id, id, tradeId }) {
   const tid = tradeId || uid(), side = type === 'income' ? 'buy' : 'sell', amount_minor = Math.max(1, Math.round(quantity * 100));
@@ -1354,13 +1360,15 @@ function acctOptions(type, selected, noNew) {
   const ws = D().wallets.filter((w) => !w.archived), coins = stableHoldings(), accts = activeAccounts();
   const fresh = type === 'income' && !noNew ? ['USDT', 'USDC'].flatMap((sym) => (accts.length ? accts : [{ id: '', name: '' }]).filter((a) => !D().holdings.some((h) => h.account_id === a.id && h.symbol === sym)).map((a) => ({ sym, a }))) : [];
   const sel = (v) => (v === selected ? 'selected' : '');
+  const loans = type === 'expense' ? activeLoans() : [];   // a loan account can pay for expenses; what is paid raises the loan
   return ws.map((w) => `<option value="${w.id}" ${sel(w.id)}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')
-    + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '');
+    + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '')
+    + (loans.length ? `<optgroup label="${__('Loan accounts')}">${loans.map((l) => `<option value="l:${l.id}" ${sel('l:' + l.id)}>${esc(l.name)} (${esc(l.currency)}) · ${__('owed')} ${money(loanBalance(l), l.currency)}</option>`).join('')}</optgroup>` : '');
 }
 /* the amount's unit and step follow the chosen account */
 function syncTxnUnit(form) {
   const v = form.wallet.value, coin = v.startsWith('h:') ? D().holdings.find((x) => x.id === v.slice(2)) : null, sym = coin ? assetInfo(coin.symbol).symbol : v.startsWith('n:') ? v.split(':')[1] : null;
-  const unit = sym || walletOf(v)?.currency || cur();
+  const unit = sym || walletOf(v)?.currency || D().loans.find((l) => 'l:' + l.id === v)?.currency || cur();
   $('[data-amt-label]', form).textContent = __('Amount ({cur})', { cur: unit }); $('input[name=amount]', form).step = sym ? 'any' : expOf(unit) ? '0.01' : '1';
 }
 function txnDialog(t, presetType, presetOccasion, presetDate) {
@@ -1374,7 +1382,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
   open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
-    <label class="field">${__('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? t.wallet_id : (recallAcct(type, acctOptions(type, '')) || (ws.find((w) => w.currency === cur()) || ws[0]).id))}</select></label>
+    <label class="field">${__('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? (t.loan_id ? 'l:' + t.loan_id : t.wallet_id) : (recallAcct(type, acctOptions(type, '')) || (ws.find((w) => w.currency === cur()) || ws[0]).id))}</select></label>
     <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(unit) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${tcoin ? tcoin.trades.find((x) => x.id === t.trade_id).quantity : t ? toMajor(t.amount_minor, c) : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${date0}"></label></div>
     <label class="field">${__('Category')}<select name="category" data-search data-empty="${__('Category not found')}" data-prev="${t?.category_id || ''}">${catOptions(type, t?.category_id, true)}</select></label>
@@ -1752,6 +1760,12 @@ function generateRecurring(r, date) {
       if (sp.type === 'expense' && heldNow(h) < sp.quantity - 1e-12) return;   // not enough coins: skip this one
       recordCoinTxn(h, { type: sp.type, quantity: sp.quantity, date, note: sp.note, category_id: sp.category_id, occasion_id: sp.occasion_id, id: detId(r.id, date, 't'), tradeId: detId(r.id, date, 'e') }); return;
     }
+    if (String(sp.wallet_id).startsWith('l:')) {   // paid with a loan account: the expense and the matching charge on the loan
+      const l = D().loans.find((x) => x.id === sp.wallet_id.slice(2)); if (!l) return;
+      const id = detId(r.id, date, 't'); add({ id, type: 'expense', amount_minor: sp.amount_minor, currency: l.currency, occurred_at: date, wallet_id: null, loan_id: l.id, note: sp.note || '', category_id: sp.category_id || null, category_source: 'user', ai_confidence: null, ...(sp.occasion_id && occasionOf(sp.occasion_id) ? { occasion_id: sp.occasion_id } : {}) });
+      if (!l.payments.some((p) => p.txn_id === id)) l.payments.push({ id: detId(r.id, date, 'c'), date, amount_minor: sp.amount_minor, kind: 'charge', txn_id: id });
+      return;
+    }
     if (!walletOf(sp.wallet_id)) return;
     add({ id: detId(r.id, date, 't'), type: sp.type, amount_minor: sp.amount_minor, currency: sp.currency, occurred_at: date, wallet_id: sp.wallet_id, note: sp.note || '', category_id: sp.category_id || null, category_source: 'user', ai_confidence: null, ...(sp.occasion_id && occasionOf(sp.occasion_id) ? { occasion_id: sp.occasion_id } : {}) });
   } else if (r.kind === 'transfer') {
@@ -1783,7 +1797,7 @@ function runRecurring() {
 function recurringNow() { const n = runRecurring(); if (n) { render(); toast(__(n === 1 ? '{n} recurring entry added' : '{n} recurring entries added', { n })); } }
 const ruleTitle = (r) => {
   const sp = r.spec;
-  if (r.kind === 'txn') { const c = catOf(sp.category_id), w = walletOf(sp.wallet_id) || (String(sp.wallet_id).startsWith('h:') ? { name: accountName((D().holdings.find((x) => x.id === sp.wallet_id.slice(2)) || {}).account_id) } : null); return { icon: sp.type === 'income' ? '💵' : '🧾', name: sp.note || (c && c.name) || (sp.type === 'income' ? __('Income') : __('Expense')), amount: `${sp.type === 'income' ? '+' : '−'}${money(sp.amount_minor, sp.currency)}`, where: w ? w.name : '' }; }
+  if (r.kind === 'txn') { const c = catOf(sp.category_id), w = walletOf(sp.wallet_id) || (String(sp.wallet_id).startsWith('l:') ? { name: (D().loans.find((x) => 'l:' + x.id === sp.wallet_id) || {}).name || '' } : null) || (String(sp.wallet_id).startsWith('h:') ? { name: accountName((D().holdings.find((x) => x.id === sp.wallet_id.slice(2)) || {}).account_id) } : null); return { icon: sp.type === 'income' ? '💵' : '🧾', name: sp.note || (c && c.name) || (sp.type === 'income' ? __('Income') : __('Expense')), amount: `${sp.type === 'income' ? '+' : '−'}${money(sp.amount_minor, sp.currency)}`, where: w ? w.name : '' }; }
   if (r.kind === 'transfer') { const A = walletOf(sp.from), B = walletOf(sp.to); return { icon: '🔁', name: `${A ? A.name : '?'} → ${B ? B.name : '?'}`, amount: money(sp.amount_minor, A ? A.currency : cur()), where: sp.note || '' }; }
   const info = assetInfo(sp.symbol), src = parseSource(sp.fund);
   return { icon: '📈', name: __('Buy {qty} {symbol}', { qty: qtyFmt(sp.quantity), symbol: info.symbol }), amount: src ? `${qtyFmt(parseAmount(src, sp.fundamount))} ${sourceUnit(src)}` : '', where: '' };
@@ -1911,7 +1925,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'delete-txn') {
     const tx = find(D().transactions), coin = coinOf(tx);
     if (coin) { if (!removeTrade(coin, coin.trades.find((x) => x.id === tx.trade_id))) { toast(__("Can't delete: the {symbol} has already been spent", { symbol: assetInfo(coin.symbol).symbol })); return; } }
-    else D().transactions = D().transactions.filter((t) => t.id !== id);
+    else { D().transactions = D().transactions.filter((t) => t.id !== id); D().loans.forEach((l) => { l.payments = l.payments.filter((p) => !(p.kind === 'charge' && p.txn_id === id)); }); }
     save(); close(); render(); toast('Transaction deleted');
   }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
@@ -2059,10 +2073,16 @@ document.addEventListener('submit', async (e) => {
     // a USDT/USDC "new" choice builds its holding now but only keeps it once the transaction is valid
     const fresh = v.wallet.startsWith('n:') ? v.wallet.split(':') : null;
     const coin = v.wallet.startsWith('h:') ? D().holdings.find((x) => x.id === v.wallet.slice(2)) : fresh ? { id: uid(), account_id: fresh[2], symbol: fresh[1], quantity: 0, since: monthKey(new Date()), trades: [], _new: true } : null, type = v.type;
-    const wc = coin ? 'USD' : walletOf(v.wallet).currency, minor = coin ? Math.round(parseFloat(v.amount) * 100) : toMinor(parseFloat(v.amount), wc), existing = f.dataset.id && D().transactions.find((t) => t.id === f.dataset.id);
+    const loan = v.wallet.startsWith('l:') ? D().loans.find((x) => x.id === v.wallet.slice(2)) : null;
+    if (v.wallet.startsWith('l:') && (!loan || type !== 'expense')) { toast(__('A loan account can only pay expenses')); return; }
+    const wc = loan ? loan.currency : coin ? 'USD' : walletOf(v.wallet).currency, minor = coin ? Math.round(parseFloat(v.amount) * 100) : toMinor(parseFloat(v.amount), wc), existing = f.dataset.id && D().transactions.find((t) => t.id === f.dataset.id);
     if (!(minor > 0)) { toast('Enter an amount above zero'); return; }
     const row = existing || { id: uid(), category_source: 'user', ai_confidence: null };
-    Object.assign(row, { type, amount_minor: minor, currency: wc, occurred_at: v.date, wallet_id: coin ? null : v.wallet, note: v.note.trim(), category_id: v.category || null });
+    Object.assign(row, { type, amount_minor: minor, currency: wc, occurred_at: v.date, wallet_id: coin || loan ? null : v.wallet, note: v.note.trim(), category_id: v.category || null });
+    if (loan) row.loan_id = loan.id; else delete row.loan_id;
+    // paying with a loan raises that loan by the amount (a "charge"); changing or removing the account moves or removes it
+    D().loans.forEach((l) => { l.payments = l.payments.filter((p) => !(p.kind === 'charge' && p.txn_id === row.id)); });
+    if (loan) loan.payments.push({ id: uid(), date: v.date, amount_minor: minor, kind: 'charge', txn_id: row.id });
     if (type === 'expense' && v.occasion) row.occasion_id = v.occasion; else delete row.occasion_id;
     let msg = existing ? 'Saved' : 'Transaction added';
     if (v.category) { row.category_source = 'user'; row.ai_confidence = null; }
@@ -2204,6 +2224,7 @@ document.addEventListener('submit', async (e) => {
     if (r.kind === 'txn') {
       sp.wallet_id = v.wallet; sp.category_id = v.category || null;
       if (v.wallet.startsWith('h:')) { sp.quantity = amount; sp.currency = 'USD'; sp.amount_minor = Math.max(1, Math.round(amount * 100)); }
+      else if (v.wallet.startsWith('l:')) { const l = D().loans.find((x) => 'l:' + x.id === v.wallet); if (!l || sp.type !== 'expense') { toast('Pick an account'); return; } delete sp.quantity; sp.currency = l.currency; sp.amount_minor = toMinor(amount, l.currency); }
       else { const w = walletOf(v.wallet); if (!w) { toast('Pick an account'); return; } delete sp.quantity; sp.currency = w.currency; sp.amount_minor = toMinor(amount, w.currency); }
     } else if (r.kind === 'transfer') {
       const A = walletOf(v.from), B = walletOf(v.to); if (!A || !B || A.id === B.id) { toast('Pick two different accounts'); return; }
@@ -2214,7 +2235,7 @@ document.addEventListener('submit', async (e) => {
     if (v.next !== r.next) { r.start = v.next; r.next = v.next; }   // later payments keep the new day of the month / week
     // a first payment that is still upcoming (entered by hand when the rule was created) follows the edit; one that already happened is left alone
     const first = sp.first_tx && D().transactions.find((t) => t.id === sp.first_tx);
-    if (first && first.occurred_at > isoDate(new Date()) && r.kind === 'txn' && !String(sp.wallet_id).startsWith('h:')) {
+    if (first && first.occurred_at > isoDate(new Date()) && r.kind === 'txn' && !String(sp.wallet_id).startsWith('h:') && !String(sp.wallet_id).startsWith('l:')) {
       Object.assign(first, { occurred_at: r.next, wallet_id: sp.wallet_id, currency: sp.currency, amount_minor: sp.amount_minor, category_id: sp.category_id || null }); sp.first_made = r.next; D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     } else delete sp.first_made;
     save(); close(); render(); toast(__('Recurring updated. Entries already made are unchanged.')); return;

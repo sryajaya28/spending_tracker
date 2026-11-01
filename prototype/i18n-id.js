@@ -1,6 +1,11 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "A loan account can only pay expenses": "Akun pinjaman hanya bisa membayar pengeluaran",
+ "Includes {amount} charged to this account": "Termasuk {amount} yang dibebankan ke akun ini",
+ "charged": "ditagihkan",
+ "owed": "terutang",
+ "Loan accounts": "Akun pinjaman",
  "Some files could not be added (images only, up to 1 MB)": "Beberapa file tidak bisa ditambahkan (hanya gambar, maks. 1 MB)",
  "Only {n} images can be attached": "Hanya {n} gambar yang bisa dilampirkan",
  "Couldn't send: {error}": "Gagal mengirim: {error}",

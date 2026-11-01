@@ -17,7 +17,7 @@ const Cloud = (() => {
     { name: 'categories', stage: 'categories_root', pick: (r) => !r.parent_id },
     { name: 'categories', stage: 'categories_child', pick: (r) => !!r.parent_id },
     { name: 'wallets' }, { name: 'occasions' }, { name: 'investment_accounts' }, { name: 'holdings' }, { name: 'holding_events' },
-    { name: 'transactions' }, { name: 'budgets' }, { name: 'debts' }, { name: 'debt_payments' }, { name: 'recurring_rules' },
+    { name: 'debts' }, { name: 'transactions' }, { name: 'budgets' }, { name: 'debt_payments' }, { name: 'recurring_rules' },   // debts before transactions (an expense can point at a loan); payments after (a charge points at its expense)
   ];
   const tradeSign = (tr) => (tr.side === 'buy' ? 1 : -1);
 
@@ -53,12 +53,12 @@ const Cloud = (() => {
     d.transactions.forEach((t) => R.transactions.push({
       id: t.id, wallet_id: t.wallet_id, category_id: t.category_id || null, type: t.type, amount_minor: t.amount_minor, currency: t.currency,
       occurred_at: t.occurred_at, note: t.note || null, occasion_id: t.occasion_id && d.occasions.some((o) => o.id === t.occasion_id) ? t.occasion_id : null, category_source: t.category_source || 'user', ai_confidence: t.ai_confidence ?? null,
-      transfer_direction: t.type === 'transfer' ? t.flow : null, holding_event_id: t.trade_id && tradeIds.has(t.trade_id) ? t.trade_id : null, transfer_group_id: t.transfer_id || null,
+      debt_id: t.loan_id && d.loans.some((l) => l.id === t.loan_id) ? t.loan_id : null, transfer_direction: t.type === 'transfer' ? t.flow : null, holding_event_id: t.trade_id && tradeIds.has(t.trade_id) ? t.trade_id : null, transfer_group_id: t.transfer_id || null,
     }));
     d.budgets.forEach((b) => R.budgets.push({ id: b.id, category_id: b.category_id || null, amount_minor: b.amount_minor, currency: b.currency, start_month: b.start_month }));
     d.loans.forEach((l) => {
       R.debts.push({ id: l.id, direction: 'owed', name: l.name, type: l.type, currency: l.currency, original_minor: l.original_minor, monthly_minor: l.monthly_minor || 0, interest_rate: l.rate ?? null, due_date: null, note: null, start_month: `${l.since}-01`, archived: !!l.archived });
-      l.payments.forEach((p) => R.debt_payments.push({ id: p.id, debt_id: l.id, paid_on: p.date, amount_minor: p.amount_minor }));
+      l.payments.forEach((p) => R.debt_payments.push({ id: p.id, debt_id: l.id, paid_on: p.date, amount_minor: p.amount_minor, kind: p.kind === 'charge' ? 'charge' : 'payment', transaction_id: p.kind === 'charge' && p.txn_id && d.transactions.some((t) => t.id === p.txn_id) ? p.txn_id : null }));
     });
     d.lent.forEach((l) => {
       R.debts.push({ id: l.id, direction: 'lent', name: l.name, type: null, currency: l.currency, original_minor: l.original_minor, monthly_minor: 0, interest_rate: null, due_date: l.due || null, note: l.note || null, start_month: `${l.since}-01`, archived: !!l.archived });
@@ -93,6 +93,7 @@ const Cloud = (() => {
       if (t.transfer_direction) o.flow = t.transfer_direction;
       if (t.holding_event_id) o.trade_id = t.holding_event_id;
       if (t.occasion_id) o.occasion_id = t.occasion_id;
+      if (t.debt_id) o.loan_id = t.debt_id;
       if (t.transfer_group_id) o.transfer_id = t.transfer_group_id;
       return o;
     }).sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
@@ -134,7 +135,7 @@ const Cloud = (() => {
     });
     const debts = (dir) => S.debts.filter((x) => x.direction === dir).map((x) => {
       const o = { id: x.id, name: x.name, currency: x.currency, original_minor: +x.original_minor, since: x.start_month.slice(0, 7), archived: x.archived,
-        payments: S.debt_payments.filter((y) => y.debt_id === x.id).sort((a, b) => a.paid_on.localeCompare(b.paid_on)).map((y) => ({ id: y.id, date: y.paid_on, amount_minor: +y.amount_minor })) };
+        payments: S.debt_payments.filter((y) => y.debt_id === x.id).sort((a, b) => a.paid_on.localeCompare(b.paid_on)).map((y) => ({ id: y.id, date: y.paid_on, amount_minor: +y.amount_minor, ...(y.kind === 'charge' ? { kind: 'charge', txn_id: y.transaction_id || null } : {}) })) };
       if (dir === 'owed') Object.assign(o, { type: x.type || 'other', monthly_minor: +x.monthly_minor, rate: x.interest_rate == null ? 0 : +x.interest_rate });
       else Object.assign(o, { due: x.due_date || '', note: x.note || '' });
       return o;

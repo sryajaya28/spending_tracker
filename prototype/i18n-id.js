@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Open share menu": "Buka menu bagikan",
+ "Tap the Share button (Safari: bottom bar; Chrome: address bar)": "Ketuk tombol Bagikan (Safari: bilah bawah; Chrome: bilah alamat)",
  "Use mobile app experience": "Pakai pengalaman aplikasi seluler",
  "Full screen, faster to open, no browser bars.": "Layar penuh, lebih cepat dibuka, tanpa bilah browser.",
  "Tap the Share button in Safari": "Ketuk tombol Bagikan di Safari",

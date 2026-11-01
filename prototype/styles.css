@@ -110,7 +110,6 @@ h1, h2, h3, p { margin: 0; }
 .row .title { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .row .sub { color: var(--muted); font-size: 13px; }
 .row .amt { font-weight: 700; text-align: right; }
-.amt.income { color: var(--good); }
 .empty { text-align: center; color: var(--muted); padding: 36px 12px; }
 
 .filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -407,7 +406,6 @@ dialog { background: var(--surface); }
 :root[data-theme="dark"] .bar i.warning { background: var(--warn); }
 :root[data-theme="dark"] .bar i.exceeded { background: var(--bad); }
 :root[data-theme="dark"] .tbl .up { color: #4fd9a0; }
-:root[data-theme="dark"] .amt.income { color: #4fd9a0; }
 :root[data-theme="dark"] .legal-links a, :root[data-theme="dark"] .land-foot a { color: inherit; }
 :root[data-theme="dark"] .land-hero .btn.secondary, :root[data-theme="dark"] .land-nav .btn.secondary { background: var(--soft); color: var(--ink); }
 :root[data-theme="dark"] .demo-frame { border-color: var(--line); }

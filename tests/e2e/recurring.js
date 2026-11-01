@@ -40,8 +40,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(inv.trades >= 2 && Math.abs(inv.q - 0.001 * inv.trades) < 1e-9, 'recurring buys recorded: ' + JSON.stringify(inv));
   // manage list
   await p.evaluate(() => { location.hash = '#/settings'; render(); }); assert((await p.innerText('main')).includes('Recurring'));
-  await p.click('[data-act=rec-toggle] >> nth=0'); assert.equal(await p.evaluate(() => D().recurring[0].active), false);
+  await p.click('[data-act=rec-menu] >> nth=0'); await p.click('.menu [data-act=rec-toggle]'); assert.equal(await p.evaluate(() => D().recurring[0].active), false);
   await p.screenshot({ path: __dirname + '/out/recurring_settings.png' });
-  await p.click('[data-act=rec-del] >> nth=0'); assert.equal(await p.evaluate(() => D().recurring.length), 2);
+  await p.click('[data-act=rec-menu] >> nth=0'); await p.click('.menu [data-act=rec-del]'); assert.equal(await p.evaluate(() => D().recurring.length), 2);
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

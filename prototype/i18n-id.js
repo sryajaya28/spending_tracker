@@ -1,6 +1,10 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Recurring updated. Entries already made are unchanged.": "Pengulangan diperbarui. Catatan yang sudah dibuat tidak berubah.",
+ "Pick a date from today on": "Pilih tanggal mulai hari ini",
+ "Next payment": "Pembayaran berikutnya",
+ "Changes apply from the next payment. Entries already made stay as they are.": "Perubahan berlaku mulai pembayaran berikutnya. Catatan yang sudah dibuat tidak berubah.",
  "Chinese yuan": "Yuan Tiongkok",
  "Hong Kong dollar": "Dolar Hong Kong",
  "Net": "Bersih",

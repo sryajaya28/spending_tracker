@@ -1,0 +1,34 @@
+const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
+/* Recurring: a first payment dated later shows as the next payment (and is not made twice); amount and next date can be edited without touching past entries. */
+(async () => {
+  const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: 'block' }); const p = await ctx.newPage();
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.route('**/vendor/supabase.js', (r) => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(__dirname + '/fake_supabase.js', 'utf8') }));
+  await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+  await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
+  const settle = () => p.evaluate(() => Cloud.idle());
+  await p.evaluate(() => { D().wallets[0].opening_balance_minor = 100000000; save(); render(); }); await settle();
+  // 1. a monthly expense whose first payment is on a later date: next payment = that date, one upcoming entry
+  const fut = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 9); return isoDate(d); });
+  await p.evaluate(() => txnDialog(null, 'expense')); await p.fill('input[name=amount]', '120000'); await p.fill('input[name=date]', fut); await p.selectOption('select[name=repeat]', 'monthly'); await p.fill('textarea[name=note], input[name=note]', 'Gym'); await p.click('#dlg button[type=submit]'); await settle();
+  let r = await p.evaluate(() => ({ n: D().recurring.length, next: D().recurring[0].next, start: D().recurring[0].start, first: D().recurring[0].spec.first_made, txns: D().transactions.filter((t) => t.note === 'Gym').length }));
+  assert.equal(r.n, 1); assert.equal(r.next, fut, 'next payment is the entered date, not a month later'); assert.equal(r.txns, 1, 'one upcoming entry'); assert.equal(r.first, fut);
+  // when that day arrives the rule does not make it again
+  const dup = await p.evaluate(() => { const rule = D().recurring[0], t = D().transactions.find((x) => x.note === 'Gym'); const d = new Date(); d.setDate(d.getDate() - 2); const past = isoDate(d); t.occurred_at = past; rule.start = past; rule.next = past; rule.spec.first_made = past; runRecurring(); return { gym: D().transactions.filter((x) => x.note === 'Gym').length, next: rule.next, first: rule.spec.first_made }; });
+  assert.equal(dup.gym, 1, 'not duplicated'); assert(dup.next > (await p.evaluate(() => isoDate(new Date()))), 'moved on'); assert.equal(dup.first, undefined);
+  // 2. edit amount and date; past entries stay as they are
+  await p.evaluate(() => { const r0 = D().recurring[0]; r0.start = '2026-06-10'; r0.next = '2026-09-10'; runRecurring(); });   // creates catch-up entries from June
+  const before = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort());
+  assert(before.length >= 2, 'past entries exist: ' + before.length);
+  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('[data-act=rec-menu]'); assert.equal(await p.$$eval('.cat-row [data-act=rec-edit], .cat-row [data-act=rec-toggle], .cat-row [data-act=rec-del]', (e) => e.length), 0, 'actions are in the ⋯ menu'); await p.click('[data-act=rec-menu]'); assert.deepEqual(await p.$$eval('.menu [data-act]', (e) => e.map((x) => x.dataset.act)), ['rec-edit', 'rec-toggle', 'rec-del']); await p.click('.menu [data-act=rec-edit]'); await p.waitForSelector('form[data-form=recedit]');
+  const newDate = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 20); return isoDate(d); });
+  await p.fill('input[name=amount]', '150000'); await p.fill('input[name=next]', newDate); await p.click('#dlg button[type=submit]'); await settle();
+  r = await p.evaluate(() => ({ amount: D().recurring[0].spec.amount_minor, next: D().recurring[0].next, start: D().recurring[0].start }));
+  assert.equal(r.amount, 150000); assert.equal(r.next, newDate); assert.equal(r.start, newDate);
+  const after = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort());
+  assert.deepEqual(after, before, 'past entries untouched');
+  assert((await p.innerText('.main')).includes('150.000') || (await p.innerText('.main')).includes('150,000'), 'the new amount shows');
+  // a date in the past is refused
+  await p.click('[data-act=rec-menu]'); await p.click('.menu [data-act=rec-edit]'); await p.evaluate(() => { document.querySelector('input[name=next]').removeAttribute('min'); }); await p.fill('input[name=next]', '2026-01-01'); await p.click('#dlg button[type=submit]'); assert.equal(await p.evaluate(() => D().recurring[0].next), newDate, 'a past date is not accepted'); await p.click('[data-act=close]');
+  console.log('ok', JSON.stringify(errs)); await b.close();
+})().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').filter((l) => l.includes('recedit.js')).slice(0, 2).join(' | ')); process.exit(1); });

@@ -1689,7 +1689,8 @@ function detId(...parts) {   // stable uuid-shaped id from text (two 53-bit hash
 }
 function addRule(kind, freq, start, spec) {
   const r = { id: uid(), kind, freq, start, next: '', end: '', active: true, spec };
-  r.next = nextAfter(r, start);
+  // a first payment dated later is already on the books as an Upcoming entry: the next payment is that date, and the rule skips creating it again
+  if (start > isoDate(new Date())) { r.next = start; r.spec = { ...spec, first_made: start }; } else r.next = nextAfter(r, start);
   (D().recurring = D().recurring || []).push(r);
   return r;
 }
@@ -1721,7 +1722,10 @@ function runRecurring() {
   const today = isoDate(new Date()); let n = 0;
   d.recurring.forEach((r) => {
     if (r.active === false) return;
-    for (let guard = 0; r.next <= today && (!r.end || r.next <= r.end) && guard < 400; guard++) { generateRecurring(r, r.next); n++; r.next = nextAfter(r, r.next); }
+    for (let guard = 0; r.next <= today && (!r.end || r.next <= r.end) && guard < 400; guard++) {
+      if (r.spec && r.spec.first_made === r.next) { delete r.spec.first_made; r.next = nextAfter(r, r.next); n++; continue; }   // that one was entered by hand when the rule was created
+      generateRecurring(r, r.next); n++; r.next = nextAfter(r, r.next);
+    }
   });
   if (n) { d.transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)); save(); }
   return n;
@@ -1734,24 +1738,41 @@ const ruleTitle = (r) => {
   const info = assetInfo(sp.symbol), src = parseSource(sp.fund);
   return { icon: '📈', name: __('Buy {qty} {symbol}', { qty: qtyFmt(sp.quantity), symbol: info.symbol }), amount: src ? `${qtyFmt(parseAmount(src, sp.fundamount))} ${sourceUnit(src)}` : '', where: '' };
 };
+/* change what a rule will do from now on: the amount and the next payment date. Entries it already made are not touched. */
+const ruleAmount = (r) => {
+  const sp = r.spec;
+  if (r.kind === 'txn') return String(sp.wallet_id).startsWith('h:') ? { unit: assetInfo((D().holdings.find((x) => x.id === sp.wallet_id.slice(2)) || {}).symbol || 'USDT').symbol, value: sp.quantity, step: 'any' } : { unit: sp.currency, value: toMajor(sp.amount_minor, sp.currency), step: expOf(sp.currency) ? '0.01' : '1' };
+  if (r.kind === 'transfer') { const A = walletOf(sp.from), c = A ? A.currency : cur(); return { unit: c, value: toMajor(sp.amount_minor, c), step: expOf(c) ? '0.01' : '1' }; }
+  const src = parseSource(sp.fund); return { unit: src ? sourceUnit(src) : '', value: parseFloat(sp.fundamount) || 0, step: 'any' };
+};
+function ruleDialog(r) {
+  const t = ruleTitle(r), a = ruleAmount(r);
+  open(`<h2>${esc(t.name)}</h2><p class="muted" style="margin-top:-10px">${__('Changes apply from the next payment. Entries already made stay as they are.')}</p>
+  <form data-form="recedit" data-id="${r.id}" style="display:contents"><div class="two"><label class="field">${__('Amount ({cur})', { cur: esc(a.unit) })}<input name="amount" type="number" inputmode="decimal" min="0" step="${a.step}" required value="${a.value}"></label>
+    <label class="field">${__('Next payment')}<input name="next" type="date" required min="${isoDate(new Date())}" value="${r.next}"></label></div>
+  <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
+}
 function recurringCard() {
   const list = D().recurring || []; if (!list.length) return '';
   return `<section class="card"><div class="card-head"><h2>${__('Recurring')}</h2></div>${list.map((r) => {
     const t = ruleTitle(r), freq = r.freq === 'weekly' ? __('Every week') : __('Every month');
     return `<div class="brow cat-row"><span class="tile" style="--c:#8B8FF0">${t.icon}</span><div class="cat-main"><b class="cat-name">${esc(t.name)}</b><small class="muted">${esc(t.amount)}${t.where ? ' · ' + esc(t.where) : ''}</small><small class="muted">${freq} · ${r.active === false ? __('Paused') : __('Next {date}', { date: dateOf(r.next).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) })}</small></div>
-      <div class="tools"><button class="btn secondary" data-act="rec-toggle" data-id="${r.id}">${r.active === false ? __('Resume') : __('Pause')}</button><button class="btn secondary" data-act="rec-del" data-id="${r.id}" aria-label="${__('Delete')}">🗑</button></div></div>`;
+      <div class="menu-wrap"><button type="button" class="dots" data-act="rec-menu" data-id="${r.id}" aria-label="${__('More actions')}" aria-haspopup="menu" aria-expanded="${state.ui.recMenu === r.id}">⋯</button>
+      ${state.ui.recMenu === r.id ? `<div class="menu" role="menu"><button type="button" role="menuitem" data-act="rec-edit" data-id="${r.id}">${__('Edit')}</button><button type="button" role="menuitem" data-act="rec-toggle" data-id="${r.id}">${r.active === false ? __('Resume') : __('Pause')}</button><button type="button" role="menuitem" class="warn" data-act="rec-del" data-id="${r.id}">${__('Delete')}</button></div>` : ''}</div></div>`;
   }).join('')}</section>`;
 }
 
 /* ---------- events ---------- */
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
-  if (!el) { if (state.ui.walletMenu || state.ui.infoOpen) { state.ui.walletMenu = null; state.ui.infoOpen = null; render(); } return; }
+  if (!el) { if (state.ui.walletMenu || state.ui.infoOpen || state.ui.recMenu) { state.ui.walletMenu = null; state.ui.infoOpen = null; state.ui.recMenu = null; render(); } return; }
   const { act, id, type, date } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
+  if (act !== 'rec-menu') state.ui.recMenu = null;
   if (act !== 'toggle-info') state.ui.infoOpen = null;
   if (act === 'close') close();
   else if (act === 'theme-toggle') { applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); render(); }
+  else if (act === 'rec-menu') { state.ui.recMenu = state.ui.recMenu === id ? null : id; render(); }
   else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
   else if (act === 'add-txn') txnDialog(null, type, undefined, date);
   else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
@@ -1763,6 +1784,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'delete-transfer') { D().transactions = D().transactions.filter((t) => t.transfer_id !== id); save(); close(); render(); toast('Transfer deleted'); }
   else if (act === 'edit-txn') txnDialog(find(D().transactions));
   else if (act === 'rec-toggle') { const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
+  else if (act === 'rec-edit') { render(); ruleDialog(find(D().recurring)); }
   else if (act === 'rec-del') { D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
   else if (act === 'add-budget') budgetDialog();
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
@@ -2096,6 +2118,16 @@ document.addEventListener('submit', async (e) => {
     if (f.dataset.id) D().investments.find((a) => a.id === f.dataset.id).name = name;
     else D().investments.push({ id: uid(), name, archived: false });
     save(); close(); render(); toast('Account saved');
+  }
+  if (kind === 'recedit') {
+    const r = D().recurring.find((x) => x.id === f.dataset.id), sp = r.spec, amount = parseFloat(v.amount);
+    if (!(amount > 0)) { toast('Enter an amount above zero'); return; }
+    if (v.next < isoDate(new Date())) { toast(__('Pick a date from today on')); return; }
+    if (r.kind === 'txn') { if (String(sp.wallet_id).startsWith('h:')) sp.quantity = amount; else sp.amount_minor = toMinor(amount, sp.currency); }
+    else if (r.kind === 'transfer') { const A = walletOf(sp.from), c = A ? A.currency : cur(), old = sp.amount_minor; sp.amount_minor = toMinor(amount, c); sp.received_minor = old ? Math.round(sp.received_minor * (sp.amount_minor / old)) : sp.amount_minor; }
+    else sp.fundamount = String(amount);
+    if (v.next !== r.next) { r.start = v.next; r.next = v.next; delete sp.first_made; }   // later payments keep the new day of the month / week
+    save(); close(); render(); toast(__('Recurring updated. Entries already made are unchanged.')); return;
   }
   if (kind === 'handoff') { const ok = await claimHandoff(v.code); if (ok) close(); return; }
   if (kind === 'cost') {

@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Portfolio hero: removed the "after loans / no loans" label. Activity header: search (left) + period dropdown (right) on line 1 (`+ Add` only on desktop, `.add-desk`),
+  filters "All categories / All occasions / All accounts" on line 2 sized by flex ratios so the text is not cut at 360-390 px (`dropdown.js` also supports a short field label with a fuller `data-list` label).
+
 - 2026-11-01: Phone pages get a little more room at the top (24px, was 12px) so the greeting and the profile icon do not touch the status bar.
 
 - 2026-11-01: USDT/USDC accounts are listed like savings accounts, `Binance (USDT)`, under a group headed "Investment Account" (dialog, filter and transaction rows).

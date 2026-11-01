@@ -602,7 +602,7 @@ function viewPortfolio() {
   const tabBtn = (id, label) => `<button class="tab ${tab === id ? 'on' : ''}" data-act="pf-tab" data-tab="${id}">${__(label)}</button>`;
   return `${topbar('Portfolio', __('Net worth across savings, investments and loans · shown in {cur}', { cur: vc }))}
   <div class="grid">
-    <section class="card hero"><div class="label">${__('Net worth')} <span>${activeLoans().length ? __('after loans') : __('no loans')}</span></div>
+    <section class="card hero"><div class="label">${__('Net worth')}</div>
       <div class="amount num" style="--len:${m(now).length}">${moneyHtml(usdToMinor(now, vc), vc)}</div>
       <div class="delta"><b>${pctFmt(mom)}</b><span>${__('vs last month')}</span></div>
       <label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label></section>
@@ -743,8 +743,8 @@ function viewDay(d) {
 function viewTransactions() {
   const list = inMonth(state.ui.month);
   return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
-  <section class="card"><div class="txn-top"><input data-filter="q" placeholder="${__('Search note or category')}" value="${esc(state.ui.q)}" aria-label="${__('Search')}"><button class="btn" data-act="add-txn">${__('+ Add')}</button></div>
-    <div class="filters scroll-row">${monthSelect(true)}
+  <section class="card"><div class="txn-top"><input data-filter="q" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true)}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
+    <div class="filters scroll-row">
       <select data-filter="cat" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
       ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
       <select data-filter="wallet" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}</select></div>

@@ -27,7 +27,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // the month picker shows ranges
   await p.evaluate(() => { location.hash = '#/overview'; render(); }); assert(/\w+ \d+ – \w+ \d+/.test(await p.innerText('select[data-bind=month]')), 'range labels');
   const [periodStartNow, periodEndNow] = await p.evaluate(() => [periodStart(state.ui.month), periodEnd(state.ui.month)]);
-  await p.evaluate(() => { location.hash = '#/transactions'; render(); }); assert(/\w+ \d+–\w+ \d+/.test(await p.innerText('.filters select[data-bind=month]')), 'Transactions filter shows the period');
+  await p.evaluate(() => { location.hash = '#/transactions'; render(); }); assert(/\w+ \d+–\w+ \d+/.test(await p.innerText('.txn-top select[data-bind=month]')), 'Transactions filter shows the period');
   const rows = await p.$$eval('#txn-list .day-row', (e) => e.map((x) => x.dataset.id)); assert(rows.every((d) => d >= periodStartNow && d <= periodEndNow) && rows.length, JSON.stringify(rows));
   // a wallet created in the calendar month the period ends in still counts (Total Balance and Savings must agree)
   const agree = await p.evaluate(() => { const nm = monthKey(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1)), k = currentPeriod();

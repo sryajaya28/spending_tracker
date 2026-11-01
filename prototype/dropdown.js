@@ -34,9 +34,9 @@
     close();
     cur = sel; openedAt = Date.now(); sel.setAttribute('aria-expanded', 'true');
     pop = document.createElement('div'); pop.className = 'cs-pop'; pop.setAttribute('role', 'listbox');
-    const add = (opt, parent) => {
+    const add = (opt, parent) => {   // data-list: a short label in the field can have a fuller one in the list
       const el = document.createElement('div'); el.className = 'cs-opt' + (opt.selected ? ' on' : '') + (opt.disabled ? ' dis' : ''); el.setAttribute('role', 'option');
-      el.setAttribute('aria-selected', String(opt.selected)); const t = document.createElement('span'); t.textContent = opt.textContent; el.appendChild(t);
+      el.setAttribute('aria-selected', String(opt.selected)); const t = document.createElement('span'); t.textContent = opt.dataset.list || opt.textContent; el.appendChild(t);
       const i = rows.length; rows.push({ opt, el });
       el.addEventListener('click', (e) => { e.stopPropagation(); choose(i); });
       el.addEventListener('pointermove', () => { if (act !== i) setActive(i, false); });

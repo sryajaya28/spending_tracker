@@ -72,7 +72,7 @@ Automated: `donut`, `ovocc`, `budgetbar`, `run`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| TX-01 | Open Activity | Header shows search + `+ Add`; second line shows the period, category and account filters (plus occasion filter when occasions exist). At most two lines of controls on a phone. |
+| TX-01 | Open Activity | Line 1: the search box on the **left** (placeholder "Search") and the period dropdown on the **right**; **no `+ Add` button on phones** (the bottom bar Add does it), it stays at the end of line 1 on desktop. Line 2: the three filters keep their full labels **All categories / All occasions (only when occasions exist) / All accounts**, sized in proportion so none is cut off at 360-390 px. |
 | TX-02 | Daily list | One row per day, newest first: day number and month, weekday, count, income and spent, net (green/red). Transfers count in the number but not in income or spent. |
 | TX-03 | Tap a day | Opens `#/transactions/YYYY-MM-DD`: that day's transactions, Back link, `+ Add` prefilled with that date. Edit/delete works; Back returns to the list. |
 | TX-04 | Search, category, account filters | List narrows; they combine; "Uncategorized" works; the account filter can pick a USDT/USDC holding. |
@@ -153,7 +153,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| PF-01 | Net worth card | Small currency dropdown top right (IDR, USD, EUR, GBP, SGD, AUD, JPY); changing it converts Portfolio numbers, budgets and totals. No exchange-rate sentence. Card is compact. |
+| PF-01 | Net worth card | Title "Net worth" alone (no "after loans" label). Small currency dropdown top right (IDR, USD, EUR, GBP, SGD, AUD, JPY); changing it converts Portfolio numbers, budgets and totals. No exchange-rate sentence. Card is compact. |
 | PF-02 | Net worth maths | Savings + Investments + Lent - Loans. With no investments, Net worth = savings (+ lent - loans). |
 | PF-03 | Breakdown | No bar. Savings / Investments / Lent show shares that add to 100% of assets; **Less: Loans** sits apart with the minus amount and no percentage. |
 | PF-04 | Savings list | Accounts sorted from the highest balance; compact cards (type and currency beside the name); `...` menu: Edit, Archive. Archived accounts section: restore, delete (blocked if transactions use it). |
@@ -305,5 +305,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: OV-05 rewritten: Overview Budgets card shows only the overall budget, button renamed Details, whole card opens Budgets.
 - 2026-11-01: UI-06 notes the tighter space under the bottom bar labels.
 - 2026-11-01: CN-01/02/08 use the `Investment Account` group and `Name (USDT)` format.
+- 2026-11-01: TX-01 (new Activity header) and PF-01 (no "after loans" label).
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

@@ -284,6 +284,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Removed the "N accounts" label from the Overview hero card.
+
 - 2026-11-01: (i) tooltip icon is vertically centred with the title text (heading is a flex row when it holds an `.info-wrap`).
 
 - 2026-11-01: (i) tooltip icon made smaller (16px) with an invisible larger tap area.

@@ -680,7 +680,7 @@ function viewOverview() {
   const recent = D().transactions.slice(0, 6);
   return `${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
-    <section class="card hero"><div class="label">${__('Total Balance')} <span>${__('{n} accounts', { n: D().wallets.filter((w) => !w.archived).length })}</span></div>
+    <section class="card hero"><div class="label">${__('Total Balance')}</div>
       <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
       <div class="delta"><b>${saved >= 0 ? '+' : ''}${saved}%</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>

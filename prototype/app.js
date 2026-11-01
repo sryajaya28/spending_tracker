@@ -1132,6 +1132,7 @@ function accountDialog(a) {
     <div class="actions">${a ? `<button type="button" class="btn danger" data-act="archive-account" data-id="${a.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function holdingDialog(h, accId, opts = {}) {
+  if (!h) state.ui.pickType = '';   // the asset picker starts on All
   const accounts = activeAccounts(), info = h && assetInfo(h.symbol), invest = !!opts.invest;
   const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
   open(`<h2>${h ? __('Edit {symbol}', { symbol: esc(info.symbol) }) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
@@ -1139,11 +1140,10 @@ function holdingDialog(h, accId, opts = {}) {
     <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
     ${h ? `<p><b>${esc(info.name)}</b> <span class="badge">${esc(typeLabel(info.type))}</span></p>` : `
     <div class="field" id="picker">${__('Asset')}
-      <div class="pills" role="group" aria-label="${__('Asset type')}"><button type="button" class="pill on" data-act="pick-type" data-type="">${__('All')}</button><button type="button" class="pill" data-act="pick-type" data-type="crypto">${__('Crypto')}</button><button type="button" class="pill" data-act="pick-type" data-type="stock">${__('US stocks &amp; ETFs')}</button><button type="button" class="pill" data-act="pick-type" data-type="idx">${__('Indonesia (IDX)')}</button><button type="button" class="pill" data-act="pick-type" data-type="commodity">${__('Gold, oil &amp; more')}</button></div>
-      <input name="assetq" autocomplete="off" placeholder="${__('Search name or ticker, e.g. BTC, AAPL, VOO')}">
+      <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Gold, oil &amp; more']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
+      <input name="assetq" autocomplete="off" placeholder="${__('Name or ticker')}"></div>
       <div class="results" id="asset-results" role="listbox" hidden></div>
       <div class="picked" id="picked" hidden></div>
-      <small>${api.finnhub ? __('Searching the full Finnhub list of US stocks, ETFs and crypto.') : __('Live list unavailable (run tools/dev_server.py with a Finnhub key). Showing built-in assets.')}</small>
       <input type="hidden" name="asset"><input type="hidden" name="assetmeta">
       <label class="field price-fallback" hidden>${__('Price (USD)')}<input name="price" type="number" min="0" step="any" placeholder="${__('Live price unavailable, enter it')}"></label>
       <button type="button" class="legend-btn" data-act="manual-asset">${__('Not listed? Add an asset manually')}</button></div>
@@ -1395,7 +1395,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'archive-lent') { find(D().lent).archived = true; save(); close(); render(); toast('Archived'); }
   else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); }
   else if (act === 'refresh-prices') { el.textContent = __('Refreshing…'); refreshPrices(false); }
-  else if (act === 'pick-type') { state.ui.pickType = el.dataset.type; $$('.pill', el.parentElement).forEach((b) => b.classList.toggle('on', b === el)); runAssetSearch(); }
+  else if (act === 'pick-type-old') { state.ui.pickType = el.dataset.type; $$('.pill', el.parentElement).forEach((b) => b.classList.toggle('on', b === el)); runAssetSearch(); }
   else if (act === 'pick-asset') pickAsset(state.pick[+el.dataset.i], el.closest('form'));
   else if (act === 'manual-asset') { const f = el.closest('form'); f.asset.value = '__custom'; f.assetmeta.value = ''; $('#picker', f).hidden = true; $('.custom-fields', f).hidden = false; }
   else if (act === 'add-account') accountDialog();
@@ -1466,6 +1466,7 @@ document.addEventListener('change', (e) => {
       if (!t.form.dataset.id) { const w = t.form.wallet, keep = w.value; w.innerHTML = acctOptions(t.value, keep); if (![...w.options].some((o) => o.value === keep)) w.selectedIndex = 0; syncTxnUnit(t.form); }   // "new" coin options exist for income only
     }
   }
+  else if (t.matches('[data-pick-type]')) { state.ui.pickType = t.value; runAssetSearch(); }
   else if (t.matches('[data-theme-select]')) { applyTheme(t.value); if (state.data && !state.real) { state.data.profile.theme = THEME; save(); } render(); }
   else if (t.matches('[data-lang]')) { setLang(t.value); if (state.data && !state.real) { state.data.profile.language = LANG; save(); } render(); }
   else if (t.matches('[data-demo]')) setDemo(t.checked);

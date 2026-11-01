@@ -17,7 +17,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const settle = () => p.evaluate(() => Cloud.idle()), log = () => p.evaluate(() => window.__log.splice(0));
   await p.evaluate(() => { D().investments.push({ id: uid(), name: 'Stockbit', archived: false }); D().wallets[0].opening_balance_minor = 100000000; save(); }); await settle(); await log();
   const buy = async (pill, query, qty, paid) => {
-    await p.evaluate(() => holdingDialog(null, null, { invest: true })); assert((await p.innerText('#picker')).includes('Indonesia (IDX)')); await p.click(`#picker .pill[data-type=${pill}]`);
+    await p.evaluate(() => holdingDialog(null, null, { invest: true })); assert((await p.innerText('#picker select')).includes('Indonesia (IDX)')); await p.selectOption('#picker select[data-pick-type]', pill);
     await p.fill('input[name=assetq]', query); await p.waitForSelector('#asset-results .res'); await p.click('#asset-results .res');
     await p.waitForTimeout(600); await p.waitForFunction(() => /live/.test(document.querySelector('#picked-price').textContent));
     await p.fill('input[name=quantity]', qty); await p.fill('input[name=fundamount]', paid); await p.click('#dlg button[type=submit]'); await settle();

@@ -530,3 +530,8 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
   .see-more { display: flex; }
   .collapsed > .more-item { display: none; }
 }
+
+/* asset picker: a type dropdown beside the search box */
+.asset-search { display: flex; gap: 8px; }
+.asset-search select { flex: 0 0 38%; min-width: 0; font-size: 14px; }
+.asset-search input { flex: 1; min-width: 0; }

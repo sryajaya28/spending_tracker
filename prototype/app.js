@@ -8,7 +8,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36));
 // units of currency per 1 USD (mock; the real app reads these from the fx_rates table)
-const RATES = { IDR: 15500, USD: 1, EUR: 0.92, GBP: 0.79, SGD: 1.35, AUD: 1.5, JPY: 150 };
+const RATES = { IDR: 15500, USD: 1, EUR: 0.92, GBP: 0.79, SGD: 1.35, AUD: 1.5, JPY: 150, HKD: 7.8, CNY: 7.2, AED: 3.6725 };
 const PRICES_KEY = 'stiver.prices.v1';   // last live prices, only to avoid a flash of 0 on load
 
 /* Decimal places per currency, fixed here on purpose. Asking the browser (Intl) gives different answers on
@@ -17,7 +17,7 @@ const PRICES_KEY = 'stiver.prices.v1';   // last live prices, only to avoid a fl
 const ZERO_DECIMAL = new Set(['IDR', 'JPY', 'KRW', 'VND', 'CLP', 'UGX', 'XAF', 'XOF', 'PYG', 'RWF']);
 const expOf = (cur) => (ZERO_DECIMAL.has(cur) ? 0 : 2);
 /* each currency is written the way its own country writes it, whatever the app language is: Rp 1.234.567 and 1.234,50 for rupiah, $1,234.50 for dollars */
-const NATIVE_LOCALE = { IDR: 'id-ID', USD: 'en-US', EUR: 'de-DE', GBP: 'en-GB', SGD: 'en-US', AUD: 'en-US', JPY: 'en-US' };
+const NATIVE_LOCALE = { IDR: 'id-ID', USD: 'en-US', EUR: 'de-DE', GBP: 'en-GB', SGD: 'en-US', AUD: 'en-US', JPY: 'en-US', HKD: 'en-US', CNY: 'en-US', AED: 'en-US' };
 const nativeLocale = (cur) => NATIVE_LOCALE[cur] || locale();
 const curFmt = (cur) => new Intl.NumberFormat(nativeLocale(cur), { style: 'currency', currency: cur, minimumFractionDigits: expOf(cur), maximumFractionDigits: expOf(cur) });
 const toMinor = (major, cur) => Math.round(major * 10 ** expOf(cur));
@@ -81,30 +81,13 @@ const CATS = [
   ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'], ['Other', 'expense', '⋯', '#94A3B8'],
   ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Other income', 'income', '➕', '#94A3B8'],
 ];
-// the sample account is Indonesian: amounts are in rupiah (converted when the reporting currency is another one)
-// [category, per-month count, min IDR, max IDR, notes]
-const EXPENSE_PLAN = [
-  ['Groceries', 5, 60000, 650000, ['Indomaret', 'Alfamart', 'Superindo', 'Pasar tradisional']],
-  ['Dining', 9, 22000, 320000, ['Kopi Kenangan', 'Warteg', 'Mie ayam', 'GoFood order', 'Sate padang', 'Starbucks']],
-  ['Transport', 8, 12000, 280000, ['Gojek', 'Grab', 'Kartu KRL', 'Pertamax', 'Parkir']],
-  ['Shopping', 2, 150000, 1800000, ['Tokopedia', 'Shopee', 'Uniqlo']],
-  ['Bills & Utilities', 3, 280000, 1250000, ['Token listrik PLN', 'Indihome', 'Telkomsel', 'PDAM']],
-  ['Entertainment', 2, 50000, 350000, ['CGV Cinema', 'Konser tiket']],
-  ['Health', 1, 90000, 550000, ['Kimia Farma', 'Gym membership']],
-];
-
+// sample accounts per country are defined in sample.js
 // one level of sub-categories under a parent; transactions may point at either
 const SUBS = {
   Groceries: [['Supermarket', '🏬'], ['Fresh market', '🥬']],
   Dining: [['Coffee', '☕'], ['Restaurants', '🍴'], ['Delivery', '🛵']],
   Transport: [['Fuel', '⛽'], ['Ride-hailing', '🚕'], ['Public transit', '🚇']],
   Entertainment: [['Movies', '🎬'], ['Streaming', '📺'], ['Events', '🎟️']],
-};
-const NOTE_SUB = {
-  Indomaret: 'Groceries/Supermarket', Alfamart: 'Groceries/Supermarket', Superindo: 'Groceries/Supermarket', 'Pasar tradisional': 'Groceries/Fresh market',
-  'Kopi Kenangan': 'Dining/Coffee', Starbucks: 'Dining/Coffee', Warteg: 'Dining/Restaurants', 'Mie ayam': 'Dining/Restaurants', 'Sate padang': 'Dining/Restaurants', 'GoFood order': 'Dining/Delivery',
-  Pertamax: 'Transport/Fuel', Gojek: 'Transport/Ride-hailing', Grab: 'Transport/Ride-hailing', 'Kartu KRL': 'Transport/Public transit', Parkir: 'Transport',
-  'CGV Cinema': 'Entertainment/Movies', 'Konser tiket': 'Entertainment/Events', Netflix: 'Entertainment/Streaming',
 };
 
 /* mock price catalog: [symbol, name, type, current USD price, monthly volatility].
@@ -177,50 +160,57 @@ async function refreshPrices(silent) {
 function seed(name, cur) {
   let s = 11;
   const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-  // rupiah -> minor units of the reporting currency (IDR stays exact; others convert, so the demo still adds up)
-  const conv = (idr) => { let v = (idr / RATES.IDR) * RATES[cur]; if (cur === 'IDR' && v > 100000) v = Math.round(v / 1000) * 1000; return toMinor(v, cur); };
+  /* a profile per country (sample.js): local banks, e-wallets, merchants, investment platforms and stocks. Unknown currencies use the USD one. */
+  const P = SAMPLE[cur] || SAMPLE.USD, IDRP = P.unit === 'IDR';
+  // round to a number a person would really pay: whole yen/rupiah, cents only for small amounts
+  const nice = (x) => { const a = Math.abs(x); if (expOf(cur) === 0) return Math.round(x / (a >= 1e6 ? 1e4 : a >= 1e5 ? 1e3 : a >= 1e4 ? 100 : a >= 1e3 ? 10 : 1)) * (a >= 1e6 ? 1e4 : a >= 1e5 ? 1e3 : a >= 1e4 ? 100 : a >= 1e3 ? 10 : 1); const st = a >= 1e5 ? 1000 : a >= 1e4 ? 100 : a >= 1e3 ? 10 : a >= 100 ? 1 : a >= 20 ? 0.5 : 0.05; return Math.round(x / st) * st; };
+  // a profile amount -> minor units of the reporting currency (rupiah profile: exact rupiah; others: USD-scale numbers x rate x local price level)
+  const A = (v) => toMinor(IDRP ? (v > 100000 ? Math.round(v / 1000) * 1000 : v) : nice(v * (RATES[cur] || 1) * P.pl), cur);
+  const major = (v) => toMajor(A(v), cur);
   const catId = {};
   const categories = CATS.map(([n, type, ic, color]) => { const id = uid(); catId[n] = id; return { id, parent_id: null, name: n, type, icon: ic, color, archived: false }; });
   CATS.forEach(([n, type, , color]) => (SUBS[n] || []).forEach(([sn, sic]) => {
     const id = uid(); catId[`${n}/${sn}`] = id;
     categories.push({ id, parent_id: catId[n], name: sn, type, icon: sic, color, archived: false });
   }));
+  // merchant -> sub-category ("Name|Sub" in the profile)
+  const noteSub = {}; P.plan.forEach(([cat, , , , notes]) => notes.forEach((n) => { const [nm, sub] = n.split('|'); noteSub[nm] = sub ? `${cat}/${sub}` : cat; })); P.subs.forEach(([n, , sub]) => { noteSub[n] = sub; });
   const today = new Date(), todayD = today.getDate(), dim = (y, m) => new Date(y, m + 1, 0).getDate();
   const wsince = monthKey(new Date(today.getFullYear(), today.getMonth() - 5, 1));   // sample history starts 5 months back
   // accounts with the balance each should show today (opening balances are derived below)
   const W = (n, type, target, c = cur) => ({ id: uid(), name: n, type, currency: c, opening_balance_minor: 0, since: wsince, archived: false, _target: target });
-  const bca = W('BCA', 'bank', conv(742000000)), mandiri = W('Mandiri', 'bank', conv(455000000)), jago = W('Bank Jago', 'bank', conv(118000000)), cash = W('Cash', 'cash', conv(26000000));
-  const gopay = W('Gopay', 'ewallet', conv(3400000)), shopee = W('ShopeePay', 'ewallet', conv(1250000)), ovo = W('OVO', 'ewallet', conv(2300000));
-  const wallets = [bca, mandiri, jago, cash, gopay, shopee, ovo];
+  const wallets = P.names.map((n, i) => W(n, ['bank', 'bank', 'bank', 'cash', 'ewallet', 'ewallet', 'ewallet'][i], A(P.bal[i])));
+  const [b1, b2, , cashW, e1, e2, e3] = wallets;
   const txns = [];
   const nowMonth = (back) => ({ y: today.getFullYear(), m: today.getMonth() - back });
-  const add = (w, cat, type, date, idr, note, extra = {}) => {
-    txns.push({ id: uid(), wallet_id: w.id, category_id: cat ? catId[NOTE_SUB[note]] || catId[cat] : null, type, amount_minor: conv(idr), currency: w.currency, occurred_at: isoDate(date), note, category_source: 'user', ai_confidence: null, ...extra });
+  const add = (w, cat, type, date, v, note, extra = {}) => {
+    txns.push({ id: uid(), wallet_id: w.id, category_id: cat ? catId[noteSub[note]] || catId[cat] : null, type, amount_minor: A(v), currency: w.currency, occurred_at: isoDate(date), note, category_source: 'user', ai_confidence: null, ...extra });
   };
+  const usdOf = (v) => (IDRP ? v / 15500 : v);
   // everyday spending: small things on e-wallets, bigger ones on the banks
-  const spendWallet = (cat, idr) => (idr < 120000 && (cat === 'Dining' || cat === 'Transport' || cat === 'Groceries') ? [gopay, ovo, shopee][Math.floor(rnd() * 3)] : idr < 400000 && rnd() < 0.15 ? cash : rnd() < 0.78 ? bca : mandiri);
-  const transfer = (from, to, idr, date, note) => {
+  const spendWallet = (cat, v) => (usdOf(v) < 7.7 && (cat === 'Dining' || cat === 'Transport' || cat === 'Groceries') ? [e1, e3, e2][Math.floor(rnd() * 3)] : usdOf(v) < 25.8 && rnd() < 0.15 ? cashW : rnd() < 0.78 ? b1 : b2);
+  const transfer = (from, to, v, date, note) => {
     const gid = uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: isoDate(date), transfer_id: gid, type: 'transfer', currency: cur };
-    txns.push({ id: uid(), wallet_id: from.id, flow: 'out', amount_minor: conv(idr), note: `Transfer to ${to.name}${note ? ' · ' + note : ''}`, ...base });
-    txns.push({ id: uid(), wallet_id: to.id, flow: 'in', amount_minor: conv(idr), note: `Transfer from ${from.name}${note ? ' · ' + note : ''}`, ...base });
+    txns.push({ id: uid(), wallet_id: from.id, flow: 'out', amount_minor: A(v), note: `Transfer to ${to.name}${note ? ' · ' + note : ''}`, ...base });
+    txns.push({ id: uid(), wallet_id: to.id, flow: 'in', amount_minor: A(v), note: `Transfer from ${from.name}${note ? ' · ' + note : ''}`, ...base });
   };
   for (let back = 5; back >= 0; back--) {
     const { y, m } = nowMonth(back), cur0 = back === 0, last = dim(y, m);
     const maxDay = cur0 ? Math.max(1, Math.min(todayD, last)) : Math.min(27, last);   // the running month only fills up to today
     const factor = cur0 ? Math.max(0.35, todayD / last) : 1;
     // fixed items (also dated later this month: they show as Upcoming)
-    add(bca, 'Salary', 'income', new Date(y, m, 25), 42000000, 'Monthly salary');
-    if (back % 2 === 0) add(bca, 'Freelance', 'income', new Date(y, m, 12), 6500000 + Math.round(rnd() * 3000000), 'Design project');
-    add(bca, 'Subscription', 'expense', new Date(y, m, 12), 186000, 'Netflix');
-    add(bca, 'Subscription', 'expense', new Date(y, m, 5), 55000, 'Spotify');
-    add(mandiri, 'Bills & Utilities', 'expense', new Date(y, m, 3), 1250000, 'Indihome + Telkomsel');
-    if (back > 0 || todayD >= 2) { transfer(bca, gopay, 1500000, new Date(y, m, 2), 'top up'); transfer(bca, ovo, 1000000, new Date(y, m, 2), 'top up'); transfer(bca, shopee, 800000, new Date(y, m, 3), 'top up'); }
+    add(b1, 'Salary', 'income', new Date(y, m, 25), P.salary, 'Monthly salary');
+    if (back % 2 === 0) add(b1, 'Freelance', 'income', new Date(y, m, 12), P.freelance[0] + Math.round(rnd() * P.freelance[1]), 'Design project');
+    add(b1, 'Subscription', 'expense', new Date(y, m, 12), P.subs[0][1], P.subs[0][0]);
+    add(b1, 'Subscription', 'expense', new Date(y, m, 5), P.subs[1][1], P.subs[1][0]);
+    add(b2, 'Bills & Utilities', 'expense', new Date(y, m, 3), P.bill[1], P.bill[0]);
+    if (back > 0 || todayD >= 2) { transfer(b1, e1, P.topup[0], new Date(y, m, 2), 'top up'); transfer(b1, e3, P.topup[1], new Date(y, m, 2), 'top up'); transfer(b1, e2, P.topup[2], new Date(y, m, 3), 'top up'); }
     // random everyday spending
-    for (const [cat, n, lo, hi, notes] of EXPENSE_PLAN) {
+    for (const [cat, n, lo, hi, notes] of P.plan) {
       const count = cur0 ? Math.max(1, Math.round(n * factor * 1.6)) : n;
       for (let i = 0; i < count; i++) {
-        const day = 1 + Math.floor(rnd() * maxDay), idr = Math.round((lo + rnd() * (hi - lo)) / 1000) * 1000;
-        add(spendWallet(cat, idr), cat, 'expense', new Date(y, m, day), idr, notes[Math.floor(rnd() * notes.length)]);
+        const day = 1 + Math.floor(rnd() * maxDay), v = IDRP ? Math.round((lo + rnd() * (hi - lo)) / 1000) * 1000 : lo + rnd() * (hi - lo);
+        add(spendWallet(cat, v), cat, 'expense', new Date(y, m, day), v, notes[Math.floor(rnd() * notes.length)].split('|')[0]);
       }
     }
   }
@@ -232,44 +222,43 @@ function seed(name, cur) {
   const past = txns.filter((t) => t.type === 'expense' && !fut(t));
   past.slice(2, 12).forEach((t, i) => { if (i % 3 === 0) { t.category_source = 'ai'; t.ai_confidence = 0.86; } });
   const start = monthKey(new Date(today.getFullYear(), today.getMonth() - 5, 1)) + '-01';
-  const mk = (cat, idr) => ({ id: uid(), category_id: cat ? catId[cat] : null, amount_minor: conv(idr), currency: cur, start_month: start });
-  const budgets = [mk(null, 22000000), mk('Groceries', 3000000), mk('Dining', 2500000), mk('Transport', 1800000), mk('Shopping', 3000000), mk('Entertainment', 1000000), mk('Bills & Utilities', 3000000)];
-  const occasions = [{ id: uid(), name: 'Bali Trip', amount_minor: conv(15000000), currency: cur, start: isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 18)), end: isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 22)), archived: false }];
-  // investment accounts, each holding several assets (quantities only; value comes from prices). IDX stocks and gold carry a fixed demo price in USD.
+  const mk = (cat, v) => ({ id: uid(), category_id: cat ? catId[cat] : null, amount_minor: A(v), currency: cur, start_month: start });
+  const B = P.budget, budgets = [mk(null, B.total), mk('Groceries', B.Groceries), mk('Dining', B.Dining), mk('Transport', B.Transport), mk('Shopping', B.Shopping), mk('Entertainment', B.Entertainment), mk('Bills & Utilities', B['Bills & Utilities'])];
+  const occasions = [{ id: uid(), name: P.trip[0], amount_minor: A(P.trip[1]), currency: cur, start: isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 18)), end: isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 22)), archived: false }];
+  // investment accounts: a local platform with local stocks and a global one, each with a cash balance. Prices are fixed demo prices in USD.
   const since = wsince;
-  const stockbit = { id: uid(), name: 'Stockbit', archived: false }, ajaib = { id: uid(), name: 'Ajaib', archived: false };
-  const OPEN = { 'BBCA.JK': [8400, 'IDR'], 'BBRI.JK': [4350, 'IDR'], 'BMRI.JK': [4700, 'IDR'], 'TLKM.JK': [3250, 'IDR'], 'ASII.JK': [4850, 'IDR'], VOO: [470, 'USD'], AAPL: [190, 'USD'], NVDA: [98, 'USD'], BTC: [52000, 'USD'], XAUG: [1480000, 'IDR'] };   // sample average prices
-  const h = (a, symbol, quantity) => ({ id: uid(), account_id: a.id, symbol, quantity, since, trades: [], ...(OPEN[symbol] ? { open_price: OPEN[symbol][0], ccy: OPEN[symbol][1] } : {}) });
-  const idr = (v) => v / RATES.IDR;   // IDR price -> USD at the demo rate
-  const customAssets = {
-    'BBCA.JK': { symbol: 'BBCA', name: 'Bank Central Asia', type: 'stock', yh: 'BBCA.JK', mult: 1, price: idr(9000) }, 'BBRI.JK': { symbol: 'BBRI', name: 'Bank Rakyat Indonesia', type: 'stock', yh: 'BBRI.JK', mult: 1, price: idr(4000) },
-    'BMRI.JK': { symbol: 'BMRI', name: 'Bank Mandiri', type: 'stock', yh: 'BMRI.JK', mult: 1, price: idr(5000) }, 'TLKM.JK': { symbol: 'TLKM', name: 'Telkom Indonesia', type: 'stock', yh: 'TLKM.JK', mult: 1, price: idr(3000) }, 'ASII.JK': { symbol: 'ASII', name: 'Astra International', type: 'stock', yh: 'ASII.JK', mult: 1, price: idr(5000) },
-    'CASH:IDR': { symbol: 'IDR', name: 'Cash (IDR)', type: 'cash', cash: 'IDR' },
-    XAUG: { symbol: 'XAUG', name: 'Gold (per gram)', type: 'commodity', yh: 'GC=F', mult: 0.0321507, price: 100 },
-  };
-  const holdings = [h(stockbit, 'CASH:IDR', 150000000), h(stockbit, 'BBCA.JK', 90000), h(stockbit, 'BBRI.JK', 150000), h(stockbit, 'BMRI.JK', 60000), h(stockbit, 'TLKM.JK', 70000),
-    h(ajaib, 'CASH:IDR', 85000000), h(ajaib, 'ASII.JK', 30000), h(ajaib, 'VOO', 35), h(ajaib, 'AAPL', 40), h(ajaib, 'NVDA', 80), h(ajaib, 'BTC', 0.5), h(ajaib, 'USDT', 12000), h(ajaib, 'XAUG', 150)];
+  const invA = { id: uid(), name: P.invest.a, archived: false }, invB = { id: uid(), name: P.invest.b, archived: false };
+  const h = (a, symbol, quantity, open) => ({ id: uid(), account_id: a.id, symbol, quantity, since, trades: [], ...(open ? { open_price: open[0], ccy: open[1] } : {}) });
+  const customAssets = { ['CASH:' + cur]: { symbol: cur, name: `Cash (${cur})`, type: 'cash', cash: cur }, XAUG: { symbol: 'XAUG', name: 'Gold (per gram)', type: 'commodity', yh: 'GC=F', mult: 0.0321507, price: 100 } };
+  const round2 = (x) => +x.toFixed(expOf(cur) === 0 ? 0 : 2), stockQty = (x) => { const st = x >= 5000 ? 100 : x >= 500 ? 10 : 1; return Math.max(st, Math.round(x / st) * st); };
+  // stocks resolved to [key, name, Yahoo symbol, mult, USD price, quantity, cost price in the reporting currency]
+  const resolve = (list) => list.map((r) => (IDRP ? r : [r[0], r[1], r[2], r[6] || 1, r[3], stockQty(r[4] / r[3]), round2(r[3] * (RATES[cur] || 1) * r[5])]));
+  const localA = resolve(P.stocks), localB = resolve(P.bStocks || []);
+  [...localA, ...localB].forEach(([key, nm, yh, mult, usd]) => { customAssets[key] = { symbol: key.split('.')[0], name: nm, type: 'stock', yh, mult, price: usd }; });
+  const cost = (sym) => (IDRP ? (sym === 'XAUG' ? [P.goldCost, 'IDR'] : P.globalCost[sym] ? [P.globalCost[sym], 'USD'] : undefined) : P.cost[sym] ? [P.cost[sym], 'USD'] : undefined);
+  const holdings = [h(invA, 'CASH:' + cur, major(P.invest.cashA ?? P.cashA)), ...localA.map(([key, , , , , q, c]) => h(invA, key, q, [c, cur])), ...(P.catalogA || []).map(([sym, q]) => h(invA, sym, q, cost(sym))),
+    h(invB, 'CASH:' + cur, major(P.invest.cashB ?? P.cashB)), ...localB.map(([key, , , , , q, c]) => h(invB, key, q, [c, cur])), ...P.global.map(([sym, q]) => h(invB, sym, q, cost(sym)))];
   // loans: debts you owe. Balance = original - payments, so earlier months can be rebuilt.
   const payments = (monthly, n) => Array.from({ length: n }, (_, i) => ({ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - (n - 1 - i), 5)), amount_minor: monthly }));
-  const loans = [
-    { id: uid(), name: 'Housing loan', type: 'mortgage', currency: cur, original_minor: conv(900000000), monthly_minor: conv(9500000), rate: 7.2, since, archived: false, payments: payments(conv(9500000), 6) },
-    { id: uid(), name: 'Car loan', type: 'car', currency: cur, original_minor: conv(190000000), monthly_minor: conv(4500000), rate: 6.5, since, archived: false, payments: payments(conv(4500000), 6) },
-    { id: uid(), name: 'Credit card', type: 'card', currency: cur, original_minor: conv(14000000), monthly_minor: conv(2500000), rate: 0, since, archived: false, payments: payments(conv(2500000), 3) },
+  const L = P.loans, loans = [
+    { id: uid(), name: 'Housing loan', type: 'mortgage', currency: cur, original_minor: A(L.home[0]), monthly_minor: A(L.home[1]), rate: L.home[2], since, archived: false, payments: payments(A(L.home[1]), 6) },
+    { id: uid(), name: 'Car loan', type: 'car', currency: cur, original_minor: A(L.car[0]), monthly_minor: A(L.car[1]), rate: L.car[2], since, archived: false, payments: payments(A(L.car[1]), 6) },
+    { id: uid(), name: 'Credit card', type: 'card', currency: cur, original_minor: A(L.card[0]), monthly_minor: A(L.card[1]), rate: 0, since, archived: false, payments: payments(A(L.card[1]), 3) },
   ];
-  const lent = [{ id: uid(), name: 'Budi', currency: cur, original_minor: conv(25000000), note: 'Business capital', due: isoDate(new Date(today.getFullYear(), today.getMonth() + 3, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 10)), amount_minor: conv(5000000) }] }];
+  const lent = [{ id: uid(), name: P.lent[0], currency: cur, original_minor: A(P.lent[1]), note: P.lent[3], due: isoDate(new Date(today.getFullYear(), today.getMonth() + 3, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 10)), amount_minor: A(P.lent[2]) }] }];
   // recurring rules (shown in Settings > Recurring; sample mode never creates entries from them)
   const next = (day) => { const d = new Date(today.getFullYear(), today.getMonth(), day); if (isoDate(d) <= isoDate(today)) d.setMonth(d.getMonth() + 1); return isoDate(d); };
   const rule = (kind, freq, day, spec) => ({ id: uid(), kind, freq, start: isoDate(new Date(today.getFullYear(), today.getMonth() - 5, day)), next: next(day), end: '', active: true, spec });
+  const first = localA[0] || [(P.catalogA || [['VOO', 1]])[0][0], '', '', 1, 520, 2], rqty = localA[0] ? 100 : 2, rprice = first[4] * (RATES[cur] || 1) * (IDRP ? 1 : P.pl);
   const recurring = [
-    rule('txn', 'monthly', 25, { type: 'income', amount_minor: conv(42000000), currency: cur, wallet_id: bca.id, note: 'Monthly salary', category_id: catId.Salary }),
-    rule('txn', 'monthly', 12, { type: 'expense', amount_minor: conv(186000), currency: cur, wallet_id: bca.id, note: 'Netflix', category_id: catId['Entertainment/Streaming'] }),
-    rule('txn', 'monthly', 5, { type: 'expense', amount_minor: conv(55000), currency: cur, wallet_id: bca.id, note: 'Spotify', category_id: catId.Subscription }),
-    rule('transfer', 'monthly', 2, { from: bca.id, to: gopay.id, amount_minor: conv(1500000), received_minor: conv(1500000), fee_minor: 0, note: 'top up' }),
-    rule('invest', 'monthly', 10, { account: stockbit.id, symbol: 'BBCA.JK', quantity: 100, fund: 'w:' + bca.id, fundamount: String(Math.round(conv(900000) / (cur === 'IDR' ? 1 : 100))) }),
+    rule('txn', 'monthly', 25, { type: 'income', amount_minor: A(P.salary), currency: cur, wallet_id: b1.id, note: 'Monthly salary', category_id: catId.Salary }),
+    rule('txn', 'monthly', 12, { type: 'expense', amount_minor: A(P.subs[0][1]), currency: cur, wallet_id: b1.id, note: P.subs[0][0], category_id: catId['Entertainment/Streaming'] }),
+    rule('txn', 'monthly', 5, { type: 'expense', amount_minor: A(P.subs[1][1]), currency: cur, wallet_id: b1.id, note: P.subs[1][0], category_id: catId.Subscription }),
+    rule('transfer', 'monthly', 2, { from: b1.id, to: e1.id, amount_minor: A(P.topup[0]), received_minor: A(P.topup[0]), fee_minor: 0, note: 'top up' }),
+    rule('invest', 'monthly', 10, { account: invA.id, symbol: first[0], quantity: rqty, fund: 'w:' + b1.id, fundamount: String(Math.round(rqty * rprice)) }),
   ];
-  return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions, investments: [stockbit, ajaib], holdings, customAssets, livePrices: {}, loans, lent, recurring };
+  return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions, investments: [invA, invB], holdings, customAssets, livePrices: {}, loans, lent, recurring };
 }
-
 const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), openDays: new Set(), archOpen: false } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
 function save() {
@@ -1454,7 +1443,7 @@ function holdingDialog(h, accId, opts = {}) {
     <div class="actions">${h ? `<button type="button" class="btn danger" data-act="delete-holding" data-id="${h.id}">${__('Remove')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${h ? __('Close') : __('Cancel')}</button><button class="btn" type="submit">${h ? __('Save') : invest ? __('Invest') : __('Add asset')}</button></div></form>`);
   if (!h) { syncFund($('#dlg form')); syncPickType($('#dlg form')); }
 }
-const CCY_NAMES = { IDR: 'Indonesian rupiah', USD: 'US dollar', EUR: 'Euro', GBP: 'British pound', SGD: 'Singapore dollar', AUD: 'Australian dollar', JPY: 'Japanese yen' };
+const CCY_NAMES = { IDR: 'Indonesian rupiah', USD: 'US dollar', EUR: 'Euro', GBP: 'British pound', SGD: 'Singapore dollar', AUD: 'Australian dollar', JPY: 'Japanese yen', HKD: 'Hong Kong dollar', CNY: 'Chinese yuan', AED: 'UAE dirham' };
 /* the currency an asset is usually quoted in */
 const defaultPriceCcy = (a, fallback) => (a.yh && /\.JK$/.test(a.yh) ? 'IDR' : a.yh || a.fh || ['crypto', 'stock', 'etf', 'commodity'].includes(a.type) ? 'USD' : fallback);
 const ccyOptions = (sel) => Object.keys(RATES).map((c) => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c}</option>`).join('');

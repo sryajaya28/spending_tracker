@@ -1,6 +1,9 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "UAE dirham": "Dirham UEA",
+ "Chinese yuan": "Yuan Tiongkok",
+ "Hong Kong dollar": "Dolar Hong Kong",
  "Net": "Bersih",
  "Hide all": "Tutup semua",
  "Expand all": "Buka semua",

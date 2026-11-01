@@ -287,6 +287,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Searchable dropdowns show a "not found" line above the add button when nothing matches (`data-empty` on the select, `.cs-empty`); set to "Category not found" on the category selects.
+
 - 2026-11-01: Fix: tapping the search box inside a dropdown list closed the list (the phone keyboard fires resize/scroll, which `dropdown.js` treated as "page moved").
   While focus is inside the list those events are ignored and the list is re-fitted to the visual viewport (`fit()`). e2e `dropdown` dispatches them.
 

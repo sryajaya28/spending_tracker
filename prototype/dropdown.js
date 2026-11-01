@@ -4,10 +4,11 @@
    non-interactive by CSS (pointer-events: none), so a tap lands on its parent: we find the select under the pointer here.
    Add data-native to a select to keep the OS picker. */
 (() => {
-  let pop = null, cur = null, openedByKey = false, openedAt = 0, lastClosed = { sel: null, at: 0 }, lastDown = { sel: null, x: 0, y: 0, at: 0 }, rows = [], act = -1, typed = '', typedAt = 0;
+  let pop = null, empty = null, cur = null, openedByKey = false, openedAt = 0, lastClosed = { sel: null, at: 0 }, lastDown = { sel: null, x: 0, y: 0, at: 0 }, rows = [], act = -1, typed = '', typedAt = 0;
   const isEnh = (s) => !!s && s.tagName === 'SELECT' && !s.hasAttribute('data-native') && !s.multiple;
 
   function close(byOutside) {
+    empty = null;
     if (pop) pop.remove();
     if (cur) { cur.removeAttribute('aria-expanded'); if (byOutside) lastClosed = { sel: cur, at: Date.now() }; }
     pop = null; cur = null; rows = []; act = -1;
@@ -37,6 +38,7 @@
     pop = document.createElement('div'); pop.className = 'cs-pop'; pop.setAttribute('role', 'listbox');
     const add = (opt, parent) => {   // data-list: a short label in the field can have a fuller one in the list
       const cta = opt.hasAttribute('data-cta');
+      if (cta && empty) parent.appendChild(empty);   // "not found" note sits just above the add button
       if (cta) { const hr = document.createElement('div'); hr.className = 'cs-sep'; parent.appendChild(hr); }
       const el = document.createElement('div'); el.className = 'cs-opt' + (opt.selected && !cta ? ' on' : '') + (opt.disabled ? ' dis' : '') + (cta ? ' cs-cta' : ''); el.setAttribute('role', 'option');
       el.setAttribute('aria-selected', String(opt.selected)); const t = document.createElement('span'); t.textContent = opt.dataset.list || opt.textContent; el.appendChild(t);
@@ -47,8 +49,9 @@
     };
     if (sel.hasAttribute('data-search')) {   // a search box on top of long lists (tap it to type; the keyboard is not opened for you)
       const q = document.createElement('input'); q.className = 'cs-search'; q.type = 'search'; q.autocomplete = 'off'; q.placeholder = (window.__ ? window.__('Search') : 'Search');
-      q.addEventListener('input', () => { const v = q.value.trim().toLowerCase(); rows.forEach((r) => { r.hidden = !r.cta && !!v && !r.key.includes(v); r.el.style.display = r.hidden ? 'none' : ''; }); const first = rows.findIndex((r) => !r.hidden && !r.opt.disabled && !r.cta); if (first >= 0) setActive(first); });
+      q.addEventListener('input', () => { const v = q.value.trim().toLowerCase(); rows.forEach((r) => { r.hidden = !r.cta && !!v && !r.key.includes(v); r.el.style.display = r.hidden ? 'none' : ''; }); if (empty) empty.style.display = v && !rows.some((r) => !r.cta && !r.hidden) ? '' : 'none'; const first = rows.findIndex((r) => !r.hidden && !r.opt.disabled && !r.cta); if (first >= 0) setActive(first); });
       pop.appendChild(q);
+      if (sel.dataset.empty) { empty = document.createElement('div'); empty.className = 'cs-empty'; empty.textContent = sel.dataset.empty; empty.style.display = 'none'; }
     }
     [...sel.children].forEach((n) => {
       if (n.tagName === 'OPTGROUP') { const g = document.createElement('div'); g.className = 'cs-group'; g.textContent = n.label; pop.appendChild(g); [...n.children].forEach((o) => add(o, pop)); }

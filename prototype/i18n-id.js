@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Category not found": "Kategori tidak ditemukan",
  "Add new category": "Tambah kategori baru",
  "Investment Account": "Akun Investasi",
  "Info": "Info",

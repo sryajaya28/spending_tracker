@@ -38,5 +38,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   { const { p: app } = await mk({ ctx }, true); await app.goto('http://127.0.0.1:5180/'); await app.waitForSelector('.land'); await app.waitForSelector('.land-transfer');
     await app.click('[data-act=transfer-dialog]'); await app.fill('input[name=code]', 'WRONG-CODE1'); await app.click('#dlg button[type=submit]'); await app.waitForTimeout(400); assert.equal(await app.$$eval('.shell', (e) => e.length), 0, 'a wrong code is refused');
     await app.fill('input[name=code]', code2.toLowerCase()); await app.click('#dlg button[type=submit]'); await app.waitForSelector('.shell', { timeout: 8000 }); }
+  // iPhone: Open share menu is the one main button (no Done); it calls the share sheet with this page; tapping outside closes the dialog
+  await p.click('#dlg [data-act=close]'); await p.evaluate(() => { navigator.share = async (d) => { window.__shared = d; }; }); await p.click('.ov-install'); await p.waitForSelector('[data-act=share-app]');
+  assert.equal(await p.$$eval('#dlg [data-act=close]', (e) => e.length), 0, 'no Done button when the share menu is offered');
+  await p.click('[data-act=share-app]'); const shared = await p.evaluate(() => window.__shared); assert(shared && /stiver|127\.0\.0\.1/i.test(shared.url), JSON.stringify(shared));
+  await p.mouse.click(3, 3); await p.waitForTimeout(300); assert.equal(await p.evaluate(() => document.querySelector('#dlg').open), false, 'tapping outside closes it');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').filter((l) => l.includes('handoff.js')).slice(0, 2).join(' | ')); process.exit(1); });

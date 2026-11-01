@@ -124,6 +124,7 @@ only worked after a detour. Keep each item short and say what to do instead.
   - After `appearance: none`, iOS puts a date input's text at the top of the box; and the date's display format is the browser's (11/01/2026 in en-US). Drawing the text ourselves (`.dp-text`) is the only way to get "2 Nov 2026" everywhere.
   - The owner prefers text links (like Reset filters) over filled buttons for secondary list actions.
   - Before adding a column, check the schema: `transactions.created_at` already existed (default `now()`), so same-day ordering needed no migration; read it back but do not send it (sending it would make the diff sync see every row as changed).
+  - Number formatting must depend on what is counted: one shared 8-decimal quantity formatter showed float noise on fiat cash. Pass the holding/symbol to the formatter.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

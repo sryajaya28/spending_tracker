@@ -55,5 +55,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const back = await p.evaluate(async () => { const d = await Cloud.load(); const h = d.holdings.find((x) => x.symbol === 'CASH:IDR'); return { q: h.quantity, a: d.customAssets['CASH:IDR'] }; });
   assert.equal(back.q, 15000000); assert(back.a.cash === 'IDR' && back.a.type === 'cash' && back.a.symbol === 'IDR', JSON.stringify(back));
   await p.screenshot({ path: __dirname + '/out/cash.png' });
+  // fiat cash shows at most 2 decimals (float noise like 46,600,560.99999999 IDR is rounded), other assets keep up to 8
+  assert.deepEqual(await p.evaluate(() => [qtyFmt(46600560.99999999, 'CASH:IDR'), qtyFmt(12.3456, true), qtyFmt(0.12345678, 'BTC')]), ['46,600,561', '12.35', '0.12345678']);
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').filter((l) => l.includes('cashacct.js')).slice(0, 2).join(' | ')); process.exit(1); });

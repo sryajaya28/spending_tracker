@@ -418,7 +418,8 @@ const holdingUSD = (h, k) => (!liveIn(h.since, k) ? 0 : Math.max(0, qtyAt(h, k))
 const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))
   .reduce((a, h) => a + holdingUSD(h, k), 0);
-const qtyFmt = (q) => new Intl.NumberFormat(locale(), { maximumFractionDigits: 8 }).format(q);
+const isFiatQty = (x) => x === true || (!!x && typeof x !== 'boolean' && assetInfo(typeof x === 'string' ? x : x.symbol)?.type === 'cash');
+const qtyFmt = (q, of = false) => new Intl.NumberFormat(locale(), { maximumFractionDigits: isFiatQty(of) ? 2 : 8 }).format(q);   // of: true, a holding or a symbol; cash in a fiat currency shows at most 2 decimals   // cash in a fiat currency: at most 2 decimals (also hides float noise like 560.99999999)
 const pctFmt = (p) => (p === null ? '—' : `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`);
 const pf = () => state.ui.pf || cur();
 /* time frame of the Portfolio chart and history list (month granularity) */
@@ -597,7 +598,7 @@ function holdingRow(h, vc, accTotal) {
   const info = assetInfo(h.symbol), k = lastMonths(6)[5], price = info.usd(k), value = heldNow(h) * price;
   // name and "quantity SYMBOL"; value and share on the right. The price and actions are in the detail (tap a row).
   return `<div class="row holding-row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
-    <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h))} ${esc(info.symbol)}</div></div>
+    <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h), info.type === 'cash')} ${esc(info.symbol)}</div></div>
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${rowTail(h, value, accTotal)}</div></div></div>`;
 }
 /* under the value: profit or loss against your cost when it is known, otherwise the share of the account */
@@ -1529,7 +1530,7 @@ function holdingSummary(h, info, vc) {
   const k = lastMonths(6)[5], price = info.usd(k), qty = heldNow(h), value = qty * price, accTotal = portfolioUSD(k, h.account_id);
   const row = (l, v) => `<div class="hs-row"><span>${l}</span><b class="num">${v}</b></div>`;
   return `<div class="hold-sum"><div class="hs-top"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span><div><b>${esc(info.symbol)}</b><small class="muted">${esc(typeLabel(info.type))} · ${esc(accountName(h.account_id))}</small></div></div>
-    ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty)} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${costRows(h, vc, row)}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
+    ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty, info.type === 'cash')} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${costRows(h, vc, row)}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
 }
 /* average price, cost, unrealized and realized profit (not for cash and stablecoins) */
 function costRows(h, vc, row) {
@@ -1620,7 +1621,7 @@ function sourceOptions(side, h, selected) {
   const cashes = D().holdings.filter((x) => x.id !== h?.id && assetInfo(x.symbol).type === 'cash' && activeAccounts().some((a) => a.id === x.account_id) && (!h || x.account_id === h.account_id));
   const sel = (v) => (v === selected ? 'selected' : '');
   return `<optgroup label="Accounts">${ws.map((w) => `<option value="w:${w.id}" ${sel('w:' + w.id)}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</optgroup>`
-    + (cashes.length ? `<optgroup label="${__('Cash balance')}">${cashes.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(accountName(x.account_id))} (${esc(assetInfo(x.symbol).symbol)}) · ${qtyFmt(heldNow(x))}</option>`).join('')}</optgroup>` : '')
+    + (cashes.length ? `<optgroup label="${__('Cash balance')}">${cashes.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(accountName(x.account_id))} (${esc(assetInfo(x.symbol).symbol)}) · ${qtyFmt(heldNow(x), true)}</option>`).join('')}</optgroup>` : '')
     + (st.length || fresh.length ? `<optgroup label="Stablecoins">${st.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(assetInfo(x.symbol).symbol)} · ${qtyFmt(heldNow(x))} held (${esc(accountName(x.account_id))})</option>`).join('')}${fresh.map((s) => `<option value="n:${s}" ${sel('n:' + s)}>${s} · new in ${esc(accountName(h.account_id))}</option>`).join('')}</optgroup>` : '');
 }
 function parseSource(val) {
@@ -1649,7 +1650,7 @@ function addOpening(h, qty, price, ccy) {
 function payShortfall(src, side, amount) {
   if (side !== 'buy') return null;
   if (src.kind === 'wallet' && amount > walletBalance(src.wallet)) return __("{name} doesn't have enough balance", { name: src.wallet.name });
-  if (src.kind === 'holding' && amount > heldNow(src.holding) + 1e-12) return __('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(src.holding)), symbol: assetInfo(src.holding.symbol).symbol });
+  if (src.kind === 'holding' && amount > heldNow(src.holding) + 1e-12) return __('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(src.holding), src.holding), symbol: assetInfo(src.holding.symbol).symbol });
   if (src.kind === 'new') return __("You don't hold any {symbol} to pay with", { symbol: src.symbol });
   return null;
 }
@@ -1715,7 +1716,7 @@ function tradeList(h) {
   return `<div class="list">${trades.map((tr) => {
     const pi = hc && hc.per[tr.id] ? hc.per[tr.id] : null, ptxt = pi ? ` · @ ${priceFmt(pi.price, hc.ccy)}` : '', rtxt = pi && tr.side === 'sell' && hc.known ? ` · ${__('P&L')} <span class="pl ${pi.realized >= 0 ? 'up' : 'down'}">${signed(pi.realized, money(usdToMinor(usdOfCcy(Math.abs(pi.realized), hc.ccy), vcOf(h)), vcOf(h)))}</span>` : '';
     const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('account'))}`;
-    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}${ptxt}${rtxt}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
+    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity, h)} ${esc(sym)}<br><small class="muted">${tail}${ptxt}${rtxt}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
   }).join('')}</div>`;
 }
 
@@ -2316,10 +2317,10 @@ document.addEventListener('submit', async (e) => {
     const h = D().holdings.find((x) => x.id === f.dataset.id), info = assetInfo(h.symbol), src = parseSource(v.source), side = v.side;
     const qty = parseFloat(v.quantity), amount = parseAmount(src, v.amount);
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
-    if (side === 'sell' && qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: info.symbol })); return; }
+    if (side === 'sell' && qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h), h), symbol: info.symbol })); return; }
     const short = payShortfall(src, side, amount); if (short) { toast(short); return; }
     recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price) });
-    save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty)} ${info.symbol}`); return;
+    save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty, h)} ${info.symbol}`); return;
   }
   if (kind === 'holding') {
     if (f.dataset.id) {

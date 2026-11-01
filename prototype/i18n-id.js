@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "The average price is kept in {ccy}, converted at the latest rate.": "Harga rata-rata disimpan dalam {ccy}, dikonversi dengan kurs terbaru.",
  "optional": "opsional",
  "Average price": "Harga rata-rata",
  "Average price (optional)": "Harga rata-rata (opsional)",

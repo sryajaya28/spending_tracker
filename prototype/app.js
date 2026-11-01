@@ -1294,11 +1294,11 @@ function holdingDialog(h, accId, opts = {}) {
     ${h ? holdingSummary(h, info, vcOf(h)) + `<div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${info.cash ? __('Deposit') : __('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${info.cash ? __('Withdraw') : __('Sell')}</button></div>
       <button type="button" class="btn secondary wide" data-act="view-history" data-id="${h.id}">${__('View history')}</button>
       <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
+    <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
+      <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
     <div class="two" data-own-price><label class="field">${__('Average price')}<input name="avgprice" type="number" min="0" step="any" placeholder="${__('optional')}"></label>
       <label class="field">${__('Price currency')}<select name="pccy">${ccyOptions(cur())}</select></label></div>
-    <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
-      <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
     ${invest ? `<label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>` : ''}
     ${invest ? repeatField() : ''}
     <p class="hint">${invest ? __('The money leaves the account (or your USDT/USDC balance) and the asset is added to your investments. It is not counted as spending.') : __('Choose a payment source if you just bought it. Leave it as "Already owned" for assets you held before.')}</p>`}
@@ -1379,12 +1379,33 @@ function payShortfall(src, side, amount) {
   return null;
 }
 
-function recordTrade(h, { side, quantity, source, amount, date, price, ccy }) {
+/* the currency a payment source works in: an account's own currency, a cash balance's currency, or USD for USDT/USDC */
+const srcCcy = (src) => (!src ? cur() : src.kind === 'wallet' ? src.wallet.currency : src.kind === 'holding' ? (assetInfo(src.holding.symbol).type === 'cash' ? assetInfo(src.holding.symbol).cash : 'USD') : 'USD');
+/* the latest fiat rates from the rate service, fetched when a trade is saved so its price is converted at today's rate, never at a stored one */
+function needsFx(kind, f, v) {
+  if (kind !== 'trade' && kind !== 'holding') return false;
+  const h = kind === 'trade' ? D().holdings.find((x) => x.id === f.dataset.id) : D().holdings.find((x) => x.account_id === v.account && x.symbol === v.asset);
+  if (!h || !h.ccy) return false;
+  const src = parseSource(kind === 'trade' ? v.source : v.fund);
+  return (src && srcCcy(src) !== h.ccy) || (kind === 'holding' && !src && v.pccy && v.pccy !== h.ccy);
+}
+async function freshFx() {
+  try {
+    const fx = await Promise.race([getJSON(`/api/fx?currencies=${Object.keys(RATES).join(',')}`), new Promise((_, no) => setTimeout(no, 4000))]);
+    if (fx && fx.rates) { Object.assign(RATES, fx.rates); api.fx = { source: fx.source, date: fx.date }; }
+  } catch { /* offline: the rates already loaded are used */ }
+}
+function recordTrade(h, { side, quantity, source, amount, date, price }) {
   const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
   const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && tr.date.slice(0, 7) < hh.since) hh.since = tr.date.slice(0, 7); };
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
-  if (trackCost(h) && !h.ccy) h.ccy = ccy || cur();
-  const px = trackCost(h) && price > 0 ? { price } : {};   // the price per unit that was typed, in the holding's cost currency
+  // the price per unit is what you paid in the account's own currency, converted once into the holding's cost currency at today's rate
+  let px = {};
+  if (trackCost(h)) {
+    const sc = srcCcy(source), paid = source.kind === 'wallet' ? toMajor(amount, sc) : amount, per = price > 0 ? price : paid / quantity;
+    if (!h.ccy) h.ccy = sc;
+    px = { price: (per * RATES[h.ccy]) / RATES[sc] };
+  }
   if (source.kind === 'wallet') {
     const w = source.wallet;
     addTrade(h, { id, date, side, quantity, amount_minor: amount, currency: w.currency, wallet_id: w.id, ...px });
@@ -1436,11 +1457,10 @@ function tradeDialog(h, side) {
   open(`<h2>${info.cash ? (side === 'buy' ? __('Deposit {symbol}', { symbol: esc(info.symbol) }) : __('Withdraw {symbol}', { symbol: esc(info.symbol) })) : side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: esc(info.symbol) })}</p>
   <form data-form="trade" data-id="${h.id}" style="display:contents">
     <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>${info.cash ? __('Deposit') : __('Buy')}</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>${info.cash ? __('Withdraw') : __('Sell')}</label></div>
+    <label class="field"><span data-trade-wallet></span><select name="source">${sourceOptions(side, h, first ? 'w:' + first.id : '')}</select></label>
     <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01"></label>
       <label class="field"><span data-trade-amt></span><input name="amount" type="number" min="0" step="any" required placeholder="${__('amount')}"></label></div>
-    ${trackCost(h) ? (h.ccy ? `<label class="field">${__('Price per unit ({ccy})', { ccy: h.ccy })}<input name="price" type="number" min="0" step="any" placeholder="${__('fills in from the amount')}"></label>`
-      : `<div class="two"><label class="field">${__('Price per unit')}<input name="price" type="number" min="0" step="any" placeholder="${__('fills in from the amount')}"></label><label class="field">${__('Price currency')}<select name="tccy">${ccyOptions(first ? first.currency : cur())}</select></label></div>`) : ''}
-    <label class="field"><span data-trade-wallet></span><select name="source">${sourceOptions(side, h, first ? 'w:' + first.id : '')}</select></label>
+    ${trackCost(h) ? `<label class="field"><span data-price-unit></span><input name="price" type="number" min="0" step="any" placeholder="${__('fills in from the amount')}"></label>` : ''}
     <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>
     <p class="hint" id="trade-hint"></p>
     <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -1453,6 +1473,7 @@ function syncTradeForm(form, rebuild) {
   const src = parseSource(form.source.value);
   $('[data-trade-wallet]', form).textContent = buy ? __('Pay with') : __('Receive into');
   $('[data-trade-amt]', form).textContent = `${buy ? __('Amount paid') : __('Amount received')} (${src ? sourceUnit(src) : ''})`;
+  const pu = $('[data-price-unit]', form); if (pu) pu.textContent = __('Price per unit ({ccy})', { ccy: srcCcy(src) });
   syncTradePrice(form, 'source');
   tradeHint(form);
 }
@@ -1460,27 +1481,28 @@ function syncTradeForm(form, rebuild) {
 /* quantity, price per unit and amount move together: type the price and the amount follows; type the amount and the price follows */
 function syncTradePrice(form, changed) {
   if (!form.price) return;
-  const h = D().holdings.find((x) => x.id === form.dataset.id), src = parseSource(form.source.value), q = parseFloat(form.quantity.value), ccy = h.ccy || form.tccy.value;
+  const q = parseFloat(form.quantity.value), src = parseSource(form.source.value);
   if (changed === 'price' || changed === 'amount') form.dataset.last = changed;
   if (!src || !(q > 0)) return;
-  const k = currentPeriod(), unitUsd = src.kind === 'wallet' ? 1 / RATES[src.wallet.currency] : assetInfo(src.kind === 'holding' ? src.holding.symbol : src.symbol).usd(k);
+  // the price is in the payment source's currency, so amount = quantity x price with no conversion
   if (form.dataset.last === 'price' && changed !== 'amount') {
     const p = parseFloat(form.price.value);
-    if (p > 0 && unitUsd > 0) { const a = ((q * p) / RATES[ccy]) / unitUsd; form.amount.value = src.kind === 'wallet' ? a.toFixed(expOf(src.wallet.currency)) : +a.toPrecision(10); }
+    if (p > 0) { const a = q * p; form.amount.value = src.kind === 'wallet' ? a.toFixed(expOf(src.wallet.currency)) : +a.toPrecision(10); }
   } else {
     const a = parseFloat(form.amount.value);
-    if (a > 0) form.price.value = +(((a * unitUsd) * RATES[ccy]) / q).toPrecision(8);
+    if (a > 0) form.price.value = +(a / q).toPrecision(8);
   }
 }
 function tradeHint(form) {
   const h = D().holdings.find((x) => x.id === form.dataset.id), src = parseSource(form.source.value), q = parseFloat(form.quantity.value), a = parseFloat(form.amount.value);
   const hint = $('#trade-hint', form), buy = form.side.value === 'buy';
   const base = src?.kind === 'wallet' ? (buy ? __('The money leaves that account. Not counted as spending or income.') : __('The money goes into that account. Not counted as spending or income.')) : (buy ? __('The coins are taken from your stablecoin balance. Not counted as spending or income.') : __('The coins are added to your stablecoin balance. Not counted as spending or income.'));
-  if (!h || !src || !(q > 0) || !(a > 0)) { hint.textContent = base; return; }
+  const conv = h && trackCost(h) && h.ccy && src && srcCcy(src) !== h.ccy ? ' ' + __('The average price is kept in {ccy}, converted at the latest rate.', { ccy: h.ccy }) : '';
+  if (!h || !src || !(q > 0) || !(a > 0)) { hint.textContent = base + conv; return; }
   const info = assetInfo(h.symbol), month = currentPeriod();
   const usd = src.kind === 'wallet' ? a / RATES[src.wallet.currency] : a * assetInfo(src.kind === 'holding' ? src.holding.symbol : src.symbol).usd(month);
   const per = usd / q, market = info.usd(month), diff = market > 0 ? ((per - market) / market) * 100 : null;
-  hint.textContent = __('About ${price} per {symbol}', { price: per.toLocaleString(locale(), { maximumFractionDigits: 4 }), symbol: info.symbol }) + (market > 0 ? ' ' + __('(market ${price}, {diff}).', { price: market.toLocaleString(locale(), { maximumFractionDigits: 4 }), diff: `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%` }) + ' ' : '. ') + base;
+  hint.textContent = __('About ${price} per {symbol}', { price: per.toLocaleString(locale(), { maximumFractionDigits: 4 }), symbol: info.symbol }) + (market > 0 ? ' ' + __('(market ${price}, {diff}).', { price: market.toLocaleString(locale(), { maximumFractionDigits: 4 }), diff: `${diff >= 0 ? '+' : '−'}${Math.abs(diff).toFixed(1)}%` }) + ' ' : '. ') + base + conv;
 }
 
 /* ---------- recurring: a rule repeats an expense, income, transfer or investment buy every week or month ----------
@@ -1688,7 +1710,6 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
-  else if (t.name === 'tccy' && t.form?.dataset.form === 'trade') syncTradePrice(t.form, 'source');
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
   else if (t.name === 'txkind') {
     const here = t.form?.dataset.form;   // 'holding' is the Invest dialog
@@ -1765,10 +1786,11 @@ function applySetting(el) {
   save(); render();
 }
 
-document.addEventListener('submit', (e) => {
+document.addEventListener('submit', async (e) => {
   const f = e.target, kind = f.dataset.form; if (!kind) return;
   e.preventDefault();
   const v = Object.fromEntries(new FormData(f));
+  if (needsFx(kind, f, v)) await freshFx();   // a price in another currency is converted at the latest rate
   if (['signin', 'signup', 'forgot', 'recovery'].includes(kind)) { submitAuth(kind, v, f); return; }
   if (kind === 'txn') {
     // a USDT/USDC "new" choice builds its holding now but only keeps it once the transaction is valid
@@ -1911,7 +1933,7 @@ document.addEventListener('submit', (e) => {
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
     if (side === 'sell' && qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: info.symbol })); return; }
     const short = payShortfall(src, side, amount); if (short) { toast(short); return; }
-    recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price), ccy: v.tccy });
+    recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price) });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty)} ${info.symbol}`); return;
   }
   if (kind === 'holding') {
@@ -1947,7 +1969,7 @@ document.addEventListener('submit', (e) => {
     let h = D().holdings.find((x) => x.account_id === v.account && x.symbol === sym);
     if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); }
     if (src) {
-      recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()), ccy: v.pccy });
+      recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
       if (v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
     } else addOpening(h, qty, parseFloat(v.avgprice), v.pccy);
     if (f.dataset.invest) state.ui.pfTab = 'investment';

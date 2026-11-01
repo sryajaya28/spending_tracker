@@ -31,11 +31,19 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   g = await get(); assert.equal(g.q, 15); near(g.avg, 450, 'average unchanged by a sell'); near(g.realized, 750, 'realized'); near(g.cost, 6750, 'cost after sell');
   // the amount of the sell credited the account
   const w = await p.evaluate(() => walletBalance(D().wallets[0])); assert.equal(w, 5000000000 - 500000 + 300000, 'bank paid 5000.00 for the buy and received 3000.00');
+  // 3b. paid from an account in another currency (IDR): the price follows that account and is converted into the holding's currency (USD)
+  const idw = await p.evaluate(() => { const w = { ...D().wallets[0], id: uid(), name: 'BCA', currency: 'IDR', opening_balance_minor: 100000000 }; D().wallets.push(w); save(); return w.id; });
+  await p.evaluate((id) => tradeDialog(D().holdings.find((h) => h.id === id), 'buy'), g.id);
+  await p.selectOption('select[name=source]', 'w:' + idw); assert((await p.innerText('[data-price-unit]')).includes('IDR'), 'price unit follows the paying account');
+  await p.fill('input[name=quantity]', '2'); await p.fill('input[name=amount]', '1550000'); assert.equal(await p.inputValue('input[name=price]'), '775000', 'price in IDR');
+  await p.click('#dlg button[type=submit]'); await settle();
+  await p.waitForTimeout(500); await settle();
+  g = await get(); assert.equal(g.q, 17); near(g.cost, 6850, 'cost: 2 units at IDR 775,000 = USD 50 each'); assert.equal(g.ccy, 'USD');
   // 4. the row, summary and history show it
   await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); await p.waitForSelector('.holding-row');
   assert(/[+−]\d/.test(await p.innerText('.holding-row .amt')), 'row shows profit or loss %');
   await p.click('.holding-row'); await p.waitForSelector('#dlg .hold-sum'); const sum = await p.innerText('#dlg .hold-sum');
-  assert(sum.includes('Average price') && sum.includes('USD 450') && sum.includes('Profit / loss') && sum.includes('Realized P&L') && sum.includes('Starting price'), sum);
+  assert(sum.includes('Average price') && sum.includes('USD 4') && sum.includes('Profit / loss') && sum.includes('Realized P&L') && sum.includes('Starting price'), sum);
   await p.click('#dlg [data-act=view-history]'); await p.waitForSelector('.back-link'); const hist = await p.innerText('.main');
   assert(hist.includes('@ USD 600') && hist.includes('@ USD 500') && hist.includes('P&L'), hist.slice(0, 600));
   // 5. an asset added without a price has an unknown cost: P&L is "—" until a price is set
@@ -50,8 +58,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // 7. cash and stablecoins have no cost basis
   assert.equal(await p.evaluate(() => (D().customAssets['CASH:IDR'] = { symbol: 'IDR', name: 'Cash (IDR)', type: 'cash', cash: 'IDR' }, [trackCost({ symbol: 'USDT' }), trackCost({ symbol: 'CASH:IDR' }), trackCost({ symbol: 'BTC' })].join())), 'false,false,true');
   // 8. saved and loaded back
-  const back = await p.evaluate(async () => { const d = await Cloud.load(); const h = d.holdings.find((x) => x.symbol === 'VOO'); return { open: h.open_price, ccy: h.ccy, prices: h.trades.map((t) => t.price).sort() }; });
-  assert.equal(back.open, 400); assert.equal(back.ccy, 'USD'); assert.deepEqual(back.prices, [500, 600], JSON.stringify(back));
+  const back = await p.evaluate(async () => { const d = await Cloud.load(); const h = d.holdings.find((x) => x.symbol === 'VOO'); return { open: h.open_price, ccy: h.ccy, prices: h.trades.map((t) => t.price).sort((a, b) => a - b) }; });
+  assert.equal(back.open, 400); assert.equal(back.ccy, 'USD'); assert.deepEqual(back.prices, [50, 500, 600], JSON.stringify(back));
   await p.screenshot({ path: __dirname + '/out/avgprice.png' });
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').slice(0, 8).join(' | ')); process.exit(1); });

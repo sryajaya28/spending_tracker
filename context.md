@@ -287,6 +287,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Trade and Add-asset dialogs put **Pay with / Paid from** (or Receive into) first; Amount and **Price per unit** follow that account's currency (an account's own currency, a cash balance's currency, or USD for USDT/USDC), so amount = quantity x price with no conversion. When the trade is saved the price is converted once into the holding's cost currency (`h.ccy`, set from the first paying account) with the latest fiat rates fetched then from `/api/fx` (`freshFx`, only when a conversion is needed; falls back to the loaded rates offline) and stored as `tr.price`, so the average does not drift when rates move later. `srcCcy`, `needsFx`.
 - 2026-11-01: Dark mode purple toned down (twice): filled surfaces (buttons, progress bars, avatar, Add circle, step numbers) use darker `--navy`/`--fill`/`--fill-2`; `--brand` stays the lighter purple for text and links.
 - 2026-11-01: The **Upcoming** tag on a transaction row moved from beside the title to the left of the date (right column), so every row keeps two lines.
 - 2026-11-01: Investment account card header (`.acct-head`): long names wrap inside their own space and, on phones, Edit / + Cash / + Asset always sit in one even three-column row below the name.

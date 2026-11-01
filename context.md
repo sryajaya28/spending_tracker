@@ -284,6 +284,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: The price disclaimer moved into an (i) tooltip next to the Investments title (`infoTip()`, `.info-wrap/.info-pop`, `state.ui.infoOpen`); no description
+  paragraph. The helper is reusable for other titles.
+
 - 2026-11-01: Live prices (Finnhub and Yahoo) are cached on the server for 6 hours like FX (`cached_price`, `PRICE_TTL`; `/api/price` and `/api/fx` also send
   `Cache-Control: public, s-maxage=21600` so Vercel's edge holds them). One disclaimer on the Investment tab ("update every 6 hours and can be delayed");
   the Refresh prices button and "Last refreshed" line were removed since a refresh would return the same cached price.

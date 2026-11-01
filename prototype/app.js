@@ -538,6 +538,8 @@ function loanCard(l, vc, kind = 'loan') {
     ${recent.length ? `<div class="list" style="margin-top:10px">${recent.map((p) => `<div class="pay-row"><span>${esc(new Date(p.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }))}</span><span class="num">${shown(p.amount_minor)}</span><button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: word })}">×</button></div>`).join('')}</div>` : `<p class="muted" style="margin-top:10px">${__('No {what}s yet.', { what: word })}</p>`}</section>`;
 }
 
+/* an (i) button with a small popover: tap/click toggles it, hover shows it on desktop, tapping elsewhere closes it */
+const infoTip = (id, text) => `<span class="info-wrap${state.ui.infoOpen === id ? ' open' : ''}"><button type="button" class="info-btn" data-act="toggle-info" data-id="${id}" aria-expanded="${state.ui.infoOpen === id}" aria-label="${__('Info')}">i</button><span class="info-pop" role="tooltip">${esc(text)}</span></span>`;
 function viewPortfolio() {
   const months = lastMonths(6), vc = pf(), base = cur(), tab = state.ui.pfTab || 'savings';
   const S = months.map(savingsUSD), I = months.map((k) => portfolioUSD(k)), L = months.map(loanUSD), LT = months.map(lentUSD);
@@ -573,11 +575,11 @@ function viewPortfolio() {
     const byType = {};
     D().holdings.filter((h) => activeAccounts().some((a) => a.id === h.account_id)).forEach((h) => { const t = assetInfo(h.symbol).type; byType[t] = (byType[t] || 0) + holdingUSD(h, months[5]); });
     const alloc = Object.entries(byType).sort((a, b) => b[1] - a[1]);
-    body = `<section class="card"><div class="card-head"><div><h2>${__('Investments')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(I[5])}</div></div>
+    body = `<section class="card"><div class="card-head"><div><h2>${__('Investments')} ${infoTip('pf-prices', __('Prices and exchange rates update every 6 hours and can be delayed. Values are estimates, not financial advice.'))}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(I[5])}</div></div>
         <div class="tools"><button class="btn" data-act="add-account">${__('+ Account')}</button></div></div>
       ${alloc.length ? `<div class="alloc">${alloc.map(([t, v]) => `<i style="flex:${v};background:${TYPE_COLOR[t]}" title="${esc(t)}"></i>`).join('')}</div>
       <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? __('Add assets to an account to see your allocation.') : __('No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.')}</div>`}
-      <p class="muted disclaimer">${__('Prices and exchange rates update every 6 hours and can be delayed. Values are estimates, not financial advice.')}</p></section>
+</section>
       ${growth}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
@@ -1355,9 +1357,10 @@ function recurringCard() {
 /* ---------- events ---------- */
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
-  if (!el) { if (state.ui.walletMenu) { state.ui.walletMenu = null; render(); } return; }
+  if (!el) { if (state.ui.walletMenu || state.ui.infoOpen) { state.ui.walletMenu = null; state.ui.infoOpen = null; render(); } return; }
   const { act, id, type, date } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
+  if (act !== 'toggle-info') state.ui.infoOpen = null;
   if (act === 'close') close();
   else if (act === 'theme-toggle') { applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); render(); }
   else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
@@ -1419,6 +1422,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const k = el.dataset.key === 'hist' ? 'histMore' : 'walletsMore'; state.ui[k] = !state.ui[k]; render(); }
+  else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }
   else if (act === 'delete-wallet') {

@@ -832,3 +832,4 @@ input[type="date"]:not([data-native]) { pointer-events: none; }
 .reset-filters { color: var(--brand); font-weight: 600; padding-left: 4px; }
 /* the filter pills (category, occasion, account) centre their text */
 .filters select { text-align: center; text-align-last: center; -moz-text-align-last: center; }
+.brow.tap-row { cursor: pointer; } .brow.tap-row:active { opacity: .85; }

@@ -66,6 +66,12 @@ Read `context.md` first: it holds the full project context (architecture, servic
 agreement. **Then read `learning.md`: the mistakes made on this project and how to avoid them (release discipline, database, iPhone quirks, testing). Add to it whenever you make a mistake or are corrected, and at the end of every coding session add what you learned to its Session log.** After any change, update `context.md` (and this README when the change affects it) in the same commit. Manual regression
 scenarios live in `regression_scenario.md`: add or edit the relevant ones whenever a feature is added or changed.
 
+## Design files (Figma)
+
+`design/` holds a Figma-importable copy of the UI: every screen and dialog, the components by group, and the design tokens.
+It is generated from the app by `node tools/design/export.js` (dev server running); regenerate and commit it after UI changes.
+See `design/README.md` for how to import it into Figma and build the design system.
+
 ## Before wider release
 
 - Finnhub's free plan is for personal use. A public product needs a suitable plan or another data source.

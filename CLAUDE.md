@@ -9,4 +9,4 @@
 3. Never commit secrets. `context.md` and the README say where secrets live, never what they are.
 4. **Keep `regression_scenario.md` current:** when a feature is added or changed, add or edit the matching manual test
    scenarios (and the automated-coverage map) in the same commit.
-5. Run `bash tests/e2e/run_all.sh` before pushing UI or data-layer changes. Pushing to `main` deploys to production.
+5. Run `bash tests/e2e/run_all.sh` before pushing UI or data-layer changes. After UI changes also regenerate the Figma design files: `node tools/design/export.js` (see `design/README.md`). Pushing to `main` deploys to production.

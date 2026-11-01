@@ -112,6 +112,11 @@ only worked after a detour. Keep each item short and say what to do instead.
   - `git push` after a red test run happened again once; the check is "every line says PASS" before the push command, not after.
   - Owner wording like "native design" means the app's own design language (see UI notes), not the OS component.
   - Wrapping a new feature behind a new DB column: hold `main` until the owner confirms the SQL ran (done for migrations 18-20).
+  - Design export: a modal pins the body (`position: fixed`), so a whole-document SVG came out empty; content behind a modal
+    is inert and its text is lost; native selects/inputs are drawn by the browser (no text in SVG); a viewport resize closes
+    open popovers. Export dialogs as the `dialog` element, swap form controls for styled boxes, open popovers after resizing.
+  - Opening `#/portfolio/<id>` directly crashed (`render` assumed the portfolio value chart). Guard page-specific bindings.
+  - Python `str.replace` failed on a line containing non-breaking spaces (`  ↳ `): edit such lines by line index or regex.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

@@ -9,10 +9,11 @@ on 2026-10-31. It contains **no secrets**: it says where each secret lives, neve
    read this file **and `learning.md`** (past mistakes and how to avoid them; add to it whenever you make a mistake or are corrected, and append your learnings to its Session log at the end of every coding session). If it disagrees with the code, trust the code, then fix this file.
 2. **After doing anything**, update this file in the same commit: edit the sections that changed (features, data model,
    services, open items, decisions) and add a dated line to the **Changelog** at the bottom.
-3. **Also update `README.md`** whenever the change affects what it describes (features, how to run, how it is built,
+3. **After a UI change, regenerate the design files** (`node tools/design/export.js`, see `design/README.md`) and commit them.
+4. **Also update `README.md`** whenever the change affects what it describes (features, how to run, how it is built,
    deploying, release checklist), and `docs/NEXT_STEPS.md` when priorities or known gaps change.
-4. Never put secrets in this file, the README or any committed file: say where a secret lives, never what it is.
-5. **Keep `regression_scenario.md` current** (detailed regression scenarios per feature, plus which e2e test covers what): for every new or
+5. Never put secrets in this file, the README or any committed file: say where a secret lives, never what it is.
+6. **Keep `regression_scenario.md` current** (detailed regression scenarios per feature, plus which e2e test covers what): for every new or
    changed feature, add or edit the relevant scenarios in the same commit, and add a line to that file's change log.
 
 `CLAUDE.md` at the repo root repeats this rule so assistant sessions load it automatically.
@@ -290,6 +291,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: **Design files for Figma** in `design/` (see `design/README.md`): every page (mobile light/dark, main pages desktop), every dialog, and the components split by group (buttons, text, banners, graphs, popups, form fields, date picker, dropdown, filters, navigation, cards, rows; light and dark) as SVG (editable layers in Figma) plus PNG previews, and `design/tokens/stiver.tokens.json` (W3C design tokens for Tokens Studio / Figma variables). Generated from the running app by `tools/design/export.js` (Playwright + vendored dom-to-svg, fake backend, sample data); re-run it after UI changes. On the way: fixed a crash when opening an asset page directly (`render` called `bindValue` without a value chart).
+- 2026-11-01: The Transactions category filter list shows each category's icon (and searches parent names). A category row on Budgets > By category opens Transactions filtered to that category for the same period (`cat-txns`); its Edit button still edits the budget.
 - 2026-11-01: `learning.md` has a **Session log**; appending what you learned at the end of every coding session is now a step of the working agreement (README, CLAUDE.md, §0, learning.md checklist step 7).
 - 2026-11-01: The Transactions filter pills (category, occasion, account) centre their text.
 - 2026-11-01: Added `learning.md` (mistakes made so far and how to avoid them) and made reading it a step of the working agreement (README, CLAUDE.md, §0).

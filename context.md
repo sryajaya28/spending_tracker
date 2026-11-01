@@ -288,6 +288,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Editing a recurring rule (Manage) whose first payment is still upcoming (`spec.first_tx` = the entry entered by hand, `spec.first_made` = its date) moves/updates that upcoming entry too (date, amount, account, category) so no stale copy is left next to the rule's own next entry; an entry that already happened is never touched. Only for expense/income rules paid from an account.
 - 2026-11-01: The recurring **Manage** dialog also edits the **Category** of expense/income rules (applies to later entries only).
 - 2026-11-01: Rupiah amounts always have a non-breaking space after `Rp` (`Rp 1.234.567`): newer iOS number formatting drops it, so `rpSpace` normalises it in `money`, `moneyHtml` and `priceFmt`.
 - 2026-11-01: Recurring **Manage** dialog also edits the payment account (expense/income: Account; transfer: From and To; investment buy: Pay with); the amount unit follows the chosen account (`syncRuleUnit`), past entries keep their account. In the Recurring list an expense amount is red, an income green (`.pl.down` / `.pl.up`; the sign comes from `ruleTitle`).

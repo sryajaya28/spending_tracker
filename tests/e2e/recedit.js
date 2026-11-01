@@ -16,6 +16,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // when that day arrives the rule does not make it again
   const dup = await p.evaluate(() => { const rule = D().recurring[0], t = D().transactions.find((x) => x.note === 'Gym'); const d = new Date(); d.setDate(d.getDate() - 2); const past = isoDate(d); t.occurred_at = past; rule.start = past; rule.next = past; rule.spec.first_made = past; runRecurring(); return { gym: D().transactions.filter((x) => x.note === 'Gym').length, next: rule.next, first: rule.spec.first_made }; });
   assert.equal(dup.gym, 1, 'not duplicated'); assert(dup.next > (await p.evaluate(() => isoDate(new Date()))), 'moved on'); assert.equal(dup.first, undefined);
+  // an upcoming first entry follows an edit of the rule (it has not happened yet), so no stale copy is left behind
+  const fut2 = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 12); return isoDate(d); });
+  await p.evaluate(() => txnDialog(null, 'expense')); await p.fill('input[name=amount]', '49000'); await p.fill('input[name=date]', fut); await p.selectOption('select[name=repeat]', 'monthly'); await p.fill('textarea[name=note], input[name=note]', 'Music'); await p.click('#dlg button[type=submit]'); await settle();
+  await p.evaluate(() => { location.hash = '#/settings'; render(); }); const idx = await p.evaluate(() => D().recurring.findIndex((r) => r.spec.note === 'Music'));
+  await p.click(`[data-act=rec-manage][data-id="${await p.evaluate((i) => D().recurring[i].id, idx)}"]`); await p.fill('input[name=amount]', '59000'); await p.fill('input[name=next]', fut2); await p.click('#dlg button[type=submit]'); await settle();
+  const mus = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Music').map((t) => [t.occurred_at, t.amount_minor])); assert.deepEqual(mus, [[fut2, 59000]], 'the upcoming first entry moved with the rule: ' + JSON.stringify(mus));
+  await p.evaluate(() => { const r = D().recurring.find((x) => x.spec.note === 'Music'); D().transactions.filter((t) => t.note === 'Music').forEach((t) => { t.occurred_at = isoDate(new Date()); }); r.start = isoDate(new Date()); r.next = isoDate(new Date()); r.spec.first_made = isoDate(new Date()); runRecurring(); }); assert.equal(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Music').length), 1, 'still one entry once the date arrives');
+  await p.evaluate(() => { D().recurring = D().recurring.filter((r) => r.spec.note !== 'Music'); D().transactions = D().transactions.filter((t) => t.note !== 'Music'); });
   // 2. edit amount and date; past entries stay as they are
   await p.evaluate(() => { const r0 = D().recurring[0]; r0.start = '2026-06-10'; r0.next = '2026-09-10'; runRecurring(); });   // creates catch-up entries from June
   const before = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort());

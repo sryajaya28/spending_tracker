@@ -2034,7 +2034,7 @@ document.addEventListener('submit', async (e) => {
       else recordCoinTxn(coin, { type, quantity: qty, date: v.date, note: row.note, category_id: row.category_id, category_source: row.category_source, ai_confidence: row.ai_confidence, occasion_id: row.occasion_id });
       if (v.repeat && !existing) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: 'h:' + coin.id, quantity: qty, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
     } else if (!existing) D().transactions.push(row);
-    if (!coin && !existing && v.repeat) addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null });
+    if (!coin && !existing && v.repeat) { const rr = addRule('txn', v.repeat, v.date, { type, amount_minor: minor, currency: wc, wallet_id: v.wallet, note: row.note, category_id: row.category_id, occasion_id: row.occasion_id || null }); if (rr.spec.first_made) rr.spec.first_tx = row.id; }
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
     state.ui.month = periodKeyOf(row.occurred_at) <= currentPeriod() ? periodKeyOf(row.occurred_at) : state.ui.month;
     if (!existing) rememberAcct(type, v.wallet);
@@ -2147,7 +2147,12 @@ document.addEventListener('submit', async (e) => {
       sp.received_minor = A.currency === B.currency ? sp.amount_minor : convert(sp.amount_minor, A.currency, B.currency);
       if (sp.fee_minor && A.currency !== (walletOf(sp.from) || A).currency) sp.fee_minor = 0;
     } else { sp.fund = v.fund; sp.fundamount = String(amount); }
-    if (v.next !== r.next) { r.start = v.next; r.next = v.next; delete sp.first_made; }   // later payments keep the new day of the month / week
+    if (v.next !== r.next) { r.start = v.next; r.next = v.next; }   // later payments keep the new day of the month / week
+    // a first payment that is still upcoming (entered by hand when the rule was created) follows the edit; one that already happened is left alone
+    const first = sp.first_tx && D().transactions.find((t) => t.id === sp.first_tx);
+    if (first && first.occurred_at > isoDate(new Date()) && r.kind === 'txn' && !String(sp.wallet_id).startsWith('h:')) {
+      Object.assign(first, { occurred_at: r.next, wallet_id: sp.wallet_id, currency: sp.currency, amount_minor: sp.amount_minor, category_id: sp.category_id || null }); sp.first_made = r.next; D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    } else delete sp.first_made;
     save(); close(); render(); toast(__('Recurring updated. Entries already made are unchanged.')); return;
   }
   if (kind === 'handoff') { const ok = await claimHandoff(v.code); if (ok) close(); return; }

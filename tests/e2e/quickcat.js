@@ -38,7 +38,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.inputValue('input[name=qc_icon]'), '🏷️', 'the default icon is a value, not a placeholder');
   await p.fill('input[name=qc_icon]', ''); assert.equal(await p.inputValue('input[name=qc_icon]'), '', 'icon can be cleared');
   await p.type('input[name=qc_icon]', '🍔'); await p.type('input[name=qc_icon]', '🏋️'); assert.equal(await p.inputValue('input[name=qc_icon]'), '🏋️', 'only the last emoji is kept');
-  await p.click('.quick-cat .icon-pick[data-e="🎁"]'); assert.equal(await p.inputValue('input[name=qc_icon]'), '🎁'); assert(await p.$eval('.quick-cat .icon-pick[data-e="🎁"]', (b) => b.classList.contains('on')));
+  // the icon row shows only while the icon field is active
+  await p.focus('input[name=qc_name]'); assert(!(await p.isVisible('.quick-cat .icon-picks')), 'row hidden until the icon field is tapped');
+  await p.focus('input[name=qc_icon]'); assert(await p.isVisible('.quick-cat .icon-picks'), 'row shows on focus');
+  await p.click('.quick-cat .icon-pick[data-e="🎁"]');
+  assert(await p.isVisible('.quick-cat .icon-picks'), 'row stays open after picking'); assert.equal(await p.evaluate(() => document.activeElement.name), 'qc_icon', 'focus stays on the icon field');
+  await p.focus('input[name=qc_name]'); assert(!(await p.isVisible('.quick-cat .icon-picks')), 'row hides when another field is active'); assert.equal(await p.inputValue('input[name=qc_icon]'), '🎁'); assert(await p.$eval('.quick-cat .icon-pick[data-e="🎁"]', (b) => b.classList.contains('on')));
   await p.selectOption('select[name=qc_parent]', ''); await p.fill('input[name=qc_name]', 'Gym'); await p.click('[data-act=quick-cat-add]'); await settle();
   l = await log(); assert(l[0].rows[0].parent_id === null && l[0].rows[0].name === 'Gym' && l[0].rows[0].icon === '🎁', JSON.stringify(l[0].rows[0]));
   // save the transaction with the new category selected

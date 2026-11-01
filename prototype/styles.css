@@ -845,6 +845,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; l
 
 /* category icon: one emoji field plus a row of common icons to tap */
 .dlg .field input.icon-input { font-size: 24px; text-align: center; }
+.icon-picks:not(.open) { display: none; }
 .icon-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
 .icon-pick { height: 40px; border: 1.5px solid transparent; border-radius: 12px; background: var(--soft); font-size: 20px; line-height: 1; display: grid; place-items: center; padding: 0; cursor: pointer; }
 .quick-cat .icon-pick { background: var(--surface); }

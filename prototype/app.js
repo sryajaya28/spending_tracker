@@ -544,7 +544,12 @@ document.addEventListener('click', (e) => {
   if (g && !g.closest('.donut').dataset.pinned) { g.closest('.donut').dataset.pinned = '1'; donutShow(g); }
 });
 document.addEventListener('focusin', (e) => { const g = e.target.closest && e.target.closest('.dseg'); if (g) donutShow(g); });
-document.addEventListener('focusin', (e) => { if (e.target.classList?.contains('icon-input')) setTimeout(() => e.target.select(), 0); });   // typing or an emoji replaces the current icon
+/* the icon row shows only while the icon field is active: it opens on focus and closes when focus moves elsewhere
+   (tapping an icon in the row keeps the field focused, see the pointerdown handler) */
+const iconPicksOf = (inp) => inp.form && inp.form.querySelector(`.icon-picks[data-for="${inp.name}"]`);
+document.addEventListener('focusin', (e) => { if (e.target.classList?.contains('icon-input')) { iconPicksOf(e.target)?.classList.add('open'); setTimeout(() => e.target.select(), 0); } });   // typing or an emoji replaces the current icon
+document.addEventListener('focusout', (e) => { if (e.target.classList?.contains('icon-input')) { const row = iconPicksOf(e.target); if (row && !row.contains(e.relatedTarget)) row.classList.remove('open'); } });
+document.addEventListener('pointerdown', (e) => { if (e.target.closest?.('.icon-pick')) e.preventDefault(); });   // keep the focus (and the keyboard state) on the icon field
 
 function valueChart(months, usd, vc) {
   const W = 560, H = 250, pl = 58, pr = 18, pt = 14, pb = 30;
@@ -1292,7 +1297,7 @@ const quickParentOptions = (type) => `<option value="">${__('Nothing: a new top-
 const ICON_PICKS = ['🏷️', '🍔', '☕', '🛒', '🚕', '⛽', '🏠', '💡', '📱', '🎬', '🎮', '👕', '💊', '🏋️', '✈️', '🎁', '🐶', '📚', '💼', '💰'];
 const lastEmoji = (v) => { const s = (v || '').trim(); if (!s) return ''; const g = window.Intl?.Segmenter ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(s)].map((x) => x.segment) : Array.from(s); return g[g.length - 1]; };
 const iconField = (name, label, value) => `<label class="field">${label}<input name="${name}" class="icon-input" value="${esc(value)}" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="${__('Icon (emoji)')}"></label>`;
-const iconPicks = (name, cur = '') => `<div class="icon-picks" role="group" aria-label="${__('Choose an icon')}">${ICON_PICKS.map((e) => `<button type="button" class="icon-pick${e === cur ? ' on' : ''}" data-act="pick-icon" data-for="${name}" data-e="${e}" aria-label="${e}">${e}</button>`).join('')}</div>`;
+const iconPicks = (name, cur = '') => `<div class="icon-picks" data-for="${name}" role="group" aria-label="${__('Choose an icon')}">${ICON_PICKS.map((e) => `<button type="button" class="icon-pick${e === cur ? ' on' : ''}" data-act="pick-icon" data-for="${name}" data-e="${e}" aria-label="${e}">${e}</button>`).join('')}</div>`;
 /* add a category without leaving the transaction form, then select it */
 function quickAddCategory(form) {
   const type = form.type.value === 'income' ? 'income' : 'expense', name = form.qc_name.value.trim(), parent = form.qc_parent.value ? catOf(form.qc_parent.value) : null;

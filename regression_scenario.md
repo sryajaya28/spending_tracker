@@ -183,7 +183,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| IV-01 | + Account (investment) | Name; appears with its holdings and total. |
+| IV-01 | + Account (investment) | Name; appears with its holdings and total. A holding row reads `Tether [Stablecoin]` with a small type tag, and below it `0 USDT × IDR 18,139` (a space on both sides of the ×); the tag does not crowd the line under it. |
 | IV-02 | Add asset, picker | Account select, then a **type dropdown** (All, Crypto, US stocks & ETFs, Indonesia (IDX), Commodities) beside the search box; starts on All each time. |
 | IV-03 | Search a US stock / crypto | Needs the Finnhub key on the server; shows live price; built-in assets work without it. |
 | IV-04 | Search an IDX stock (BBCA) **(manual)** | Result "BBCA / Bank Central Asia"; a price appears (rupiah converted to USD). If Yahoo is unreachable: "price unavailable" and a typed price field. |
@@ -308,5 +308,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: TX-01 (new Activity header) and PF-01 (no "after loans" label).
 - 2026-11-01: ST-02 rewritten for the Expense / Income groups and the phone-only top-5 limit.
 - 2026-11-01: TX-03 covers the day page search box and the Back link spacing.
+- 2026-11-01: IV-01 covers the smaller holding type tag and the space after ×.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

@@ -780,6 +780,62 @@ function topbar(title, sub) {
     <a class="profile" href="#/settings" aria-label="${__('Settings')}"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></a></div></header>`;
 }
 
+/* ---------- category spending trend: stacked bars per period ----------
+   All categories: each bar is split by top-level category. One category with sub-categories: split by sub-category.
+   One sub-category (or a category without any): a single-colour bar. Tap a bar for the breakdown of that period. */
+const TREND_N = [[1, '1 month'], [3, '3 months'], [6, '6 months'], [12, '12 months']];
+const TREND_PALETTE = ['#4A44C6', '#F5B800', '#1FA971', '#E5484D', '#8B8FF0', '#D97706', '#14B8A6', '#64748B'];
+function trendData() {
+  const n = state.ui.trendN || 6, sel = state.ui.trendCat || '', c = sel ? catOf(sel) : null, ps = lastMonths(n);
+  const kids = c && !c.parent_id ? childrenOf(c.id) : [];
+  const keyOf = (t) => {   // which segment of the bar a transaction falls into
+    const id = t.category_id || null;
+    if (!sel) return id ? rootOf(id) : 'none';
+    if (kids.length) return id === sel ? 'direct' : id;
+    return sel;
+  };
+  const inScope = (t) => (!sel ? true : !!t.category_id && (t.category_id === sel || (!c.parent_id && rootOf(t.category_id) === sel)));
+  const per = ps.map((k) => { const m = new Map(); inMonth(k).filter((t) => t.type === 'expense' && inScope(t)).forEach((t) => m.set(keyOf(t), (m.get(keyOf(t)) || 0) + amt(t))); return m; });
+  const totals = new Map(); per.forEach((m) => m.forEach((v, key) => totals.set(key, (totals.get(key) || 0) + v)));
+  const ranked = [...totals].sort((a, b) => b[1] - a[1]).map(([key]) => key), keep = ranked.slice(0, 6), rest = ranked.slice(6);
+  const info = (key, i) => {
+    if (key === 'none') return { key, name: __('Uncategorized'), color: '#CBD0E8' };
+    if (key === 'direct') return { key, name: __('Not in a sub-category'), color: '#CBD0E8', cat: sel };
+    const cc = catOf(key); return { key, name: cc ? cc.name : '?', color: kids.length || !cc || !cc.color ? TREND_PALETTE[i % TREND_PALETTE.length] : cc.color, cat: key, icon: cc && cc.icon };
+  };
+  const segs = keep.map(info); if (rest.length) segs.push({ key: 'others', name: __('Others'), color: '#9AA0C4' });
+  const val = (m, seg) => (seg.key === 'others' ? rest.reduce((a, key) => a + (m.get(key) || 0), 0) : m.get(seg.key) || 0);
+  return { ps, segs, rows: per.map((m) => segs.map((seg) => val(m, seg))), n, sel, c };
+}
+function trendChart() {
+  const d = trendData(), W = 560, H = 250, pl = 50, pr = 14, pt = 12, pb = 30, c$ = cur();
+  const tot = d.rows.map((r) => r.reduce((a, v) => a + v, 0)), raw = Math.max(...tot, 1);
+  const base = 10 ** Math.floor(Math.log10(raw / 4)), max = 4 * base * ([1, 1.5, 2, 2.5, 5, 10].find((m) => m * base >= raw / 4) || 10);
+  const slot = (W - pl - pr) / d.n, bw = Math.min(64, slot * 0.62), y = (v) => pt + (H - pt - pb) * (1 - v / max);
+  if (!tot.some((v) => v > 0)) return `<div class="empty">${__('No spending in this range.')}</div>`;
+  const grid = [0, 1, 2, 3, 4].map((i) => (max * i) / 4).map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--line)"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">${compact(t, c$)}</text>`).join('');
+  const bars = d.ps.map((k, i) => {
+    const x = pl + slot * i + (slot - bw) / 2; let acc = 0;
+    const segs = d.segs.map((sg, j) => { const v = d.rows[i][j]; if (!v) return ''; const y1 = y(acc + v), h = y(acc) - y1; acc += v; return `<rect x="${x.toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(h - 1, 0.5).toFixed(1)}" fill="${sg.color}"><title>${esc(sg.name)}: ${money(v, c$)}</title></rect>`; }).join('');
+    return `<g class="tbar" data-act="trend-detail" data-k="${k}" tabindex="0" role="button" aria-label="${esc(periodShort(k))}: ${money(tot[i], c$)}"><rect x="${pl + slot * i}" y="${pt}" width="${slot}" height="${H - pt - pb}" fill="transparent"/>${segs}<text x="${pl + slot * i + slot / 2}" y="${H - 9}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${esc(monthLabel(k, 'short'))}</text></g>`;
+  }).join('');
+  const legend = d.segs.map((sg) => `<span><i style="background:${sg.color}"></i>${sg.icon ? sg.icon + ' ' : ''}${esc(sg.name)}</span>`).join('');
+  return `<svg class="chart trend" viewBox="0 0 ${W} ${H}" role="group" aria-label="${__('Category spending trend')}">${grid}${bars}</svg><div class="legend-row" style="margin-top:10px">${legend}</div><p class="muted" style="font-size:12px;margin-top:8px">${__('Tap a bar to see its breakdown.')}</p>`;
+}
+const trendCatOptions = () => `<option value="">${__('All categories')}</option>${catTree('expense').map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${c.id === (state.ui.trendCat || '') ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}`;
+const trendCard = () => `<section class="card"><div class="card-head"><h2>${__('Category trend')}</h2><div class="tools"><select class="pill-select" data-trend="n" aria-label="${__('Time frame')}">${TREND_N.map(([n, l]) => `<option value="${n}" ${n === (state.ui.trendN || 6) ? 'selected' : ''}>${__(l)}</option>`).join('')}</select></div></div>
+  <label class="field trend-cat"><select data-trend="cat" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}">${trendCatOptions()}</select></label>
+  <div id="trend-chart">${trendChart()}</div></section>`;
+/* what a bar is made of, with a shortcut to the matching transactions */
+function trendDialog(k) {
+  const d = trendData(), i = d.ps.indexOf(k), c$ = cur(), total = d.rows[i].reduce((a, v) => a + v, 0);
+  const rows = d.segs.map((sg, j) => ({ sg, v: d.rows[i][j] })).filter((r) => r.v > 0).sort((a, b) => b.v - a.v);
+  open(`<h2>${esc(monthLabel(k))}</h2><p class="muted" style="margin-top:-10px">${d.c ? esc(d.c.icon + ' ' + d.c.name) : __('All categories')} · ${__('Spent')} <b class="num">${money(total, c$)}</b></p>
+    <div class="list">${rows.map(({ sg, v }) => `<div class="bk-item"><div class="bk-sum nochev"><span class="bk-name"><i class="dot" style="background:${sg.color}"></i><b>${sg.icon ? sg.icon + ' ' : ''}${esc(sg.name)}</b></span><span class="bk-amt num">${money(v, c$)} <small class="muted">${Math.round((v / total) * 100)}%</small></span></div>
+      <div class="bar"><i style="width:${Math.round((v / total) * 100)}%;background:${sg.color}"></i></div>
+      ${sg.key === 'others' ? '' : `<div class="bk-subs"><button class="legend-btn" data-act="trend-go" data-k="${k}" data-cat="${sg.key === 'none' ? 'none' : sg.cat || ''}">${__('View transactions')}</button></div>`}</div>`).join('') || ('<div class="empty">' + __('No spending in this period.') + '</div>')}</div>
+    <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
+}
 function viewOverview() {
   const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
   const months = lastMonths(6);
@@ -802,6 +858,7 @@ function viewOverview() {
       ${flowChart(months, incs, exps)}</section>
     <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools"><button class="chip" data-act="breakdown">${__('Details')}</button>${monthSelect()}</div></div>
       ${halfDonut(cats, exp)}</section>
+ ${trendCard()}
     <section class="card tap-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
       ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })}</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
       <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('')}</div></section>
@@ -1758,6 +1815,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
+  else if (act === 'trend-detail') trendDialog(el.dataset.k);
+  else if (act === 'trend-go') { state.ui.month = el.dataset.k; state.ui.cat = el.dataset.cat || ''; state.ui.occ = ''; state.ui.q = ''; state.ui.wallet = ''; close(); location.hash = '#/transactions'; }
   else if (act === 'guide-tab') { state.ui.guide = el.dataset.k; $('#install-guide').innerHTML = installGuide(state.ui.guide); }
   else if (act === 'transfer-dialog') handoffDialog();
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
@@ -1776,7 +1835,8 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
-  if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
+  if (t.matches('[data-trend]')) { if (t.dataset.trend === 'n') { state.ui.trendN = +t.value; state.ui.trendCat = state.ui.trendCat || ''; } else state.ui.trendCat = t.value; $('#trend-chart').innerHTML = trendChart(); }
+  else if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
   else if (t.matches('[data-filter]')) { state.ui[t.dataset.filter] = t.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
   else if (t.name === 'category' && t.form?.dataset.form === 'txn') {

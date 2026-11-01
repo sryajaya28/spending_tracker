@@ -752,3 +752,8 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .g-n5 .g-mine { animation: g-pop5 15s infinite; }
 @keyframes g-pop5 { 0%, 80% { transform: scale(.2); opacity: 0; } 86% { transform: scale(1.15); opacity: 1; } 90%, 100% { transform: scale(1); opacity: 1; } }
 .g-mine { position: relative; min-width: 0; } .g-mine .g-ring { inset: -5px -5px 8px -5px; border-radius: 15px; }
+/* category trend */
+.bk-name .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex: none; }
+.chart.trend .tbar { cursor: pointer; outline: none; } .chart.trend .tbar:hover rect:not(:first-child) { opacity: .85; } .chart.trend .tbar:focus-visible rect:first-child { stroke: var(--brand-2); stroke-width: 2; }
+.trend-cat { margin: -4px 0 12px; }
+.legend-row { flex-wrap: wrap; gap: 6px 14px; } .legend-row span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }

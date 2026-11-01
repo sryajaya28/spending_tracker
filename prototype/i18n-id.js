@@ -1,6 +1,15 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "+ Cash": "+ Kas",
+ "Currency not found": "Mata uang tidak ditemukan",
+ "Indonesian rupiah": "Rupiah Indonesia",
+ "US dollar": "Dolar AS",
+ "Euro": "Euro",
+ "British pound": "Poundsterling",
+ "Singapore dollar": "Dolar Singapura",
+ "Australian dollar": "Dolar Australia",
+ "Japanese yen": "Yen Jepang",
  "No deposits or withdrawals yet.": "Belum ada setoran atau penarikan.",
  "That cash balance belongs to another investment account": "Saldo tunai itu milik akun investasi lain",
  "Balance": "Saldo",

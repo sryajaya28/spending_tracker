@@ -528,7 +528,8 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
 /* asset picker: a type dropdown beside the search box */
 .asset-search { display: flex; gap: 8px; }
 .asset-search select { flex: 0 0 38%; min-width: 0; font-size: 14px; }
-.asset-search input { flex: 1; min-width: 0; }
+.asset-search input, .asset-search select[data-cash-ccy] { flex: 1; min-width: 0; }
+.asset-search [hidden] { display: none; }
 
 .disclaimer { font-size: 12px; margin-top: 12px; line-height: 1.45; }
 

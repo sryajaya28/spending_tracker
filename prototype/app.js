@@ -628,7 +628,7 @@ function viewPortfolio() {
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
         return `<section class="card"><div class="card-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
-          <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">${__('Edit')}</button><button class="btn" data-act="add-holding" data-account="${a.id}">${__('+ Asset')}</button></div></div>
+          <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">${__('Edit')}</button><button class="btn secondary" data-act="add-holding" data-account="${a.id}" data-type="cash">${__('+ Cash')}</button><button class="btn" data-act="add-holding" data-account="${a.id}">${__('+ Asset')}</button></div></div>
           <div class="list">${hs.map((h) => holdingRow(h, vc, total)).join('') || ('<div class="empty">' + __('No assets yet. Add one to start tracking.') + '</div>')}</div></section>`;
       }).join('')}</div>`;
   } else if (tab === 'lent') {
@@ -1193,7 +1193,7 @@ function holdingSummary(h, info, vc) {
     ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty)} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
 }
 function holdingDialog(h, accId, opts = {}) {
-  if (!h) state.ui.pickType = '';   // the asset picker starts on All
+  if (!h) state.ui.pickType = opts.pickType || '';   // the asset picker starts on All (or Cash balance from the + Cash button)
   const accounts = activeAccounts(), info = h && assetInfo(h.symbol), invest = !!opts.invest;
   const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
   open(`<h2>${h ? esc(info.name) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
@@ -1202,7 +1202,8 @@ function holdingDialog(h, accId, opts = {}) {
     ${h ? '' : `
     <div class="field" id="picker">${__('Asset')}
       <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Commodities'], ['cash', 'Cash balance']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
-      <input name="assetq" autocomplete="off" placeholder="${__('Name or ticker')}"></div>
+      <input name="assetq" autocomplete="off" placeholder="${__('Name or ticker')}" ${state.ui.pickType === 'cash' ? 'hidden' : ''}>
+      <select data-cash-ccy data-search data-empty="${__('Currency not found')}" aria-label="${__('Currency')}" ${state.ui.pickType === 'cash' ? '' : 'hidden'}>${Object.keys(RATES).map((c) => `<option value="${c}" data-s="${c} ${esc(ccyName(c))}" ${c === cur() ? 'selected' : ''}>${c} · ${esc(ccyName(c))}</option>`).join('')}</select></div>
       <div class="results" id="asset-results" role="listbox" hidden></div>
       <div class="picked" id="picked" hidden></div>
       <input type="hidden" name="asset"><input type="hidden" name="assetmeta">
@@ -1220,7 +1221,17 @@ function holdingDialog(h, accId, opts = {}) {
     ${invest ? repeatField() : ''}
     <p class="hint">${invest ? __('The money leaves the account (or your USDT/USDC balance) and the asset is added to your investments. It is not counted as spending.') : __('Choose a payment source if you just bought it. Leave it as "Already owned" for assets you held before.')}</p>`}
     <div class="actions">${h ? `<button type="button" class="btn danger" data-act="delete-holding" data-id="${h.id}">${__('Remove')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${h ? __('Close') : __('Cancel')}</button><button class="btn" type="submit">${h ? __('Save') : invest ? __('Invest') : __('Add asset')}</button></div></form>`);
-  if (!h) syncFund($('#dlg form'));
+  if (!h) { syncFund($('#dlg form')); syncPickType($('#dlg form')); }
+}
+const CCY_NAMES = { IDR: 'Indonesian rupiah', USD: 'US dollar', EUR: 'Euro', GBP: 'British pound', SGD: 'Singapore dollar', AUD: 'Australian dollar', JPY: 'Japanese yen' };
+const ccyName = (c) => __(CCY_NAMES[c] || c);
+/* Cash balance type: the text box becomes a searchable list of currencies and the choice goes straight into that field (no chip below) */
+function syncPickType(form) {
+  if (!form || !form.assetq) return;
+  const cash = state.ui.pickType === 'cash', sel = $('[data-cash-ccy]', form);
+  form.assetq.hidden = cash; sel.hidden = !cash;
+  if (cash) { pickAsset({ key: 'CASH:' + sel.value, symbol: sel.value, name: `Cash (${sel.value})`, type: 'cash', cash: sel.value }, form, true); $('#asset-results').hidden = true; }
+  else if (form.asset.value.startsWith('CASH:')) { form.asset.value = ''; form.assetmeta.value = ''; $('#picked').hidden = true; }
 }
 /* the amount's unit follows the payment source: a wallet's currency, or coins for a stablecoin */
 function syncFund(form) {
@@ -1462,7 +1473,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-account') accountDialog();
   else if (act === 'edit-account') accountDialog(find(D().investments));
   else if (act === 'archive-account') { find(D().investments).archived = true; save(); close(); render(); toast('Account archived'); }
-  else if (act === 'add-holding') holdingDialog(null, el.dataset.account);
+  else if (act === 'add-holding') { holdingDialog(null, el.dataset.account, el.dataset.type === 'cash' ? { pickType: 'cash' } : {}); }
   else if (act === 'edit-holding') holdingDialog(find(D().holdings));
   else if (act === 'trade') tradeDialog(find(D().holdings), el.dataset.side);
   else if (act === 'delete-trade') {
@@ -1535,7 +1546,8 @@ document.addEventListener('change', (e) => {
       if (!t.form.dataset.id) { const w = t.form.wallet, keep = w.value; w.innerHTML = acctOptions(t.value, keep); if (![...w.options].some((o) => o.value === keep)) w.selectedIndex = 0; syncTxnUnit(t.form); }   // "new" coin options exist for income only
     }
   }
-  else if (t.matches('[data-pick-type]')) { state.ui.pickType = t.value; runAssetSearch(); }
+  else if (t.matches('[data-pick-type]')) { state.ui.pickType = t.value; syncPickType(t.form); runAssetSearch(); }
+  else if (t.matches('[data-cash-ccy]')) syncPickType(t.form);
   else if (t.matches('[data-theme-select]')) { applyTheme(t.value); if (state.data && !state.real) { state.data.profile.theme = THEME; save(); } render(); }
   else if (t.matches('[data-lang]')) { setLang(t.value); if (state.data && !state.real) { state.data.profile.language = LANG; save(); } render(); }
   else if (t.matches('[data-demo]')) setDemo(t.checked);
@@ -1577,10 +1589,10 @@ function runAssetSearch() {
     } catch (err) { box.innerHTML = `<div class="res-note">Search failed: ${esc(err.message)}</div>`; }
   }, 220);
 }
-async function pickAsset(a, form) {
+async function pickAsset(a, form, quiet) {
   form.asset.value = a.key; form.assetmeta.value = JSON.stringify(a); form.price.value = '';
   $('#asset-results').hidden = true; form.assetq.value = '';
-  const chip = $('#picked'), fb = $('.price-fallback', form); chip.hidden = false; fb.hidden = true;
+  const chip = $('#picked'), fb = $('.price-fallback', form); chip.hidden = !!quiet; fb.hidden = true;
   chip.innerHTML = `<b>${esc(a.symbol)}</b> ${esc(a.name)} <span class="badge">${esc(a.type)}</span> <span class="muted" id="picked-price"></span>`;
   if (!a.fh && !a.yh) return; // built-in asset: priced from the mock catalog
   $('#picked-price').textContent = __('getting price…');

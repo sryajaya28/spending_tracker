@@ -13,10 +13,18 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const bank = () => p.evaluate(() => walletBalance(D().wallets[0]));
   // 1. add a cash balance, paid from the bank account
   await p.evaluate((id) => holdingDialog(null, id, { invest: true }), acc);
-  await p.selectOption('#picker select[data-pick-type]', 'cash'); await p.fill('input[name=assetq]', 'idr'); await p.waitForSelector('#asset-results .res'); await p.click('#asset-results .res');
+  await p.selectOption('#picker select[data-pick-type]', 'cash');
+  assert(await p.isVisible('select[data-cash-ccy]') && !(await p.isVisible('input[name=assetq]')), 'cash type shows a currency list instead of the text box'); assert((await p.$$eval('select[data-cash-ccy] option', (o) => o.length)) >= 5);
+  assert.equal(await p.inputValue('input[name=asset]'), 'CASH:' + (await p.inputValue('select[data-cash-ccy]')), 'the choice goes straight into the field'); assert(!(await p.isVisible('#picked')), 'no chip below');
+  await p.selectOption('select[data-cash-ccy]', 'EUR'); assert.equal(await p.inputValue('input[name=asset]'), 'CASH:EUR'); await p.selectOption('select[data-cash-ccy]', 'IDR');
+  await p.selectOption('#picker select[data-pick-type]', 'crypto'); assert.equal(await p.inputValue('input[name=asset]'), '', 'leaving Cash clears the pick'); assert(await p.isVisible('input[name=assetq]'));
+  await p.selectOption('#picker select[data-pick-type]', 'cash');
   await p.fill('input[name=quantity]', '20000000'); await p.fill('input[name=fundamount]', '20000000'); await p.click('#dlg button[type=submit]'); await settle();
   assert.equal(await cashQ(), 20000000); assert.equal(await bank(), 80000000, 'the bank account paid for the deposit');
   const i0 = await p.evaluate(() => ({ type: assetInfo('CASH:IDR').type, usd: Math.round(holdingUSD(D().holdings.find((x) => x.symbol === 'CASH:IDR'), currentPeriod()) * RATES.IDR) })); assert.deepEqual(i0, { type: 'cash', usd: 20000000 }, 'cash counts at face value in investments');
+  // the + Cash button on the account opens the dialog already on Cash balance
+  await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); await p.waitForSelector('[data-act=add-holding][data-type=cash]'); await p.click('[data-act=add-holding][data-type=cash]'); await p.waitForSelector('select[data-cash-ccy]:not([hidden])');
+  assert.equal(await p.inputValue('select[data-pick-type]'), 'cash'); await p.click('[data-act=close]');
   // 2. deposit more with the Deposit button
   await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); await p.waitForSelector('.holding-row'); await p.click('.holding-row'); await p.waitForSelector('#dlg .hold-sum');
   const dt = await p.innerText('#dlg'); assert(dt.includes('Deposit') && dt.includes('Withdraw') && dt.includes('Balance') && !dt.includes('Current price'), dt.slice(0, 200));

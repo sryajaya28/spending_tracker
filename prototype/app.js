@@ -895,7 +895,7 @@ function viewOverview() {
   const global = bs.find((b) => b.category_id === null);
   const tiles = global ? [global] : [];   // Overview shows only the overall budget; the Budgets page has the rest
   const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
-  const recent = D().transactions.slice(0, 6);
+  const recent = D().transactions.filter((t) => t.occurred_at <= todayIso()).slice(0, 6);   // upcoming entries are not listed here either
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
     <section class="card hero"><div class="label">${__('Total Balance')}${infoTip('ov-total', __('Savings + investments'))}</div>
@@ -913,7 +913,7 @@ function viewOverview() {
     <section class="card tap-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
       ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })}</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
       <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('')}</div></section>
-  <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>
+  <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map((t) => txnRow(t)).join('')}</div></section>
   </div>`;
 }
 
@@ -969,7 +969,7 @@ function txnListHtml() {
 }
 // the detail page for one day: every transaction on it
 const dayTxns = (d) => { const ql = (state.ui.dayQ || '').trim().toLowerCase(); return D().transactions.filter((t) => t.occurred_at === d && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql))); };
-const dayListHtml = (d) => { const l = dayTxns(d); return l.length ? l.map(txnRow).join('') : '<div class="empty">' + __(state.ui.dayQ ? 'No transactions match.' : 'No transactions on this day.') + '</div>'; };
+const dayListHtml = (d) => { const l = dayTxns(d); return l.length ? l.map((t) => txnRow(t)).join('') : '<div class="empty">' + __(state.ui.dayQ ? 'No transactions match.' : 'No transactions on this day.') + '</div>'; };
 function viewDay(d) {
   const l = D().transactions.filter((t) => t.occurred_at === d), inc = sumBy(l, 'income'), exp = sumBy(l, 'expense');
   return `${topbar('Transactions', countLabel(l.length) + ' · ' + __('Income') + ' ' + money(inc, cur()) + ' · ' + __('Spent') + ' ' + money(exp, cur()))}

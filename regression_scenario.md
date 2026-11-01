@@ -196,6 +196,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 | IV-06 | Pay with an account or USDT/USDC, or "Already owned" | Paid-from account decreases (transfer, not spending); "Already owned" leaves accounts untouched. Quantity is added **once**. |
 | IV-07 | Buy / Sell on an existing holding | Quantity and the other side (account or stablecoin) move together; selling more than held is refused; deleting a trade restores both sides. |
 | IV-08 | Price freshness | Prices (Finnhub and Yahoo) and exchange rates are cached on the server for **6 hours**; they load when the app opens (no Refresh button). Failures keep the previous price. There is no description line on the Investment tab: an **(i)** button next to the "Investments" title opens a small popover (prices and exchange rates update every 6 hours and can be delayed; estimates, not financial advice). Tap/click toggles it, hover shows it on desktop, tapping elsewhere closes it; on a phone it stays inside the screen. |
+| IV-10 | Category list popup (phone browser) | The popup opens in the top layer (not clipped by the dialog edge). The Search box is fixed on top; the categories scroll; **Add new category is the last item of the scrolling list** (not pinned): scroll to the end and it is fully visible and tappable **(manual, real phone)**. |
 | IV-09 | Reload | Holdings keep type, name and price source (IDX = stock, commodity = Commodity). |
 
 ### 9.5 Lent and loans
@@ -219,6 +220,7 @@ Automated: `pfrange`, `wallet`, `arch`, `curdd`, `idx`, `run`, `ios`.
 | ST-05 | Recurring card | Appears only when rules exist (see section 6). |
 | ST-06 | Account card | Signed-in email, Sign out, Sign out others, Use sample data. |
 | ST-07b | Reload while sample data is on | After refreshing the page (any page, phone browser or desktop) sample mode comes back **with the sample data**: the yellow "Sample data" banner is never shown together with your own empty data (regression: two overlapping loads at sign-in left banner + own data). |
+| ST-07c | Sample data content (Indonesian) | Sample mode shows an Indonesian account: banks **BCA, Mandiri, Bank Jago**, **Cash**, e-wallets **Gopay, ShopeePay, OVO**, a **DBS SG** (SGD) account; investment accounts **Stockbit** (BBCA, BBRI, BMRI, TLKM) and **Ajaib** (ASII, VOO, AAPL, NVDA, BTC, USDT, gold per gram); savings about Rp 1.4 bn plus investments about Rp 3.7 bn (about Rp 5 bn in total, net worth about Rp 5.0 bn after a car loan and a credit card, with a friend who owes money). Six months of history, Indonesian merchants (Indomaret, Gojek, Kopi Kenangan, PLN...), monthly salary, parents' allowance, subscriptions and e-wallet top-ups, **every transaction categorized (no "Uncategorized")**, November filled up to today plus Upcoming items later this month, a "Bali Trip" occasion, budgets, and 6 recurring rules in Settings > Recurring (salary, allowance, Netflix, Spotify, top-up transfer, BBCA buy). No account has a negative balance. |
 | ST-07 | Sample data toggle | On: a **compact one-line banner** on phones ("Sample data · not saved" + Back to my data; the long sentence on desktop) (at the top of the page, **not pinned**: it scrolls away with the content), demo account in memory, nothing saved; off: your own data returns untouched. Old "sample data saved earlier" rows can be removed. |
 | ST-08 | Legal pages | Privacy and Terms open from the landing and sign-in screens. |
 
@@ -330,5 +332,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: ST-07b: sample mode survives a reload.
 - 2026-11-01: TX-07b: Add new category is pinned (sticky) at the bottom of the list.
 - 2026-11-01: TX-07b: list = fixed search + scrolling options + fixed Add new category footer.
+- 2026-11-01: ST-07c (Indonesian sample data), IV-10 (category popup: scrollable, Add new category last, top layer).
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

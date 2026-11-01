@@ -287,6 +287,12 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: (1) Sample data rebuilt as an Indonesian account (`seed()` in `app.js`, amounts in IDR, converted for other reporting currencies): BCA, Mandiri, Bank Jago, Cash,
+  Gopay/ShopeePay/OVO, DBS SG; Stockbit (IDX stocks) and Ajaib (IDX stock, US stocks, BTC, USDT, gold); ~Rp 5 bn of savings+investments; Indonesian merchants, fixed monthly items,
+  e-wallet top-ups, a Bali Trip occasion, budgets, 6 recurring rules; November is filled up to today with later items as Upcoming; every transaction is categorized. Opening balances are
+  derived so each account ends at its target. (2) Dropdown popover now uses the Popover API (top layer) but stays inside the dialog (outside it everything is inert), so a long list is
+  not clipped by the dialog edge; "Add new category" is the last item of the scrolling list again (not fixed/sticky), as requested.
+
 - 2026-11-01: Dropdown popover restructured (`dropdown.js`): `.cs-pop` is a flex column with a fixed search box, a `.cs-scroll` area that is the only scrolling part, and a fixed
   footer for `data-cta` entries ("Add new category"), sized with `visualViewport` and 28px bottom margin. The sticky-bottom approach was not enough on iOS: the end of the list could
   not be scrolled into view (rubber-band). Not testable on a real phone from the sandbox.

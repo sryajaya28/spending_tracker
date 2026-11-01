@@ -39,7 +39,7 @@
     const list = document.createElement('div'); list.className = 'cs-scroll';   // only this part scrolls: the search box stays on top and the add entry at the bottom
     const add = (opt, parent) => {   // data-list: a short label in the field can have a fuller one in the list
       const cta = opt.hasAttribute('data-cta');
-      if (cta) { parent = pop; if (empty) pop.appendChild(empty); }   // the add entry is a fixed footer, with the "not found" note just above it
+      if (cta && empty) parent.appendChild(empty);   // the "not found" note sits just above the add entry (the last item of the scrolling list)
       const el = document.createElement('div'); el.className = 'cs-opt' + (opt.selected && !cta ? ' on' : '') + (opt.disabled ? ' dis' : '') + (cta ? ' cs-cta' : ''); el.setAttribute('role', 'option');
       el.setAttribute('aria-selected', String(opt.selected)); const t = document.createElement('span'); t.textContent = opt.dataset.list || opt.textContent; el.appendChild(t);
       const i = rows.length; rows.push({ opt, el, cta, hidden: false, key: (opt.dataset.s || opt.textContent).toLowerCase() });
@@ -57,9 +57,10 @@
       if (n.tagName === 'OPTGROUP') { const g = document.createElement('div'); g.className = 'cs-group'; g.textContent = n.label; list.appendChild(g); [...n.children].forEach((o) => add(o, list)); }
       else if (n.tagName === 'OPTION') add(n, list);
     });
-    pop.insertBefore(list, pop.querySelector('.cs-empty, .cs-cta'));
-    if (!list.parentNode) pop.appendChild(list);
-    (sel.closest('dialog') || document.body).appendChild(pop);   // inside the open <dialog> so it shows above it
+    pop.appendChild(list);
+    // top layer: a popover sits above the open <dialog> and is not clipped by it (inside the dialog the end of a long list was cut off by the dialog edge)
+    (sel.closest('dialog') || document.body).appendChild(pop);   // it must stay inside the modal dialog (everything outside it is inert)
+    if (pop.showPopover) { pop.popover = 'manual'; try { pop.showPopover(); } catch { /* stays a plain fixed element */ } }
     const vvp = window.visualViewport, r = sel.getBoundingClientRect(), vw = innerWidth, vh = vvp ? vvp.offsetTop + vvp.height : innerHeight, w = Math.min(Math.max(r.width, 200), vw - 16);
     const below = vh - r.bottom - 28, above = r.top - 12, want = Math.min(pop.scrollHeight + 2, 300);
     const up = below < Math.min(want, 200) && above > below, room = Math.max(120, up ? above : below);

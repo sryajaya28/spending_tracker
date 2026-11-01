@@ -75,18 +75,19 @@ const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const CATS = [
   ['Groceries', 'expense', '🛒', '#4A44C6'], ['Dining', 'expense', '🍽️', '#8B8FF0'], ['Transport', 'expense', '🚌', '#F5B800'],
   ['Shopping', 'expense', '🛍️', '#EC4899'], ['Bills & Utilities', 'expense', '🧾', '#14B8A6'], ['Entertainment', 'expense', '🎬', '#F97316'],
-  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'], ['Parents', 'expense', '👨‍👩‍👦', '#22C55E'], ['Other', 'expense', '⋯', '#94A3B8'],
   ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Other income', 'income', '➕', '#94A3B8'],
 ];
-// [category, per-month count, min USD, max USD, notes]
+// the sample account is Indonesian: amounts are in rupiah (converted when the reporting currency is another one)
+// [category, per-month count, min IDR, max IDR, notes]
 const EXPENSE_PLAN = [
-  ['Groceries', 4, 28, 95, ['Whole Foods', 'Trader Joes', 'Local market']],
-  ['Dining', 7, 7, 48, ['Coffee shop', 'Lunch with team', 'Pizza night', 'Sushi bar']],
-  ['Transport', 6, 3, 28, ['Metro card', 'Uber ride', 'Gas station']],
-  ['Shopping', 2, 18, 120, ['Online order', 'Clothes', 'Home goods']],
-  ['Bills & Utilities', 2, 35, 90, ['Electric bill', 'Internet', 'Phone plan']],
-  ['Entertainment', 2, 9, 40, ['Cinema', 'Streaming', 'Concert tickets']],
-  ['Health', 1, 20, 60, ['Pharmacy', 'Gym membership']],
+  ['Groceries', 5, 60000, 650000, ['Indomaret', 'Alfamart', 'Superindo', 'Pasar tradisional']],
+  ['Dining', 9, 22000, 320000, ['Kopi Kenangan', 'Warteg', 'Mie ayam', 'GoFood order', 'Sate padang', 'Starbucks']],
+  ['Transport', 8, 12000, 280000, ['Gojek', 'Grab', 'Kartu KRL', 'Pertamax', 'Parkir']],
+  ['Shopping', 2, 150000, 1800000, ['Tokopedia', 'Shopee', 'Uniqlo']],
+  ['Bills & Utilities', 3, 280000, 1250000, ['Token listrik PLN', 'Indihome', 'Telkomsel', 'PDAM']],
+  ['Entertainment', 2, 50000, 350000, ['CGV Cinema', 'Konser tiket']],
+  ['Health', 1, 90000, 550000, ['Kimia Farma', 'Gym membership']],
 ];
 
 // one level of sub-categories under a parent; transactions may point at either
@@ -97,10 +98,10 @@ const SUBS = {
   Entertainment: [['Movies', '🎬'], ['Streaming', '📺'], ['Events', '🎟️']],
 };
 const NOTE_SUB = {
-  'Whole Foods': 'Groceries/Supermarket', 'Trader Joes': 'Groceries/Supermarket', 'Local market': 'Groceries/Fresh market',
-  'Coffee shop': 'Dining/Coffee', 'Lunch with team': 'Dining/Restaurants', 'Sushi bar': 'Dining/Restaurants', 'Pizza night': 'Dining/Delivery',
-  'Gas station': 'Transport/Fuel', 'Uber ride': 'Transport/Ride-hailing', 'Metro card': 'Transport/Public transit',
-  Cinema: 'Entertainment/Movies', Streaming: 'Entertainment/Streaming', 'Concert tickets': 'Entertainment/Events',
+  Indomaret: 'Groceries/Supermarket', Alfamart: 'Groceries/Supermarket', Superindo: 'Groceries/Supermarket', 'Pasar tradisional': 'Groceries/Fresh market',
+  'Kopi Kenangan': 'Dining/Coffee', Starbucks: 'Dining/Coffee', Warteg: 'Dining/Restaurants', 'Mie ayam': 'Dining/Restaurants', 'Sate padang': 'Dining/Restaurants', 'GoFood order': 'Dining/Delivery',
+  Pertamax: 'Transport/Fuel', Gojek: 'Transport/Ride-hailing', Grab: 'Transport/Ride-hailing', 'Kartu KRL': 'Transport/Public transit', Parkir: 'Transport',
+  'CGV Cinema': 'Entertainment/Movies', 'Konser tiket': 'Entertainment/Events', Netflix: 'Entertainment/Streaming',
 };
 
 /* mock price catalog: [symbol, name, type, current USD price, monthly volatility].
@@ -170,59 +171,97 @@ async function refreshPrices(silent) {
 function seed(name, cur) {
   let s = 11;
   const rnd = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-  const conv = (usd) => { let v = usd * RATES[cur]; if (v > 100000) v = Math.round(v / 1000) * 1000; return toMinor(v, cur); };
+  // rupiah -> minor units of the reporting currency (IDR stays exact; others convert, so the demo still adds up)
+  const conv = (idr) => { let v = (idr / RATES.IDR) * RATES[cur]; if (cur === 'IDR' && v > 100000) v = Math.round(v / 1000) * 1000; return toMinor(v, cur); };
   const catId = {};
   const categories = CATS.map(([n, type, ic, color]) => { const id = uid(); catId[n] = id; return { id, parent_id: null, name: n, type, icon: ic, color, archived: false }; });
   CATS.forEach(([n, type, , color]) => (SUBS[n] || []).forEach(([sn, sic]) => {
     const id = uid(); catId[`${n}/${sn}`] = id;
     categories.push({ id, parent_id: catId[n], name: sn, type, icon: sic, color, archived: false });
   }));
-  const wsince = monthKey(new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1));   // sample history starts 5 months back
-  const wallets = [
-    { id: uid(), name: 'Cash', type: 'cash', currency: cur, opening_balance_minor: conv(1200), since: wsince, archived: false },
-    { id: uid(), name: 'Main Bank', type: 'bank', currency: cur, opening_balance_minor: conv(2400), since: wsince, archived: false },
-    { id: uid(), name: 'E-Wallet', type: 'ewallet', currency: cur, opening_balance_minor: conv(900), since: wsince, archived: false },
-    // a wallet in another currency, to show multi-currency wallets
-    { id: uid(), name: `${cur === 'USD' ? 'EUR' : 'USD'} Savings`, type: 'bank', currency: cur === 'USD' ? 'EUR' : 'USD', opening_balance_minor: toMinor(cur === 'USD' ? 2000 : 3000, cur === 'USD' ? 'EUR' : 'USD'), since: wsince, archived: false },
-  ];
-  const today = new Date();
+  const today = new Date(), todayD = today.getDate(), dim = (y, m) => new Date(y, m + 1, 0).getDate();
+  const wsince = monthKey(new Date(today.getFullYear(), today.getMonth() - 5, 1));   // sample history starts 5 months back
+  // accounts with the balance each should show today (opening balances are derived below)
+  const W = (n, type, target, c = cur) => ({ id: uid(), name: n, type, currency: c, opening_balance_minor: 0, since: wsince, archived: false, _target: target });
+  const bca = W('BCA', 'bank', conv(742000000)), mandiri = W('Mandiri', 'bank', conv(455000000)), jago = W('Bank Jago', 'bank', conv(118000000)), cash = W('Cash', 'cash', conv(26000000));
+  const gopay = W('Gopay', 'ewallet', conv(3400000)), shopee = W('ShopeePay', 'ewallet', conv(1250000)), ovo = W('OVO', 'ewallet', conv(2300000));
+  const sgd = W('DBS SG', 'bank', toMinor(6500, 'SGD'), 'SGD');   // a foreign-currency account
+  const wallets = [bca, mandiri, jago, cash, gopay, shopee, ovo, sgd];
   const txns = [];
-  const push = (cat, type, date, usd, note) => {
-    if (date > today) return;
-    const w = type === 'income' || rnd() < 0.8 ? wallets[1] : wallets[rnd() < 0.5 ? 0 : 2];
-    txns.push({ id: uid(), wallet_id: w.id, category_id: cat ? catId[NOTE_SUB[note]] || catId[cat] : null, type, amount_minor: conv(usd), currency: cur, occurred_at: isoDate(date), note, category_source: 'user', ai_confidence: null });
+  const nowMonth = (back) => ({ y: today.getFullYear(), m: today.getMonth() - back });
+  const add = (w, cat, type, date, idr, note, extra = {}) => {
+    txns.push({ id: uid(), wallet_id: w.id, category_id: cat ? catId[NOTE_SUB[note]] || catId[cat] : null, type, amount_minor: conv(idr), currency: w.currency, occurred_at: isoDate(date), note, category_source: 'user', ai_confidence: null, ...extra });
+  };
+  // everyday spending: small things on e-wallets, bigger ones on the banks
+  const spendWallet = (cat, idr) => (idr < 120000 && (cat === 'Dining' || cat === 'Transport' || cat === 'Groceries') ? [gopay, ovo, shopee][Math.floor(rnd() * 3)] : idr < 400000 && rnd() < 0.15 ? cash : rnd() < 0.78 ? bca : mandiri);
+  const transfer = (from, to, idr, date, note) => {
+    const gid = uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: isoDate(date), transfer_id: gid, type: 'transfer', currency: cur };
+    txns.push({ id: uid(), wallet_id: from.id, flow: 'out', amount_minor: conv(idr), note: `Transfer to ${to.name}${note ? ' · ' + note : ''}`, ...base });
+    txns.push({ id: uid(), wallet_id: to.id, flow: 'in', amount_minor: conv(idr), note: `Transfer from ${from.name}${note ? ' · ' + note : ''}`, ...base });
   };
   for (let back = 5; back >= 0; back--) {
-    const y = today.getFullYear(), m = today.getMonth() - back;
-    push('Salary', 'income', new Date(y, m, 25), 4200, 'Monthly salary');
-    if (back % 2 === 0) push('Freelance', 'income', new Date(y, m, 12), 450 + Math.round(rnd() * 300), 'Design project');
+    const { y, m } = nowMonth(back), cur0 = back === 0, last = dim(y, m);
+    const maxDay = cur0 ? Math.max(1, Math.min(todayD, last)) : Math.min(27, last);   // the running month only fills up to today
+    const factor = cur0 ? Math.max(0.35, todayD / last) : 1;
+    // fixed items (also dated later this month: they show as Upcoming)
+    add(bca, 'Salary', 'income', new Date(y, m, 25), 42000000, 'Monthly salary');
+    if (back % 2 === 0) add(bca, 'Freelance', 'income', new Date(y, m, 12), 6500000 + Math.round(rnd() * 3000000), 'Design project');
+    add(bca, 'Parents', 'expense', new Date(y, m, 1), 5000000, 'Monthly allowance for parents');
+    add(bca, 'Subscription', 'expense', new Date(y, m, 12), 186000, 'Netflix');
+    add(bca, 'Subscription', 'expense', new Date(y, m, 5), 55000, 'Spotify');
+    add(mandiri, 'Bills & Utilities', 'expense', new Date(y, m, 3), 1250000, 'Indihome + Telkomsel');
+    if (back > 0 || todayD >= 2) { transfer(bca, gopay, 1500000, new Date(y, m, 2), 'top up'); transfer(bca, ovo, 1000000, new Date(y, m, 2), 'top up'); transfer(bca, shopee, 800000, new Date(y, m, 3), 'top up'); }
+    // random everyday spending
     for (const [cat, n, lo, hi, notes] of EXPENSE_PLAN) {
-      for (let i = 0; i < n; i++) {
-        const day = 1 + Math.floor(rnd() * 27);
-        push(cat, 'expense', new Date(y, m, day), Math.round(lo + rnd() * (hi - lo)), notes[Math.floor(rnd() * notes.length)]);
+      const count = cur0 ? Math.max(1, Math.round(n * factor * 1.6)) : n;
+      for (let i = 0; i < count; i++) {
+        const day = 1 + Math.floor(rnd() * maxDay), idr = Math.round((lo + rnd() * (hi - lo)) / 1000) * 1000;
+        add(spendWallet(cat, idr), cat, 'expense', new Date(y, m, day), idr, notes[Math.floor(rnd() * notes.length)]);
       }
     }
   }
+  const fut = (t) => t.occurred_at > isoDate(today);
+  // balances: derive each opening balance so today's balance is the target (future-dated rows do not count)
+  wallets.forEach((w) => { const net = txns.filter((t) => t.wallet_id === w.id && !fut(t)).reduce((a, t) => a + (t.type === 'income' || (t.type === 'transfer' && t.flow === 'in') ? 1 : -1) * t.amount_minor, 0); w.opening_balance_minor = w._target - net; delete w._target; });
   txns.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
-  // show the AI states: a few AI-tagged rows and two uncategorized fallbacks
-  txns.filter((t) => t.type === 'expense').slice(2, 9).forEach((t, i) => { if (i % 3 === 0) { t.category_source = 'ai'; t.ai_confidence = 0.86; } });
-  txns.filter((t) => t.type === 'expense').slice(0, 2).forEach((t) => { t.category_id = null; t.note = 'Card payment'; });
+  // show the AI state on a few rows (every sample transaction is categorized)
+  const past = txns.filter((t) => t.type === 'expense' && !fut(t));
+  past.slice(2, 12).forEach((t, i) => { if (i % 3 === 0) { t.category_source = 'ai'; t.ai_confidence = 0.86; } });
   const start = monthKey(new Date(today.getFullYear(), today.getMonth() - 5, 1)) + '-01';
-  const mk = (cat, usd) => ({ id: uid(), category_id: cat ? catId[cat] : null, amount_minor: conv(usd), currency: cur, start_month: start });
-  const budgets = [mk(null, 1500), mk('Groceries', 340), mk('Dining', 190), mk('Transport', 110), mk('Shopping', 150), mk('Entertainment', 70)];
-  // investment accounts, each holding several assets (quantities only; value comes from prices)
-  const since = monthKey(new Date(today.getFullYear(), today.getMonth() - 5, 1));
-  const exch = { id: uid(), name: 'Crypto Exchange', archived: false }, broker = { id: uid(), name: 'US Brokerage', archived: false };
+  const mk = (cat, idr) => ({ id: uid(), category_id: cat ? catId[cat] : null, amount_minor: conv(idr), currency: cur, start_month: start });
+  const budgets = [mk(null, 22000000), mk('Groceries', 3000000), mk('Dining', 2500000), mk('Transport', 1800000), mk('Shopping', 3000000), mk('Entertainment', 1000000), mk('Bills & Utilities', 3000000)];
+  const occasions = [{ id: uid(), name: 'Bali Trip', amount_minor: conv(15000000), currency: cur, start: isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 18)), end: isoDate(new Date(today.getFullYear(), today.getMonth() + 1, 22)), archived: false }];
+  // investment accounts, each holding several assets (quantities only; value comes from prices). IDX stocks and gold carry a fixed demo price in USD.
+  const since = wsince;
+  const stockbit = { id: uid(), name: 'Stockbit', archived: false }, ajaib = { id: uid(), name: 'Ajaib', archived: false };
   const h = (a, symbol, quantity) => ({ id: uid(), account_id: a.id, symbol, quantity, since, trades: [] });
-  const holdings = [h(exch, 'BTC', 0.085), h(exch, 'USDT', 1200), h(exch, 'ETH', 0.9), h(broker, 'VOO', 4.2), h(broker, 'AAPL', 6), h(broker, 'NVDA', 3)];
+  const idr = (v) => v / RATES.IDR;   // IDR price -> USD at the demo rate
+  const customAssets = {
+    'BBCA.JK': { symbol: 'BBCA', name: 'Bank Central Asia', type: 'stock', yh: 'BBCA.JK', mult: 1, price: idr(9000) }, 'BBRI.JK': { symbol: 'BBRI', name: 'Bank Rakyat Indonesia', type: 'stock', yh: 'BBRI.JK', mult: 1, price: idr(4000) },
+    'BMRI.JK': { symbol: 'BMRI', name: 'Bank Mandiri', type: 'stock', yh: 'BMRI.JK', mult: 1, price: idr(5000) }, 'TLKM.JK': { symbol: 'TLKM', name: 'Telkom Indonesia', type: 'stock', yh: 'TLKM.JK', mult: 1, price: idr(3000) }, 'ASII.JK': { symbol: 'ASII', name: 'Astra International', type: 'stock', yh: 'ASII.JK', mult: 1, price: idr(5000) },
+    XAUG: { symbol: 'XAUG', name: 'Gold (per gram)', type: 'commodity', yh: 'GC=F', mult: 0.0321507, price: 100 },
+  };
+  const holdings = [h(stockbit, 'BBCA.JK', 90000), h(stockbit, 'BBRI.JK', 150000), h(stockbit, 'BMRI.JK', 60000), h(stockbit, 'TLKM.JK', 70000),
+    h(ajaib, 'ASII.JK', 30000), h(ajaib, 'VOO', 35), h(ajaib, 'AAPL', 40), h(ajaib, 'NVDA', 80), h(ajaib, 'BTC', 0.6), h(ajaib, 'USDT', 12000), h(ajaib, 'XAUG', 150)];
   // loans: debts you owe. Balance = original - payments, so earlier months can be rebuilt.
   const payments = (monthly, n) => Array.from({ length: n }, (_, i) => ({ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - (n - 1 - i), 5)), amount_minor: monthly }));
   const loans = [
-    { id: uid(), name: 'Car loan', type: 'car', currency: cur, original_minor: conv(14000), monthly_minor: conv(380), rate: 6.5, since, archived: false, payments: payments(conv(380), 6) },
-    { id: uid(), name: 'Credit card', type: 'card', currency: cur, original_minor: conv(900), monthly_minor: conv(150), rate: 0, since, archived: false, payments: payments(conv(150), 3) },
+    { id: uid(), name: 'Car loan', type: 'car', currency: cur, original_minor: conv(190000000), monthly_minor: conv(4500000), rate: 6.5, since, archived: false, payments: payments(conv(4500000), 6) },
+    { id: uid(), name: 'Credit card', type: 'card', currency: cur, original_minor: conv(14000000), monthly_minor: conv(2500000), rate: 0, since, archived: false, payments: payments(conv(2500000), 3) },
   ];
-  const lent = [{ id: uid(), name: 'Budi', currency: cur, original_minor: conv(300), note: 'Laptop repair', due: isoDate(new Date(today.getFullYear(), today.getMonth() + 2, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 12)), amount_minor: conv(100) }] }];
-  return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions: [], investments: [exch, broker], holdings, customAssets: {}, livePrices: {}, loans, lent };
+  const lent = [{ id: uid(), name: 'Budi', currency: cur, original_minor: conv(25000000), note: 'Business capital', due: isoDate(new Date(today.getFullYear(), today.getMonth() + 3, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 10)), amount_minor: conv(5000000) }] }];
+  // recurring rules (shown in Settings > Recurring; sample mode never creates entries from them)
+  const next = (day) => { const d = new Date(today.getFullYear(), today.getMonth(), day); if (isoDate(d) <= isoDate(today)) d.setMonth(d.getMonth() + 1); return isoDate(d); };
+  const rule = (kind, freq, day, spec) => ({ id: uid(), kind, freq, start: isoDate(new Date(today.getFullYear(), today.getMonth() - 5, day)), next: next(day), end: '', active: true, spec });
+  const recurring = [
+    rule('txn', 'monthly', 25, { type: 'income', amount_minor: conv(42000000), currency: cur, wallet_id: bca.id, note: 'Monthly salary', category_id: catId.Salary }),
+    rule('txn', 'monthly', 1, { type: 'expense', amount_minor: conv(5000000), currency: cur, wallet_id: bca.id, note: 'Monthly allowance for parents', category_id: catId.Parents }),
+    rule('txn', 'monthly', 12, { type: 'expense', amount_minor: conv(186000), currency: cur, wallet_id: bca.id, note: 'Netflix', category_id: catId['Entertainment/Streaming'] }),
+    rule('txn', 'monthly', 5, { type: 'expense', amount_minor: conv(55000), currency: cur, wallet_id: bca.id, note: 'Spotify', category_id: catId.Subscription }),
+    rule('transfer', 'monthly', 2, { from: bca.id, to: gopay.id, amount_minor: conv(1500000), received_minor: conv(1500000), fee_minor: 0, note: 'top up' }),
+    rule('invest', 'monthly', 10, { account: stockbit.id, symbol: 'BBCA.JK', quantity: 100, fund: 'w:' + bca.id, fundamount: String(Math.round(conv(900000) / (cur === 'IDR' ? 1 : 100))) }),
+  ];
+  return { profile: { name, currency: cur, ai: true }, categories, wallets, transactions: txns, budgets, occasions, investments: [stockbit, ajaib], holdings, customAssets, livePrices: {}, loans, lent, recurring };
 }
 
 const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), archOpen: false } };

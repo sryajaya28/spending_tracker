@@ -12,38 +12,42 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.$eval('select', (s) => getComputedStyle(s).pointerEvents).catch(() => 'none'), 'none');
   // inside a dialog: opens above the dialog, lists every option and group, shows the current one
   await p.click('.nav-add'); await p.waitForSelector('#dlg[open]');
-  await tap('#dlg select[name=wallet]'); await p.waitForTimeout(300);   await p.waitForSelector('#dlg .cs-pop');
-  const n = await p.$$eval('select[name=wallet] option', (o) => o.length); assert.equal(await p.$$eval('#dlg .cs-opt', (e) => e.length), n);
-  assert.equal(await p.$$eval('#dlg .cs-opt.on', (e) => e.length), 1, 'current option is marked');
-  const box = await p.$eval('#dlg .cs-pop', (e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom }; }); assert(box.l >= 0 && box.r <= 390 && box.t >= 0 && box.b <= 900, JSON.stringify(box));
+  await tap('#dlg select[name=wallet]'); await p.waitForTimeout(300);   await p.waitForSelector('.cs-pop');
+  const n = await p.$$eval('select[name=wallet] option', (o) => o.length); assert.equal(await p.$$eval('.cs-opt', (e) => e.length), n);
+  assert.equal(await p.$$eval('.cs-opt.on', (e) => e.length), 1, 'current option is marked');
+  const box = await p.$eval('.cs-pop', (e) => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom }; }); assert(box.l >= 0 && box.r <= 390 && box.t >= 0 && box.b <= 900, JSON.stringify(box));
   // choosing fires the app's change handling: the amount unit follows the account
-  await p.click('#dlg .cs-opt:has-text("US Dollar")'); assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0, 'closes after choosing');
+  await p.click('.cs-opt:has-text("US Dollar")'); assert.equal(await p.$$('.cs-pop').then((a) => a.length), 0, 'closes after choosing');
   assert((await p.innerText('#dlg [data-amt-label]')).includes('USD')); assert.equal(await p.$eval('#dlg select[name=wallet]', (s) => s.selectedOptions[0].textContent), 'US Dollar (USD)');
   assert.notEqual(await p.evaluate(() => document.activeElement && document.activeElement.tagName), 'SELECT', 'after a tap-choice the select is not focused (iOS would reopen its own picker)');
   // Esc closes the list but not the dialog; tapping elsewhere closes it; tapping the field again toggles
-  await tap('#dlg select[name=wallet]'); await p.waitForSelector('#dlg .cs-pop'); await p.keyboard.press('Escape'); assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0); assert.equal(await p.evaluate(() => document.querySelector('#dlg').open), true, 'dialog stays open');
-  await tap('#dlg select[name=wallet]'); await p.waitForSelector('#dlg .cs-pop'); await p.mouse.click(20, 20); assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0, 'outside tap closes');
+  await tap('#dlg select[name=wallet]'); await p.waitForSelector('.cs-pop'); await p.keyboard.press('Escape'); assert.equal(await p.$$('.cs-pop').then((a) => a.length), 0); assert.equal(await p.evaluate(() => document.querySelector('#dlg').open), true, 'dialog stays open');
+  await tap('#dlg select[name=wallet]'); await p.waitForSelector('.cs-pop'); await p.mouse.click(20, 20); assert.equal(await p.$$('.cs-pop').then((a) => a.length), 0, 'outside tap closes');
   // keyboard: arrow down opens, arrows move, Enter picks
-  await p.focus('#dlg select[name=wallet]'); await p.keyboard.press('ArrowDown'); await p.waitForSelector('#dlg .cs-pop'); await p.keyboard.press('ArrowUp'); await p.keyboard.press('Enter');
-  assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0); assert.equal(await p.$eval('#dlg select[name=wallet]', (s) => s.selectedIndex), 0);
+  await p.focus('#dlg select[name=wallet]'); await p.keyboard.press('ArrowDown'); await p.waitForSelector('.cs-pop'); await p.keyboard.press('ArrowUp'); await p.keyboard.press('Enter');
+  assert.equal(await p.$$('.cs-pop').then((a) => a.length), 0); assert.equal(await p.$eval('#dlg select[name=wallet]', (s) => s.selectedIndex), 0);
   // the Category list: searchable, with "Add new category" as the last entry
-  await tap('#dlg select[name=category]'); await p.waitForSelector('#dlg .cs-search');
-  assert((await p.innerText('#dlg .cs-cta')).includes('Add new category')); assert.equal(await p.$$eval('#dlg .cs-opt', (e) => e[e.length - 1].classList.contains('cs-cta')), true, 'the add entry is last');
-  { const pb = await p.$eval('#dlg .cs-pop', (e) => e.getBoundingClientRect().bottom), cb = await p.$eval('#dlg .cs-cta', (e) => e.getBoundingClientRect().bottom); assert(cb <= pb + 1 && cb > pb - 60, 'Add new category is visible at the list bottom without scrolling: ' + [cb, pb]); }
+  await tap('#dlg select[name=category]'); await p.waitForSelector('.cs-search');
+  assert((await p.innerText('.cs-cta')).includes('Add new category')); assert.equal(await p.$$eval('.cs-opt', (e) => e[e.length - 1].classList.contains('cs-cta')), true, 'the add entry is last');
+  { // not pinned: it is the last item of the scrolling list; scrolling to the end brings it fully into view inside the popup (not clipped by the dialog)
+    await p.$eval('.cs-scroll', (e) => { e.scrollTop = e.scrollHeight; }); await p.waitForTimeout(80);
+    const m = await p.evaluate(() => { const c = document.querySelector('.cs-cta').getBoundingClientRect(), pp = document.querySelector('.cs-pop').getBoundingClientRect(), d = document.querySelector('#dlg').getBoundingClientRect(); return { cb: c.bottom, pb: pp.bottom, ct: c.top, pt: pp.top, inTop: !!document.querySelector('.cs-pop').matches(':popover-open') }; });
+    assert(m.cb <= m.pb + 1 && m.ct >= m.pt, 'Add new category is fully inside the popup at the end of the list: ' + JSON.stringify(m)); assert(m.inTop, 'popup is in the top layer (not clipped by the dialog)');
+    await p.$eval('.cs-scroll', (e) => { e.scrollTop = 0; }); }
   assert(!(await p.evaluate(() => document.activeElement.matches('input'))), 'the search box does not grab focus by itself');
   // tapping the search box (phone keyboard => resize/scroll events) keeps the list open
-  await tap('#dlg .cs-search'); assert(await p.evaluate(() => document.activeElement.matches('.cs-search')), 'search focused');
+  await tap('.cs-search'); assert(await p.evaluate(() => document.activeElement.matches('.cs-search')), 'search focused');
   await p.evaluate(() => { window.dispatchEvent(new Event('resize')); document.dispatchEvent(new Event('scroll')); window.dispatchEvent(new Event('scroll')); document.querySelector('#dlg').dispatchEvent(new Event('scroll')); }); await p.waitForTimeout(100);
-  assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 1, 'the list stays open while typing');
-  const total = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').length);
-  await p.fill('#dlg .cs-search', 'coffee'); const some = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(some.length < total && some.some((x) => /Coffee/.test(x)) && some.some((x) => /Add new category/.test(x)), JSON.stringify(some));
-  await p.fill('#dlg .cs-search', 'dining'); const dn = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(dn.some((x) => /Dining/.test(x)) && dn.some((x) => /Coffee/.test(x)), 'searching a parent also lists its sub-categories: ' + JSON.stringify(dn));
-  await p.fill('#dlg .cs-search', 'zzzz'); assert((await p.innerText('#dlg .cs-empty')).includes('Category not found'), 'not-found note shows'); assert.equal(await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent).join('|')), '＋ Add new category'.replace('＋', '＋'), 'only the add button remains');
-  assert.equal(await p.$eval('#dlg .cs-empty', (e) => e.nextElementSibling.classList.contains('cs-cta')), true, 'the note sits right above the add button');
-  await p.fill('#dlg .cs-search', 'coffee'); assert.equal(await p.$eval('#dlg .cs-empty', (e) => getComputedStyle(e).display), 'none', 'note hides when something matches'); await p.click('#dlg .cs-opt:has-text("Coffee")'); assert.equal(await p.$eval('#dlg select[name=category]', (s) => s.selectedOptions[0].textContent.includes('Coffee')), true);
+  assert.equal(await p.$$('.cs-pop').then((a) => a.length), 1, 'the list stays open while typing');
+  const total = await p.$$eval('.cs-opt', (e) => e.filter((x) => x.style.display !== 'none').length);
+  await p.fill('.cs-search', 'coffee'); const some = await p.$$eval('.cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(some.length < total && some.some((x) => /Coffee/.test(x)) && some.some((x) => /Add new category/.test(x)), JSON.stringify(some));
+  await p.fill('.cs-search', 'dining'); const dn = await p.$$eval('.cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(dn.some((x) => /Dining/.test(x)) && dn.some((x) => /Coffee/.test(x)), 'searching a parent also lists its sub-categories: ' + JSON.stringify(dn));
+  await p.fill('.cs-search', 'zzzz'); assert((await p.innerText('.cs-empty')).includes('Category not found'), 'not-found note shows'); assert.equal(await p.$$eval('.cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent).join('|')), '＋ Add new category'.replace('＋', '＋'), 'only the add button remains');
+  assert.equal(await p.$eval('.cs-empty', (e) => e.nextElementSibling.classList.contains('cs-cta')), true, 'the note sits right above the add button');
+  await p.fill('.cs-search', 'coffee'); assert.equal(await p.$eval('.cs-empty', (e) => getComputedStyle(e).display), 'none', 'note hides when something matches'); await p.click('.cs-opt:has-text("Coffee")'); assert.equal(await p.$eval('#dlg select[name=category]', (s) => s.selectedOptions[0].textContent.includes('Coffee')), true);
   // income shows the USDT choices in their own group heading
-  await p.click('#dlg label:has(input[name=type][value=income])'); await tap('#dlg select[name=wallet]'); await p.waitForSelector('#dlg .cs-group');
-  assert((await p.innerText('#dlg .cs-group')).toLowerCase().includes('investment account')); await p.keyboard.press('Escape'); await p.click('[data-act=close]');
+  await p.click('#dlg label:has(input[name=type][value=income])'); await tap('#dlg select[name=wallet]'); await p.waitForSelector('.cs-group');
+  assert((await p.innerText('.cs-group')).toLowerCase().includes('investment account')); await p.keyboard.press('Escape'); await p.click('[data-act=close]');
   // outside a dialog: the month picker changes the period
   await p.evaluate(() => { location.hash = '#/budgets'; render(); }); await p.waitForSelector('select[data-bind=month]');
   await tap('select[data-bind=month]'); await p.waitForSelector('.cs-pop'); const before = await p.evaluate(() => state.ui.month);

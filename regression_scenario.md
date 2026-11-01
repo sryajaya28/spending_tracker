@@ -89,7 +89,7 @@ Automated: `donut`, `ovocc`, `budgetbar`, `run`.
 | TX-09 | Edit amount / date / note / category | Saved; balances and reports update. |
 | TX-10 | Delete a transaction | Removed; balances restored. |
 | TX-11 | Amount 0, negative or empty | Rejected with a message; nothing saved. |
-| TX-12 | Date in the future | Row shows an **Upcoming** badge; it changes no balance, holding, net worth or monthly total until that day (see section 12). |
+| TX-12 | Date in the future | Row shows an **Upcoming** badge to the left of the date (right column, rows stay two lines); it changes no balance, holding, net worth or monthly total until that day (see section 12). |
 | TX-13 | Transfer rows in the list | Show the Transfer badge; tapping opens the transfer detail, not the edit form. A transfer fee row shows the fee badge. |
 
 Automated: `daily`, `run`, `quickcat`, `occtx`, `transfer`.

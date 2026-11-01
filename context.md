@@ -287,6 +287,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: The **Upcoming** tag on a transaction row moved from beside the title to the left of the date (right column), so every row keeps two lines.
 - 2026-11-01: Investment account card header (`.acct-head`): long names wrap inside their own space and, on phones, Edit / + Cash / + Asset always sit in one even three-column row below the name.
 - 2026-11-01: The asset dialog no longer lists trades: a **View history** button opens a full page `#/portfolio/<holdingId>` (`viewAsset`, routed from `viewPortfolio` via `routeArg()`) with summary, Buy/Sell, Edit and the full trade list (`tradeList`, no limit, dates with year).
 - 2026-11-01: Investment accounts get a **+ Cash** button (opens Add asset on Cash balance); for the Cash balance type the asset box becomes a searchable currency dropdown (`select[data-cash-ccy]`, currencies = `RATES` keys) and the choice fills that field directly (`syncPickType`). `cashacct` test extended.

@@ -236,7 +236,7 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { display: none; }
-  .main { padding: 12px 12px calc(84px + env(safe-area-inset-bottom) * .4); }
+  .main { padding: 24px 12px calc(84px + env(safe-area-inset-bottom) * .4); }
   .card { padding: 12px 14px; }
   .topbar { margin-bottom: 10px; }
   .search { display: none; }

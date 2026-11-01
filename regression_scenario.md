@@ -58,7 +58,7 @@ Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| OV-01 | Hero card | Total Balance equals the sum of all non-archived accounts (and equals Portfolio > Savings). Shows the month change and saved % (no "N accounts" label). No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
+| OV-01 | Hero card | Total Balance equals the sum of all non-archived accounts (and equals Portfolio > Savings). Shows the period's change in amount and as a **% of the balance it started with** (e.g. `−0.8%` next to `−IDR 680,886 this month`; both always have the same sign; `—` when the starting balance is zero or negative). No "N accounts" label. No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
 | OV-02 | Desktop layout | Hero spans the full width; below it a two-column grid: Money Flow and Spending, then Budgets and Recent transactions side by side with no empty cell. Phone: single column. |
 | OV-03 | Money Flow | Six periods of income and spending; hover/tap a point shows net for that period. Saved shows income minus spending of the selected period. |
 | OV-04 | Spending donut | Top 5 categories + Others. Hover (desktop) or tap (phone) an arc: centre shows name, amount and % of total; tap the same arc or elsewhere to clear. Empty month: grey ring and zero total. No category buttons under it. **Details** opens the breakdown with expandable sub-categories. |
@@ -301,5 +301,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: IV-08 now covers the price-refresh disclaimer on the Investment tab.
 - 2026-11-01: IV-08 rewritten for the 6-hour price cache and the single disclaimer (Refresh prices button removed).
 - 2026-11-01: IV-08 now describes the disclaimer as an (i) tooltip next to the Investments title.
+- 2026-11-01: OV-01 hero percentage is now the balance change %, not the saved-income %.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

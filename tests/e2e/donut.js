@@ -8,10 +8,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const m = await p.evaluate(() => state.ui.month);
-  await p.evaluate((m) => { const w = D().wallets[0], cs = D().categories.filter((c) => c.type === 'expense' && !c.parent_id);
+  await p.evaluate((m) => { const w = D().wallets[0]; w.opening_balance_minor = 10000000; const cs = D().categories.filter((c) => c.type === 'expense' && !c.parent_id);
     [[0, 300000], [1, 100000], [2, 100000]].forEach(([i, a]) => D().transactions.push({ id: uid(), type: 'expense', amount_minor: a, currency: w.currency, wallet_id: w.id, category_id: cs[i].id, note: 'x', occurred_at: m + '-01' }));
     save(); location.hash = '#/overview'; render(); }, m);
   const at = async (f) => { const r = await p.$eval('.donut svg', (e) => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, k: b.width / 260 }; }), a = f * 2 * Math.PI; return [r.x + (130 + 100 * Math.sin(a)) * r.k, r.y + (130 - 100 * Math.cos(a)) * r.k]; };
+  // the hero's % is the period's change of the balance, with the same sign as the amount beside it (-500,000 of 10,500,000)
+  const hero = (await p.innerText('.hero .delta')).replace(/\u00a0/g, ' '); assert(/^−\d+\.\d%/.test(hero) && hero.includes('−IDR 500,000'), hero);
   const segs = await p.$$('.dseg'); assert.equal(segs.length, 3);
   const def = await p.innerText('.donut .center'); assert(def.includes('Spent in'));
   await p.mouse.move(...(await at(0.3))); const t = await p.innerText('.donut .center');

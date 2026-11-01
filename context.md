@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Overview hero percentage is now the period's balance change % (net / starting balance, `balChange`), so it matches the sign of the amount
+  beside it; it used to be the saved-income % and showed +0% with a negative amount. `—` when the starting balance is not positive.
+
 - 2026-11-01: App-styled dropdown lists for all selects (`dropdown.js`, CSS `.cs-*`, service worker cache `stiver-shell-v5`); e2e `dropdown`; regression UI-11.
 
 - 2026-11-01: Removed the "N accounts" label from the Overview hero card.

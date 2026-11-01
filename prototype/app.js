@@ -675,14 +675,14 @@ function viewOverview() {
   const cats = spendByCategory(k), bs = budgetStatus(k);
   const global = bs.find((b) => b.category_id === null);
   const tiles = [...(global ? [global] : []), ...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct)].slice(0, 3);
-  const saved = inc > 0 ? Math.round((net / inc) * 100) : 0;
+  const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
   const allOcc = occasionStatus().filter((o) => !o.archived && occasionInMonth(o, k)).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999')), occs = allOcc.slice(0, 3), moreOcc = allOcc.length - occs.length;
   const recent = D().transactions.slice(0, 6);
   return `${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
     <section class="card hero"><div class="label">${__('Total Balance')}</div>
       <div class="amount num" style="--len:${money(totalBalance(), cur()).length}">${moneyHtml(totalBalance(), cur())}</div>
-      <div class="delta"><b>${saved >= 0 ? '+' : ''}${saved}%</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
+      <div class="delta"><b>${pctFmt(balChange)}</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>

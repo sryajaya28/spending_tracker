@@ -35,6 +35,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.evaluate(() => D().recurring[0].spec.wallet_id), wid, 'the rule pays from the new account');
   assert.deepEqual(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort()), before, 'past entries still on their old account and amounts');
   assert.equal(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').every((t) => t.wallet_id !== window.__w2)), true);
+  // the category can be changed too
+  const catId = await p.evaluate(() => D().categories.find((c) => c.type === 'expense' && !c.parent_id).id);
+  await p.click('[data-act=rec-manage]'); await p.selectOption('select[name=category]', catId); await p.click('#dlg button[type=submit]'); await settle();
+  assert.equal(await p.evaluate(() => D().recurring[0].spec.category_id), catId, 'category saved on the rule');
   // expenses show red, income green in the list
   assert(await p.$('.cat-row .pl.down'), 'expense amount is red'); assert(!/[−+]{2}/.test(await p.innerText('.cat-row .pl.down')), 'one sign only');
   // a date in the past is refused

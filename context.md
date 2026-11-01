@@ -280,6 +280,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Transaction rows: a space after the middle dot before the account name ("Salary · USDT · Binance · Nov 25").
+
 - 2026-11-01: Added IDX stocks and commodities (Yahoo Finance, unofficial) as investment assets; e2e `idx`, `tests/test_yahoo.py` (python, stubbed).
   BUG FIX: since the recurring release (2026-10-31) a buy with a payment source also added its quantity a second time to the holding
   (an `else` bound to the wrong `if` in the holding form). Fixed; production DB checked: no holding was affected.

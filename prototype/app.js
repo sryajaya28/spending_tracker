@@ -962,10 +962,36 @@ window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); inst
 const installBtn = (cls) => (MOBILE_BROWSER ? `<button type="button" class="btn lg install-cta ${cls || ''}" data-act="install-app">📲 ${__('Use mobile app experience')}</button>` : '');
 const fmtHandoff = (c) => c.slice(0, 5) + '-' + c.slice(5);
 const handoffInUrl = () => { const q = location.hash.split('?')[1] || ''; return new URLSearchParams(q).get('handoff') || ''; };
+/* a looping, silent how-to animation of adding to the Home Screen on iPhone, one version for Safari and one for Chrome (drawn in CSS: no video file, no personal screen contents) */
+const GUIDE_SHARE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M8 7l4-4 4 4"/><path d="M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
+function installGuide(kind) {
+  const chrome = kind === 'chrome', ring = '<i class="g-ring"></i>';
+  const page = '<div class="g-page"><i></i><i></i><i></i></div>';
+  const rowsOf = (list) => list.map((t) => `<div class="g-row">${t}</div>`).join('');
+  const sheet = (rows, scroll) => `<div class="g-sheet"><div class="g-sheet-h"><img src="icon.svg" alt=""><span>Stiver<small>stiver.io</small></span></div><div class="g-clip"><div class="g-list ${scroll ? 'g-scroll' : ''}">${rows}</div></div></div>`;
+  const hot = `<div class="g-row g-hot">Add to Home Screen ${ring}</div>`;
+  const add = `<div class="g-add"><div class="g-add-h"><span>✕</span><b>Add to Home Screen</b><em class="g-hot">Add${ring}</em></div><div class="g-add-app"><img src="icon.svg" alt=""><span>Stiver<small>stiver.io</small></span></div><div class="g-tog"><span>Open as Web App</span><u class="g-hot"><i></i>${ring}</u></div></div>`;
+  const home = `<div class="g-home">${Array.from({ length: 7 }, () => '<i class="g-app"></i>').join('')}<span class="g-mine"><img src="icon.svg" alt=""><small>Stiver</small></span></div>`;
+  let scenes, caps;
+  if (chrome) {   // Chrome: the Share icon sits in the address bar; Add to Home Screen is further down the list
+    scenes = [`<div class="g-url"><span>stiver.io</span><b class="g-ic">${GUIDE_SHARE}${ring}</b></div>${page}`, sheet(rowsOf(['Add to Bookmarks', 'Create a QR code', 'Find in Page', 'Print']) + hot + rowsOf(['Add to Quick Note']), true), add, home];
+    caps = ['Tap the Share icon', 'Scroll down, tap Add to Home Screen', 'Keep Open as Web App on, tap Add', 'Open Stiver from your Home Screen'];
+  } else {        // Safari (iOS 26): the ≡ button in the address bar opens a menu with Share, whose sheet lists Add to Home Screen
+    scenes = [`${page}<div class="g-bar2"><b>‹</b><div class="g-pill"><span class="g-ic">≡${ring}</span><em>stiver.io</em><span>⟳</span></div><b>⧉</b></div>`,
+      `${page}<div class="g-menu"><div class="g-row g-hot">${GUIDE_SHARE} Share ${ring}</div>${rowsOf(['Add to Bookmarks', 'Find on Page', 'Page Zoom'])}</div>`,
+      sheet(rowsOf(['Add Bookmark to…', 'Add to Favourites', 'Add to Quick Note', 'Find on Page']) + hot + rowsOf(['Markup']), false), add, home];
+    caps = ['Tap ≡ in the address bar', 'Tap Share', 'Tap Add to Home Screen', 'Keep Open as Web App on, tap Add', 'Open Stiver from your Home Screen'];
+  }
+  const n = scenes.length;
+  return `<div class="install-guide g-n${n}" role="img" aria-label="${__('How to add Stiver to your Home Screen')}">
+    <div class="g-tabs">${[['safari', 'Safari'], ['chrome', 'Chrome']].map(([k, l]) => `<button type="button" class="${k === kind ? 'on' : ''}" data-act="guide-tab" data-k="${k}">${l}</button>`).join('')}</div>
+    <div class="g-phone">${scenes.map((h, i) => `<div class="g-scene" style="animation-delay:${i * 3}s">${h}</div>`).join('')}</div>
+    <div class="g-caps">${caps.map((c, i) => `<span style="animation-delay:${i * 3}s"><b>${i + 1}</b> ${__(c)}</span>`).join('')}</div></div>`;
+}
 async function installDialog() {
   if (installPrompt) { try { installPrompt.prompt(); await installPrompt.userChoice; } catch { /* the steps below still apply */ } installPrompt = null; return; }
   let code = '';
-  if (state.auth.status === 'in' && Cloud.configured) {
+  if (IS_IOS && state.auth.status === 'in' && Cloud.configured) {   // Android Chrome shares its sign-in with the installed app; only iPhone needs the transfer code
     try {
       code = (await Cloud.createHandoff()) || '';
       // adding to the Home Screen saves this address, so the app can pick the session up by itself
@@ -974,11 +1000,13 @@ async function installDialog() {
   }
   const steps = IS_IOS
     ? [/CriOS/.test(navigator.userAgent) ? __('Tap the Share icon in the address bar (the square with an arrow, top right of the page)') : __('Tap the Share button in Safari (in the toolbar, or under the ⋯ button)'), __('Scroll down the list and tap "Add to Home Screen"'), __('Keep "Open as Web App" switched on, then tap Add'), __('Open Stiver from your Home Screen')]
-    : [__('Open the browser menu (⋮)'), __('Choose "Install app" or "Add to Home screen"'), __('Open Stiver from your Home screen')];
+    : [__('Tap the browser menu (⋮, top right)'), __('Tap "Install app" or "Add to Home screen"'), __('Tap Install, then open Stiver from your Home screen')];
+  state.ui.guide = /CriOS/.test(navigator.userAgent) ? 'chrome' : 'safari';
   open(`<h2>${__('Use mobile app experience')}</h2><p class="muted" style="margin-top:-10px">${__('Full screen, faster to open, no browser bars.')}</p>
-    <ol class="install-steps">${steps.map((t, i) => `<li><span class="step-n">${i + 1}</span><span>${t}</span></li>`).join('')}</ol>
+    ${IS_IOS ? `<div id="install-guide">${installGuide(state.ui.guide)}</div>` : ''}
+    ${IS_IOS ? '' : `<ol class="install-steps">${steps.map((t, i) => `<li><span class="step-n">${i + 1}</span><span>${t}</span></li>`).join('')}</ol>`}
     ${code ? `<div class="hint">${__("You're signed in here, so the app should open already signed in. If it asks you to sign in, tap \"Transfer from browser\" and enter this code:")}<div class="handoff-code num">${fmtHandoff(code)}</div><small>${__('Works once, for 15 minutes. The browser signs out after the app takes over.')}</small></div>` : ''}
-    <div class="actions"><button type="button" class="btn" data-act="close">${__('Got it')}</button></div><span data-close-outside hidden></span>`);
+    <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div><span data-close-outside hidden></span>`);
 }
 function handoffDialog() {
   open(`<h2>${__('Transfer from browser')}</h2><p class="muted" style="margin-top:-10px">${__('Signed in on your phone browser? Open "Use mobile app experience" there and enter the code it shows.')}</p>
@@ -1729,6 +1757,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
+  else if (act === 'guide-tab') { state.ui.guide = el.dataset.k; $('#install-guide').innerHTML = installGuide(state.ui.guide); }
   else if (act === 'transfer-dialog') handoffDialog();
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }

@@ -707,3 +707,47 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .land-cta-wrap .land-install { width: 100%; }
 .land-cta-wrap .land-cta { margin-bottom: 0; } .land-cta-wrap .land-cta .btn { flex: 1; justify-content: center; }
 .land-transfer { margin-top: 14px; }
+
+/* how-to animation (iPhone): four scenes of 3 s each, looping, silent */
+.install-guide { margin: 4px 0 14px; display: grid; justify-items: center; gap: 10px; }
+.g-tabs { display: inline-flex; background: var(--soft); border-radius: 999px; padding: 3px; }
+.g-tabs button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; padding: 5px 16px; border-radius: 999px; }
+.g-tabs button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
+.g-phone { position: relative; width: 210px; height: 270px; border-radius: 26px; border: 3px solid #1e1b4b; background: #f2f3fb; overflow: hidden; color: #1e1b4b; font-size: 11px; }
+.g-scene, .g-caps span { position: absolute; inset: 0; opacity: 0; animation: g-show 12s infinite; }
+@keyframes g-show { 0% { opacity: 0; } 2% { opacity: 1; } 23% { opacity: 1; } 25%, 100% { opacity: 0; } }
+.g-caps { position: relative; width: 100%; height: 22px; text-align: center; font-size: 13px; color: var(--ink); }
+.g-caps span { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.g-caps b { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--brand); color: #fff; font-size: 11px; }
+.g-ring { position: absolute; inset: -6px; border-radius: 12px; border: 2px solid #f5b800; animation: g-pulse 1s ease-in-out infinite; pointer-events: none; }
+@keyframes g-pulse { 0%, 100% { transform: scale(.92); opacity: .4; } 50% { transform: scale(1.06); opacity: 1; } }
+.g-url { margin: 14px 12px 0; height: 28px; border-radius: 14px; background: #dcdcea; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; }
+.g-ic { position: relative; display: inline-grid; place-items: center; width: 26px; height: 22px; }
+.g-page { padding: 14px 14px 0; display: grid; gap: 8px; } .g-page i { display: block; height: 52px; border-radius: 10px; background: linear-gradient(135deg, #4a44c6, #8b8ff0); opacity: .5; } .g-page i + i { height: 36px; opacity: .25; }
+.g-bar { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 34px; border-radius: 17px; background: #dcdcea; display: flex; align-items: center; justify-content: space-around; font-size: 14px; }
+.g-sheet { position: absolute; inset: 40px 8px 0; background: #fff; border-radius: 18px 18px 0 0; padding: 10px; }
+.g-sheet-h { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; } .g-sheet-h img, .g-add-app img { width: 30px; height: 30px; border-radius: 8px; } .g-sheet-h span, .g-add-app span { display: grid; font-weight: 700; } small { font-weight: 400; color: #6b6f95; }
+.g-clip { height: 170px; overflow: hidden; border-radius: 10px; background: #f2f3fb; }
+.g-list.g-scroll { animation: g-scroll 12s infinite; }
+@keyframes g-scroll { 0%, 27% { transform: none; } 35%, 48% { transform: translateY(-96px); } 50%, 100% { transform: none; } }
+.g-row { position: relative; height: 34px; display: flex; align-items: center; padding: 0 10px; border-bottom: 1px solid #e3e3f0; }
+.g-hot { position: relative; }
+.g-add { position: absolute; inset: 24px 8px 0; background: #fff; border-radius: 18px 18px 0 0; padding: 12px; display: grid; align-content: start; gap: 14px; }
+.g-add-h { display: flex; align-items: center; justify-content: space-between; } .g-add-h em { position: relative; font-style: normal; font-weight: 700; color: #fff; background: #4a44c6; padding: 3px 10px; border-radius: 12px; }
+.g-add-app { display: flex; gap: 10px; align-items: center; background: #f2f3fb; border-radius: 12px; padding: 8px; }
+.g-tog { display: flex; align-items: center; justify-content: space-between; background: #f2f3fb; border-radius: 12px; padding: 10px; }
+.g-tog u { position: relative; width: 38px; height: 22px; border-radius: 11px; background: #34c759; } .g-tog u i { position: absolute; right: 2px; top: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; }
+.g-home { position: absolute; inset: 0; padding: 26px 14px; display: grid; grid-template-columns: repeat(4, 1fr); align-content: start; gap: 16px 8px; background: linear-gradient(160deg, #3b5bdb, #7048e8); }
+.g-app { display: block; aspect-ratio: 1; border-radius: 12px; background: rgba(255, 255, 255, .35); }
+.g-mine { display: grid; justify-items: center; gap: 2px; color: #fff; animation: g-pop 12s infinite; } .g-mine img { width: 100%; aspect-ratio: 1; border-radius: 12px; } .g-mine small { color: #fff; font-size: 9px; }
+@keyframes g-pop { 0%, 76% { transform: scale(.2); opacity: 0; } 82% { transform: scale(1.15); opacity: 1; } 86%, 100% { transform: scale(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .g-scene, .g-caps span, .g-list, .g-ring, .g-mine { animation: none; } .g-scene:first-child, .g-caps span:first-child { opacity: 1; } .g-mine { opacity: 1; } }
+
+.g-bar2 { position: absolute; left: 8px; right: 8px; bottom: 10px; display: flex; align-items: center; gap: 6px; } .g-bar2 > b { width: 30px; height: 30px; flex: none; border-radius: 50%; background: #dcdcea; display: grid; place-items: center; font-size: 14px; }
+.g-pill { flex: 1; height: 32px; border-radius: 16px; background: #dcdcea; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; } .g-pill em { font-style: normal; } .g-pill .g-ic { width: 22px; font-size: 15px; font-weight: 700; }
+.g-menu { position: absolute; left: 14px; bottom: 54px; width: 150px; background: #fff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0, 0, 0, .25); overflow: hidden; } .g-menu .g-row:last-child { border-bottom: 0; } .g-menu .g-row svg { margin-right: 6px; }
+/* five-scene version (Safari): 3 s each, 15 s loop */
+.g-n5 .g-scene, .g-n5 .g-caps span { animation-name: g-show5; animation-duration: 15s; }
+@keyframes g-show5 { 0% { opacity: 0; } 2% { opacity: 1; } 18% { opacity: 1; } 20%, 100% { opacity: 0; } }
+.g-n5 .g-mine { animation: g-pop5 15s infinite; }
+@keyframes g-pop5 { 0%, 80% { transform: scale(.2); opacity: 0; } 86% { transform: scale(1.15); opacity: 1; } 90%, 100% { transform: scale(1); opacity: 1; } }

@@ -1,6 +1,16 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Tap Add to Home Screen": "Ketuk Tambah ke Layar Utama",
+ "Tap ≡ in the address bar": "Ketuk ≡ di bilah alamat",
+ "Tap Install, then open Stiver from your Home screen": "Ketuk Instal, lalu buka Stiver dari layar utama",
+ "Tap \"Install app\" or \"Add to Home screen\"": "Ketuk \"Instal aplikasi\" atau \"Tambahkan ke layar utama\"",
+ "Tap the browser menu (⋮, top right)": "Ketuk menu browser (⋮, kanan atas)",
+ "Keep Open as Web App on, tap Add": "Biarkan Buka sebagai Aplikasi Web aktif, ketuk Tambah",
+ "Scroll down, tap Add to Home Screen": "Gulir ke bawah, ketuk Tambah ke Layar Utama",
+ "Tap Share": "Ketuk Bagikan",
+ "Tap the Share icon": "Ketuk ikon Bagikan",
+ "How to add Stiver to your Home Screen": "Cara menambahkan Stiver ke Layar Utama",
  "Tap the Share button in Safari (in the toolbar, or under the ⋯ button)": "Ketuk tombol Bagikan di Safari (di bilah alat, atau di bawah tombol ⋯)",
  "Tap the Share icon in the address bar (the square with an arrow, top right of the page)": "Ketuk ikon Bagikan di bilah alamat (kotak dengan panah, kanan atas halaman)",
  "Got it": "Mengerti",

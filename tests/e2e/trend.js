@@ -11,15 +11,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const titles = await p.$$eval('.grid > section h2', (h) => h.map((x) => x.textContent.trim())); const iS = titles.indexOf('Spending'), iT = titles.indexOf('Category trend'), iB = titles.indexOf('Budgets'); assert(iS >= 0 && iT === iS + 1 && iB === iT + 1, JSON.stringify(titles));
   assert.equal(await p.$$eval('.tbar', (e) => e.length), 6, 'six months by default');
   // all categories: segments are top-level categories
-  let legend = await p.$$eval('#trend-chart .legend-row span', (s) => s.map((x) => x.textContent.trim())); assert(legend.length >= 3 && legend.some((x) => /Groceries|Bills|Dining|Shopping/.test(x)), JSON.stringify(legend));
+  const names = () => p.$$eval('#trend-chart svg.trend rect title', (t) => [...new Set(t.map((x) => x.textContent.split(':')[0].trim()))]); assert.equal(await p.$$eval('#trend-chart .legend-row', (e) => e.length), 0, 'no legend under the chart'); let legend = await names(); assert(legend.length >= 3 && legend.some((x) => /Groceries|Bills|Dining|Shopping/.test(x)), JSON.stringify(legend));
   // the time frame
   await p.selectOption('[data-trend=n]', '3'); assert.equal(await p.$$eval('.tbar', (e) => e.length), 3); await p.selectOption('[data-trend=n]', '1'); assert.equal(await p.$$eval('.tbar', (e) => e.length), 1); await p.selectOption('[data-trend=n]', '12'); assert.equal(await p.$$eval('.tbar', (e) => e.length), 12); await p.selectOption('[data-trend=n]', '6');
   // a category with sub-categories breaks into them
   const ent = await p.evaluate(() => { const c = D().categories.find((x) => x.name === 'Entertainment' && !x.parent_id); return { id: c.id, subs: childrenOf(c.id).map((s) => s.name) }; }); assert(ent.subs.length > 0);
-  await p.selectOption('[data-trend=cat]', ent.id); legend = await p.$$eval('#trend-chart .legend-row span', (s) => s.map((x) => x.textContent.trim()));
+  await p.selectOption('[data-trend=cat]', ent.id); legend = await names();
   assert(legend.some((x) => ent.subs.some((sn) => x.includes(sn))), 'sub-categories in the legend: ' + JSON.stringify(legend) + JSON.stringify(ent.subs));
   // a single sub-category: one colour only
-  const sub = await p.evaluate((id) => childrenOf(id)[0].id, ent.id); await p.selectOption('[data-trend=cat]', sub); legend = await p.$$eval('#trend-chart .legend-row span', (s) => s.length); assert.equal(legend, 1, 'a sub-category is one segment');
+  const sub = await p.evaluate((id) => childrenOf(id)[0].id, ent.id); await p.selectOption('[data-trend=cat]', sub); legend = (await names()).length; assert.equal(legend, 1, 'a sub-category is one segment');
   // tap a bar: the breakdown dialog; View transactions opens the matching filter
   await p.selectOption('[data-trend=cat]', ''); await p.evaluate(() => { const g = [...document.querySelectorAll('.tbar')].pop(); g.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
   await p.waitForSelector('#dlg .bk-item'); const dt = await p.innerText('#dlg'); assert(/Spent/.test(dt) && /%/.test(dt) && dt.includes('View transactions'), dt.slice(0, 200));

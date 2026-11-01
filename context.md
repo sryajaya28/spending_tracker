@@ -287,6 +287,11 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Category picking: "＋ Add new category" is the last entry of the Category dropdown (`option value=__new data-cta`), replacing the separate button; it opens the quick-add
+  form without focusing a field (no keyboard), choosing a real category hides it. `dropdown.js` gained `data-search` (search box on long lists; `data-s` on an option
+  widens what it matches, sub-categories carry their parent's name), `data-cta` entries, and remembers the select under the finger at pointerdown so a tap is not lost
+  when the keyboard closes between pointerdown and click. `data-search` is on the transaction, budget and filter category selects.
+
 - 2026-11-01: Bottom bar: the Add item is now as tall as the other tabs (52px, 5.5px bottom padding), so its label is level with theirs (measured to 0.1px; `noscroll` asserts it).
 
 - 2026-11-01: Investment holding rows: smaller type tag (`.badge.sm`) and a space after the × in `qty SYMBOL × price`.

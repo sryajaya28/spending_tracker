@@ -4,7 +4,7 @@
    non-interactive by CSS (pointer-events: none), so a tap lands on its parent: we find the select under the pointer here.
    Add data-native to a select to keep the OS picker. */
 (() => {
-  let pop = null, cur = null, openedAt = 0, lastClosed = { sel: null, at: 0 }, rows = [], act = -1, typed = '', typedAt = 0;
+  let pop = null, cur = null, openedAt = 0, lastClosed = { sel: null, at: 0 }, lastDown = { sel: null, x: 0, y: 0, at: 0 }, rows = [], act = -1, typed = '', typedAt = 0;
   const isEnh = (s) => !!s && s.tagName === 'SELECT' && !s.hasAttribute('data-native') && !s.multiple;
 
   function close(byOutside) {
@@ -19,7 +19,7 @@
     rows.forEach((r, k) => r.el.classList.toggle('act', k === act));
     if (scroll) rows[act].el.scrollIntoView({ block: 'nearest' });
   }
-  function step(dir) { let i = act; do { i += dir; } while (rows[i] && rows[i].opt.disabled); if (rows[i]) setActive(i); }
+  function step(dir) { let i = act; do { i += dir; } while (rows[i] && (rows[i].opt.disabled || rows[i].hidden)); if (rows[i]) setActive(i); }
 
   function choose(i) {
     const r = rows[i]; if (!r || r.opt.disabled) return;
@@ -35,13 +35,20 @@
     cur = sel; openedAt = Date.now(); sel.setAttribute('aria-expanded', 'true');
     pop = document.createElement('div'); pop.className = 'cs-pop'; pop.setAttribute('role', 'listbox');
     const add = (opt, parent) => {   // data-list: a short label in the field can have a fuller one in the list
-      const el = document.createElement('div'); el.className = 'cs-opt' + (opt.selected ? ' on' : '') + (opt.disabled ? ' dis' : ''); el.setAttribute('role', 'option');
+      const cta = opt.hasAttribute('data-cta');
+      if (cta) { const hr = document.createElement('div'); hr.className = 'cs-sep'; parent.appendChild(hr); }
+      const el = document.createElement('div'); el.className = 'cs-opt' + (opt.selected && !cta ? ' on' : '') + (opt.disabled ? ' dis' : '') + (cta ? ' cs-cta' : ''); el.setAttribute('role', 'option');
       el.setAttribute('aria-selected', String(opt.selected)); const t = document.createElement('span'); t.textContent = opt.dataset.list || opt.textContent; el.appendChild(t);
-      const i = rows.length; rows.push({ opt, el });
+      const i = rows.length; rows.push({ opt, el, cta, hidden: false, key: (opt.dataset.s || opt.textContent).toLowerCase() });
       el.addEventListener('click', (e) => { e.stopPropagation(); choose(i); });
       el.addEventListener('pointermove', () => { if (act !== i) setActive(i, false); });
       parent.appendChild(el);
     };
+    if (sel.hasAttribute('data-search')) {   // a search box on top of long lists (tap it to type; the keyboard is not opened for you)
+      const q = document.createElement('input'); q.className = 'cs-search'; q.type = 'search'; q.autocomplete = 'off'; q.placeholder = (window.__ ? window.__('Search') : 'Search');
+      q.addEventListener('input', () => { const v = q.value.trim().toLowerCase(); rows.forEach((r) => { r.hidden = !r.cta && !!v && !r.key.includes(v); r.el.style.display = r.hidden ? 'none' : ''; }); const first = rows.findIndex((r) => !r.hidden && !r.opt.disabled && !r.cta); if (first >= 0) setActive(first); });
+      pop.appendChild(q);
+    }
     [...sel.children].forEach((n) => {
       if (n.tagName === 'OPTGROUP') { const g = document.createElement('div'); g.className = 'cs-group'; g.textContent = n.label; pop.appendChild(g); [...n.children].forEach((o) => add(o, pop)); }
       else if (n.tagName === 'OPTION') add(n, pop);
@@ -60,31 +67,28 @@
   document.addEventListener('click', (e) => {
     const justClosed = lastClosed; lastClosed = { sel: null, at: 0 };   // only the click right after an outside tap can be that same tap
     if (pop && pop.contains(e.target)) return;
-    let sel = isEnh(e.target) ? e.target : null;
-    if (!sel) {
-      const root = document.querySelector('dialog[open]') || document;
-      for (const s of root.querySelectorAll('select')) {
-        if (!isEnh(s) || s.disabled || !s.getClientRects().length) continue;
-        const r = s.getBoundingClientRect();
-        if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) { sel = s; break; }
-      }
-    }
+    let sel = isEnh(e.target) ? e.target : hit(e.clientX, e.clientY);
+    if (!sel && lastDown.sel && lastDown.sel.isConnected && Date.now() - lastDown.at < 800 && Math.hypot(e.clientX - lastDown.x, e.clientY - lastDown.y) < 24) sel = lastDown.sel;
     if (!sel || sel.disabled) return;
     e.preventDefault(); e.stopPropagation();
     if (justClosed.sel === sel && Date.now() - justClosed.at < 400) return;   // the tap that just closed the list
     if (cur === sel && Date.now() - openedAt > 350) close(); else open(sel);
   }, true);
 
-  document.addEventListener('pointerdown', (e) => { if (pop && !pop.contains(e.target) && e.target !== cur) close(true); }, true);
+  const hit = (x, y) => { const root = document.querySelector('dialog[open]') || document; for (const s of root.querySelectorAll('select')) { if (!isEnh(s) || s.disabled || !s.getClientRects().length) continue; const r = s.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return s; } return null; };
+  document.addEventListener('pointerdown', (e) => {
+    if (pop && !pop.contains(e.target) && e.target !== cur) close(true);
+    lastDown = { sel: pop && pop.contains(e.target) ? null : hit(e.clientX, e.clientY), x: e.clientX, y: e.clientY, at: Date.now() };   // remember what was under the finger: the layout can shift before the click (keyboard closing)
+  }, true);
   document.addEventListener('keydown', (e) => {
     if (pop) {
       const k = e.key;
       if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
       if (k === 'ArrowDown') { e.preventDefault(); step(1); } else if (k === 'ArrowUp') { e.preventDefault(); step(-1); }
       else if (k === 'Home') { e.preventDefault(); setActive(0); } else if (k === 'End') { e.preventDefault(); setActive(rows.length - 1); }
-      else if (k === 'Enter' || k === ' ') { e.preventDefault(); choose(act); }
+      else if (k === 'Enter' || (k === ' ' && !(e.target && e.target.classList && e.target.classList.contains('cs-search')))) { e.preventDefault(); choose(act); }
       else if (k === 'Tab') close();
-      else if (k.length === 1) {   // type to jump to an option
+      else if (k.length === 1 && !(e.target && e.target.classList && e.target.classList.contains('cs-search'))) {   // type to jump to an option
         typed = (Date.now() - typedAt > 600 ? '' : typed) + k.toLowerCase(); typedAt = Date.now();
         const i = rows.findIndex((r) => !r.opt.disabled && r.opt.textContent.trim().toLowerCase().startsWith(typed)); if (i >= 0) setActive(i);
       }

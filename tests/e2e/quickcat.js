@@ -10,7 +10,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.click('[data-act=add-txn]');
   await p.fill('input[name=amount]', '45000'); await p.fill('textarea[name=note]', 'Gym snack');
   assert(await p.$eval('.quick-cat', (e) => e.hidden));
-  await p.click('[data-act=quick-cat]'); assert(!(await p.$eval('.quick-cat', (e) => e.hidden)));
+  // "Add new category" is the last entry of the Category list; choosing it opens the form but does not focus a field (no keyboard)
+  assert(!(await p.$('[data-act=quick-cat]')), 'no separate add-category button');
+  await p.evaluate(() => document.activeElement.blur());
+  await p.selectOption('select[name=category]', '__new'); assert(!(await p.$eval('.quick-cat', (e) => e.hidden)));
+  assert(!(await p.evaluate(() => document.activeElement.matches('input, textarea'))), 'no field focused');
+  assert.equal(await p.$eval('select[name=category]', (s) => s.value), '', 'the list keeps its previous choice');
+  // picking an existing category hides the form again
+  const dn = await p.$eval('select[name=category]', (s) => [...s.options].find((o) => /Dining/.test(o.textContent)).value); await p.selectOption('select[name=category]', dn); assert(await p.$eval('.quick-cat', (e) => e.hidden), 'form hides when a category is chosen');
+  await p.selectOption('select[name=category]', '__new'); assert(!(await p.$eval('.quick-cat', (e) => e.hidden)));
   // empty name is refused
   await p.click('[data-act=quick-cat-add]'); assert(!(await p.$eval('.quick-cat', (e) => e.hidden)));
   // a sub-category under Dining, added with Enter
@@ -24,7 +32,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   let l = await log(); const cat = l.find((o) => o.table === 'categories').rows[0];
   assert.equal(cat.name, 'Snacks'); assert.equal(cat.parent_id, dining); assert.equal(cat.icon, '🍿'); assert.equal(cat.type, 'expense');
   // duplicate refused; a new top-level category too
-  await p.click('[data-act=quick-cat]'); await p.fill('input[name=qc_name]', 'snacks'); await p.selectOption('select[name=qc_parent]', dining); await p.click('[data-act=quick-cat-add]');
+  await p.selectOption('select[name=category]', '__new'); await p.fill('input[name=qc_name]', 'snacks'); await p.selectOption('select[name=qc_parent]', dining); await p.click('[data-act=quick-cat-add]');
   assert((await p.evaluate(() => document.getElementById('toast').textContent)).includes('already exists'));
   await p.selectOption('select[name=qc_parent]', ''); await p.fill('input[name=qc_name]', 'Gym'); await p.click('[data-act=quick-cat-add]'); await settle();
   l = await log(); assert(l[0].rows[0].parent_id === null && l[0].rows[0].name === 'Gym');

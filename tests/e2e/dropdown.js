@@ -25,6 +25,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // keyboard: arrow down opens, arrows move, Enter picks
   await p.focus('#dlg select[name=wallet]'); await p.keyboard.press('ArrowDown'); await p.waitForSelector('#dlg .cs-pop'); await p.keyboard.press('ArrowUp'); await p.keyboard.press('Enter');
   assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0); assert.equal(await p.$eval('#dlg select[name=wallet]', (s) => s.selectedIndex), 0);
+  // the Category list: searchable, with "Add new category" as the last entry
+  await tap('#dlg select[name=category]'); await p.waitForSelector('#dlg .cs-search');
+  assert((await p.innerText('#dlg .cs-cta')).includes('Add new category')); assert.equal(await p.$$eval('#dlg .cs-opt', (e) => e[e.length - 1].classList.contains('cs-cta')), true, 'the add entry is last');
+  assert(!(await p.evaluate(() => document.activeElement.matches('input'))), 'the search box does not grab focus by itself');
+  const total = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').length);
+  await p.fill('#dlg .cs-search', 'coffee'); const some = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(some.length < total && some.some((x) => /Coffee/.test(x)) && some.some((x) => /Add new category/.test(x)), JSON.stringify(some));
+  await p.fill('#dlg .cs-search', 'dining'); const dn = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(dn.some((x) => /Dining/.test(x)) && dn.some((x) => /Coffee/.test(x)), 'searching a parent also lists its sub-categories: ' + JSON.stringify(dn));
+  await p.fill('#dlg .cs-search', 'coffee'); await p.click('#dlg .cs-opt:has-text("Coffee")'); assert.equal(await p.$eval('#dlg select[name=category]', (s) => s.selectedOptions[0].textContent.includes('Coffee')), true);
   // income shows the USDT choices in their own group heading
   await p.click('#dlg label:has(input[name=type][value=income])'); await tap('#dlg select[name=wallet]'); await p.waitForSelector('#dlg .cs-group');
   assert((await p.innerText('#dlg .cs-group')).toLowerCase().includes('investment account')); await p.keyboard.press('Escape'); await p.click('[data-act=close]');

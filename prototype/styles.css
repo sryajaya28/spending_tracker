@@ -775,3 +775,5 @@ dialog { overscroll-behavior: contain; } .cs-scroll, .dlg { overscroll-behavior:
 .day-body { background: #eceef5; border-radius: 14px; border-left: 0; padding: 4px 6px; margin: 4px 0 10px 8px; }
 :root[data-theme="dark"] .day-body { background: #272566; }
 .day-body .row:last-child { border-bottom: 0; }
+/* a day row shows no highlight when pressed, hovered or open: the chevron shows the state */
+.day-row:hover, .day-row:active, .day-row:focus, .day-row:focus-visible { background: none; }

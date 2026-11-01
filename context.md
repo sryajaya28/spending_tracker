@@ -288,6 +288,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Day rows on Transactions have no hover/pressed/focus background (it stayed highlighted after a tap on touch screens); the chevron shows open/closed.
 - 2026-11-01: Transaction amounts have one colour for income and expense (the +/− sign tells them apart); the green income colour on `.amt.income` was removed, including the day totals.
 - 2026-11-01: The open part of a day on Transactions (`.day-body`) has its own rounded block background: light grey (#eceef5) in light mode, lighter indigo (#272566) in dark mode, so it separates from the day rows.
 - 2026-11-01: **Modal scroll lock**: while a modal is open the page behind cannot scroll (`lockScroll` pins the body with `body.scroll-locked` and a negative top, `unlockScroll` restores the scroll position on the dialog's `close` event; `overscroll-behavior: contain` on dialogs and dropdown lists). Needed on iPhone, where `overflow:hidden` alone still lets the background move. e2e `modalscroll`.

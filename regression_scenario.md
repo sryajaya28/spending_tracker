@@ -145,7 +145,7 @@ Automated: `coin`.
 | BU-02 | Add a category budget | Appears under By category; sub-category spending rolls into its parent. |
 | BU-03 | Change a budget amount | Applies from the selected period onward; earlier periods keep the old amount. Editing an existing category + period updates in place (no duplicate). |
 | BU-04 | Overspend | Status turns to Almost there (80%+) then Over budget; counts update. |
-| BU-05 | Special occasion budget | Create with a name, amount, optional dates; "+ Expense" opens the form preselected; "Expenses" lists its transactions; the row shows only the date range. |
+| BU-05 | Special occasion budget | Create with a name, amount, optional dates; "+ Expense" opens the form preselected; "Details" (was "Expenses") opens Transactions filtered to its expenses; the row shows only the date range. |
 | BU-06 | Occasions per period | An occasion shows only in the period(s) its dates cover (or that contain its tagged expenses); undated ones show always. |
 | BU-07 | Occasion spending | Occasion expenses still count in the monthly budgets; future-dated ones do not count yet. |
 | BU-08 | Archive / delete an occasion | Archived: moves to the archive; delete removes it and untags its expenses. |

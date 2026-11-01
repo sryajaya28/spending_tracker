@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Investment Account": "Akun Investasi",
  "Info": "Info",
  "Prices and exchange rates update every 6 hours and can be delayed. Values are estimates, not financial advice.": "Harga dan kurs diperbarui setiap 6 jam dan bisa tertunda. Nilai hanyalah perkiraan, bukan saran keuangan.",
  "Last refreshed {time}.": "Terakhir diperbarui {time}.",

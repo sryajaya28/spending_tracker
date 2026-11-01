@@ -120,14 +120,14 @@ Automated: `recurring`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| CN-01 | Add income, Account = "USDT · account · balance" | Amount is entered in USDT; the holding rises; the transaction shows in USD (1 USDT = 1 USD), counts as income and in Money Flow; no fiat account changes. |
-| CN-02 | Add income with no USDT yet | The Account list offers "USDT · <investment account>" (income only); saving creates the holding (and a "Crypto" investment account if none). |
+| CN-01 | Add income, Account = "Binance (USDT)" (same `Name (CUR)` pattern as savings accounts, under the group heading **Investment Account**) | Amount is entered in USDT; the holding rises; the transaction shows in USD (1 USDT = 1 USD), counts as income and in Money Flow; no fiat account changes. |
+| CN-02 | Add income with no USDT yet | The Account list offers "<investment account> (USDT)" / "(USDC)" under **Investment Account** (income only); saving creates the holding (and a "Crypto" investment account if none). |
 | CN-03 | Expense paid from USDT | Holding decreases; counts as spending, budgets and categories. More than you hold: refused. |
 | CN-04 | Expense type | The "new USDT" choices disappear; only held coins are listed. |
 | CN-05 | Edit the amount | The holding changes by the difference. |
 | CN-06 | Delete | The coins come back / go away; blocked if the income was already spent. |
 | CN-07 | Income dated in the future | Holding, net worth and balances do not change until the date; the coins are not spendable before then. |
-| CN-08 | Reload / second device | Same balances; transactions list shows "USDT · account". |
+| CN-08 | Reload / second device | Same balances; transactions list shows "account (USDT)". |
 
 Automated: `coin`.
 
@@ -304,5 +304,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: OV-01 hero percentage is now the balance change %, not the saved-income %.
 - 2026-11-01: OV-05 rewritten: Overview Budgets card shows only the overall budget, button renamed Details, whole card opens Budgets.
 - 2026-11-01: UI-06 notes the tighter space under the bottom bar labels.
+- 2026-11-01: CN-01/02/08 use the `Investment Account` group and `Name (USDT)` format.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

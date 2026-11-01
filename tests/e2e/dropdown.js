@@ -27,7 +27,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0); assert.equal(await p.$eval('#dlg select[name=wallet]', (s) => s.selectedIndex), 0);
   // income shows the USDT choices in their own group heading
   await p.click('#dlg label:has(input[name=type][value=income])'); await tap('#dlg select[name=wallet]'); await p.waitForSelector('#dlg .cs-group');
-  assert((await p.innerText('#dlg .cs-group')).toLowerCase().includes('usdt')); await p.keyboard.press('Escape'); await p.click('[data-act=close]');
+  assert((await p.innerText('#dlg .cs-group')).toLowerCase().includes('investment account')); await p.keyboard.press('Escape'); await p.click('[data-act=close]');
   // outside a dialog: the month picker changes the period
   await p.evaluate(() => { location.hash = '#/budgets'; render(); }); await p.waitForSelector('select[data-bind=month]');
   await tap('select[data-bind=month]'); await p.waitForSelector('.cs-pop'); const before = await p.evaluate(() => state.ui.month);

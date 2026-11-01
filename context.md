@@ -53,7 +53,7 @@ infrastructure names, see section 8).
   `#/transactions/YYYY-MM-DD` with that day's detailed rows (edit/delete, `+ Add` prefilled with the date). Expense/income with categories + one level of sub-categories, add a category inline from the form,
   AI-style auto-tagging (mock: history match, null when unsure), search/filter, special-occasion tag.
 - **USDT/USDC as a wallet for income and expenses:** the Wallet field of the add-transaction dialog also lists stablecoin holdings
-  ("USDT · account · balance"; for income also "new" USDT/USDC in any investment account, created on save). Income received there raises the coin quantity; an expense paid from it lowers it (refused if you hold less).
+  ("Binance (USDT)" under the heading "Investment Account"; for income also "new" USDT/USDC in any investment account, created on save). Income received there raises the coin quantity; an expense paid from it lowers it (refused if you hold less).
   Stored as a holding trade with `kind` income/expense (holding_events.note) linked to a normal income/expense transaction with
   `wallet_id` null, currency USD, 1 coin = 1 USD (amount in cents). It counts in income/spending, budgets, categories and net
   worth (via the holding); it does not touch any wallet balance. Edit changes the trade too; delete reverses it (`removeTrade`).
@@ -286,6 +286,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: USDT/USDC accounts are listed like savings accounts, `Binance (USDT)`, under a group headed "Investment Account" (dialog, filter and transaction rows).
 
 - 2026-11-01: Phone bottom bar: less space under the labels (padding 6px top, 2px + 40% of the home-indicator inset at the bottom, was 8px + 100%); page bottom padding reduced to match.
 

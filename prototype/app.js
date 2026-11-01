@@ -747,7 +747,7 @@ function viewTransactions() {
     <div class="filters scroll-row">${monthSelect(true)}
       <select data-filter="cat" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
       ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))}</option>`).join('')}</select></div>
+      <select data-filter="wallet" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}</select></div>
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 
@@ -1005,8 +1005,8 @@ function transferDetail(gid) {
 /* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
    linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
 const coinOf = (t) => (t && !t.wallet_id && t.trade_id ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
-const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; const h = coinOf(t); return h ? `${assetInfo(h.symbol).symbol} · ${accountName(h.account_id)}` : ''; };
-const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))} · ${qtyFmt(heldNow(h))}</option>`;
+const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; const h = coinOf(t); return h ? `${accountName(h.account_id)} (${assetInfo(h.symbol).symbol})` : ''; };
+const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`;
 function recordCoinTxn(h, { type, quantity, date, note, category_id, category_source, ai_confidence, occasion_id, id, tradeId }) {
   const tid = tradeId || uid(), side = type === 'income' ? 'buy' : 'sell', amount_minor = Math.max(1, Math.round(quantity * 100));
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
@@ -1024,7 +1024,7 @@ function acctOptions(type, selected) {
   const fresh = type === 'income' ? ['USDT', 'USDC'].flatMap((sym) => (accts.length ? accts : [{ id: '', name: '' }]).filter((a) => !D().holdings.some((h) => h.account_id === a.id && h.symbol === sym)).map((a) => ({ sym, a }))) : [];
   const sel = (v) => (v === selected ? 'selected' : '');
   return ws.map((w) => `<option value="${w.id}" ${sel(w.id)}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')
-    + (coins.length || fresh.length ? `<optgroup label="${__('USDT / USDC in an investment account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(assetInfo(h.symbol).symbol)} · ${esc(accountName(h.account_id))} · ${qtyFmt(heldNow(h))}</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${sym} · ${a.name ? esc(a.name) : __('Crypto')}</option>`).join('')}</optgroup>` : '');
+    + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '');
 }
 /* the amount's unit and step follow the chosen account */
 function syncTxnUnit(form) {

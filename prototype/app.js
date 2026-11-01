@@ -1926,6 +1926,10 @@ function applySetting(el) {
   else if (k === 'currency' && el.value !== p.currency) {
     // only the reporting currency changes; wallets and transactions keep their own currency
     const from = p.currency, to = el.value;
+    if (state.real) {   // sample data: rebuild the sample for that country (local banks, merchants, brokers); your own data is untouched
+      const d = seed(p.name || 'You', to); d.profile = { ...p, currency: to }; d.livePrices = D().livePrices || {};
+      state.data = d; state.ui.pf = null; Object.assign(state.ui, { cat: '', wallet: '', occ: '', q: '' }); toast(__('Reporting currency changed to {cur}', { cur: to })); render(); return;
+    }
     D().budgets.forEach((b) => { b.amount_minor = convert(b.amount_minor, from, to); b.currency = to; });
     p.currency = to; state.ui.pf = null; toast(__('Reporting currency changed to {cur}', { cur: to }));
   }

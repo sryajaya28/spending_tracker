@@ -915,20 +915,25 @@ function viewAuth() {
     <p class="muted" style="text-align:center">${__('New here?')} ${authLink('signup', 'Create an account')}</p></form>`;
   return `<div class="onboard">${body}<p class="legal-links"><a href="privacy.html">${__('Privacy Policy')}</a> · <a href="terms.html">${__('Terms of Service')}</a></p></div>`;
 }
-const viewSplash = (msg) => `<div class="onboard"><div class="card" role="status"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="muted">${esc(__(msg))}</p></div></div>`;
+/* loading screen: the logo with an orbiting coin, a soft pulse and a running bar; the line under it changes every few seconds (pure CSS, no timers) */
+const viewSplash = (msg) => `<div class="onboard"><div class="splash" role="status" aria-live="polite" aria-label="${esc(__(msg))}">
+  <div class="splash-mark"><span class="ring"></span><span class="ring r2"></span><img src="icon.svg" alt=""><i class="orbit"><b></b></i></div>
+  <div class="splash-name">Stiver</div>
+  <div class="splash-msg"><span>${esc(__(msg))}</span><span>${__('Counting your coins…')}</span><span>${__('Lining up your budgets…')}</span><span>${__('Almost there…')}</span></div>
+  <div class="splash-bar"><i></i></div></div></div>`;
 
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
   const a = state.auth;
-  if (a.status === 'loading') { app.innerHTML = viewSplash('Loading…'); return; }
+  if (a.status === 'loading') { app.innerHTML = viewSplash('Waking up Stiver…'); return; }
   if (a.status === 'out' && a.view === 'landing') { app.innerHTML = viewLanding(); return; }
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
   if (!D()) {
     app.innerHTML = a.loadError
       ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="auth-err" role="alert">${__("Couldn't load your data: {error}", { error: esc(a.loadError) })}</p><button class="btn lg" data-act="retry-load">${__('Try again')}</button><button class="btn secondary lg" data-act="signout">${__('Sign out')}</button></div></div>`
-      : viewSplash('Loading your data…');
+      : viewSplash('Fetching your finances…');
     return;
   }
   if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); }   // a new start day (or switching demo/real data) re-selects the current period

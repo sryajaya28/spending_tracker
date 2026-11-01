@@ -1,6 +1,11 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Fetching your finances…": "Mengambil data keuangan Anda…",
+ "Waking up Stiver…": "Membangunkan Stiver…",
+ "Almost there…": "Hampir selesai…",
+ "Lining up your budgets…": "Merapikan anggaran Anda…",
+ "Counting your coins…": "Menghitung koin Anda…",
  "Category not found": "Kategori tidak ditemukan",
  "Add new category": "Tambah kategori baru",
  "Investment Account": "Akun Investasi",

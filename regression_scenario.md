@@ -50,6 +50,7 @@ Automated: `run`, `sample`, `confirm`, `csp`, `landshot`.
 | UI-08 | Open any add/edit dialog | The phone keyboard does **not** open until a field is tapped. |
 | UI-09 | Pages have no helper subtitles under titles | Titles stand alone; spacing is compact. On a phone the title and the profile icon sit a little below the status bar (not touching it), in the installed app too **(manual)**. |
 | UI-11 | Open any dropdown (account, category, month, language, currency, filters, asset type, repeat...) on phone and desktop | The list opens as an **app-styled popover** (rounded, themed, current choice ticked, group headings for optgroups), not the OS picker. It stays on screen (flips upward near the bottom), works inside dialogs, in light and dark. Tap an option: the field updates and the app reacts (e.g. the amount unit follows the account). Tapping outside or Esc closes it (Esc does not close the dialog); Arrow keys, Enter, Home/End and typing jump work; tapping the field again closes it. |
+| UI-12 | Loading screens (opening the app, signing in, loading your data; throttle the network to see them **(manual)**) | The Stiver logo floats with a pulsing ring and an orbiting yellow coin, a short bar runs under it, and the line under the name changes every ~2.4 s ("Waking up Stiver…" / "Fetching your finances…", "Counting your coins…", "Lining up your budgets…", "Almost there…"). Works in light and dark and in Bahasa Indonesia; with reduced-motion enabled nothing animates and only the first line shows. |
 | UI-10 | A very long name (account, category, note) | Wraps or truncates without breaking the layout. |
 
 Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
@@ -316,5 +317,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: TX-07c now checks that no native picker reopens after choosing (focus is no longer returned to the select after a tap).
 - 2026-11-01: TX-07b: tapping the search box must not close the list (phone keyboard resizes the page).
 - 2026-11-01: TX-07b: "Category not found" note above the Add new category button when the search has no match.
+- 2026-11-01: Added UI-12 (the new loading screen).
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

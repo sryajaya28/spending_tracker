@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: New loading screen (`viewSplash`, `.splash*` CSS): floating logo with a pulsing ring and an orbiting coin, a running bar, and a line that rotates through four
+  friendly messages with pure CSS (no timers); respects `prefers-reduced-motion`; themed for dark mode.
+
 - 2026-11-01: Searchable dropdowns show a "not found" line above the add button when nothing matches (`data-empty` on the select, `.cs-empty`); set to "Category not found" on the category selects.
 
 - 2026-11-01: Fix: tapping the search box inside a dropdown list closed the list (the phone keyboard fires resize/scroll, which `dropdown.js` treated as "page moved").

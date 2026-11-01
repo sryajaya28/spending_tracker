@@ -772,8 +772,8 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 body.scroll-locked { position: fixed; top: var(--lock-top, 0); left: 0; right: 0; width: 100%; overflow: hidden; }
 dialog { overscroll-behavior: contain; } .cs-scroll, .dlg { overscroll-behavior: contain; }
 /* the open part of a day reads as its own block: a little greyer in light mode, a little lighter in dark mode */
-.day-body { background: #eceef5; border-radius: 14px; border-left: 0; padding: 4px 6px; margin: 4px 0 10px 8px; }
-:root[data-theme="dark"] .day-body { background: #272566; }
+.day-body { background: #f2f3f9; border-radius: 14px; border-left: 0; padding: 4px 6px; margin: 4px 0 10px 8px; }
+:root[data-theme="dark"] .day-body { background: #212059; }
 .day-body .row:last-child { border-bottom: 0; }
 /* a day row shows no highlight when pressed, hovered or open: the chevron shows the state */
 .day-row:hover, .day-row:active, .day-row:focus, .day-row:focus-visible { background: none; }

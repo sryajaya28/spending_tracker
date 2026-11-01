@@ -189,7 +189,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| IV-01 | + Account (investment) | Name; appears with its holdings and total. A holding row reads `Tether [Stablecoin]` with a small type tag, and below it `0 USDT × IDR 18,139` (a space on both sides of the ×); the tag does not crowd the line under it. |
+| IV-01 | + Account (investment) | Name; appears with its holdings and total. A holding row has three tidy lines: the asset name (one line, cut with … if long), `12,000 USDT`, and `@ IDR 18,139`; the value and the share % sit on the right. Tapping a row opens it **without a blue focus border**. |
 | IV-02 | Add asset, picker | Account select, then a **type dropdown** (All, Crypto, US stocks & ETFs, Indonesia (IDX), Commodities) beside the search box; starts on All each time. |
 | IV-03 | Search a US stock / crypto | Needs the Finnhub key on the server; shows live price; built-in assets work without it. |
 | IV-04 | Search an IDX stock (BBCA) **(manual)** | Result "BBCA / Bank Central Asia"; a price appears (rupiah converted to USD). If Yahoo is unreachable: "price unavailable" and a typed price field. |
@@ -337,5 +337,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: OV-01: Total Balance = savings + investments, with an (i) tooltip.
 - 2026-11-01: ST-07c: no DBS SG, adds a housing loan, sample period starts on the 25th.
 - 2026-11-01: TX-02 (count only), UI-13 (pages open at the top).
+- 2026-11-01: IV-01: tidier holding rows, no focus ring on tap.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

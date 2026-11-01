@@ -528,8 +528,9 @@ function bindValue(months, usd, vc) {
 
 function holdingRow(h, vc, accTotal) {
   const info = assetInfo(h.symbol), k = lastMonths(6)[5], price = info.usd(k), value = heldNow(h) * price;
-  return `<div class="row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
-    <div><div class="title">${esc(info.name)} <span class="badge sm">${esc(typeLabel(info.type))}</span></div><div class="sub num">${qtyFmt(heldNow(h))} ${esc(info.symbol)} × ${money(usdToMinor(price, vc), vc)}</div></div>
+  // name on top, then "quantity SYMBOL", then the unit price; value and share on the right
+  return `<div class="row holding-row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
+    <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h))} ${esc(info.symbol)}</div><div class="sub num">@ ${money(usdToMinor(price, vc), vc)}</div></div>
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${accTotal ? Math.round((value / accTotal) * 100) : 0}%</div></div></div>`;
 }
 

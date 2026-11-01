@@ -287,6 +287,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Holding rows: name, `qty SYMBOL` and `@ price` on three clean lines (no type badge or type text); no focus outline on rows/buttons after a tap (`outline: none`).
+
 - 2026-11-01: Activity day rows show only the weekday and the transaction count (no income/spent text); every route change scrolls to the top (`hashchange` handler).
 
 - 2026-11-01: Sample data: removed the monthly allowance for parents (transactions, recurring rule and the Parents category); 5 recurring rules remain.

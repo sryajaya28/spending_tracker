@@ -34,7 +34,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(back.a.yh === 'BBCA.JK' && back.a.symbol === 'BBCA' && back.a.type === 'stock' && back.g.yh === 'GC=F' && back.g.type === 'commodity' && Math.abs(back.g.mult - 0.0321507) < 1e-9, JSON.stringify(back));
   // shows on the Investment tab with the right unit and value (gold: 10 g x $100 = $1,000)
   await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); const t = await p.innerText('main');
-  assert(t.includes('Gold (per gram)') && t.includes('Commodity') && t.includes('Bank Central Asia'), t.slice(0, 400));
+  assert(t.includes('Gold (per gram)') && t.includes('Bank Central Asia'), t.slice(0, 400));
   assert(!t.includes('update every 6 hours') && !t.includes('Refresh prices') && !t.includes('Growth counts'), 'no description line; the text lives in the tooltip');
   await p.click('.info-btn'); assert((await p.innerText('.info-pop')).includes('update every 6 hours'), 'tooltip text'); await p.click('h1'); assert.equal(await p.$$eval('.info-wrap.open', (e) => e.length), 0, 'tapping elsewhere closes it');
   assert.equal(await p.evaluate(() => Math.round(holdingUSD(D().holdings.find((h) => h.symbol === 'XAUG'), currentPeriod()))), 1000);

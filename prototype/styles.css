@@ -656,3 +656,16 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .hero .info-pop { top: -4px; left: 26px; width: max-content; max-width: 70vw; white-space: nowrap; background: #1e1b4b; border: 1px solid rgba(255, 255, 255, .25); }
 .hero .label .info-wrap, .hero .label .info-wrap .info-pop { padding: 0; background: none; font-size: 12px; border-radius: 0; }
 .hero .label .info-wrap .info-pop { padding: 6px 10px; background: #1e1b4b; border-radius: 10px; left: 28px; top: -3px; }
+
+/* holdings: tidy three-line description, one-line name; no browser focus ring after a tap */
+.holding-row .h-main { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.holding-row .h-name { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.holding-row .sub { font-size: 13px; }
+.holding-row .amt { align-self: start; padding-top: 2px; }
+.row, .row:focus, .row:focus-visible, .brow:focus, .brow:focus-visible, [data-act]:focus, [data-act]:focus-visible { outline: none; }
+.row { -webkit-tap-highlight-color: transparent; }
+.holding-row { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; }
+.holding-row .tile { width: 40px; height: 40px; font-size: 10px; }
+.holding-row .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px; }
+.holding-row .amt { font-size: 14.5px; }
+.holding-row .amt .sub { font-size: 12.5px; }

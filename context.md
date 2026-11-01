@@ -287,6 +287,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Transaction rows show just the category (sub-category) name, not "Parent › Child", to keep the detail line short (`catPath` is still used elsewhere).
+
 - 2026-11-01: The sample-data banner (`.demo-bar`) is sticky (top 8px, compact on phones) so the "Back to my data" button stays reachable even when the page cannot be scrolled
   back to the top in a phone browser. e2e `sample` checks it.
 

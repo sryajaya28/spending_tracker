@@ -584,7 +584,18 @@ function loanCard(l, vc, kind = 'loan') {
 
 /* an (i) button with a small popover: tap/click toggles it, hover shows it on desktop, tapping elsewhere closes it */
 const infoTip = (id, text) => `<span class="info-wrap${state.ui.infoOpen === id ? ' open' : ''}"><button type="button" class="info-btn" data-act="toggle-info" data-id="${id}" aria-expanded="${state.ui.infoOpen === id}" aria-label="${__('Info')}">i</button><span class="info-pop" role="tooltip">${esc(text)}</span></span>`;
+/* the full history page of one asset: summary, Buy/Sell (Deposit/Withdraw for cash), and every trade, transfer and income/expense in coins */
+function viewAsset(h) {
+  const info = assetInfo(h.symbol), acc = accountName(h.account_id);
+  return `${topbar('Portfolio', esc(info.name) + ' · ' + esc(acc))}
+  <section class="card"><div class="card-head"><div><a class="back-link" href="#/portfolio">← ${__('Back to Portfolio')}</a><h2>${esc(info.name)}</h2></div>
+    <div class="tools"><button class="btn secondary" data-act="edit-holding" data-id="${h.id}">${__('Edit')}</button></div></div>
+    ${holdingSummary(h, info, vcOf(h))}
+    <div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${info.cash ? __('Deposit') : __('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${info.cash ? __('Withdraw') : __('Sell')}</button></div></section>
+  <section class="card"><div class="card-head"><h2>${__('History')}</h2></div>${tradeList(h)}</section>`;
+}
 function viewPortfolio() {
+  const hid = routeArg(), ah = hid && D().holdings.find((x) => x.id === hid); if (ah) return viewAsset(ah);
   const months = lastMonths(6), vc = pf(), base = cur(), tab = state.ui.pfTab || 'savings';
   const S = months.map(savingsUSD), I = months.map((k) => portfolioUSD(k)), L = months.map(loanUSD), LT = months.map(lentUSD);
   const N = months.map((_, i) => S[i] + I[i] + LT[i] - L[i]);
@@ -627,7 +638,7 @@ function viewPortfolio() {
       ${growth}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
-        return `<section class="card"><div class="card-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
+        return `<section class="card"><div class="card-head acct-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
           <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">${__('Edit')}</button><button class="btn secondary" data-act="add-holding" data-account="${a.id}" data-type="cash">${__('+ Cash')}</button><button class="btn" data-act="add-holding" data-account="${a.id}">${__('+ Asset')}</button></div></div>
           <div class="list">${hs.map((h) => holdingRow(h, vc, total)).join('') || ('<div class="empty">' + __('No assets yet. Add one to start tracking.') + '</div>')}</div></section>`;
       }).join('')}</div>`;
@@ -1212,7 +1223,7 @@ function holdingDialog(h, accId, opts = {}) {
     <div class="custom-fields" hidden><div class="two"><label class="field">${__('Symbol')}<input name="symbol" maxlength="10" placeholder="${__('e.g. GOLD')}"></label><label class="field">${__('Name')}<input name="cname" maxlength="40" placeholder="${__('Name')}"></label></div>
       <div class="two"><label class="field">${__('Type')}<select name="ctype"><option value="crypto">${__('Crypto')}</option><option value="stock">${__('Stock')}</option><option value="etf">${__('ETF')}</option><option value="manual">${__('Other')}</option></select></label><label class="field">${__('Price (USD)')}<input name="cprice" type="number" min="0" step="any"></label></div></div>`}
     ${h ? holdingSummary(h, info, vcOf(h)) + `<div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${info.cash ? __('Deposit') : __('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${info.cash ? __('Withdraw') : __('Sell')}</button></div>
-      ${tradeList(h)}
+      <button type="button" class="btn secondary wide" data-act="view-history" data-id="${h.id}">${__('View history')}</button>
       <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
     <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
@@ -1309,11 +1320,11 @@ function removeTrade(h, tr) {
 }
 
 function tradeList(h) {
-  const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), sym = assetInfo(h.symbol).symbol, sym2 = assetInfo(h.symbol).type;
+  const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)), sym = assetInfo(h.symbol).symbol, sym2 = assetInfo(h.symbol).type;
   if (!trades.length) return ('<p class="muted" style="font-size:13px">' + (sym2 === 'cash' ? __('No deposits or withdrawals yet.') : __('No buys or sells recorded yet.')) + '</p>');
   return `<div class="list">${trades.map((tr) => {
     const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('account'))}`;
-    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
+    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
   }).join('')}</div>`;
 }
 
@@ -1475,11 +1486,12 @@ document.addEventListener('click', (e) => {
   else if (act === 'archive-account') { find(D().investments).archived = true; save(); close(); render(); toast('Account archived'); }
   else if (act === 'add-holding') { holdingDialog(null, el.dataset.account, el.dataset.type === 'cash' ? { pickType: 'cash' } : {}); }
   else if (act === 'edit-holding') holdingDialog(find(D().holdings));
+  else if (act === 'view-history') { close(); location.hash = '#/portfolio/' + id; }
   else if (act === 'trade') tradeDialog(find(D().holdings), el.dataset.side);
   else if (act === 'delete-trade') {
     const h = find(D().holdings), tr = h.trades.find((x) => x.id === el.dataset.tid);
     if (!removeTrade(h, tr)) { toast("Can't remove this: it would leave a negative holding (part of it was sold or spent since)"); return; }
-    save(); render(); holdingDialog(h); toast('Trade removed and balances restored');
+    save(); render(); if (routeArg() !== h.id) holdingDialog(h); toast('Trade removed and balances restored');
   }
   else if (act === 'delete-holding') { D().holdings = D().holdings.filter((x) => x.id !== id); save(); close(); render(); toast('Asset removed'); }
   else if (act === 'breakdown') breakdownDialog(id);

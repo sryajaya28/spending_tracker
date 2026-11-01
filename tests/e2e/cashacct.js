@@ -36,6 +36,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const opts = await p.$$eval('select[name=fund] option', (o) => o.map((x) => x.textContent)); assert(opts.some((x) => /Ajaib \(IDR\)/.test(x)), JSON.stringify(opts));
   await p.selectOption('select[name=fund]', { label: opts.find((x) => /Ajaib \(IDR\)/.test(x)) }); await p.fill('input[name=fundamount]', '6000000'); await p.click('#dlg button[type=submit]'); await settle();
   assert.equal(await cashQ(), 19000000, 'the cash balance paid'); assert.equal(await p.evaluate(() => D().holdings.find((x) => x.symbol === 'VOO').quantity), 2); assert.equal(await bank(), 75000000, 'the bank account was not touched');
+  // View history: the asset dialog has a button that opens a full page with every deposit/withdrawal
+  await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'CASH:IDR'); holdingDialog(h); }); await p.waitForSelector('#dlg [data-act=view-history]');
+  assert(!(await p.isVisible('#dlg .pay-row')), 'the dialog no longer lists trades'); await p.click('#dlg [data-act=view-history]');
+  await p.waitForSelector('.back-link'); assert(/#\/portfolio\/.+/.test(await p.evaluate(() => location.hash)));
+  let hp = await p.innerText('.main'); assert(hp.includes('Back to Portfolio') && hp.includes('History') && hp.includes('Deposited') && hp.includes('Deposit') && hp.includes('Withdraw'), hp.slice(0, 300));
+  const nTr = await p.$$eval('.pay-row', (r) => r.length); assert(nTr >= 2, 'all trades listed: ' + nTr);
+  await p.click('.main [data-act=trade][data-side=buy]'); await p.waitForSelector('form[data-form=trade]'); await p.click('#dlg [data-act=close]');
+  await p.click('.back-link'); await p.waitForSelector('.holding-row');
   // 4. withdraw part of it back to the bank
   await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'CASH:IDR'); tradeDialog(h, 'sell'); });
   await p.fill('input[name=quantity]', '4000000'); await p.fill('input[name=amount]', '4000000'); await p.click('#dlg button[type=submit]'); await settle();

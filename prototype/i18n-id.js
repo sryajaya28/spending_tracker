@@ -1,6 +1,9 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "View history": "Lihat riwayat",
+ "Back to Portfolio": "Kembali ke Portofolio",
+ "History": "Riwayat",
  "+ Cash": "+ Kas",
  "Currency not found": "Mata uang tidak ditemukan",
  "Indonesian rupiah": "Rupiah Indonesia",

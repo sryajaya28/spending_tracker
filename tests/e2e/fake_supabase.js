@@ -22,6 +22,7 @@
     eq(k, v) { this.f.push((r) => r[k] === v); this.fl = (this.fl || []).concat([[k, v]]); return this; }
     in(k, vs) { this.f.push((r) => vs.includes(r[k])); this.fl = (this.fl || []).concat([[k, vs]]); return this; }
     upsert(rows, o) { this.op = 'upsert'; this.rows = rows; this.o = o || {}; return this; }
+    insert(row) { this.op = 'insert'; this.row = row; return this; }
     update(v) { this.op = 'update'; this.v = v; return this; }
     delete() { this.op = 'delete'; return this; }
     then(res, rej) { return Promise.resolve().then(() => this.run()).then(res, rej); }
@@ -38,6 +39,9 @@
         log.push({ op: 'upsert', table: t, rows: JSON.parse(JSON.stringify(this.rows)), onConflict: this.o.onConflict });
         this.rows.forEach((n) => { const i = rows.findIndex((r) => keyOf(t, r) === keyOf(t, n)); if (i >= 0) Object.assign(rows[i], n); else rows.push(JSON.parse(JSON.stringify(n))); });
         return { data: null, error: null };
+      }
+      if (this.op === 'insert') {   // the database fills in the sender, like the real trigger
+        const row = { ...JSON.parse(JSON.stringify(this.row)), user_id: uid, email: (session && session.user.email) || null, status: 'new', created_at: new Date().toISOString() }; log.push({ op: 'insert', table: t, row }); rows.push(row); return { data: null, error: null };
       }
       if (this.op === 'update') {
         log.push({ op: 'update', table: t, values: this.v, where: this.fl });
@@ -60,6 +64,7 @@
   };
   window.supabase = { createClient: () => ({
     from: (t) => new Q(t),
+    storage: { from: (bucket) => ({ upload: async (path, file, o) => { if (window.__failUpload) return { data: null, error: { message: 'upload failed' } }; (window.__uploads = window.__uploads || []).push({ bucket, path, size: file.size, type: o && o.contentType }); return { data: { path }, error: null }; } }) },
     rpc,
     auth: {
       onAuthStateChange: (f) => { cb = f; setTimeout(() => f('INITIAL_SESSION', session), 0); return { data: { subscription: {} } }; },

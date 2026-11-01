@@ -251,6 +251,18 @@ const Cloud = (() => {
     reset: (email, captchaToken) => client.auth.resetPasswordForEmail(email, { redirectTo: appUrl(), captchaToken }),
     setPassword: (password) => client.auth.updateUser({ password }),
     signOut: (scope) => client.auth.signOut({ scope: scope || 'local' }),
+    /* bug reports and feedback: screenshots first (private bucket, one folder per user and report), then the row; the database adds the user id and email */
+    async submitSupport({ type, message, files, context }) {
+      if (!userId) throw new Error('Sign in to send a report');
+      const id = crypto.randomUUID(), paths = [], ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+      for (const [i, f] of files.entries()) {
+        const path = `${userId}/${id}/${i + 1}.${ext[f.type] || 'jpg'}`;
+        must(await client.storage.from('support-attachments').upload(path, f, { contentType: f.type, upsert: false }));
+        paths.push(path);
+      }
+      must(await client.from('support_reports').insert({ id, type, message, attachments: paths, context }));
+      return id;
+    },
     /* hand this signed-in session to the installed app: a short single-use code (15 minutes), claimed once on the other side */
     async createHandoff() {
       const session = must(await client.auth.getSession()).session; if (!session) return null;

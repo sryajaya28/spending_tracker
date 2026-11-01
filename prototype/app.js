@@ -65,6 +65,7 @@ const lastMonths = (n) => { const c = currentPeriod(), t = new Date(+c.slice(0, 
 
 /* ---------- icons ---------- */
 const ICON = {
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/><path d="M9 10h6M9 13.5h4"/>',
   home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
   swap: '<path d="M7 4v16M7 4L3 8M7 4l4 4M17 20V4M17 20l-4-4M17 20l4-4"/>',
@@ -769,7 +770,50 @@ function topbar(title, sub) {
   const greet = title ? __(title) : hour < 12 ? __('Good morning, {name}', { name: first }) : hour < 18 ? __('Good afternoon, {name}', { name: first }) : __('Good evening, {name}', { name: first });
   return `<header class="topbar"><div><h1>${greet}</h1></div>
     <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="${__('Search transactions')}" aria-label="${__('Search transactions')}"></label>
+    <button type="button" class="icon-btn support-btn" data-act="support" aria-label="${__('Report a bug or send feedback')}" title="${__('Report a bug or send feedback')}">${icon('chat')}</button>
     <a class="profile" href="#/settings" aria-label="${__('Settings')}"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></a></div></header>`;
+}
+
+/* ---------- support: report a bug or suggest an improvement ----------
+   Up to 250 characters and up to 5 screenshots of at most 1 MB each (bigger photos are shrunk in the browser). The report goes to the
+   support_reports table with a `type` of bug or feedback; the database adds the user id and email. */
+const SUPPORT_MAX_FILES = 5, SUPPORT_MAX_BYTES = 1048576, SUPPORT_MAX_CHARS = 250;
+let supportShots = [];   // [{ blob, name, url (data URL for the thumbnail) }]
+const blobToDataUrl = (b) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+async function shrinkImage(file) {
+  if (file.size <= SUPPORT_MAX_BYTES && /^image\/(png|jpeg|webp|gif)$/.test(file.type)) return file;
+  const bmp = await createImageBitmap(file);   // throws for something that is not a readable image
+  let scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  for (let i = 0; i < 6; i++) {
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(bmp.width * scale)); c.height = Math.max(1, Math.round(bmp.height * scale)); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    for (const q of [0.85, 0.7, 0.55]) { const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', q)); if (blob && blob.size <= SUPPORT_MAX_BYTES) return blob; }
+    scale *= 0.75;
+  }
+  throw new Error('too big');
+}
+function supportShotsHtml() {
+  const thumbs = supportShots.map((f, i) => `<div class="shot"><img src="${f.url}" alt="${esc(f.name)}"><button type="button" class="icon-x" data-act="shot-del" data-i="${i}" aria-label="${__('Remove image')}">×</button></div>`).join('');
+  const add = supportShots.length < SUPPORT_MAX_FILES ? `<label class="shot add"><input type="file" name="shots" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden><span>＋</span><small>${__('Add')}</small></label>` : '';
+  return `${thumbs}${add}`;
+}
+function supportDialog() {
+  supportShots = [];
+  open(`<h2>${__('Help & feedback')}</h2><p class="muted" style="margin-top:-10px">${__('Found a bug or have an idea? Tell us.')}</p>
+  <form data-form="support" style="display:contents">
+    <div class="seg"><label><input type="radio" name="type" value="bug" checked>${__('Report a bug')}</label><label><input type="radio" name="type" value="feedback">${__('Suggest an improvement')}</label></div>
+    <label class="field">${__('What happened, or what would you like to see?')}<textarea name="message" rows="5" maxlength="${SUPPORT_MAX_CHARS}" required placeholder="${__('Type here (max 250 characters)')}"></textarea><small class="muted support-count" id="support-count">0/${SUPPORT_MAX_CHARS}</small></label>
+    <div class="field">${__('Screenshots (optional)')}<div class="shots" id="shots">${supportShotsHtml()}</div><small class="muted">${__('Up to 5 images, 1 MB each. Larger photos are shrunk automatically.')}</small></div>
+    <p class="hint">${__('We include your account email and basic device info so we can follow up.')}</p>
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit" data-send>${__('Send')}</button></div></form>`);
+}
+async function addSupportShots(files) {
+  const room = SUPPORT_MAX_FILES - supportShots.length; let skipped = 0;
+  for (const f of [...files].slice(0, room)) {
+    try { const blob = await shrinkImage(f); supportShots.push({ blob, name: f.name || 'image', url: await blobToDataUrl(blob) }); } catch { skipped++; }
+  }
+  if (files.length > room) toast(__('Only {n} images can be attached', { n: SUPPORT_MAX_FILES }));
+  else if (skipped) toast(__('Some files could not be added (images only, up to 1 MB)'));
+  const box = $('#shots'); if (box) box.innerHTML = supportShotsHtml();
 }
 
 /* ---------- category spending trend: stacked bars per period ----------
@@ -1871,6 +1915,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
+  else if (act === 'support') supportDialog();
+  else if (act === 'shot-del') { supportShots.splice(+el.dataset.i, 1); $('#shots').innerHTML = supportShotsHtml(); }
   else if (act === 'trend-detail') trendDialog(el.dataset.k);
   else if (act === 'trend-go') { state.ui.month = el.dataset.k; state.ui.cat = el.dataset.cat || ''; state.ui.occ = ''; state.ui.q = ''; state.ui.wallet = ''; close(); location.hash = '#/transactions'; }
   else if (act === 'guide-tab') { state.ui.guide = el.dataset.k; $('#install-guide').innerHTML = installGuide(state.ui.guide); }
@@ -1891,6 +1937,7 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
+  if (t.matches('input[name=shots]')) { addSupportShots(t.files).then(() => { t.value = ''; }); return; }
   if (t.matches('[data-trend]')) { if (t.dataset.trend === 'n') { state.ui.trendN = +t.value; state.ui.trendCat = state.ui.trendCat || ''; } else state.ui.trendCat = t.value; $('#trend-chart').innerHTML = trendChart(); }
   else if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
@@ -1971,6 +2018,7 @@ async function pickAsset(a, form, quiet) {
 document.addEventListener('input', (e) => {
   if (e.target.form?.dataset.form === 'trade' && ['quantity', 'amount', 'price'].includes(e.target.name)) { syncTradePrice(e.target.form, e.target.name); tradeHint(e.target.form); }
   if (e.target.name === 'assetq') runAssetSearch();
+  if (e.target.name === 'message' && e.target.form?.dataset.form === 'support') $('#support-count').textContent = `${e.target.value.length}/${SUPPORT_MAX_CHARS}`;
   if (e.target.matches('[data-filter="dayq"]')) { state.ui.dayQ = e.target.value; const l = $('#day-list'); if (l) l.innerHTML = dayListHtml(routeArg()); }
   if (e.target.matches('[data-filter="q"]')) { state.ui.q = e.target.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
 });
@@ -2132,6 +2180,18 @@ document.addEventListener('submit', async (e) => {
     if (f.dataset.id) D().investments.find((a) => a.id === f.dataset.id).name = name;
     else D().investments.push({ id: uid(), name, archived: false });
     save(); close(); render(); toast('Account saved');
+  }
+  if (kind === 'support') {
+    const msg = (v.message || '').trim(), btn = $('[data-send]', f);
+    if (!msg) { toast(__('Write a few words first')); return; }
+    if (state.real || !Cloud.configured) { toast(__('Switch back to your own data to send a report')); return; }
+    btn.disabled = true; btn.textContent = __('Sending…');
+    try {
+      await Cloud.submitSupport({ type: v.type === 'feedback' ? 'feedback' : 'bug', message: msg.slice(0, SUPPORT_MAX_CHARS), files: supportShots.map((x) => x.blob),
+        context: { language: LANG, theme: THEME, route: location.hash.split('?')[0], viewport: `${innerWidth}x${innerHeight}`, standalone: IS_STANDALONE, currency: cur(), userAgent: navigator.userAgent.slice(0, 200) } });
+      supportShots = []; close(); toast(__('Thank you! We received your message.'));
+    } catch (err) { btn.disabled = false; btn.textContent = __('Send'); toast(__("Couldn't send: {error}", { error: err.message || 'network error' })); }
+    return;
   }
   if (kind === 'recedit') {
     const r = D().recurring.find((x) => x.id === f.dataset.id), sp = r.spec, amount = parseFloat(v.amount);

@@ -778,3 +778,12 @@ dialog { overscroll-behavior: contain; } .cs-scroll, .dlg { overscroll-behavior:
 /* a day row shows no highlight when pressed, hovered or open: the chevron shows the state */
 .day-row:hover, .day-row:active, .day-row:focus, .day-row:focus-visible { background: none; }
 .rec-actions { margin: 4px 0 6px; } .rec-actions .btn { width: 100%; justify-content: center; }
+/* support */
+.support-btn { width: 38px; height: 38px; } @media (min-width: 701px) { .support-btn { width: 44px; height: 44px; } }
+.field textarea { width: 100%; resize: vertical; min-height: 110px; font: inherit; }
+.support-count { display: block; text-align: right; margin-top: 4px; }
+.shots { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.shot { position: relative; width: 64px; height: 64px; border-radius: 12px; overflow: hidden; background: var(--soft); display: grid; place-items: center; }
+.shot img { width: 100%; height: 100%; object-fit: cover; }
+.shot .icon-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; border: 0; display: grid; place-items: center; padding: 0; }
+.shot.add { cursor: pointer; border: 1.5px dashed var(--line); color: var(--muted); align-content: center; } .shot.add span { font-size: 22px; line-height: 1; } .shot.add small { font-size: 11px; }

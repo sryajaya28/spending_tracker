@@ -235,7 +235,8 @@ function seed(name, cur) {
   // investment accounts, each holding several assets (quantities only; value comes from prices). IDX stocks and gold carry a fixed demo price in USD.
   const since = wsince;
   const stockbit = { id: uid(), name: 'Stockbit', archived: false }, ajaib = { id: uid(), name: 'Ajaib', archived: false };
-  const h = (a, symbol, quantity) => ({ id: uid(), account_id: a.id, symbol, quantity, since, trades: [] });
+  const OPEN = { 'BBCA.JK': [8400, 'IDR'], 'BBRI.JK': [4350, 'IDR'], 'BMRI.JK': [4700, 'IDR'], 'TLKM.JK': [3250, 'IDR'], 'ASII.JK': [4850, 'IDR'], VOO: [470, 'USD'], AAPL: [190, 'USD'], NVDA: [98, 'USD'], BTC: [52000, 'USD'], XAUG: [1480000, 'IDR'] };   // sample average prices
+  const h = (a, symbol, quantity) => ({ id: uid(), account_id: a.id, symbol, quantity, since, trades: [], ...(OPEN[symbol] ? { open_price: OPEN[symbol][0], ccy: OPEN[symbol][1] } : {}) });
   const idr = (v) => v / RATES.IDR;   // IDR price -> USD at the demo rate
   const customAssets = {
     'BBCA.JK': { symbol: 'BBCA', name: 'Bank Central Asia', type: 'stock', yh: 'BBCA.JK', mult: 1, price: idr(9000) }, 'BBRI.JK': { symbol: 'BBRI', name: 'Bank Rakyat Indonesia', type: 'stock', yh: 'BBRI.JK', mult: 1, price: idr(4000) },
@@ -360,6 +361,52 @@ const tradeSign = (tr) => (tr.side === 'buy' ? 1 : -1);
 const r12 = (x) => Math.round(x * 1e12) / 1e12;   // keep quantities free of floating-point dust
 const qtyAt = (h, k) => h.quantity - h.trades.filter((tr) => tr.date > [periodEnd(k), todayIso()].sort()[0]).reduce((a, tr) => a + tradeSign(tr) * tr.quantity, 0);
 const heldNow = (h) => qtyAt(h, currentPeriod());   // what you hold today (trades dated later are not in yet)
+/* ---- cost basis: weighted average cost ----
+   Every holding has a cost currency h.ccy. The quantity you held before any recorded trade is the "opening" quantity
+   (q0 = quantity - signed trades) priced at h.open_price (average price per unit, in h.ccy). A buy adds qty*price to the cost;
+   a sell realizes qty*(price - average) and removes qty*average from the cost, so the average only moves on buys.
+   A trade's price is what was typed (tr.price) or what it cost (wallet amount, or the coins it was swapped for).
+   Cash and stablecoins have no cost basis. If the opening quantity has no price, the cost is unknown (shown as "—"). */
+const trackCost = (h) => { const t = assetInfo(h.symbol).type; return t !== 'cash' && t !== 'stablecoin'; };
+function tradePrice(h, tr, ccy) {
+  if (tr.price != null) return tr.price;
+  if (!(tr.quantity > 0)) return null;
+  if (tr.wallet_id || (tr.amount_minor != null && tr.currency)) return (toMajor(tr.amount_minor, tr.currency) / RATES[tr.currency]) * RATES[ccy] / tr.quantity;
+  if (tr.via) return (tr.via.quantity * assetInfo(tr.via.symbol).usd(currentPeriod())) * RATES[ccy] / tr.quantity;
+  return null;
+}
+function holdingCost(h) {
+  const ccy = h.ccy || cur(), today = todayIso();
+  const all = [...h.trades].sort((a, b) => a.date.localeCompare(b.date));
+  const q0 = Math.max(0, r12(h.quantity - all.reduce((a, t) => a + tradeSign(t) * t.quantity, 0)));
+  const out = { ccy, known: true, q0, qty: 0, avg: 0, cost: 0, realized: 0, per: {} };
+  let qty = q0, cost = 0;
+  if (q0 > 1e-12) { if (h.open_price != null) cost = q0 * h.open_price; else out.known = false; }
+  for (const tr of all) {
+    if (tr.date > today || tr.kind) continue;   // trades dated later are not in yet
+    const price = tradePrice(h, tr, ccy);
+    if (price == null) { out.known = false; continue; }
+    let r = 0;
+    if (tr.side === 'buy') { cost += tr.quantity * price; qty += tr.quantity; }
+    else { const avg = qty > 1e-12 ? cost / qty : 0, sq = Math.min(tr.quantity, qty); r = sq * (price - avg); out.realized += r; cost -= sq * avg; qty -= sq; }
+    if (qty < 1e-12) { qty = 0; cost = 0; }
+    out.per[tr.id] = { price, avg: qty > 0 ? cost / qty : 0, realized: r };
+  }
+  out.qty = qty; out.cost = cost; out.avg = qty > 0 ? cost / qty : 0;
+  return out;
+}
+/* what the holding is worth against its cost, in its own cost currency; null when there is nothing to compare */
+function pnlOf(h) {
+  if (!trackCost(h)) return null;
+  const c = holdingCost(h); if (!c.known) return null;
+  const k = lastMonths(6)[5], price = assetInfo(h.symbol).usd(k) * RATES[c.ccy], value = c.qty * price, pnl = value - c.cost;
+  return { ...c, price, value, pnl, pct: c.cost > 0 ? (pnl / c.cost) * 100 : null };
+}
+const usdOfCcy = (x, ccy) => x / RATES[ccy];
+const signed = (n, text) => (n > 0 ? '+' : n < 0 ? '−' : '') + text;
+const pctText = (p) => `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`;
+/* a per-unit price in its own currency (cents and small decimals kept) */
+const priceFmt = (x, ccy) => `${ccy} ${x.toLocaleString(locale(), { maximumFractionDigits: Math.abs(x) >= 1000 || expOf(ccy) === 0 ? 0 : Math.abs(x) >= 1 ? 2 : 6 })}`;
 const holdingUSD = (h, k) => (!liveIn(h.since, k) ? 0 : Math.max(0, qtyAt(h, k)) * assetInfo(h.symbol).usd(k));
 const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))
@@ -535,7 +582,13 @@ function holdingRow(h, vc, accTotal) {
   // name and "quantity SYMBOL"; value and share on the right. The price and actions are in the detail (tap a row).
   return `<div class="row holding-row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
     <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h))} ${esc(info.symbol)}</div></div>
-    <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${accTotal ? Math.round((value / accTotal) * 100) : 0}%</div></div></div>`;
+    <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${rowTail(h, value, accTotal)}</div></div></div>`;
+}
+/* under the value: profit or loss against your cost when it is known, otherwise the share of the account */
+function rowTail(h, value, accTotal) {
+  const pl = pnlOf(h);
+  if (pl && pl.pct != null) return `<span class="pl ${pl.pnl >= 0 ? 'up' : 'down'}">${pctText(pl.pct)}</span>`;
+  return `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`;
 }
 
 /* archived wallets: hidden from totals; can be restored, or deleted for good when no transaction uses them */
@@ -1201,7 +1254,23 @@ function holdingSummary(h, info, vc) {
   const k = lastMonths(6)[5], price = info.usd(k), qty = heldNow(h), value = qty * price, accTotal = portfolioUSD(k, h.account_id);
   const row = (l, v) => `<div class="hs-row"><span>${l}</span><b class="num">${v}</b></div>`;
   return `<div class="hold-sum"><div class="hs-top"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span><div><b>${esc(info.symbol)}</b><small class="muted">${esc(typeLabel(info.type))} · ${esc(accountName(h.account_id))}</small></div></div>
-    ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty)} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
+    ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty)} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${costRows(h, vc, row)}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
+}
+/* average price, cost, unrealized and realized profit (not for cash and stablecoins) */
+function costRows(h, vc, row) {
+  if (!trackCost(h)) return '';
+  const c = holdingCost(h), m = (x) => money(usdToMinor(usdOfCcy(x, c.ccy), vc), vc), colored = (n, t) => `<span class="pl ${n >= 0 ? 'up' : 'down'}">${t}</span>`;
+  const setBtn = `<button type="button" class="legend-btn" data-act="set-cost" data-id="${h.id}">${__('Set average price')}</button>`;
+  let out = '';
+  if (!c.known) out += row(__('Average price'), c.q0 > 1e-12 ? setBtn : '—') + row(__('Profit / loss'), '—');
+  else {
+    const pl = pnlOf(h);
+    out += row(__('Average price'), c.qty > 0 ? priceFmt(c.avg, c.ccy) : '—');
+    if (c.qty > 0) out += row(__('Cost'), m(c.cost)) + row(__('Profit / loss'), colored(pl.pnl, signed(pl.pnl, m(Math.abs(pl.pnl))) + (pl.pct != null ? ` (${pctText(pl.pct)})` : '')));
+  }
+  if (c.realized) out += row(__('Realized P&L'), colored(c.realized, signed(c.realized, m(Math.abs(c.realized)))));
+  if (c.q0 > 1e-12 && c.known) out += row(__('Starting price'), `${priceFmt(h.open_price, c.ccy)} <button type="button" class="legend-btn" data-act="set-cost" data-id="${h.id}">${__('Edit')}</button>`);
+  return out;
 }
 function holdingDialog(h, accId, opts = {}) {
   if (!h) state.ui.pickType = opts.pickType || '';   // the asset picker starts on All (or Cash balance from the + Cash button)
@@ -1226,6 +1295,8 @@ function holdingDialog(h, accId, opts = {}) {
       <button type="button" class="btn secondary wide" data-act="view-history" data-id="${h.id}">${__('View history')}</button>
       <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
+    <div class="two" data-own-price><label class="field">${__('Average price')}<input name="avgprice" type="number" min="0" step="any" placeholder="${__('optional')}"></label>
+      <label class="field">${__('Price currency')}<select name="pccy">${ccyOptions(cur())}</select></label></div>
     <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest && firstW ? 'w:' + firstW.id : '')}</select></label>
       <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
     ${invest ? `<label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>` : ''}
@@ -1235,6 +1306,9 @@ function holdingDialog(h, accId, opts = {}) {
   if (!h) { syncFund($('#dlg form')); syncPickType($('#dlg form')); }
 }
 const CCY_NAMES = { IDR: 'Indonesian rupiah', USD: 'US dollar', EUR: 'Euro', GBP: 'British pound', SGD: 'Singapore dollar', AUD: 'Australian dollar', JPY: 'Japanese yen' };
+/* the currency an asset is usually quoted in */
+const defaultPriceCcy = (a, fallback) => (a.yh && /\.JK$/.test(a.yh) ? 'IDR' : a.yh || a.fh || ['crypto', 'stock', 'etf', 'commodity'].includes(a.type) ? 'USD' : fallback);
+const ccyOptions = (sel) => Object.keys(RATES).map((c) => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c}</option>`).join('');
 const ccyName = (c) => __(CCY_NAMES[c] || c);
 /* Cash balance type: the text box becomes a searchable list of currencies and the choice goes straight into that field (no chip below) */
 function syncPickType(form) {
@@ -1248,6 +1322,12 @@ function syncPickType(form) {
 function syncFund(form) {
   const src = parseSource(form.fund.value), label = $('[data-fund-amt]', form);
   label.textContent = src ? __('Amount paid ({unit})', { unit: sourceUnit(src) }) : __('Amount paid');
+  syncOwnPrice(form);
+}
+/* the average-price fields are for assets you already owned (no payment) and that have a cost (not cash or stablecoins) */
+function syncOwnPrice(form) {
+  const box = $('[data-own-price]', form); if (!box) return;
+  box.hidden = !!parseSource(form.fund.value) || form.dataset.nocost === '1';
 }
 
 /* ---------- trades ----------
@@ -1279,6 +1359,17 @@ const sourceUnit = (src) => (src.kind === 'wallet' ? src.wallet.currency : src.k
 /* amount typed by the user -> stored amount: minor units for a wallet, coin units for a stablecoin */
 const parseAmount = (src, text) => (src.kind === 'wallet' ? toMinor(parseFloat(text), src.wallet.currency) : parseFloat(text));
 
+/* quantity you already owned, with the average price you paid for it: blended into the starting price (weighted average) */
+function addOpening(h, qty, price, ccy) {
+  const had = holdingCost(h), q0 = had.q0;
+  h.quantity = r12(h.quantity + qty);
+  if (!trackCost(h)) return;
+  if (!h.ccy) h.ccy = ccy || cur();
+  const p = price > 0 ? (price * RATES[h.ccy]) / RATES[ccy || h.ccy] : null;
+  if (p != null && (q0 <= 1e-12 || h.open_price != null)) h.open_price = q0 > 1e-12 ? (q0 * h.open_price + qty * p) / (q0 + qty) : p;
+  else if (q0 > 1e-12) delete h.open_price;   // an unpriced addition makes the starting price unknown
+}
+
 /* returns a message when the paying side can't cover a buy; null when it is fine */
 function payShortfall(src, side, amount) {
   if (side !== 'buy') return null;
@@ -1288,13 +1379,15 @@ function payShortfall(src, side, amount) {
   return null;
 }
 
-function recordTrade(h, { side, quantity, source, amount, date }) {
+function recordTrade(h, { side, quantity, source, amount, date, price, ccy }) {
   const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
   const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && tr.date.slice(0, 7) < hh.since) hh.since = tr.date.slice(0, 7); };
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
+  if (trackCost(h) && !h.ccy) h.ccy = ccy || cur();
+  const px = trackCost(h) && price > 0 ? { price } : {};   // the price per unit that was typed, in the holding's cost currency
   if (source.kind === 'wallet') {
     const w = source.wallet;
-    addTrade(h, { id, date, side, quantity, amount_minor: amount, currency: w.currency, wallet_id: w.id });
+    addTrade(h, { id, date, side, quantity, amount_minor: amount, currency: w.currency, wallet_id: w.id, ...px });
     D().transactions.push({ id: uid(), trade_id: id, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in',
       amount_minor: amount, currency: w.currency, occurred_at: date, note: `${word} ${qtyFmt(quantity)} ${sym}`, category_source: 'user', ai_confidence: null });
     D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
@@ -1304,7 +1397,7 @@ function recordTrade(h, { side, quantity, source, amount, date }) {
   if (source.kind === 'new') { s = { id: uid(), account_id: h.account_id, symbol: source.symbol, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(s); }
   const mirror = uid(), ssym = assetInfo(s.symbol).symbol;
   s.quantity = r12(s.quantity + (side === 'buy' ? -amount : amount));
-  addTrade(h, { id, date, side, quantity, via: { holding_id: s.id, symbol: ssym, quantity: amount, pair: mirror } });
+  addTrade(h, { id, date, side, quantity, via: { holding_id: s.id, symbol: ssym, quantity: amount, pair: mirror }, ...px });
   addTrade(s, { id: mirror, date, side: side === 'buy' ? 'sell' : 'buy', quantity: amount, via: { holding_id: h.id, symbol: sym, quantity, pair: id } });
 }
 
@@ -1322,12 +1415,22 @@ function removeTrade(h, tr) {
 function tradeList(h) {
   const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)), sym = assetInfo(h.symbol).symbol, sym2 = assetInfo(h.symbol).type;
   if (!trades.length) return ('<p class="muted" style="font-size:13px">' + (sym2 === 'cash' ? __('No deposits or withdrawals yet.') : __('No buys or sells recorded yet.')) + '</p>');
+  const hc = trackCost(h) ? holdingCost(h) : null;
   return `<div class="list">${trades.map((tr) => {
+    const pi = hc && hc.per[tr.id] ? hc.per[tr.id] : null, ptxt = pi ? ` · @ ${priceFmt(pi.price, hc.ccy)}` : '', rtxt = pi && tr.side === 'sell' && hc.known ? ` · ${__('P&L')} <span class="pl ${pi.realized >= 0 ? 'up' : 'down'}">${signed(pi.realized, money(usdToMinor(usdOfCcy(Math.abs(pi.realized), hc.ccy), vcOf(h)), vcOf(h)))}</span>` : '';
     const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('account'))}`;
-    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
+    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}${ptxt}${rtxt}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
   }).join('')}</div>`;
 }
 
+/* set or correct the average price of what you held before the first recorded trade */
+function costDialog(h) {
+  const info = assetInfo(h.symbol), c = holdingCost(h);
+  open(`<h2>${__('Average price')}</h2><p class="muted" style="margin-top:-10px">${__('What you paid per {symbol} for the {qty} you held before your first recorded buy or sell.', { symbol: esc(info.symbol), qty: qtyFmt(c.q0) })}</p>
+  <form data-form="cost" data-id="${h.id}" style="display:contents"><div class="two"><label class="field">${__('Average price')}<input name="avgprice" type="number" min="0" step="any" required value="${h.open_price != null ? h.open_price : ''}"></label>
+    <label class="field">${__('Price currency')}${h.ccy ? `<input value="${h.ccy}" disabled>` : `<select name="pccy">${ccyOptions(defaultPriceCcy(info, cur()))}</select>`}</label></div>
+  <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
+}
 function tradeDialog(h, side) {
   const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), first = ws.find((w) => w.currency === cur()) || ws[0];
   open(`<h2>${info.cash ? (side === 'buy' ? __('Deposit {symbol}', { symbol: esc(info.symbol) }) : __('Withdraw {symbol}', { symbol: esc(info.symbol) })) : side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: esc(info.symbol) })}</p>
@@ -1335,6 +1438,8 @@ function tradeDialog(h, side) {
     <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>${info.cash ? __('Deposit') : __('Buy')}</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>${info.cash ? __('Withdraw') : __('Sell')}</label></div>
     <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01"></label>
       <label class="field"><span data-trade-amt></span><input name="amount" type="number" min="0" step="any" required placeholder="${__('amount')}"></label></div>
+    ${trackCost(h) ? (h.ccy ? `<label class="field">${__('Price per unit ({ccy})', { ccy: h.ccy })}<input name="price" type="number" min="0" step="any" placeholder="${__('fills in from the amount')}"></label>`
+      : `<div class="two"><label class="field">${__('Price per unit')}<input name="price" type="number" min="0" step="any" placeholder="${__('fills in from the amount')}"></label><label class="field">${__('Price currency')}<select name="tccy">${ccyOptions(first ? first.currency : cur())}</select></label></div>`) : ''}
     <label class="field"><span data-trade-wallet></span><select name="source">${sourceOptions(side, h, first ? 'w:' + first.id : '')}</select></label>
     <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>
     <p class="hint" id="trade-hint"></p>
@@ -1348,9 +1453,25 @@ function syncTradeForm(form, rebuild) {
   const src = parseSource(form.source.value);
   $('[data-trade-wallet]', form).textContent = buy ? __('Pay with') : __('Receive into');
   $('[data-trade-amt]', form).textContent = `${buy ? __('Amount paid') : __('Amount received')} (${src ? sourceUnit(src) : ''})`;
+  syncTradePrice(form, 'source');
   tradeHint(form);
 }
 /* price per unit implied by what was typed, next to the market price */
+/* quantity, price per unit and amount move together: type the price and the amount follows; type the amount and the price follows */
+function syncTradePrice(form, changed) {
+  if (!form.price) return;
+  const h = D().holdings.find((x) => x.id === form.dataset.id), src = parseSource(form.source.value), q = parseFloat(form.quantity.value), ccy = h.ccy || form.tccy.value;
+  if (changed === 'price' || changed === 'amount') form.dataset.last = changed;
+  if (!src || !(q > 0)) return;
+  const k = currentPeriod(), unitUsd = src.kind === 'wallet' ? 1 / RATES[src.wallet.currency] : assetInfo(src.kind === 'holding' ? src.holding.symbol : src.symbol).usd(k);
+  if (form.dataset.last === 'price' && changed !== 'amount') {
+    const p = parseFloat(form.price.value);
+    if (p > 0 && unitUsd > 0) { const a = ((q * p) / RATES[ccy]) / unitUsd; form.amount.value = src.kind === 'wallet' ? a.toFixed(expOf(src.wallet.currency)) : +a.toPrecision(10); }
+  } else {
+    const a = parseFloat(form.amount.value);
+    if (a > 0) form.price.value = +(((a * unitUsd) * RATES[ccy]) / q).toPrecision(8);
+  }
+}
 function tradeHint(form) {
   const h = D().holdings.find((x) => x.id === form.dataset.id), src = parseSource(form.source.value), q = parseFloat(form.quantity.value), a = parseFloat(form.amount.value);
   const hint = $('#trade-hint', form), buy = form.side.value === 'buy';
@@ -1488,6 +1609,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-holding') holdingDialog(find(D().holdings));
   else if (act === 'view-history') { close(); location.hash = '#/portfolio/' + id; }
   else if (act === 'trade') tradeDialog(find(D().holdings), el.dataset.side);
+  else if (act === 'set-cost') costDialog(find(D().holdings));
   else if (act === 'delete-trade') {
     const h = find(D().holdings), tr = h.trades.find((x) => x.id === el.dataset.tid);
     if (!removeTrade(h, tr)) { toast("Can't remove this: it would leave a negative holding (part of it was sold or spent since)"); return; }
@@ -1566,6 +1688,7 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
+  else if (t.name === 'tccy' && t.form?.dataset.form === 'trade') syncTradePrice(t.form, 'source');
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
   else if (t.name === 'txkind') {
     const here = t.form?.dataset.form;   // 'holding' is the Invest dialog
@@ -1604,6 +1727,7 @@ function runAssetSearch() {
 async function pickAsset(a, form, quiet) {
   form.asset.value = a.key; form.assetmeta.value = JSON.stringify(a); form.price.value = '';
   $('#asset-results').hidden = true; form.assetq.value = '';
+  form.dataset.nocost = a.type === 'cash' || a.type === 'stablecoin' ? '1' : ''; if (form.pccy) form.pccy.value = defaultPriceCcy(a, form.pccy.value); syncOwnPrice(form);
   const chip = $('#picked'), fb = $('.price-fallback', form); chip.hidden = !!quiet; fb.hidden = true;
   chip.innerHTML = `<b>${esc(a.symbol)}</b> ${esc(a.name)} <span class="badge">${esc(a.type)}</span> <span class="muted" id="picked-price"></span>`;
   if (!a.fh && !a.yh) return; // built-in asset: priced from the mock catalog
@@ -1617,7 +1741,7 @@ async function pickAsset(a, form, quiet) {
 }
 
 document.addEventListener('input', (e) => {
-  if (e.target.form?.dataset.form === 'trade' && ['quantity', 'amount'].includes(e.target.name)) tradeHint(e.target.form);
+  if (e.target.form?.dataset.form === 'trade' && ['quantity', 'amount', 'price'].includes(e.target.name)) { syncTradePrice(e.target.form, e.target.name); tradeHint(e.target.form); }
   if (e.target.name === 'assetq') runAssetSearch();
   if (e.target.matches('[data-filter="dayq"]')) { state.ui.dayQ = e.target.value; const l = $('#day-list'); if (l) l.innerHTML = dayListHtml(routeArg()); }
   if (e.target.matches('[data-filter="q"]')) { state.ui.q = e.target.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
@@ -1775,13 +1899,19 @@ document.addEventListener('submit', (e) => {
     else D().investments.push({ id: uid(), name, archived: false });
     save(); close(); render(); toast('Account saved');
   }
+  if (kind === 'cost') {
+    const h = D().holdings.find((x) => x.id === f.dataset.id), price = parseFloat(v.avgprice);
+    if (!(price > 0)) { toast('Enter a price above zero'); return; }
+    if (!h.ccy) h.ccy = v.pccy || cur();
+    h.open_price = price; save(); close(); render(); toast('Average price saved'); return;
+  }
   if (kind === 'trade') {
     const h = D().holdings.find((x) => x.id === f.dataset.id), info = assetInfo(h.symbol), src = parseSource(v.source), side = v.side;
     const qty = parseFloat(v.quantity), amount = parseAmount(src, v.amount);
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
     if (side === 'sell' && qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: info.symbol })); return; }
     const short = payShortfall(src, side, amount); if (short) { toast(short); return; }
-    recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date });
+    recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price), ccy: v.tccy });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty)} ${info.symbol}`); return;
   }
   if (kind === 'holding') {
@@ -1817,9 +1947,9 @@ document.addEventListener('submit', (e) => {
     let h = D().holdings.find((x) => x.account_id === v.account && x.symbol === sym);
     if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); }
     if (src) {
-      recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
+      recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()), ccy: v.pccy });
       if (v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
-    } else h.quantity += qty;
+    } else addOpening(h, qty, parseFloat(v.avgprice), v.pccy);
     if (f.dataset.invest) state.ui.pfTab = 'investment';
     save(); close(); render(); toast(`${assetInfo(sym).symbol} ${src ? 'bought' : 'added'}${src ? ` · ${qtyFmt(paid)} ${sourceUnit(src)} paid` : ''}`);
   }

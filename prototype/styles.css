@@ -689,3 +689,7 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
   .acct-head .tools .btn { width: 100%; justify-content: center; padding-left: 8px; padding-right: 8px; white-space: nowrap; }
 }
 .amt-col .sub .badge { margin: 0 6px 0 0; }
+.pl.up { color: var(--good); font-weight: 600; }
+.pl.down { color: var(--bad); font-weight: 600; }
+:root[data-theme="dark"] .pl.up { color: #4fd9a0; }
+.hs-row .legend-btn { padding: 0 0 0 6px; }

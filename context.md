@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Fix (from a screen recording): after choosing an option in the app-styled list, iOS opened its native picker again because `dropdown.js` focused the
+  select. Focus now returns to the select only when the list was opened from the keyboard; after a tap the select is blurred. e2e `dropdown` asserts it.
+
 - 2026-11-01: Category picking: "＋ Add new category" is the last entry of the Category dropdown (`option value=__new data-cta`), replacing the separate button; it opens the quick-add
   form without focusing a field (no keyboard), choosing a real category hides it. `dropdown.js` gained `data-search` (search box on long lists; `data-s` on an option
   widens what it matches, sub-categories carry their parent's name), `data-cta` entries, and remembers the select under the finger at pointerdown so a tap is not lost

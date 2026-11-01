@@ -19,6 +19,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // choosing fires the app's change handling: the amount unit follows the account
   await p.click('#dlg .cs-opt:has-text("US Dollar")'); assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0, 'closes after choosing');
   assert((await p.innerText('#dlg [data-amt-label]')).includes('USD')); assert.equal(await p.$eval('#dlg select[name=wallet]', (s) => s.selectedOptions[0].textContent), 'US Dollar (USD)');
+  assert.notEqual(await p.evaluate(() => document.activeElement && document.activeElement.tagName), 'SELECT', 'after a tap-choice the select is not focused (iOS would reopen its own picker)');
   // Esc closes the list but not the dialog; tapping elsewhere closes it; tapping the field again toggles
   await tap('#dlg select[name=wallet]'); await p.waitForSelector('#dlg .cs-pop'); await p.keyboard.press('Escape'); assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0); assert.equal(await p.evaluate(() => document.querySelector('#dlg').open), true, 'dialog stays open');
   await tap('#dlg select[name=wallet]'); await p.waitForSelector('#dlg .cs-pop'); await p.mouse.click(20, 20); assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 0, 'outside tap closes');

@@ -4,7 +4,7 @@
    non-interactive by CSS (pointer-events: none), so a tap lands on its parent: we find the select under the pointer here.
    Add data-native to a select to keep the OS picker. */
 (() => {
-  let pop = null, cur = null, openedAt = 0, lastClosed = { sel: null, at: 0 }, lastDown = { sel: null, x: 0, y: 0, at: 0 }, rows = [], act = -1, typed = '', typedAt = 0;
+  let pop = null, cur = null, openedByKey = false, openedAt = 0, lastClosed = { sel: null, at: 0 }, lastDown = { sel: null, x: 0, y: 0, at: 0 }, rows = [], act = -1, typed = '', typedAt = 0;
   const isEnh = (s) => !!s && s.tagName === 'SELECT' && !s.hasAttribute('data-native') && !s.multiple;
 
   function close(byOutside) {
@@ -23,16 +23,17 @@
 
   function choose(i) {
     const r = rows[i]; if (!r || r.opt.disabled) return;
-    const sel = cur, changed = sel.value !== r.opt.value;
+    const sel = cur, changed = sel.value !== r.opt.value, keyboard = openedByKey;
     close();
     if (changed) { sel.value = r.opt.value; sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); }
-    sel.focus({ preventScroll: true });
+    // focus goes back to the field only when it was opened from the keyboard: focusing a <select> after a tap makes iOS open its own picker again
+    if (keyboard) sel.focus({ preventScroll: true }); else if (document.activeElement === sel) sel.blur();
   }
 
   function open(sel, byKey) {
     if (!byKey && cur === sel && Date.now() - openedAt < 350) return;           // the label can forward a second click
     close();
-    cur = sel; openedAt = Date.now(); sel.setAttribute('aria-expanded', 'true');
+    cur = sel; openedByKey = !!byKey; openedAt = Date.now(); sel.setAttribute('aria-expanded', 'true');
     pop = document.createElement('div'); pop.className = 'cs-pop'; pop.setAttribute('role', 'listbox');
     const add = (opt, parent) => {   // data-list: a short label in the field can have a fuller one in the list
       const cta = opt.hasAttribute('data-cta');

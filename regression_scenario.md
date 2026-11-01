@@ -80,7 +80,7 @@ Automated: `donut`, `ovocc`, `budgetbar`, `run`.
 | TX-06 | Add income / expense with no category | AI-style auto-tag if history matches (badge AI), otherwise "Uncategorized". With a category chosen: no AI badge. |
 | TX-07 | Add a new category or sub-category from the form | There is **no separate button**: **＋ Add new category** is the last entry of the Category dropdown (after a divider, in brand colour). Choosing it opens the small form below the field **without opening the keyboard** (type only after tapping Name); the dropdown keeps its previous choice. Choosing any existing category hides the form again. Adding creates it inline and selects it; Enter in the name field adds it and does not submit the transaction. |
 | TX-07b | Category dropdown search | The list has a **Search** box on top (not focused automatically); typing filters categories and sub-categories, searching a parent name also lists its sub-categories, "Add new category" always stays at the bottom. Also available in the Activity category filter and the budget category picker. |
-| TX-07c | First tap on a dropdown after a keyboard was open | One tap opens the list (the tap is not lost when the keyboard closes and the layout shifts) **(manual)**. |
+| TX-07c | iPhone: tap a dropdown, choose an option | Exactly one app-styled list opens; after choosing, **no second (iOS native) list opens** and the field is not left focused (regression: focusing the select after a tap made iOS reopen its own picker). Also check one tap is enough after a keyboard was open **(manual, real iPhone)**. |
 | TX-08 | Add expense with a special occasion | Occasion preselected when the date is inside its range; picking a date outside leaves the choice alone. Row shows the occasion badge. |
 | TX-09 | Edit amount / date / note / category | Saved; balances and reports update. |
 | TX-10 | Delete a transaction | Removed; balances restored. |
@@ -313,5 +313,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: IV-01 covers the smaller holding type tag and the space after ×.
 - 2026-11-01: UI-06: the Add label is exactly level with the other bottom-bar labels.
 - 2026-11-01: TX-07 rewritten (Add new category inside the Category dropdown, no auto keyboard), TX-07b/c added.
+- 2026-11-01: TX-07c now checks that no native picker reopens after choosing (focus is no longer returned to the select after a tap).
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

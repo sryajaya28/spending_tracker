@@ -14,6 +14,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
     for (const h of ['overview', 'transactions', 'budgets', 'portfolio', 'settings']) { await p.evaluate((h) => { location.hash = '#/' + h; }, h); await p.waitForTimeout(200); assert((await wide()) <= 0, h + ' is wider than the screen at ' + width); }
     for (const tab of ['investment', 'lent', 'loan']) { await p.evaluate(() => { location.hash = '#/portfolio'; }); await p.click(`[data-act=pf-tab][data-tab=${tab}]`); await p.waitForTimeout(150); assert((await wide()) <= 0, tab + ' tab wider at ' + width); }
+    // the Add label shares the baseline of the other bottom-bar labels
+    const ys = await p.evaluate(() => [...document.querySelectorAll('.bottom-nav > *')].map((e) => { const t = [...e.childNodes].find((n) => n.nodeType === 3 && n.textContent.trim()); const r = document.createRange(); r.selectNodeContents(t); return r.getBoundingClientRect().bottom; }));
+    assert(Math.max(...ys) - Math.min(...ys) < 0.6, 'bottom bar labels are level: ' + ys);
     await p.click('.nav-add'); assert((await wide()) <= 0, 'add dialog wider at ' + width);
     await p.close();
   }

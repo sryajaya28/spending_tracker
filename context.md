@@ -287,6 +287,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Bottom bar: the Add item is now as tall as the other tabs (52px, 5.5px bottom padding), so its label is level with theirs (measured to 0.1px; `noscroll` asserts it).
+
 - 2026-11-01: Investment holding rows: smaller type tag (`.badge.sm`) and a space after the × in `qty SYMBOL × price`.
 
 - 2026-11-01: Day page (`#/transactions/<date>`) got a search box (`state.ui.dayQ`, `dayTxns`, `dayListHtml`) and more space under the Back link.

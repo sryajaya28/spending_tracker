@@ -250,7 +250,7 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
   .bottom-nav a svg { width: 22px; height: 22px; }
   .bottom-nav a.active { color: var(--brand); font-weight: 700; }
   /* same height as the other tabs, so the "Add" label shares their baseline; the circle rises above the bar */
-  .bottom-nav .nav-add { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; height: 50px; background: none; border: 0; font: inherit; font-size: 11px; font-weight: 700; color: var(--navy); padding: 6px 0; box-sizing: border-box; }
+  .bottom-nav .nav-add { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 8px; height: 52px; background: none; border: 0; font: inherit; font-size: 11px; font-weight: 700; color: var(--navy); padding: 6px 0 5.5px; box-sizing: border-box; }
   .nav-add span { display: grid; place-items: center; flex: none; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; box-shadow: 0 8px 18px rgba(74, 68, 198, .4); border: 4px solid var(--surface); }
   .nav-add svg { width: 28px; height: 28px; }
   .fab { display: none; }

@@ -59,6 +59,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   hid = await p.evaluate(() => D().holdings.find((x) => x.symbol === 'USDT').id); const base = await qty();
   const n = await p.evaluate((id) => { const r = addRule('txn', 'weekly', '2026-10-10', { type: 'income', amount_minor: 5000, currency: 'USD', wallet_id: 'h:' + id, quantity: 50, note: 'Retainer', category_id: null }); r.next = '2026-10-17'; return runRecurring(); }, hid);
   assert(n >= 2); assert.equal(await qty(), base + 50 * n);
+  // amounts in a stablecoin are written with the coin, not a dollar sign
+  await p.evaluate(() => { const t = D().transactions.find((x) => coinOf(x)); state.ui.month = periodKeyOf(t.occurred_at); location.hash = '#/transactions'; render(); }); await p.click('[data-act=days-all]');
+  const coinRows = await p.$$eval('#txn-list .row:not(.day-row)', (r) => r.map((x) => x.textContent).filter((t) => /USDT/.test(t))); assert(coinRows.length >= 1 && coinRows.every((t) => !/\$/.test(t) && /USDT\s[\d,]+\.\d\d/.test(t.replace(/\u00a0/g, ' '))), JSON.stringify(coinRows.slice(0, 2)));
   await p.screenshot({ path: __dirname + '/out/coin.png' });
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').slice(1, 3).join(' | ')); process.exit(1); });

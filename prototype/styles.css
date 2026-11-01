@@ -679,11 +679,12 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .btn.sell { background: #fde6e7; color: var(--bad); }
 :root[data-theme="dark"] .btn.sell { background: rgba(229, 72, 77, .18); color: #ff8b8f; }
 .btn.wide { width: 100%; justify-content: center; }
-/* investment account header: the buttons always sit on the right; a long name wraps in the space left beside them */
-.acct-head { flex-wrap: nowrap; align-items: flex-start; }
-.acct-head > div:first-child { min-width: 0; flex: 1 1 auto; }
+/* investment account header: a long name never pushes the buttons around; on phones the buttons always sit in one even row below */
+.acct-head > div:first-child { min-width: 0; flex: 1 1 200px; }
 .acct-head h2 { overflow-wrap: anywhere; }
-.acct-head .tools { flex: 0 0 auto; flex-wrap: nowrap; gap: 6px; }
+.acct-head .tools { flex-wrap: nowrap; }
 @media (max-width: 700px) {
-  .acct-head .tools .btn { height: 34px; padding: 0 10px; font-size: 13px; white-space: nowrap; }
+  .acct-head > div:first-child { flex-basis: 100%; }
+  .acct-head .tools { width: 100%; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .acct-head .tools .btn { width: 100%; justify-content: center; padding-left: 8px; padding-right: 8px; white-space: nowrap; }
 }

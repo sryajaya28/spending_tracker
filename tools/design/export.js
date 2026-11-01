@@ -20,6 +20,8 @@ const PAGE = (hash, extra = '') => `state.ui.openDays = new Set(); ${extra} loca
 // popovers are opened in a second step, after the page has its final size (a resize closes them, like on a phone)
 const LIST_AFTER = (name) => `const s = document.querySelector('#dlg select[name=${name}]'); const r = s.getBoundingClientRect(); s.parentElement.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 }));`;
 const DATE_AFTER = `document.querySelector('#dlg input[name=date]').closest('label').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));`;
+// two future-dated entries in the current period, so "See upcoming transactions" and its pop-up have something to show
+const UPCOMING = `if (!D().transactions.some((t) => t.id === 'up-1')) { const w = D().wallets[0], c = D().categories.find((x) => x.type === 'expense'); [['up-1', 'Netflix', 186000, 3], ['up-2', 'Rent', 4500000, 6]].forEach(([id, note, a, o]) => { const d = new Date(); d.setDate(d.getDate() + o); D().transactions.push({ id, type: 'expense', amount_minor: a, currency: w.currency, wallet_id: w.id, category_id: c.id, note, occurred_at: isoDate(d) }); }); } state.ui.month = periodKeyOf(todayIso());`;
 const SCREENS = [
   ['landing', 'auth', `state.auth.view = 'landing'; render();`],
   ['sign-in', 'auth', `state.auth.view = 'signin'; render();`],
@@ -51,6 +53,8 @@ const SCREENS = [
   ['dialog-account', 'dialog', `walletDialog();`],
   ['dialog-category', 'dialog', `catDialog();`],
   ['dialog-loan-payment', 'dialog', `paymentDialog(D().loans[0], 'loan');`],
+  ['transactions-upcoming', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); ${UPCOMING}`)],
+  ['dialog-upcoming', 'dialog', `${UPCOMING} Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); upcomingDialog();`],
   ['dialog-lent-history', 'dialog', `loanHistoryDialog(D().lent[0], 'lent');`],
   ['dialog-recurring-manage', 'dialog', `ruleDialog(D().recurring[0]);`],
   ['dialog-support', 'dialog', `supportDialog();`],
@@ -119,6 +123,7 @@ const COMPONENTS = [
   { group: 'filters', name: 'pill', setup: TX, sel: '.filters select' },
   { group: 'filters', name: 'pill-active', setup: TX_DINING, sel: '.filters select.f-on' },
   { group: 'filters', name: 'reset-filters', setup: TX_DINING, sel: '.day-tools' },
+  { group: 'buttons', name: 'see-upcoming', setup: PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); ${UPCOMING}`), sel: '.see-upcoming' },
   // navigation
   { group: 'navigation', name: 'top-bar', setup: PAGE('#/overview'), sel: '.topbar' },
   { group: 'navigation', name: 'bottom-nav', setup: PAGE('#/overview'), sel: '.bottom-nav' },

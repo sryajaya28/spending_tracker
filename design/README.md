@@ -17,17 +17,17 @@ Each design comes as **`.svg`** (import this into Figma: real text layers and ve
 preview; for dialogs the PNG shows the dialog on its page).
 
 Components: buttons (primary, secondary, danger, chip, dialog actions, hero actions, icon button, text links, install
-call to action) · text (type scale, badges) · banners (sample data, sample-data promo, hint) · graphs (money-flow line,
+call to action, see upcoming) · text (type scale, badges) · banners (sample data, sample-data promo, hint) · graphs (money-flow line,
 spending donut, category trend bars, portfolio value, progress bar) · popups (dialog, toast, tooltip) · form fields (text,
 amount, select, date, segmented control, switch, image attach, message with counter) · date picker (calendar) · dropdown
 (closed, grouped list, list with search) · filters (filter bar, active filter bar, pill, active pill, reset filters, search
 and period) · navigation (top bar, bottom nav, desktop sidebar, tabs) · cards (hero, card, loan card) · rows (transaction,
 day, holding, budget).
 
-Screens: landing, sign-in, sign-up, overview, transactions (collapsed, expanded, filtered, loan account), budgets,
+Screens: landing, sign-in, sign-up, overview, transactions (collapsed, expanded, filtered, loan account, with upcoming), budgets,
 portfolio (savings, investment, lent, loan), asset history, settings, and the dialogs: add expense / income, edit
 transaction, transfer, invest, add asset, add cash, asset, buy, average price, budget, occasion, account, category, loan
-payment, lent history, recurring manage, support, install (iPhone), trend detail, spending breakdown.
+payment, lent history, recurring manage, upcoming transactions, support, install (iPhone), trend detail, spending breakdown.
 
 ## Importing into Figma
 

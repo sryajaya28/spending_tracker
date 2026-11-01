@@ -933,9 +933,9 @@ function txnRow(t, loanView) {
     <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}</div></div>
     <div class="amt-col"><div class="amt num ${t.type}">${sign}${coinOf(t) ? coinAmount(coinOf(t), t.amount_minor) : money(t.amount_minor, t.currency)}</div><div class="sub">${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
 }
-function filteredTxns() {
+function filteredTxns(upcoming = false) {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
-  return D().transactions.filter((t) => t.occurred_at <= todayIso()   // upcoming (future-dated) entries are not part of the history yet
+  return D().transactions.filter((t) => (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
     && (occ || inPeriod(t.occurred_at, state.ui.month))
     && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2)) || (wallet.startsWith('l:') && t.loan_id === wallet.slice(2))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
@@ -953,9 +953,10 @@ const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions',
 /* days are collapsible: tap a day to open its transactions in place; Expand all / Hide all for the whole list. A search opens every matching day. */
 function txnListHtml() {
   const loanView = !!loanViewId(), rows = [...filteredTxns(), ...loanPaymentRows()];
-  const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet);
+  const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet), up = filteredTxns(true).length;
+  const upBtn = up ? `<button type="button" class="see-upcoming" data-act="see-upcoming">${__('See upcoming transactions ({n})', { n: up })}<span class="chev" aria-hidden="true">›</span></button>` : '';
   const reset = anyFilter ? `<button type="button" class="legend-btn reset-filters" data-act="reset-filters">${__('Reset filters')}</button>` : '';
-  if (!rows.length) return (reset ? `<div class="day-tools">${reset}</div>` : '') + '<div class="empty">' + __('No transactions match.') + '</div>';
+  if (!rows.length) return (reset ? `<div class="day-tools">${reset}</div>` : '') + '<div class="empty">' + __('No transactions match.') + '</div>' + upBtn;
   const days = {};
   rows.forEach((t) => { (days[t.occurred_at] = days[t.occurred_at] || []).push(t); });
   const keys = Object.keys(days).sort().reverse(), searching = !!state.ui.q.trim();
@@ -967,7 +968,14 @@ function txnListHtml() {
     <div class="amt num">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div><span class="day-chev" aria-hidden="true">›</span></div>
     <div class="day-body">${l.map((t) => txnRow(t, loanView)).join('')}</div></div>`;
   };
-  return `<div class="day-tools ${reset ? 'has-reset' : ''}">${reset}<span class="day-tools-r"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></span></div>${keys.map(group).join('')}`;
+  return `<div class="day-tools ${reset ? 'has-reset' : ''}">${reset}<span class="day-tools-r"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></span></div>${keys.map(group).join('')}${upBtn}`;
+}
+/* the future-dated entries of the period (same filters), soonest first; tap one to edit it */
+function upcomingDialog() {
+  const l = filteredTxns(true).sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+  open(`<h2>${__('Upcoming transactions')}</h2><p class="muted" style="margin-top:-10px">${esc(monthLabel(state.ui.month))} · ${countLabel(l.length)}</p>
+  <div class="list up-list">${l.map((t) => txnRow(t)).join('') || ('<div class="empty">' + __('No upcoming transactions.') + '</div>')}</div>
+  <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
 // the detail page for one day: every transaction on it
 const dayTxns = (d) => { const ql = (state.ui.dayQ || '').trim().toLowerCase(); return D().transactions.filter((t) => t.occurred_at === d && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql))); };
@@ -1908,6 +1916,7 @@ document.addEventListener('click', (e) => {
     const l = find(D().loans), last = l.payments.filter((p) => p.date <= todayIso()).map((p) => p.date).sort().pop();
     Object.assign(state.ui, { wallet: 'l:' + id, month: last ? periodKeyOf(last) : currentPeriod(), cat: '', occ: '', q: '' }); forgetScroll('#/transactions'); location.hash = '#/transactions';
   }
+  else if (act === 'see-upcoming') upcomingDialog();
   else if (act === 'history-lent') loanHistoryDialog(find(D().lent), 'lent');
   else if (act === 'archive-loan') { find(D().loans).archived = true; save(); close(); render(); toast('Loan archived'); }
   else if (act === 'add-lent') lentDialog();

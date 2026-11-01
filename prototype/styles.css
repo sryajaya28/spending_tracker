@@ -833,3 +833,12 @@ input[type="date"]:not([data-native]) { pointer-events: none; }
 /* the filter pills (category, occasion, account) centre their text */
 .filters select { text-align: center; text-align-last: center; -moz-text-align-last: center; }
 .brow.tap-row { cursor: pointer; } .brow.tap-row:active { opacity: .85; }
+
+/* date fields line up with the other fields: left-aligned text, full width (iOS centres the value and sizes the box to it) */
+input[type="date"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; text-align: left; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+
+/* Transactions: "See upcoming transactions" under the list, and its pop-up */
+.see-upcoming { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; background: var(--soft); border: 0; color: var(--brand); font: inherit; font-weight: 600; font-size: 14px; padding: 12px; border-radius: 14px; cursor: pointer; }
+.see-upcoming .chev { font-size: 18px; line-height: 1; }
+.up-list { max-height: 60vh; overflow: auto; margin: 0 -6px; padding: 0 6px; }

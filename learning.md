@@ -117,6 +117,9 @@ only worked after a detour. Keep each item short and say what to do instead.
     open popovers. Export dialogs as the `dialog` element, swap form controls for styled boxes, open popovers after resizing.
   - Opening `#/portfolio/<id>` directly crashed (`render` assumed the portfolio value chart). Guard page-specific bindings.
   - Python `str.replace` failed on a line containing non-breaking spaces (`  ↳ `): edit such lines by line index or regex.
+  - The owner's image numbering can be swapped ("first image" was the second screenshot): match each request to the screenshot it describes.
+  - iOS Safari draws `<input type="date">` with centred text and an intrinsic width that ignores `max-width`; `appearance: none` + `width: 100%` + `::-webkit-date-and-time-value { text-align: left }` fixes it. Chromium cannot show this, so it stays unverified until seen on an iPhone.
+  - New UI parts go into the design exporter (`SCREENS` / `COMPONENTS`) in the same change (owner request).
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

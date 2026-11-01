@@ -284,6 +284,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: (i) tooltip icon made smaller (16px) with an invisible larger tap area.
+
 - 2026-11-01: The price disclaimer moved into an (i) tooltip next to the Investments title (`infoTip()`, `.info-wrap/.info-pop`, `state.ui.infoOpen`); no description
   paragraph. The helper is reusable for other titles.
 

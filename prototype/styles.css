@@ -541,8 +541,10 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
 /* (i) tooltip next to a title */
 .card-head > div:first-child { position: relative; }
 .info-wrap { position: static; display: inline-block; vertical-align: middle; margin-left: 4px; }
-.info-btn { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); background: var(--soft); color: var(--muted); font: italic 700 13px/1 Georgia, serif; padding: 0; cursor: pointer; }
+.info-btn { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--line); background: var(--soft); color: var(--muted); font: italic 700 10px/1 Georgia, serif; padding: 0; cursor: pointer; }
 .info-btn:hover, .info-wrap.open .info-btn { background: var(--brand); color: #fff; border-color: var(--brand); }
-.info-pop { display: none; position: absolute; left: 0; top: 30px; z-index: 30; width: min(270px, 72vw); background: var(--ink); color: var(--surface); border-radius: 12px; padding: 10px 12px; font: 400 12.5px/1.45 inherit; letter-spacing: 0; text-transform: none; box-shadow: 0 10px 24px rgba(30, 27, 75, .25); }
+.info-pop { display: none; position: absolute; left: 0; top: 28px; z-index: 30; width: min(270px, 72vw); background: var(--ink); color: var(--surface); border-radius: 12px; padding: 10px 12px; font: 400 12.5px/1.45 inherit; letter-spacing: 0; text-transform: none; box-shadow: 0 10px 24px rgba(30, 27, 75, .25); }
 .info-wrap.open .info-pop { display: block; }
 @media (hover: hover) { .info-wrap:hover .info-pop { display: block; } }
+.info-btn { position: relative; }
+.info-btn::after { content: ""; position: absolute; inset: -9px; }   /* a bigger invisible tap area around the small icon */

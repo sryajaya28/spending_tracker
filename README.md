@@ -63,7 +63,7 @@ custom SMTP (Resend, sender on `stiver.io`), and the templates in `supabase/temp
 ## Working on this project
 
 Read `context.md` first: it holds the full project context (architecture, services, decisions, open items) and the working
-agreement. After any change, update `context.md` (and this README when the change affects it) in the same commit. Manual regression
+agreement. **Then read `learning.md`: the mistakes made on this project and how to avoid them (release discipline, database, iPhone quirks, testing). Add to it whenever you make a mistake or are corrected.** After any change, update `context.md` (and this README when the change affects it) in the same commit. Manual regression
 scenarios live in `regression_scenario.md`: add or edit the relevant ones whenever a feature is added or changed.
 
 ## Before wider release

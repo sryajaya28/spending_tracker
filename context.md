@@ -6,7 +6,7 @@ on 2026-10-31. It contains **no secrets**: it says where each secret lives, neve
 ## 0. Working agreement (read this first)
 
 1. **Before doing anything** on this project (code, database, config, docs, answering a question about the project),
-   read this file. If it disagrees with the code, trust the code, then fix this file.
+   read this file **and `learning.md`** (past mistakes and how to avoid them; add to it whenever you make a mistake or are corrected). If it disagrees with the code, trust the code, then fix this file.
 2. **After doing anything**, update this file in the same commit: edit the sections that changed (features, data model,
    services, open items, decisions) and add a dated line to the **Changelog** at the bottom.
 3. **Also update `README.md`** whenever the change affects what it describes (features, how to run, how it is built,
@@ -290,6 +290,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Added `learning.md` (mistakes made so far and how to avoid them) and made reading it a step of the working agreement (README, CLAUDE.md, §0).
 - 2026-11-01: Transactions: **Reset filters** link (left of Expand all / Hide all, also shown when nothing matches) appears while any of search, category, occasion or account is set and clears all four (the period is kept). Fixed on the way: a `change` event from a removed, focused search box used to bring its old text back after a re-render (the `[data-filter]` change handler now only handles selects).
 - 2026-11-01: **Scroll position is remembered per page within a session** (`scrollPos`, `pageKey`, `hashchange` handler; memory only): leaving a page saves where you were, coming back (tab, link or browser back) restores it; a page not visited yet opens at the top. Buttons that open Transactions with a new filter (trend bar, occasion/loan Details, global search) call `forgetScroll('#/transactions')` so that view starts at the top. Replaces the earlier "every page opens at the top" rule (UI-13). e2e `scrollpos`.
 - 2026-11-01: **App-styled calendar** (`prototype/datepicker.js`, in the service worker shell, cache `stiver-shell-v7`): tapping any date field opens a popover calendar in the app's design (month header with arrows, weekday row, day grid, **Today**, selected/today marks, `min`/`max` respected, light and dark) instead of the iOS/OS calendar; the `<input type=date>` stays in the DOM (ISO value, forms, tests; made non-interactive by CSS like the dropdown selects), typing still works, Esc or a tap outside closes only the calendar, `data-native` keeps the OS one. **Active filters are highlighted** on Transactions: category, occasion, account and search get a tinted `f-on` style (brand colour, bold) while set.

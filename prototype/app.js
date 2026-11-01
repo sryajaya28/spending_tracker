@@ -1243,7 +1243,11 @@ const unlockScroll = () => { if (lockY === null) return; const y = lockY; lockY 
 dlg().addEventListener('close', unlockScroll);
 function open(html) { dlg().innerHTML = `<div class="dlg" tabindex="-1">${html}</div>`; if (!dlg().open) { lockScroll(); dlg().showModal(); } $('.dlg', dlg()).focus({ preventScroll: true }); }
 const close = () => dlg().open && dlg().close();
-dlg().addEventListener('click', (e) => { if (e.target === dlg() && $('[data-close-outside]', dlg())) close(); });   // the install dialog has no Done button: tap outside to close
+/* a tap or click on the dimmed area outside a modal closes it (web and phone). A press that starts inside and is released outside (selecting text), or a tap that only closes an open dropdown list, does not. */
+let downOnBackdrop = false, listOpenAtDown = false;
+window.addEventListener('pointerdown', () => { listOpenAtDown = !!document.querySelector('.cs-pop'); }, true);   // before the dropdown closes its own list
+dlg().addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === dlg() && !listOpenAtDown; });
+dlg().addEventListener('click', (e) => { if (e.target === dlg() && downOnBackdrop) close(); downOnBackdrop = false; });
 const catOptions = (type, sel, withNew) => `<option value="">${__('— None (AI may suggest) —')}</option>${catTree(type).map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}${withNew ? `<option value="__new" data-cta>＋ ${__('Add new category')}</option>` : ''}`;
 
 /* parents a new category can live in: none (a new top-level category) or an existing top-level one of this type */

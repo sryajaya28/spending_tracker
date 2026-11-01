@@ -27,30 +27,40 @@ const OUT = __dirname + '/video';
   const START = Date.now() - t0;   // the tour proper starts here; everything before is trimmed
   const pause = (ms) => p.waitForTimeout(ms);
   const go = async (sel, opts = {}) => { const el = await p.waitForSelector(sel); await el.scrollIntoViewIfNeeded(); const bx = await el.boundingBox(); await p.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2, { steps: 28 }); await pause(opts.beforeClick ?? 350); await p.mouse.down(); await pause(80); await p.mouse.up(); };
-  // 1. overview
+  // 1. overview: balance, money flow and the spending donut (hover to read a category)
   await pause(1600);
   const chart = await p.$('#flow-tip, .chart-wrap svg'); if (chart) { const bx = await chart.boundingBox(); for (const f of [0.15, 0.4, 0.65, 0.9]) { await p.mouse.move(bx.x + bx.width * f, bx.y + bx.height * 0.5, { steps: 14 }); await pause(450); } }
-  await pause(500);
-  // 2. add an expense
+  const ring = await p.$eval('.donut svg', (e) => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, k: b.width / 260 }; });
+  await p.evaluate(() => document.querySelector('.donut').scrollIntoView({ block: 'center' })); const ring2 = await p.$eval('.donut svg', (e) => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, k: b.width / 260 }; });
+  for (const f of [0.12, 0.45, 0.7, 0.9]) { const a = f * 2 * Math.PI; await p.mouse.move(ring2.x + (130 + 100 * Math.sin(a)) * ring2.k, ring2.y + (130 - 100 * Math.cos(a)) * ring2.k, { steps: 18 }); await pause(900); }
+  await p.evaluate(() => window.scrollTo(0, 0)); await pause(400);
+  // 2. add an expense: account first, then the category list with search
   await go('[data-act=add-txn][data-type=expense]'); await p.waitForSelector('#dlg[open]'); await pause(700);
   await p.type('input[name=amount]', '85000', { delay: 140 }); await pause(500);
-  const val = await p.$eval('select[name=category]', (s) => { const o = [...s.options].find((x) => /Coffee/.test(x.textContent)); return o ? o.value : ''; });
-  await go('select[name=category]', { beforeClick: 200 }); await p.keyboard.press('Escape').catch(() => {}); if (val) await p.selectOption('select[name=category]', val); await pause(600);
+  await go('select[name=category]', { beforeClick: 250 }); await p.waitForSelector('.cs-pop'); await pause(700);
+  await go('.cs-search'); await p.type('.cs-search', 'cof', { delay: 160 }); await pause(700);
+  await go('.cs-opt:has-text("Coffee")'); await pause(600);
   await go('textarea[name=note]'); await p.type('textarea[name=note]', 'Coffee with the team', { delay: 70 }); await pause(700);
-  await go('#dlg button[type=submit]'); await pause(2200);
-  // 3. budgets
+  await go('#dlg button[type=submit]'); await pause(2000);
+  // 3. activity: one row per day, tap a day for its transactions
+  await go('.sidebar a[href="#/transactions"]'); await pause(1600);
+  await go('#txn-list .day-row'); await pause(2000);
+  await go('.back-link'); await pause(900);
+  // 4. budgets
   await go('.sidebar a[href="#/budgets"]'); await pause(2200);
   await p.mouse.wheel(0, 380); await pause(1500);
-  // 4. portfolio
+  // 5. portfolio: net worth, accounts, history with a time frame
   await go('.sidebar a[href="#/portfolio"]'); await pause(2000);
-  await go('[data-act=pf-tab][data-tab=investment]'); await pause(1800);
+  await p.mouse.wheel(0, 700); await pause(1500);
+  await go('select[data-bind=pfRange]', { beforeClick: 300 }); await p.waitForSelector('.cs-pop'); await pause(700); await go('.cs-opt:has-text("1 year")'); await pause(1700);
+  await p.evaluate(() => window.scrollTo(0, 0)); await go('[data-act=pf-tab][data-tab=investment]'); await pause(1800);
   await go('[data-act=pf-tab][data-tab=savings]'); await pause(1200);
-  // 5. transfer between wallets
+  // 6. move money between accounts, with a fee
   await go('[data-act=transfer]'); await p.waitForSelector('form[data-form=transfer]'); await pause(900);
   await p.type('input[name=amount]', '1500000', { delay: 120 }); await pause(500);
   await go('input[name=fee]'); await p.type('input[name=fee]', '6500', { delay: 130 }); await pause(900);
   await go('#dlg button[type=submit]'); await pause(2200);
-  // 6. back to the overview
+  // 7. back to the overview
   await go('.sidebar a[href="#/overview"]'); await pause(2600);
   const END = Date.now() - t0;
   await ctx.close(); await b.close();

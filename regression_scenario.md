@@ -22,7 +22,7 @@ the same commit (see `context.md` section 0).
 
 | ID | Scenario | Expected |
 |---|---|---|
-| AUTH-01 | Visit the site signed out | Landing page: hero, demo video, features, how it works, final CTA, footer with Privacy and Terms. No "Private by design" block, no "Sign up with email or Google" note. |
+| AUTH-01 | Visit the site signed out | Landing page: header with clear space above it on phones (not touching the status bar), a text-only hero (headline, sub-line, **Get started** and an outlined **Sign in** button; no product mock-up card), demo video, features, how it works, final CTA, footer with Privacy and Terms. The demo video shows the current app (Overview with hover on the donut, add an expense with the category search, a day's transactions, Budgets, Portfolio with a time frame, a transfer) **(manual)**. No "Private by design" block, no "Sign up with email or Google" note. |
 | AUTH-02 | Sign up with email + password (min length per Supabase) | "Check your email" screen. A confirmation email arrives from the custom sender **(manual)**. |
 | AUTH-03 | Open the confirmation link on a phone while the desktop shows "Check your email" | The desktop signs in on its own within about 15 s or when the tab is focused; the link returns to https://stiver.io, not a `*.vercel.app` address **(manual)**. |
 | AUTH-04 | Press "I've confirmed my email" | Signs in if confirmed; otherwise a clear message, no crash. |
@@ -320,5 +320,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: TX-07b: "Category not found" note above the Add new category button when the search has no match.
 - 2026-11-01: Added UI-12 (the new loading screen).
 - 2026-11-01: Added OV-01b (sample-data offer on Overview for empty accounts).
+- 2026-11-01: AUTH-01: landing header spacing, outlined Sign in, no hero mock-up card, new demo video.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

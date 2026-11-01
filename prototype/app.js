@@ -853,15 +853,8 @@ function viewLanding() {
       <p class="land-sub">${__('Track spending, set budgets, and watch your net worth grow across savings, investments and loans. Simple, private and built for how you actually live.')}</p>
       <div class="land-cta"><button class="btn lg" data-act="auth-view" data-view="signup">${__('Get started')}</button><button class="btn secondary lg" data-act="auth-view" data-view="signin">${__('Sign in')}</button></div>
     </div>
-    <div class="land-mock" aria-hidden="true">
-      <div class="mock-card"><div class="mock-label">${__('Net worth')}</div><div class="mock-amt">IDR 54,328,869</div><div class="mock-delta"><b>+12.4%</b> ${__('vs last month')}</div>
-        <svg viewBox="0 0 300 70" preserveAspectRatio="none" class="mock-spark"><polyline points="4,58 54,50 104,54 154,38 204,30 254,22 296,10" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div class="mock-bud"><div class="mock-row"><span>🛒 ${__('Groceries')}</span><span>63%</span></div><div class="bar"><i class="ok" style="width:63%"></i></div>
-        <div class="mock-row"><span>🍽️ ${__('Dining')}</span><span>86%</span></div><div class="bar"><i class="warning" style="width:86%"></i></div>
-        <div class="mock-row"><span>🎉 ${__('Bali Trip')}</span><span>41%</span></div><div class="bar"><i class="ok" style="width:41%"></i></div></div>
-    </div>
   </section>
-  <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, check your budgets, and move money between accounts.')}</p>
+  <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, browse your days, check budgets and your portfolio, and move money between accounts.')}</p>
     <div class="demo-frame"><video controls playsinline preload="metadata" poster="media/demo-poster.jpg" aria-label="${__('Stiver demo video')}"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div></section>
   <section class="land-sec"><h2>${__('Everything you need, nothing you don’t')}</h2>
     <div class="feats">

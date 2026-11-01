@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "A quick tour: add an expense, browse your days, check budgets and your portfolio, and move money between accounts.": "Tur singkat: tambah pengeluaran, telusuri hari demi hari, cek anggaran dan portofolio, lalu pindahkan uang antar akun.",
  "Test Stiver now with sample data": "Uji coba Stiver sekarang dengan data contoh",
  "Just looking around?": "Hanya ingin melihat-lihat?",
  "Fetching your finances…": "Mengambil data keuangan Anda…",

@@ -232,8 +232,8 @@ which is a public suffix and is rejected).
 3. DB changes: write `supabase/migrations/2026103100000N_name.sql`, apply it with the Supabase `apply_migration` tool,
    keep the file in the repo. Never edit applied migrations.
 4. Email templates: edit `tools/build_email_templates.py`, run it, paste into Supabase (manual).
-5. Demo video: `tests/e2e/record_demo_tour.js` records a scripted tour (needs the dev server and ffmpeg); trim and
-   encode to `prototype/media/demo.mp4/.webm` and `demo-poster.jpg` (see the encode commands in git history).
+5. Demo video: start the dev server, run `node tests/e2e/record_demo_tour.js` (records a scripted tour of the sample-data app), then
+   `bash tests/e2e/encode_demo.sh` (needs ffmpeg) to trim, speed up 1.25x and encode `prototype/media/demo.mp4/.webm` + `demo-poster.jpg`.
 
 ## 13. Testing and tools
 
@@ -286,6 +286,10 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: Landing page: more space above the header on phones, outlined Sign in button (`.land-cta .btn.secondary`), the hero product mock-up card removed (hero is
+  now centred text), demo video re-recorded for the current UI (new `tests/e2e/encode_demo.sh`; the tour now shows the donut, category search, day page, Portfolio time frame)
+  and its caption updated.
 
 - 2026-11-01: Overview shows a "Just looking around?" card with a sample-data switch (`samplePromo`, `.sample-promo`) when the total balance is under 1 USD and sample
   mode is off, so new users can try the app without finding the Settings toggle. It reuses the `[data-demo]` switch handler.

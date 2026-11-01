@@ -112,7 +112,7 @@ const CATALOG = [
   ['AAPL', 'Apple', 'stock', 225, 0.05], ['MSFT', 'Microsoft', 'stock', 420, 0.045], ['NVDA', 'NVIDIA', 'stock', 130, 0.1], ['TSLA', 'Tesla', 'stock', 250, 0.12],
   ['VOO', 'Vanguard S&P 500 ETF', 'etf', 520, 0.03], ['VTI', 'Vanguard Total Market ETF', 'etf', 280, 0.03], ['QQQ', 'Invesco QQQ ETF', 'etf', 480, 0.04], ['SPY', 'SPDR S&P 500 ETF', 'etf', 570, 0.03],
 ];
-const TYPE_COLOR = { crypto: '#F5B800', stablecoin: '#14B8A6', stock: '#4A44C6', etf: '#8B8FF0', commodity: '#D97706', manual: '#94A3B8' };
+const TYPE_COLOR = { crypto: '#F5B800', stablecoin: '#14B8A6', stock: '#4A44C6', etf: '#8B8FF0', commodity: '#D97706', cash: '#64748B', manual: '#94A3B8' };
 const SERIES = {};
 function priceSeries(sym) {
   if (SERIES[sym]) return SERIES[sym];
@@ -131,6 +131,7 @@ const assetInfo = (key) => {
   const c = CATALOG.find((x) => x[0] === key);
   if (c) return { key, symbol: key, name: c[1], type: c[2], usd: (k) => (k === thisMonth && live > 0 ? live : priceSeries(key)[Math.max(0, lastMonths(6).indexOf(k))]) };
   const m = D().customAssets[key] || { name: key, type: 'manual', price: 0 };
+  if (m.cash) return { key, symbol: m.cash, name: m.name || `Cash (${m.cash})`, type: 'cash', cash: m.cash, usd: () => 1 / (RATES[m.cash] || 1) };   // fiat balance inside an investment account: worth its face value
   return { key, symbol: m.symbol || key, name: m.name, type: m.type, fh: m.fh, yh: m.yh, mult: m.mult, usd: () => (live > 0 ? live : m.price || 0) };
 };
 
@@ -142,6 +143,7 @@ async function getJSON(url) {
   return j;
 }
 async function searchAssets(q, type) {
+  if (type === 'cash') { const ql = q.trim().toUpperCase(); return Object.keys(RATES).filter((c) => !ql || c.includes(ql) || 'CASH'.includes(ql)).map((c) => ({ key: 'CASH:' + c, symbol: c, name: `Cash (${c})`, type: 'cash', cash: c })); }
   if (api.yahoo && (type === 'idx' || type === 'commodity')) return (await getJSON(`/api/assets?q=${encodeURIComponent(q)}&type=${type}&limit=25`)).results;
   if (api.finnhub) return (await getJSON(`/api/assets?q=${encodeURIComponent(q)}&type=${type}&limit=25`)).results;
   const ql = q.toUpperCase();
@@ -161,6 +163,7 @@ async function refreshPrices(silent) {
   const keys = [...new Set(D().holdings.map((h) => h.symbol))]; let ok = 0;
   for (const key of keys) {
     const info = assetInfo(key);
+    if (info.cash) continue;
     if (info.yh ? !api.yahoo : !api.finnhub) continue;   // that price source is not available
     try { D().livePrices[key] = await quote(info); ok++; } catch { /* keep the previous price */ }
   }
@@ -237,10 +240,11 @@ function seed(name, cur) {
   const customAssets = {
     'BBCA.JK': { symbol: 'BBCA', name: 'Bank Central Asia', type: 'stock', yh: 'BBCA.JK', mult: 1, price: idr(9000) }, 'BBRI.JK': { symbol: 'BBRI', name: 'Bank Rakyat Indonesia', type: 'stock', yh: 'BBRI.JK', mult: 1, price: idr(4000) },
     'BMRI.JK': { symbol: 'BMRI', name: 'Bank Mandiri', type: 'stock', yh: 'BMRI.JK', mult: 1, price: idr(5000) }, 'TLKM.JK': { symbol: 'TLKM', name: 'Telkom Indonesia', type: 'stock', yh: 'TLKM.JK', mult: 1, price: idr(3000) }, 'ASII.JK': { symbol: 'ASII', name: 'Astra International', type: 'stock', yh: 'ASII.JK', mult: 1, price: idr(5000) },
+    'CASH:IDR': { symbol: 'IDR', name: 'Cash (IDR)', type: 'cash', cash: 'IDR' },
     XAUG: { symbol: 'XAUG', name: 'Gold (per gram)', type: 'commodity', yh: 'GC=F', mult: 0.0321507, price: 100 },
   };
-  const holdings = [h(stockbit, 'BBCA.JK', 90000), h(stockbit, 'BBRI.JK', 150000), h(stockbit, 'BMRI.JK', 60000), h(stockbit, 'TLKM.JK', 70000),
-    h(ajaib, 'ASII.JK', 30000), h(ajaib, 'VOO', 35), h(ajaib, 'AAPL', 40), h(ajaib, 'NVDA', 80), h(ajaib, 'BTC', 0.6), h(ajaib, 'USDT', 12000), h(ajaib, 'XAUG', 150)];
+  const holdings = [h(stockbit, 'CASH:IDR', 150000000), h(stockbit, 'BBCA.JK', 90000), h(stockbit, 'BBRI.JK', 150000), h(stockbit, 'BMRI.JK', 60000), h(stockbit, 'TLKM.JK', 70000),
+    h(ajaib, 'CASH:IDR', 85000000), h(ajaib, 'ASII.JK', 30000), h(ajaib, 'VOO', 35), h(ajaib, 'AAPL', 40), h(ajaib, 'NVDA', 80), h(ajaib, 'BTC', 0.5), h(ajaib, 'USDT', 12000), h(ajaib, 'XAUG', 150)];
   // loans: debts you owe. Balance = original - payments, so earlier months can be rebuilt.
   const payments = (monthly, n) => Array.from({ length: n }, (_, i) => ({ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - (n - 1 - i), 5)), amount_minor: monthly }));
   const loans = [
@@ -387,7 +391,7 @@ const loanUSD = (k) => activeLoans().reduce((a, l) => (!liveIn(l.since, k) ? a :
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
 const activeLent = () => D().lent.filter((l) => !l.archived);
 const lentUSD = (k) => activeLent().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
-const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', commodity: 'Commodity', manual: 'Other' }[t] || t);
+const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', commodity: 'Commodity', cash: 'Cash', manual: 'Other' }[t] || t);
 const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Car loan', card: 'Credit card', personal: 'Personal loan', other: 'Other' };
 
 /* mock of the AI tagging described in the plan: history match first, null when unsure */
@@ -1186,7 +1190,7 @@ function holdingSummary(h, info, vc) {
   const k = lastMonths(6)[5], price = info.usd(k), qty = heldNow(h), value = qty * price, accTotal = portfolioUSD(k, h.account_id);
   const row = (l, v) => `<div class="hs-row"><span>${l}</span><b class="num">${v}</b></div>`;
   return `<div class="hold-sum"><div class="hs-top"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span><div><b>${esc(info.symbol)}</b><small class="muted">${esc(typeLabel(info.type))} · ${esc(accountName(h.account_id))}</small></div></div>
-    ${row(__('You hold'), `${qtyFmt(qty)} ${esc(info.symbol)}`)}${row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
+    ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty)} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
 }
 function holdingDialog(h, accId, opts = {}) {
   if (!h) state.ui.pickType = '';   // the asset picker starts on All
@@ -1197,7 +1201,7 @@ function holdingDialog(h, accId, opts = {}) {
     ${h ? '' : `<label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}
     ${h ? '' : `
     <div class="field" id="picker">${__('Asset')}
-      <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Commodities']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
+      <div class="asset-search"><select data-pick-type aria-label="${__('Asset type')}">${[['', 'All'], ['crypto', 'Crypto'], ['stock', 'US stocks &amp; ETFs'], ['idx', 'Indonesia (IDX)'], ['commodity', 'Commodities'], ['cash', 'Cash balance']].map(([v, l]) => `<option value="${v}" ${(state.ui.pickType || '') === v ? 'selected' : ''}>${__(l)}</option>`).join('')}</select>
       <input name="assetq" autocomplete="off" placeholder="${__('Name or ticker')}"></div>
       <div class="results" id="asset-results" role="listbox" hidden></div>
       <div class="picked" id="picked" hidden></div>
@@ -1206,7 +1210,7 @@ function holdingDialog(h, accId, opts = {}) {
       <button type="button" class="legend-btn" data-act="manual-asset">${__('Not listed? Add an asset manually')}</button></div>
     <div class="custom-fields" hidden><div class="two"><label class="field">${__('Symbol')}<input name="symbol" maxlength="10" placeholder="${__('e.g. GOLD')}"></label><label class="field">${__('Name')}<input name="cname" maxlength="40" placeholder="${__('Name')}"></label></div>
       <div class="two"><label class="field">${__('Type')}<select name="ctype"><option value="crypto">${__('Crypto')}</option><option value="stock">${__('Stock')}</option><option value="etf">${__('ETF')}</option><option value="manual">${__('Other')}</option></select></label><label class="field">${__('Price (USD)')}<input name="cprice" type="number" min="0" step="any"></label></div></div>`}
-    ${h ? holdingSummary(h, info, vcOf(h)) + `<div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${__('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${__('Sell')}</button></div>
+    ${h ? holdingSummary(h, info, vcOf(h)) + `<div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${info.cash ? __('Deposit') : __('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${info.cash ? __('Withdraw') : __('Sell')}</button></div>
       ${tradeList(h)}
       <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
@@ -1236,8 +1240,10 @@ function sourceOptions(side, h, selected) {
   const ws = D().wallets.filter((w) => !w.archived), st = stableHoldings(h?.id);
   const held = new Set(st.filter((x) => x.account_id === h?.account_id).map((x) => x.symbol));
   const fresh = h && side === 'sell' ? ['USDT', 'USDC'].filter((s) => !held.has(s) && s !== h.symbol) : [];
+  const cashes = D().holdings.filter((x) => x.id !== h?.id && assetInfo(x.symbol).type === 'cash' && activeAccounts().some((a) => a.id === x.account_id) && (!h || x.account_id === h.account_id));
   const sel = (v) => (v === selected ? 'selected' : '');
   return `<optgroup label="Accounts">${ws.map((w) => `<option value="w:${w.id}" ${sel('w:' + w.id)}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</optgroup>`
+    + (cashes.length ? `<optgroup label="${__('Cash balance')}">${cashes.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(accountName(x.account_id))} (${esc(assetInfo(x.symbol).symbol)}) · ${qtyFmt(heldNow(x))}</option>`).join('')}</optgroup>` : '')
     + (st.length || fresh.length ? `<optgroup label="Stablecoins">${st.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(assetInfo(x.symbol).symbol)} · ${qtyFmt(heldNow(x))} held (${esc(accountName(x.account_id))})</option>`).join('')}${fresh.map((s) => `<option value="n:${s}" ${sel('n:' + s)}>${s} · new in ${esc(accountName(h.account_id))}</option>`).join('')}</optgroup>` : '');
 }
 function parseSource(val) {
@@ -1292,19 +1298,19 @@ function removeTrade(h, tr) {
 }
 
 function tradeList(h) {
-  const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), sym = assetInfo(h.symbol).symbol;
-  if (!trades.length) return ('<p class="muted" style="font-size:13px">' + __('No buys or sells recorded yet.') + '</p>');
+  const trades = [...h.trades].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), sym = assetInfo(h.symbol).symbol, sym2 = assetInfo(h.symbol).type;
+  if (!trades.length) return ('<p class="muted" style="font-size:13px">' + (sym2 === 'cash' ? __('No deposits or withdrawals yet.') : __('No buys or sells recorded yet.')) + '</p>');
   return `<div class="list">${trades.map((tr) => {
     const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('account'))}`;
-    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
+    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity)} ${esc(sym)}<br><small class="muted">${tail}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
   }).join('')}</div>`;
 }
 
 function tradeDialog(h, side) {
   const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), first = ws.find((w) => w.currency === cur()) || ws[0];
-  open(`<h2>${side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: esc(info.symbol) })}</p>
+  open(`<h2>${info.cash ? (side === 'buy' ? __('Deposit {symbol}', { symbol: esc(info.symbol) }) : __('Withdraw {symbol}', { symbol: esc(info.symbol) })) : side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: esc(info.symbol) })}</p>
   <form data-form="trade" data-id="${h.id}" style="display:contents">
-    <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>${__('Buy')}</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>${__('Sell')}</label></div>
+    <div class="seg"><label><input type="radio" name="side" value="buy" ${side === 'buy' ? 'checked' : ''}>${info.cash ? __('Deposit') : __('Buy')}</label><label><input type="radio" name="side" value="sell" ${side === 'sell' ? 'checked' : ''}>${info.cash ? __('Withdraw') : __('Sell')}</label></div>
     <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01"></label>
       <label class="field"><span data-trade-amt></span><input name="amount" type="number" min="0" step="any" required placeholder="${__('amount')}"></label></div>
     <label class="field"><span data-trade-wallet></span><select name="source">${sourceOptions(side, h, first ? 'w:' + first.id : '')}</select></label>
@@ -1771,6 +1777,7 @@ document.addEventListener('submit', (e) => {
       // picked from the Finnhub list (or the built-in fallback)
       const meta = v.assetmeta ? JSON.parse(v.assetmeta) : null;
       if (!sym || !meta) { toast('Search and pick an asset first'); return; }
+      if (meta.cash) D().customAssets[sym] = { symbol: meta.cash, name: meta.name, type: 'cash', cash: meta.cash };
       if (meta.fh || meta.yh) {
         const price = parseFloat(v.price);
         if (!(price > 0)) { toast('No live price yet. Enter one or wait a moment.'); return; }
@@ -1781,6 +1788,7 @@ document.addEventListener('submit', (e) => {
     // paid from a wallet or a stablecoin: that side loses the money. No source = an asset you already owned.
     const src = parseSource(v.fund), paid = src ? parseAmount(src, v.fundamount || 0) : 0;
     if (src && !(paid > 0)) { toast('Enter the amount you paid'); return; }
+    if (src && src.kind === 'holding' && assetInfo(src.holding.symbol).type === 'cash' && src.holding.account_id !== v.account) { toast('That cash balance belongs to another investment account'); return; }
     if (src) { const short = payShortfall(src, 'buy', paid); if (short) { toast(short); return; } }
     let h = D().holdings.find((x) => x.account_id === v.account && x.symbol === sym);
     if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); }

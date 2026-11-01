@@ -1,6 +1,16 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "No deposits or withdrawals yet.": "Belum ada setoran atau penarikan.",
+ "That cash balance belongs to another investment account": "Saldo tunai itu milik akun investasi lain",
+ "Balance": "Saldo",
+ "Withdrew": "Ditarik",
+ "Deposited": "Disetor",
+ "Withdraw {symbol}": "Tarik {symbol}",
+ "Deposit {symbol}": "Setor {symbol}",
+ "Withdraw": "Tarik",
+ "Deposit": "Setor",
+ "Cash balance": "Saldo tunai",
  "Move to account": "Pindahkan ke akun",
  "Share of account": "Porsi di akun",
  "Total value": "Total nilai",

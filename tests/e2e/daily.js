@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const settle = () => p.evaluate(() => Cloud.idle());
-  const m = await p.evaluate(() => state.ui.month);
+  const m = await p.evaluate(() => { const k = lastMonths(2)[0]; state.ui.month = k; return k; });   // a past period, so the test does not depend on today's date
   await p.evaluate((m) => { const w = D().wallets[0]; const c = D().categories[0];
     [[m + '-05', 'expense', 10000, 'Lunch'], [m + '-05', 'expense', 25000, 'Taxi'], [m + '-05', 'income', 500000, 'Gift'], [m + '-09', 'expense', 7000, 'Coffee']].forEach(([d, type, a, note]) =>
       D().transactions.push({ id: uid(), type, amount_minor: a, currency: w.currency, wallet_id: w.id, category_id: c ? c.id : null, note, occurred_at: d }));
@@ -33,5 +33,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // a transaction inside an open day opens for editing
   await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); await p.click('#txn-list .day-group.open .day-body .row'); assert((await p.$$('#dlg')).length >= 1); await p.click('[data-act=close]');
   assert((await p.innerText('.sidebar a.active')).includes('Transactions'));
+  // upcoming (future-dated) entries are not in the history
+  await p.evaluate(() => { const w = D().wallets[0], d = new Date(); d.setDate(d.getDate() + 1); D().transactions.push({ id: uid(), type: 'expense', amount_minor: 4000, currency: w.currency, wallet_id: w.id, category_id: null, note: 'Future thing', occurred_at: isoDate(d) }); state.ui.month = periodKeyOf(isoDate(d)); location.hash = '#/transactions'; render(); });
+  await p.waitForTimeout(150); assert(!(await p.innerText('#txn-list')).includes('Future thing') && !(await p.innerText('.main')).includes('Future thing'), 'an upcoming entry is hidden from the history');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

@@ -787,3 +787,16 @@ dialog { overscroll-behavior: contain; } .cs-scroll, .dlg { overscroll-behavior:
 .shot img { width: 100%; height: 100%; object-fit: cover; }
 .shot .icon-x { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; border: 0; display: grid; place-items: center; padding: 0; }
 .shot.add { cursor: pointer; border: 1.5px dashed var(--line); color: var(--muted); align-content: center; } .shot.add span { font-size: 22px; line-height: 1; } .shot.add small { font-size: 11px; }
+/* support dialog: everything centred */
+.support-form { text-align: center; }
+.support-form h2 { text-align: center; } .support-form .sub { margin: -8px 0 14px; }
+.support-form .seg { margin: 0 auto 14px; }
+.support-form .seg label { white-space: nowrap; padding-left: 6px; padding-right: 6px; }
+.support-form .field { text-align: center; } .support-form .field textarea { text-align: left; }
+.support-form .support-count { text-align: center; margin-top: 6px; }
+.support-form .shots { justify-content: center; }
+.support-form .actions { justify-content: center; }
+.support-form { display: grid; gap: 14px; }
+.support-form h2 { margin: 0; } .support-form .sub { margin: -6px 0 0; }
+.support-form .field, .support-form .shots { margin: 0; }
+.support-form .seg { width: 100%; margin: 0; } .support-form .seg label { flex: 1; text-align: center; }

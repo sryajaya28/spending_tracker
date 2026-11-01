@@ -1,6 +1,13 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Paid": "Dibayar",
+ "Repaid": "Dilunasi",
+ "Charged to this account": "Dibebankan ke akun ini",
+ "Still owed to you": "Masih terutang kepadamu",
+ "Payment and charge history": "Riwayat pembayaran dan tagihan",
+ "Repayment history": "Riwayat pelunasan",
+ "Share an idea": "Bagikan ide",
  "A loan account can only pay expenses": "Akun pinjaman hanya bisa membayar pengeluaran",
  "Includes {amount} charged to this account": "Termasuk {amount} yang dibebankan ke akun ini",
  "charged": "ditagihkan",

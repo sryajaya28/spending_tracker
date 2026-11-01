@@ -623,18 +623,17 @@ function loanCard(l, vc, kind = 'loan') {
   const lent = kind === 'lent', coll = lent ? D().lent : D().loans;
   const bal = loanBalance(l), paid = paidOf(l), charged = chargedOf(l), total = l.original_minor + charged, pct = total ? Math.min(100, Math.round((paid / total) * 100)) : 0;
   const shown = (m) => money(convert(m, l.currency, vc), vc);
-  const recent = [...l.payments].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 4);
   const word = lent ? __('repayment') : __('payment');
   const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}`
     : `${l.monthly_minor ? __('Monthly {amount}', { amount: shown(l.monthly_minor) }) : ''}${l.rate ? ` · ${l.rate}% APR` : ''}`;
   return `<section class="card"><div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Loan'))}</span></h2>
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
-      <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
+      <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn secondary" data-act="history-${kind}" data-id="${l.id}">${__('Details')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
     <div class="bar"><i style="width:${pct}%;${lent ? 'background:#1fa971' : ''}"></i></div>
     <div class="loan-meta"><span>${__(lent ? '{pct}% repaid · {paid} of {total}' : '{pct}% paid · {paid} of {total}', { pct, paid: shown(paid), total: shown(total) })}</span><span>${meta}</span></div>
     ${charged ? `<p class="muted" style="font-size:13px;margin-top:4px">${__('Includes {amount} charged to this account', { amount: shown(charged) })}</p>` : ''}
     ${bal === 0 ? `<p class="hint" style="margin-top:10px">${lent ? __('Fully repaid. You can archive this.') : __('Paid off. You can archive this.')}</p>` : ''}
-    ${recent.length ? `<div class="list" style="margin-top:10px">${recent.map((p) => `<div class="pay-row"><span>${esc(new Date(p.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }))}</span><span class="num">${p.kind === 'charge' ? '+' : ''}${shown(p.amount_minor)}${p.kind === 'charge' ? ` <small class="muted">${__('charged')}</small>` : ''}</span>${p.kind === 'charge' ? '<span></span>' : `<button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: word })}">×</button>`}</div>`).join('')}</div>` : `<p class="muted" style="margin-top:10px">${__('No {what}s yet.', { what: word })}</p>`}</section>`;
+</section>`;
 }
 
 /* an (i) button with a small popover: tap/click toggles it, hover shows it on desktop, tapping elsewhere closes it */
@@ -747,6 +746,18 @@ function lentDialog(l) {
       <label class="field">${__('Note (optional)')}<input name="note" maxlength="60" value="${esc(l?.note || '')}" placeholder="${__('e.g. Laptop repair')}"></label></div>
     <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-lent" data-id="${l.id}">${__('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
+/* every repayment and, for a loan account, every charge (an expense paid with it), newest first */
+function loanHistoryDialog(l, kind = 'loan') {
+  const lent = kind === 'lent', shown = (m) => money(m, l.currency), rows = [...l.payments].sort((a, b) => b.date.localeCompare(a.date));
+  const fmt = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' });
+  open(`<h2>${esc(l.name)}</h2><p class="muted" style="margin-top:-10px">${lent ? __('Repayment history') : __('Payment and charge history')}</p>
+  <div class="hold-sum"><div class="hs-row"><span>${lent ? __('Still owed to you') : __('Balance')}</span><b class="num">${shown(loanBalance(l))}</b></div>
+    <div class="hs-row"><span>${lent ? __('Lent') : __('Original amount')}</span><b class="num">${shown(l.original_minor)}</b></div>
+    ${chargedOf(l) ? `<div class="hs-row"><span>${__('Charged to this account')}</span><b class="num">+${shown(chargedOf(l))}</b></div>` : ''}
+    <div class="hs-row"><span>${lent ? __('Repaid') : __('Paid')}</span><b class="num">${shown(paidOf(l))}</b></div></div>
+  <div class="list">${rows.map((p) => `<div class="pay-row"><span>${esc(fmt(p.date))}</span><span class="num">${p.kind === 'charge' ? '+' : ''}${shown(p.amount_minor)}${p.kind === 'charge' ? ` <small class="muted">${__('charged')}</small>` : ''}</span>${p.kind === 'charge' ? '<span></span>' : `<button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: lent ? __('repayment') : __('payment') })}">×</button>`}</div>`).join('') || `<p class="muted">${__('No {what}s yet.', { what: lent ? __('repayment') : __('payment') })}</p>`}</div>
+  <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
+}
 function paymentDialog(l, kind = 'loan') {
   const lent = kind === 'lent';
   open(`<h2>${lent ? __('Record repayment') : __('Record payment')}</h2><p class="muted" style="margin-top:-10px">${esc(l.name)} · ${money(loanBalance(l), l.currency)} ${lent ? __('still owed to you') : __('remaining')}</p>
@@ -804,13 +815,12 @@ function supportShotsHtml() {
 }
 function supportDialog() {
   supportShots = [];
-  open(`<h2>${__('Help & feedback')}</h2><p class="muted" style="margin-top:-10px">${__('Found a bug or have an idea? Tell us.')}</p>
+  open(`<div class="support-form"><h2>${__('Help & feedback')}</h2><p class="muted sub">${__('Found a bug or have an idea? Tell us.')}</p>
   <form data-form="support" style="display:contents">
-    <div class="seg"><label><input type="radio" name="type" value="bug" checked>${__('Report a bug')}</label><label><input type="radio" name="type" value="feedback">${__('Suggest an improvement')}</label></div>
+    <div class="seg"><label><input type="radio" name="type" value="bug" checked>${__('Report a bug')}</label><label><input type="radio" name="type" value="feedback">${__('Share an idea')}</label></div>
     <label class="field">${__('What happened, or what would you like to see?')}<textarea name="message" rows="5" maxlength="${SUPPORT_MAX_CHARS}" required placeholder="${__('Type here (max 250 characters)')}"></textarea><small class="muted support-count" id="support-count">0/${SUPPORT_MAX_CHARS}</small></label>
     <div class="field">${__('Screenshots (optional)')}<div class="shots" id="shots">${supportShotsHtml()}</div><small class="muted">${__('Up to 5 images, 1 MB each. Larger photos are shrunk automatically.')}</small></div>
-    <p class="hint">${__('We include your account email and basic device info so we can follow up.')}</p>
-    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit" data-send>${__('Send')}</button></div></form>`);
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit" data-send>${__('Send')}</button></div></form></div>`);
 }
 async function addSupportShots(files) {
   const room = SUPPORT_MAX_FILES - supportShots.length; let skipped = 0;
@@ -925,7 +935,8 @@ function txnRow(t) {
 }
 function filteredTxns() {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
-  return D().transactions.filter((t) => (occ || inPeriod(t.occurred_at, state.ui.month))
+  return D().transactions.filter((t) => t.occurred_at <= todayIso()   // upcoming (future-dated) entries are not part of the history yet
+    && (occ || inPeriod(t.occurred_at, state.ui.month))
     && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
 }
@@ -1363,7 +1374,7 @@ function acctOptions(type, selected, noNew) {
   const loans = type === 'expense' ? activeLoans() : [];   // a loan account can pay for expenses; what is paid raises the loan
   return ws.map((w) => `<option value="${w.id}" ${sel(w.id)}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')
     + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '')
-    + (loans.length ? `<optgroup label="${__('Loan accounts')}">${loans.map((l) => `<option value="l:${l.id}" ${sel('l:' + l.id)}>${esc(l.name)} (${esc(l.currency)}) · ${__('owed')} ${money(loanBalance(l), l.currency)}</option>`).join('')}</optgroup>` : '');
+    + (loans.length ? `<optgroup label="${__('Loan accounts')}">${loans.map((l) => `<option value="l:${l.id}" ${sel('l:' + l.id)}>${esc(l.name)} (${esc(l.currency)})</option>`).join('')}</optgroup>` : '');
 }
 /* the amount's unit and step follow the chosen account */
 function syncTxnUnit(form) {
@@ -1877,12 +1888,14 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-loan') loanDialog();
   else if (act === 'edit-loan') loanDialog(find(D().loans));
   else if (act === 'pay-loan') paymentDialog(find(D().loans), 'loan');
+  else if (act === 'history-loan') loanHistoryDialog(find(D().loans), 'loan');
+  else if (act === 'history-lent') loanHistoryDialog(find(D().lent), 'lent');
   else if (act === 'archive-loan') { find(D().loans).archived = true; save(); close(); render(); toast('Loan archived'); }
   else if (act === 'add-lent') lentDialog();
   else if (act === 'edit-lent') lentDialog(find(D().lent));
   else if (act === 'pay-lent') paymentDialog(find(D().lent), 'lent');
   else if (act === 'archive-lent') { find(D().lent).archived = true; save(); close(); render(); toast('Archived'); }
-  else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); }
+  else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); if (el.closest('#dlg')) loanHistoryDialog(l, el.dataset.kind); }
   else if (act === 'pick-type-old') { state.ui.pickType = el.dataset.type; $$('.pill', el.parentElement).forEach((b) => b.classList.toggle('on', b === el)); runAssetSearch(); }
   else if (act === 'pick-asset') pickAsset(state.pick[+el.dataset.i], el.closest('form'));
   else if (act === 'manual-asset') { const f = el.closest('form'); f.asset.value = '__custom'; f.assetmeta.value = ''; $('#picker', f).hidden = true; $('.custom-fields', f).hidden = false; }

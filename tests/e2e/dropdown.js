@@ -30,6 +30,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await tap('#dlg select[name=category]'); await p.waitForSelector('#dlg .cs-search');
   assert((await p.innerText('#dlg .cs-cta')).includes('Add new category')); assert.equal(await p.$$eval('#dlg .cs-opt', (e) => e[e.length - 1].classList.contains('cs-cta')), true, 'the add entry is last');
   assert(!(await p.evaluate(() => document.activeElement.matches('input'))), 'the search box does not grab focus by itself');
+  // tapping the search box (phone keyboard => resize/scroll events) keeps the list open
+  await tap('#dlg .cs-search'); assert(await p.evaluate(() => document.activeElement.matches('.cs-search')), 'search focused');
+  await p.evaluate(() => { window.dispatchEvent(new Event('resize')); document.dispatchEvent(new Event('scroll')); window.dispatchEvent(new Event('scroll')); document.querySelector('#dlg').dispatchEvent(new Event('scroll')); }); await p.waitForTimeout(100);
+  assert.equal(await p.$$('#dlg .cs-pop').then((a) => a.length), 1, 'the list stays open while typing');
   const total = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').length);
   await p.fill('#dlg .cs-search', 'coffee'); const some = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(some.length < total && some.some((x) => /Coffee/.test(x)) && some.some((x) => /Add new category/.test(x)), JSON.stringify(some));
   await p.fill('#dlg .cs-search', 'dining'); const dn = await p.$$eval('#dlg .cs-opt', (e) => e.filter((x) => x.style.display !== 'none').map((x) => x.textContent)); assert(dn.some((x) => /Dining/.test(x)) && dn.some((x) => /Coffee/.test(x)), 'searching a parent also lists its sub-categories: ' + JSON.stringify(dn));

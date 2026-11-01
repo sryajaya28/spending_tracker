@@ -287,6 +287,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Fix: tapping the search box inside a dropdown list closed the list (the phone keyboard fires resize/scroll, which `dropdown.js` treated as "page moved").
+  While focus is inside the list those events are ignored and the list is re-fitted to the visual viewport (`fit()`). e2e `dropdown` dispatches them.
+
 - 2026-11-01: Fix (from a screen recording): after choosing an option in the app-styled list, iOS opened its native picker again because `dropdown.js` focused the
   select. Focus now returns to the select only when the list was opened from the keyboard; after a tap the select is blurred. e2e `dropdown` asserts it.
 

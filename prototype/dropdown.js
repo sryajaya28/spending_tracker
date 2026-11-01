@@ -98,7 +98,11 @@
     if (isEnh(e.target) && [' ', 'Enter', 'ArrowDown', 'ArrowUp'].includes(e.key)) { e.preventDefault(); open(e.target, true); }
   }, true);
   document.addEventListener('cancel', (e) => { if (pop) e.preventDefault(); }, true);   // Esc closes the list, not the dialog
-  addEventListener('resize', () => close());
-  addEventListener('scroll', (e) => { if (pop && !pop.contains(e.target)) close(); }, true);
+  // typing in the list's search box opens the phone keyboard, which resizes/scrolls the page: keep the list open then and fit it above the keyboard
+  const typing = () => pop && pop.contains(document.activeElement);
+  const fit = () => { const vv = window.visualViewport; if (!pop || !vv || !pop.style.top) return; const r = pop.getBoundingClientRect(); pop.style.maxHeight = Math.max(140, Math.min(320, vv.offsetTop + vv.height - r.top - 8)) + 'px'; };
+  addEventListener('resize', () => { if (typing()) fit(); else close(); });
+  addEventListener('scroll', (e) => { if (pop && !typing() && !pop.contains(e.target)) close(); }, true);
+  if (window.visualViewport) { visualViewport.addEventListener('resize', () => { if (typing()) fit(); }); visualViewport.addEventListener('scroll', () => { if (typing()) fit(); }); }
   new MutationObserver(() => { if (cur && !cur.isConnected) close(); }).observe(document.body, { childList: true, subtree: true });
 })();

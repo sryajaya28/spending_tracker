@@ -777,3 +777,4 @@ dialog { overscroll-behavior: contain; } .cs-scroll, .dlg { overscroll-behavior:
 .day-body .row:last-child { border-bottom: 0; }
 /* a day row shows no highlight when pressed, hovered or open: the chevron shows the state */
 .day-row:hover, .day-row:active, .day-row:focus, .day-row:focus-visible { background: none; }
+.rec-actions { margin: 4px 0 6px; } .rec-actions .btn { width: 100%; justify-content: center; }

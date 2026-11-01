@@ -20,7 +20,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { const r0 = D().recurring[0]; r0.start = '2026-06-10'; r0.next = '2026-09-10'; runRecurring(); });   // creates catch-up entries from June
   const before = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort());
   assert(before.length >= 2, 'past entries exist: ' + before.length);
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('[data-act=rec-menu]'); assert.equal(await p.$$eval('.cat-row [data-act=rec-edit], .cat-row [data-act=rec-toggle], .cat-row [data-act=rec-del]', (e) => e.length), 0, 'actions are in the ⋯ menu'); await p.click('[data-act=rec-menu]'); assert.deepEqual(await p.$$eval('.menu [data-act]', (e) => e.map((x) => x.dataset.act)), ['rec-edit', 'rec-toggle', 'rec-del']); await p.click('.menu [data-act=rec-edit]'); await p.waitForSelector('form[data-form=recedit]');
+  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('[data-act=rec-manage]'); assert.equal(await p.$$eval('.cat-row [data-act=rec-toggle], .cat-row [data-act=rec-del], .cat-row .dots', (e) => e.length), 0, 'one Manage button per rule'); assert.equal((await p.innerText('[data-act=rec-manage]')).trim(), 'Manage'); await p.click('[data-act=rec-manage]'); assert.deepEqual(await p.$$eval('#dlg [data-act]', (e) => e.map((x) => x.dataset.act)), ['rec-toggle', 'rec-del', 'close']); await p.waitForSelector('form[data-form=recedit]');
   const newDate = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 20); return isoDate(d); });
   await p.fill('input[name=amount]', '150000'); await p.fill('input[name=next]', newDate); await p.click('#dlg button[type=submit]'); await settle();
   r = await p.evaluate(() => ({ amount: D().recurring[0].spec.amount_minor, next: D().recurring[0].next, start: D().recurring[0].start }));
@@ -29,6 +29,6 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.deepEqual(after, before, 'past entries untouched');
   assert((await p.innerText('.main')).includes('150.000') || (await p.innerText('.main')).includes('150,000'), 'the new amount shows');
   // a date in the past is refused
-  await p.click('[data-act=rec-menu]'); await p.click('.menu [data-act=rec-edit]'); await p.evaluate(() => { document.querySelector('input[name=next]').removeAttribute('min'); }); await p.fill('input[name=next]', '2026-01-01'); await p.click('#dlg button[type=submit]'); assert.equal(await p.evaluate(() => D().recurring[0].next), newDate, 'a past date is not accepted'); await p.click('[data-act=close]');
+  await p.click('[data-act=rec-manage]'); await p.evaluate(() => { document.querySelector('input[name=next]').removeAttribute('min'); }); await p.fill('input[name=next]', '2026-01-01'); await p.click('#dlg button[type=submit]'); assert.equal(await p.evaluate(() => D().recurring[0].next), newDate, 'a past date is not accepted'); await p.click('[data-act=close]');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').filter((l) => l.includes('recedit.js')).slice(0, 2).join(' | ')); process.exit(1); });

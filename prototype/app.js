@@ -1750,6 +1750,7 @@ function ruleDialog(r) {
   open(`<h2>${esc(t.name)}</h2><p class="muted" style="margin-top:-10px">${__('Changes apply from the next payment. Entries already made stay as they are.')}</p>
   <form data-form="recedit" data-id="${r.id}" style="display:contents"><div class="two"><label class="field">${__('Amount ({cur})', { cur: esc(a.unit) })}<input name="amount" type="number" inputmode="decimal" min="0" step="${a.step}" required value="${a.value}"></label>
     <label class="field">${__('Next payment')}<input name="next" type="date" required min="${isoDate(new Date())}" value="${r.next}"></label></div>
+  <div class="two rec-actions"><button type="button" class="btn secondary" data-act="rec-toggle" data-id="${r.id}">${r.active === false ? __('Resume') : __('Pause')}</button><button type="button" class="btn danger" data-act="rec-del" data-id="${r.id}">${__('Delete')}</button></div>
   <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function recurringCard() {
@@ -1757,22 +1758,19 @@ function recurringCard() {
   return `<section class="card"><div class="card-head"><h2>${__('Recurring')}</h2></div>${list.map((r) => {
     const t = ruleTitle(r), freq = r.freq === 'weekly' ? __('Every week') : __('Every month');
     return `<div class="brow cat-row"><span class="tile" style="--c:#8B8FF0">${t.icon}</span><div class="cat-main"><b class="cat-name">${esc(t.name)}</b><small class="muted">${esc(t.amount)}${t.where ? ' · ' + esc(t.where) : ''}</small><small class="muted">${freq} · ${r.active === false ? __('Paused') : __('Next {date}', { date: dateOf(r.next).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }) })}</small></div>
-      <div class="menu-wrap"><button type="button" class="dots" data-act="rec-menu" data-id="${r.id}" aria-label="${__('More actions')}" aria-haspopup="menu" aria-expanded="${state.ui.recMenu === r.id}">⋯</button>
-      ${state.ui.recMenu === r.id ? `<div class="menu" role="menu"><button type="button" role="menuitem" data-act="rec-edit" data-id="${r.id}">${__('Edit')}</button><button type="button" role="menuitem" data-act="rec-toggle" data-id="${r.id}">${r.active === false ? __('Resume') : __('Pause')}</button><button type="button" role="menuitem" class="warn" data-act="rec-del" data-id="${r.id}">${__('Delete')}</button></div>` : ''}</div></div>`;
+      <div class="tools"><button class="btn secondary" data-act="rec-manage" data-id="${r.id}">${__('Manage')}</button></div></div>`;
   }).join('')}</section>`;
 }
 
 /* ---------- events ---------- */
 document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
-  if (!el) { if (state.ui.walletMenu || state.ui.infoOpen || state.ui.recMenu) { state.ui.walletMenu = null; state.ui.infoOpen = null; state.ui.recMenu = null; render(); } return; }
+  if (!el) { if (state.ui.walletMenu || state.ui.infoOpen) { state.ui.walletMenu = null; state.ui.infoOpen = null; render(); } return; }
   const { act, id, type, date } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
-  if (act !== 'rec-menu') state.ui.recMenu = null;
   if (act !== 'toggle-info') state.ui.infoOpen = null;
   if (act === 'close') close();
   else if (act === 'theme-toggle') { applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); render(); }
-  else if (act === 'rec-menu') { state.ui.recMenu = state.ui.recMenu === id ? null : id; render(); }
   else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
   else if (act === 'add-txn') txnDialog(null, type, undefined, date);
   else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
@@ -1783,9 +1781,9 @@ document.addEventListener('click', (e) => {
   else if (act === 'view-transfer') transferDetail(id);
   else if (act === 'delete-transfer') { D().transactions = D().transactions.filter((t) => t.transfer_id !== id); save(); close(); render(); toast('Transfer deleted'); }
   else if (act === 'edit-txn') txnDialog(find(D().transactions));
-  else if (act === 'rec-toggle') { const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
-  else if (act === 'rec-edit') { render(); ruleDialog(find(D().recurring)); }
-  else if (act === 'rec-del') { D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
+  else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
+  else if (act === 'rec-manage') ruleDialog(find(D().recurring));
+  else if (act === 'rec-del') { close(); D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
   else if (act === 'add-budget') budgetDialog();
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
   else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }

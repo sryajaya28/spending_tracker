@@ -548,3 +548,5 @@ html, body { max-width: 100%; overflow-x: clip; touch-action: manipulation; }
 @media (hover: hover) { .info-wrap:hover .info-pop { display: block; } }
 .info-btn { position: relative; }
 .info-btn::after { content: ""; position: absolute; inset: -9px; }   /* a bigger invisible tap area around the small icon */
+.card-head h2:has(.info-wrap) { display: flex; align-items: center; gap: 6px; }
+.card-head h2 .info-wrap { margin: 0; display: flex; align-items: center; }

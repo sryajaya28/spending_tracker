@@ -1,6 +1,6 @@
 # Instructions for assistants working on Stiver
 
-0. **Read `learning.md` before every coding session:** it lists the mistakes made on this project and how to avoid them. Add a line to it whenever you make a mistake or the owner corrects you.
+0. **Read `learning.md` before every coding session:** it lists the mistakes made on this project and how to avoid them. Add a line to it whenever you make a mistake or the owner corrects you, and **at the end of every coding session append your learnings to its Session log** (even if it is "no new mistakes").
 1. **Read `context.md` before doing anything.** It is the source of truth for the project's architecture, services,
    decisions and open items. If it disagrees with the code, trust the code and fix the file.
 2. **After doing anything, update `context.md` in the same commit** (change the affected sections and add a dated line to

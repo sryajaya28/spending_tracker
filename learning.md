@@ -1,8 +1,9 @@
 # Learning: mistakes made on this project, and how to avoid them
 
 **Read this file before every new coding session** (together with `context.md`). Every item below cost time, broke
-something, or annoyed the owner. Add a new line here whenever you make a mistake or the owner corrects you; keep each
-item short and say what to do instead.
+something, or annoyed the owner. **At the end of every coding session, add what you learned** to the "Session log" at the
+bottom (and to the right section above when it is a lasting rule): mistakes made, owner corrections, surprises, things that
+only worked after a detour. Keep each item short and say what to do instead.
 
 ## Before you push (release discipline)
 
@@ -102,6 +103,17 @@ item short and say what to do instead.
   `Rp 1.234` formatting, "Account" not "Wallet", dark purple (not bright) in dark mode, never zoom the PWA.
 - Never send secrets; never delete or overwrite data without looking at it first and, if in doubt, asking.
 
+## Session log (append a dated entry at the end of every coding session)
+
+- **2026-11-01** (long session: investments cost basis, localized sample data, loans as payment accounts, support form, calendar):
+  - A native `<select>` needs `text-align-last: center` to centre its text, `text-align` alone does nothing.
+  - A debugging detour cost time because a hidden `change` event (removed focused input) reset state: when a click "does
+    nothing", log the state after the handler and look for events fired by the re-render itself.
+  - `git push` after a red test run happened again once; the check is "every line says PASS" before the push command, not after.
+  - Owner wording like "native design" means the app's own design language (see UI notes), not the OS component.
+  - Wrapping a new feature behind a new DB column: hold `main` until the owner confirms the SQL ran (done for migrations 18-20).
+  - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
+
 ## Checklist before you start
 
 1. Read `context.md` and `learning.md`; `git status`; start the dev server.
@@ -110,3 +122,4 @@ item short and say what to do instead.
 4. Add/adjust the e2e test; run the full suite; read the output.
 5. Update docs (`context.md`, `regression_scenario.md`, README, `NEXT_STEPS.md`) and `i18n-id.js`.
 6. Look at the screenshot; commit; push (`&&` chain); if a migration is involved, wait for the owner to apply it.
+7. **Before you finish the session: append your learnings to the Session log above** and commit it.

@@ -6,7 +6,7 @@ on 2026-10-31. It contains **no secrets**: it says where each secret lives, neve
 ## 0. Working agreement (read this first)
 
 1. **Before doing anything** on this project (code, database, config, docs, answering a question about the project),
-   read this file **and `learning.md`** (past mistakes and how to avoid them; add to it whenever you make a mistake or are corrected). If it disagrees with the code, trust the code, then fix this file.
+   read this file **and `learning.md`** (past mistakes and how to avoid them; add to it whenever you make a mistake or are corrected, and append your learnings to its Session log at the end of every coding session). If it disagrees with the code, trust the code, then fix this file.
 2. **After doing anything**, update this file in the same commit: edit the sections that changed (features, data model,
    services, open items, decisions) and add a dated line to the **Changelog** at the bottom.
 3. **Also update `README.md`** whenever the change affects what it describes (features, how to run, how it is built,
@@ -290,6 +290,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: `learning.md` has a **Session log**; appending what you learned at the end of every coding session is now a step of the working agreement (README, CLAUDE.md, §0, learning.md checklist step 7).
 - 2026-11-01: The Transactions filter pills (category, occasion, account) centre their text.
 - 2026-11-01: Added `learning.md` (mistakes made so far and how to avoid them) and made reading it a step of the working agreement (README, CLAUDE.md, §0).
 - 2026-11-01: Transactions: **Reset filters** link (left of Expand all / Hide all, also shown when nothing matches) appears while any of search, category, occasion or account is set and clears all four (the period is kept). Fixed on the way: a `change` event from a removed, focused search box used to bring its old text back after a re-render (the `[data-filter]` change handler now only handles selects).

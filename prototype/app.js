@@ -544,6 +544,7 @@ document.addEventListener('click', (e) => {
   if (g && !g.closest('.donut').dataset.pinned) { g.closest('.donut').dataset.pinned = '1'; donutShow(g); }
 });
 document.addEventListener('focusin', (e) => { const g = e.target.closest && e.target.closest('.dseg'); if (g) donutShow(g); });
+document.addEventListener('focusin', (e) => { if (e.target.classList?.contains('icon-input')) setTimeout(() => e.target.select(), 0); });   // typing or an emoji replaces the current icon
 
 function valueChart(months, usd, vc) {
   const W = 560, H = 250, pl = 58, pr = 18, pt = 14, pb = 30;
@@ -954,7 +955,7 @@ const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions',
 function txnListHtml() {
   const loanView = !!loanViewId(), rows = [...filteredTxns(), ...loanPaymentRows()];
   const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet), up = filteredTxns(true).length;
-  const upBtn = up ? `<button type="button" class="see-upcoming" data-act="see-upcoming">${__('See upcoming transactions ({n})', { n: up })}<span class="chev" aria-hidden="true">›</span></button>` : '';
+  const upBtn = up ? `<button type="button" class="see-upcoming" data-act="see-upcoming">${__('See upcoming transactions ({n})', { n: up })}</button>` : '';
   const reset = anyFilter ? `<button type="button" class="legend-btn reset-filters" data-act="reset-filters">${__('Reset filters')}</button>` : '';
   if (!rows.length) return (reset ? `<div class="day-tools">${reset}</div>` : '') + '<div class="empty">' + __('No transactions match.') + '</div>' + upBtn;
   const days = {};
@@ -1286,15 +1287,21 @@ const catOptions = (type, sel, withNew) => `<option value="">${__('— None (AI 
 
 /* parents a new category can live in: none (a new top-level category) or an existing top-level one of this type */
 const quickParentOptions = (type) => `<option value="">${__('Nothing: a new top-level category')}</option>${D().categories.filter((c) => !c.parent_id && !c.archived && c.type === type).map((c) => `<option value="${c.id}">${c.icon} ${esc(c.name)} ${__('(as a sub-category)')}</option>`).join('')}`;
+/* category icon: the field holds the current emoji (not a placeholder, so it can be deleted), its text is selected on focus so
+   typing or picking an emoji replaces it, only the last emoji typed is kept, and a row of common icons can be tapped instead */
+const ICON_PICKS = ['🏷️', '🍔', '☕', '🛒', '🚕', '⛽', '🏠', '💡', '📱', '🎬', '🎮', '👕', '💊', '🏋️', '✈️', '🎁', '🐶', '📚', '💼', '💰'];
+const lastEmoji = (v) => { const s = (v || '').trim(); if (!s) return ''; const g = window.Intl?.Segmenter ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(s)].map((x) => x.segment) : Array.from(s); return g[g.length - 1]; };
+const iconField = (name, label, value) => `<label class="field">${label}<input name="${name}" class="icon-input" value="${esc(value)}" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="${__('Icon (emoji)')}"></label>`;
+const iconPicks = (name, cur = '') => `<div class="icon-picks" role="group" aria-label="${__('Choose an icon')}">${ICON_PICKS.map((e) => `<button type="button" class="icon-pick${e === cur ? ' on' : ''}" data-act="pick-icon" data-for="${name}" data-e="${e}" aria-label="${e}">${e}</button>`).join('')}</div>`;
 /* add a category without leaving the transaction form, then select it */
 function quickAddCategory(form) {
   const type = form.type.value === 'income' ? 'income' : 'expense', name = form.qc_name.value.trim(), parent = form.qc_parent.value ? catOf(form.qc_parent.value) : null;
   if (!name) { toast('Enter a name for the category'); form.qc_name.focus(); return; }
   if (D().categories.some((c) => !c.archived && (c.parent_id || null) === (parent?.id || null) && c.type === type && c.name.toLowerCase() === name.toLowerCase())) { toast('That name already exists here'); return; }
-  const c = { id: uid(), parent_id: parent ? parent.id : null, name, type, icon: form.qc_icon.value.trim() || '🏷️', color: parent ? parent.color : SWATCHES[D().categories.length % SWATCHES.length], archived: false };
+  const c = { id: uid(), parent_id: parent ? parent.id : null, name, type, icon: lastEmoji(form.qc_icon.value) || '🏷️', color: parent ? parent.color : SWATCHES[D().categories.length % SWATCHES.length], archived: false };
   D().categories.push(c); save();
   $('select[name=category]', form).innerHTML = catOptions(type, c.id, true); $('select[name=category]', form).dataset.prev = c.id;
-  form.qc_name.value = ''; form.qc_icon.value = ''; $('.quick-cat', form).hidden = true;
+  form.qc_name.value = ''; form.qc_icon.value = '🏷️'; $('.quick-cat', form).hidden = true;
   toast(parent ? __('Added {name} under {parent}', { name, parent: parent.name }) : __('Added {name}', { name }));
 }
 /* active occasions whose dates include this day (an occasion without dates never matches by date) */
@@ -1420,7 +1427,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
     <label class="field">${__('Category')}<select name="category" data-search data-empty="${__('Category not found')}" data-prev="${t?.category_id || ''}">${catOptions(type, t?.category_id, true)}</select></label>
     <div class="quick-cat" hidden>
       <div class="two"><label class="field">${__('Name')}<input name="qc_name" maxlength="40" placeholder="${__('e.g. Gym, or Snacks')}" autocomplete="off"></label>
-        <label class="field">${__('Icon')}<input name="qc_icon" maxlength="4" placeholder="🏷️" autocomplete="off"></label></div>
+        ${iconField('qc_icon', __('Icon'), '🏷️')}</div>${iconPicks('qc_icon', '🏷️')}
       <label class="field">${__('Inside')}<select name="qc_parent">${quickParentOptions(type)}</select></label>
       <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">${__('Cancel')}</button><button type="button" class="btn" data-act="quick-cat-add">${__('Add category')}</button></div></div>
     ${live.length ? `<label class="field">${__('🎉 Special occasion (optional)')}<select name="occasion"><option value="">${__('None')}</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
@@ -1456,8 +1463,8 @@ function catDialog(c, parentId) {
   open(`<h2>${c ? (parent ? __('Edit sub-category') : __('Edit category')) : (parent ? __('New sub-category') : __('New category'))}</h2>
   <form data-form="cat" data-id="${c?.id || ''}" style="display:contents">
     <label class="field">${__('Name')}<input name="name" required maxlength="30" value="${esc(c?.name || '')}" placeholder="${__('e.g. Pets')}"></label>
-    <div class="two"><label class="field">${__('Icon (emoji)')}<input name="icon" maxlength="4" value="${esc(c?.icon || '🏷️')}"></label>
-      <label class="field">${__('Color')}<input name="color" type="color" value="${esc(c?.color || parent?.color || SWATCHES[0])}"></label></div>
+    <div class="two">${iconField('icon', __('Icon (emoji)'), c?.icon || '🏷️')}
+      <label class="field">${__('Color')}<input name="color" type="color" value="${esc(c?.color || parent?.color || SWATCHES[0])}"></label></div>${iconPicks('icon', c?.icon || '🏷️')}
     <label class="field">${__('Parent category')}<select name="parent" ${hasKids ? 'disabled' : ''}><option value="">${__('None (top-level)')}</option>${tops.map((x) => `<option value="${x.id}" ${parent && x.id === parent.id ? 'selected' : ''}>${x.icon} ${esc(x.name)}</option>`).join('')}</select></label>
     <label class="field">${__('Type')}<select name="type" ${parent || c ? 'disabled' : ''}><option value="expense" ${c?.type === 'expense' || !c ? 'selected' : ''}>${__('Expense')}</option><option value="income" ${c?.type === 'income' ? 'selected' : ''}>${__('Income')}</option></select></label>
     <p class="hint">${hasKids ? __('This category has sub-categories, so it stays top-level.') : __('Sub-categories show up in the spending breakdown and roll up into their parent.')}</p>
@@ -1901,6 +1908,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }
   else if (act === 'quick-cat-cancel') $('.quick-cat', el.closest('form')).hidden = true;
   else if (act === 'quick-cat-add') quickAddCategory(el.closest('form'));
+  else if (act === 'pick-icon') { const f = el.closest('form')?.elements[el.dataset.for]; if (f) { f.value = el.dataset.e; f.dispatchEvent(new Event('input', { bubbles: true })); } }
   else if (act === 'add-wallet') walletDialog();
   else if (act === 'add-occasion') occasionDialog();
   else if (act === 'add-occasion-txn') txnDialog(null, 'expense', occasionOf(id));
@@ -2078,6 +2086,7 @@ async function pickAsset(a, form, quiet) {
 document.addEventListener('input', (e) => {
   if (e.target.form?.dataset.form === 'trade' && ['quantity', 'amount', 'price'].includes(e.target.name)) { syncTradePrice(e.target.form, e.target.name); tradeHint(e.target.form); }
   if (e.target.name === 'assetq') runAssetSearch();
+  if (e.target.classList?.contains('icon-input')) { const v = lastEmoji(e.target.value); if (v !== e.target.value) e.target.value = v; $$('.icon-pick', e.target.form).forEach((b) => b.classList.toggle('on', b.dataset.for === e.target.name && b.dataset.e === v)); }
   if (e.target.name === 'message' && e.target.form?.dataset.form === 'support') $('#support-count').textContent = `${e.target.value.length}/${SUPPORT_MAX_CHARS}`;
   if (e.target.matches('[data-filter="dayq"]')) { state.ui.dayQ = e.target.value; const l = $('#day-list'); if (l) l.innerHTML = dayListHtml(routeArg()); }
   if (e.target.matches('[data-filter="q"]')) { state.ui.q = e.target.value; e.target.classList.toggle('f-on', !!e.target.value.trim()); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
@@ -2196,7 +2205,7 @@ document.addEventListener('submit', async (e) => {
     const type = parent ? parent.type : existing ? existing.type : v.type || 'expense';
     const dup = D().categories.some((c) => c.id !== existing?.id && !c.archived && (c.parent_id || null) === (parent?.id || null) && c.type === type && c.name.toLowerCase() === name.toLowerCase());
     if (!name || dup) { toast(dup ? 'That name already exists here' : 'Enter a name'); return; }
-    const fields = { name, icon: v.icon.trim() || '🏷️', color: v.color, parent_id: parent ? parent.id : null, type };
+    const fields = { name, icon: lastEmoji(v.icon) || '🏷️', color: v.color, parent_id: parent ? parent.id : null, type };
     if (existing) Object.assign(existing, fields);
     else D().categories.push({ id: uid(), archived: false, ...fields });
     if (parent) { state.ui['more_cat-' + parent.type] = true; state.ui.openCats.add(parent.id); }   // show the sub-category you just added

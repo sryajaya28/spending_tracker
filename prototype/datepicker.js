@@ -72,5 +72,20 @@
   document.addEventListener('cancel', (e) => { if (pop) e.preventDefault(); }, true);   // Esc closes the calendar, not the dialog
   addEventListener('resize', () => close());
   addEventListener('scroll', (e) => { if (pop && !pop.contains(e.target)) close(); }, true);
-  new MutationObserver(() => { if (cur && !cur.isConnected) close(); }).observe(document.body, { childList: true, subtree: true });
+  /* the field shows its date as "2 Nov 2026" on every browser (the OS writes 11/02/2026 or 02/11/2026, which confuses people):
+     the native text is hidden and a label is drawn over the input; the label follows every value change, also from code */
+  const proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  const fmt = (v) => { const d = parse(v); if (!d) return ''; const l = loc(); return new Intl.DateTimeFormat(l.startsWith('en') ? 'en-GB' : l, { day: 'numeric', month: 'short', year: 'numeric' }).format(d); };
+  const refresh = (inp) => { const t = inp.parentElement && inp.parentElement.querySelector(':scope > .dp-text'); if (t) t.textContent = fmt(proto.get.call(inp)); };
+  function decorate(inp) {
+    inp.classList.add('dp-on');
+    const wrap = document.createElement('span'); wrap.className = 'dp-wrap'; inp.before(wrap); wrap.appendChild(inp);
+    const t = document.createElement('span'); t.className = 'dp-text'; t.setAttribute('aria-hidden', 'true'); wrap.appendChild(t);
+    Object.defineProperty(inp, 'value', { configurable: true, get() { return proto.get.call(this); }, set(v) { proto.set.call(this, v); refresh(this); } });
+    inp.addEventListener('input', () => refresh(inp)); inp.addEventListener('change', () => refresh(inp));
+    refresh(inp);
+  }
+  const scan = () => document.querySelectorAll('input[type=date]:not([data-native]):not(.dp-on)').forEach(decorate);
+  scan();
+  new MutationObserver(() => { scan(); if (cur && !cur.isConnected) close(); }).observe(document.body, { childList: true, subtree: true });
 })();

@@ -13,6 +13,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const today = await p.evaluate(() => isoDate(new Date())); assert.equal(await p.$eval('.dp-day.today', (e) => e.dataset.d), today, 'today is marked'); assert.equal(await p.$eval('.dp-day.on', (e) => e.dataset.d), today, 'the current value is selected');
   // 2. choose a day: the value changes and the calendar closes (the dialog stays)
   const ym = today.slice(0, 7); await p.click(`.dp-day[data-d="${ym}-15"]`); assert.equal(await p.inputValue('#dlg input[name=date]'), ym + '-15'); assert.equal(await p.$$eval('.dp-pop', (e) => e.length), 0); assert(await p.evaluate(() => document.querySelector('#dlg').open));
+  // the field reads "15 Nov 2026" (day month year), not the OS 11/15/2026; a value set from code updates it too
+  const shown = await p.$eval('#dlg input[name=date] ~ .dp-text', (e) => e.textContent); assert(new RegExp('^15 [A-Z][a-z]{2} ' + ym.slice(0, 4) + '$').test(shown), shown);
+  assert.equal(await p.evaluate(() => { const i = document.querySelector('#dlg input[name=date]'); const v = i.value; i.value = '2026-01-02'; const t = i.parentElement.querySelector('.dp-text').textContent; i.value = v; return t; }), '2 Jan 2026');
   // 3. month navigation and Today
   await tap('#dlg input[name=date]'); await p.waitForSelector('.dp-pop'); await p.click('[data-nav="1"]'); const nm = await p.$eval('.dp-day', (e) => e.dataset.d.slice(0, 7)); assert.notEqual(nm, ym, 'next month'); await p.click('[data-nav="-1"]'); await p.click('[data-nav="-1"]');
   await p.click('[data-today]'); assert.equal(await p.inputValue('#dlg input[name=date]'), today);

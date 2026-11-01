@@ -34,8 +34,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // duplicate refused; a new top-level category too
   await p.selectOption('select[name=category]', '__new'); await p.fill('input[name=qc_name]', 'snacks'); await p.selectOption('select[name=qc_parent]', dining); await p.click('[data-act=quick-cat-add]');
   assert((await p.evaluate(() => document.getElementById('toast').textContent)).includes('already exists'));
+  // the icon field holds a real value that can be deleted; a new emoji replaces the old one; a tapped suggestion sets it
+  assert.equal(await p.inputValue('input[name=qc_icon]'), '🏷️', 'the default icon is a value, not a placeholder');
+  await p.fill('input[name=qc_icon]', ''); assert.equal(await p.inputValue('input[name=qc_icon]'), '', 'icon can be cleared');
+  await p.type('input[name=qc_icon]', '🍔'); await p.type('input[name=qc_icon]', '🏋️'); assert.equal(await p.inputValue('input[name=qc_icon]'), '🏋️', 'only the last emoji is kept');
+  await p.click('.quick-cat .icon-pick[data-e="🎁"]'); assert.equal(await p.inputValue('input[name=qc_icon]'), '🎁'); assert(await p.$eval('.quick-cat .icon-pick[data-e="🎁"]', (b) => b.classList.contains('on')));
   await p.selectOption('select[name=qc_parent]', ''); await p.fill('input[name=qc_name]', 'Gym'); await p.click('[data-act=quick-cat-add]'); await settle();
-  l = await log(); assert(l[0].rows[0].parent_id === null && l[0].rows[0].name === 'Gym');
+  l = await log(); assert(l[0].rows[0].parent_id === null && l[0].rows[0].name === 'Gym' && l[0].rows[0].icon === '🎁', JSON.stringify(l[0].rows[0]));
   // save the transaction with the new category selected
   await p.click('#dlg button[type=submit]'); await settle(); l = await log();
   const tx = l.find((o) => o.table === 'transactions').rows[0]; assert.equal(tx.amount_minor, 45000);

@@ -105,6 +105,8 @@ const COMPONENTS = [
   // form fields
   { group: 'form-fields', name: 'text-field', setup: `txnDialog(null, 'expense');`, sel: '#dlg textarea[name=note]', up: 'label' },
   { group: 'form-fields', name: 'amount-field', setup: `txnDialog(null, 'expense');`, sel: '#dlg input[name=amount]', up: 'label' },
+  { group: 'form-fields', name: 'icon-picker', setup: `catDialog(D().categories[0]);`, sel: '#dlg .icon-picks' },
+  { group: 'form-fields', name: 'quick-add-category', setup: `txnDialog(null, 'expense'); const s = document.querySelector('#dlg select[name=category]'); s.value = '__new'; s.dispatchEvent(new Event('change', { bubbles: true }));`, sel: '#dlg .quick-cat' },
   { group: 'form-fields', name: 'select-field', setup: `txnDialog(null, 'expense');`, sel: '#dlg select[name=wallet]', up: 'label' },
   { group: 'form-fields', name: 'date-field', setup: `txnDialog(null, 'expense');`, sel: '#dlg input[name=date]', up: 'label' },
   { group: 'form-fields', name: 'segmented-control', setup: `txnDialog(null, 'expense');`, sel: '#dlg .seg' },

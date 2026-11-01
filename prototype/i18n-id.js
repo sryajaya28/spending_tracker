@@ -17,6 +17,7 @@ DICT.id = {
  "Payment and charge history": "Riwayat pembayaran dan tagihan",
  "See upcoming transactions ({n})": "Lihat transaksi mendatang ({n})",
  "Upcoming transactions": "Transaksi mendatang",
+ "Choose an icon": "Pilih ikon",
  "No upcoming transactions.": "Tidak ada transaksi mendatang.",
  "Repayment history": "Riwayat pelunasan",
  "Share an idea": "Bagikan ide",

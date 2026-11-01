@@ -120,6 +120,9 @@ only worked after a detour. Keep each item short and say what to do instead.
   - The owner's image numbering can be swapped ("first image" was the second screenshot): match each request to the screenshot it describes.
   - iOS Safari draws `<input type="date">` with centred text and an intrinsic width that ignores `max-width`; `appearance: none` + `width: 100%` + `::-webkit-date-and-time-value { text-align: left }` fixes it. Chromium cannot show this, so it stays unverified until seen on an iPhone.
   - New UI parts go into the design exporter (`SCREENS` / `COMPONENTS`) in the same change (owner request).
+  - A placeholder looks like a value: the 🏷️ placeholder in the icon field could not be "deleted". Prefill real values the user may want to change; `maxlength` on emoji fields counts UTF-16 units and blocks some emoji.
+  - After `appearance: none`, iOS puts a date input's text at the top of the box; and the date's display format is the browser's (11/01/2026 in en-US). Drawing the text ourselves (`.dp-text`) is the only way to get "2 Nov 2026" everywhere.
+  - The owner prefers text links (like Reset filters) over filled buttons for secondary list actions.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

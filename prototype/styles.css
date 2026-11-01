@@ -836,9 +836,23 @@ input[type="date"]:not([data-native]) { pointer-events: none; }
 
 /* date fields line up with the other fields: left-aligned text, full width (iOS centres the value and sizes the box to it) */
 input[type="date"] { -webkit-appearance: none; appearance: none; display: block; width: 100%; max-width: 100%; min-width: 0; text-align: left; }
-input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; line-height: 42px; }   /* without the OS styling iOS puts the value at the top of the box */
+.field input[type="date"] { line-height: 42px; }
 
 /* Transactions: "See upcoming transactions" under the list, and its pop-up */
-.see-upcoming { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; background: var(--soft); border: 0; color: var(--brand); font: inherit; font-weight: 600; font-size: 14px; padding: 12px; border-radius: 14px; cursor: pointer; }
-.see-upcoming .chev { font-size: 18px; line-height: 1; }
+.see-upcoming { display: block; margin: 12px auto 2px; background: none; border: 0; color: var(--brand); font: inherit; font-weight: 600; font-size: 14px; padding: 6px 8px; cursor: pointer; }
 .up-list { max-height: 60vh; overflow: auto; margin: 0 -6px; padding: 0 6px; }
+
+/* category icon: one emoji field plus a row of common icons to tap */
+.dlg .field input.icon-input { font-size: 24px; text-align: center; }
+.icon-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; }
+.icon-pick { height: 40px; border: 1.5px solid transparent; border-radius: 12px; background: var(--soft); font-size: 20px; line-height: 1; display: grid; place-items: center; padding: 0; cursor: pointer; }
+.quick-cat .icon-pick { background: var(--surface); }
+.icon-pick.on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 14%, var(--surface)); }
+
+/* date fields show "2 Nov 2026" (datepicker.js draws it over the input; the OS text is hidden) */
+.dp-wrap { position: relative; display: block; min-width: 0; }
+input[type="date"].dp-on { color: transparent; }
+input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
+.dp-text { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 14px; pointer-events: none; color: var(--ink); font-size: 15px; white-space: nowrap; overflow: hidden; }
+.dp-text { padding: 0 16px; }

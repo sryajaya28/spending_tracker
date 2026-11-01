@@ -62,7 +62,7 @@ Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
 | OV-02 | Desktop layout | Hero spans the full width; below it a two-column grid: Money Flow and Spending, then Budgets and Recent transactions side by side with no empty cell. Phone: single column. |
 | OV-03 | Money Flow | Six periods of income and spending; hover/tap a point shows net for that period. Saved shows income minus spending of the selected period. |
 | OV-04 | Spending donut | Top 5 categories + Others. Hover (desktop) or tap (phone) an arc: centre shows name, amount and % of total; tap the same arc or elsewhere to clear. Empty month: grey ring and zero total. No category buttons under it. **Details** opens the breakdown with expandable sub-categories. |
-| OV-05 | Budgets card month picker | Changing the period here also changes the Spending card (shared month). Bars are empty at 0%, percentage visible. |
+| OV-05 | Budgets card | Shows **only the overall budget** ("All spending": spent / budget · %, empty bar at 0%): no category budgets and no special occasions on Overview. The button says **Details**; tapping the button or anywhere on the card (except the month picker) opens the Budgets page. The period dropdown on the card also changes the Spending card (shared period). Without an overall budget it says "No monthly budget". |
 | OV-06 | Recent transactions | Latest rows, "View all" goes to Activity. Detail line reads `Category · Account · Date` with a space on both sides of each dot. |
 | OV-07 | Add/Edit through any entry point | After saving, numbers on the page refresh immediately. |
 
@@ -302,5 +302,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: IV-08 rewritten for the 6-hour price cache and the single disclaimer (Refresh prices button removed).
 - 2026-11-01: IV-08 now describes the disclaimer as an (i) tooltip next to the Investments title.
 - 2026-11-01: OV-01 hero percentage is now the balance change %, not the saved-income %.
+- 2026-11-01: OV-05 rewritten: Overview Budgets card shows only the overall budget, button renamed Details, whole card opens Budgets.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

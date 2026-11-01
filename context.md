@@ -72,7 +72,7 @@ infrastructure names, see section 8).
   investment buys. A rule is saved (`recurring_rules`); due entries are created **when the app opens or the tab returns to the front**
   (no server job), dated on their due day, with ids derived from rule+date so two devices never double-add. Settings > Recurring
   lists rules with Pause/Resume (skips what was missed) and delete (past entries stay). Monthly keeps the day-of-month, clamped to short months.
-- **Budgets:** overall + per-category monthly budgets; Overview shows horizontal bars with percentages; **special
+- **Budgets:** overall + per-category monthly budgets; Overview shows only the overall budget bar (tap the card for the Budgets page); **special
   occasions** (one-off budgets with optional dates, tagged expenses, archive/delete).
 - **Portfolio** tabs: Savings (accounts, called wallets in the code, in any currency, compact cards with a ⋯ menu, archive/restore/delete, edit
   name/type/current balance, **transfers between wallets** with optional fee and cross-currency received amount),
@@ -286,6 +286,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: Overview Budgets card shows only the overall budget (no category tiles, no special occasions), the button is "Details", and the whole card
+  (`.tap-card`, `data-act=goto`) opens the Budgets page. Full budgets and occasions live on the Budgets page.
 
 - 2026-11-01: Overview hero percentage is now the period's balance change % (net / starting balance, `balChange`), so it matches the sign of the amount
   beside it; it used to be the saved-income % and showed +0% with a negative amount. `—` when the starting balance is not positive.

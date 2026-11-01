@@ -674,9 +674,8 @@ function viewOverview() {
   const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
   const cats = spendByCategory(k), bs = budgetStatus(k);
   const global = bs.find((b) => b.category_id === null);
-  const tiles = [...(global ? [global] : []), ...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct)].slice(0, 3);
+  const tiles = global ? [global] : [];   // Overview shows only the overall budget; the Budgets page has the rest
   const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
-  const allOcc = occasionStatus().filter((o) => !o.archived && occasionInMonth(o, k)).sort((a, b) => (a.start || '9999').localeCompare(b.start || '9999')), occs = allOcc.slice(0, 3), moreOcc = allOcc.length - occs.length;
   const recent = D().transactions.slice(0, 6);
   return `${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
@@ -690,10 +689,9 @@ function viewOverview() {
       ${flowChart(months, incs, exps)}</section>
     <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools"><button class="chip" data-act="breakdown">${__('Details')}</button>${monthSelect()}</div></div>
       ${halfDonut(cats, exp)}</section>
-    <section class="card"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Manage')}</a></div></div>
+    <section class="card tap-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
       ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })}</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
-      <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('') || (occs.length ? '' : ('<p class="muted">' + __('No budgets yet.') + '</p>'))}</div>
-      ${occs.length ? `<h3 class="ov-h">${__('Special occasions')}</h3>${occs.map((o) => `<div class="ov-occ"><div class="meta"><span>🎉 ${esc(o.name)}</span><span class="num">${money(o.spent, cur())} / ${money(o.budget, cur())} · ${Math.round(o.pct)}%</span></div><div class="bar"><i class="${o.status}" style="width:${Math.min(100, o.pct)}%"></i></div></div>`).join('')}${moreOcc ? `<p class="muted" style="margin-top:10px"><a href="#/budgets">${__('+{n} more on the Budgets page', { n: moreOcc })}</a></p>` : ''}` : ''}</section>
+      <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('')}</div></section>
   <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map(txnRow).join('')}</div></section>
   </div>`;
 }
@@ -1422,6 +1420,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const k = el.dataset.key === 'hist' ? 'histMore' : 'walletsMore'; state.ui[k] = !state.ui[k]; render(); }
+  else if (act === 'goto') location.hash = '#/' + el.dataset.route;
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }

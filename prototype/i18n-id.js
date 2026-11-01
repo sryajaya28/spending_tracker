@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Try": "Coba",
+ "Try sample data": "Coba data contoh",
  "not saved": "tidak disimpan",
  "Sample data": "Data contoh",
  "A quick tour: add an expense, browse your days, check budgets and your portfolio, and move money between accounts.": "Tur singkat: tambah pengeluaran, telusuri hari demi hari, cek anggaran dan portofolio, lalu pindahkan uang antar akun.",

@@ -608,7 +608,7 @@ select:not([data-native]) { pointer-events: none; }
 
 /* sample-data offer on an empty account: the same yellow banner as sample mode, with a switch */
 .sample-promo { flex-wrap: nowrap; }
-.sample-promo .switch { flex: none; }
+.sample-promo .btn { flex: none; height: 32px; padding: 0 14px; font-size: 13px; }
 
 /* landing: the Sign in button gets a visible outline */
 .land-cta .btn.secondary { background: transparent; border: 1.5px solid rgba(30, 27, 75, .28); }
@@ -626,6 +626,8 @@ select:not([data-native]) { pointer-events: none; }
   .demo-bar .btn { height: 30px; padding: 0 12px; font-size: 13px; flex: none; }
 }
 
-/* no pull-to-refresh / rubber-band at the top of any page, in browsers as well as the installed app (it fired while scrolling back up) */
-html, body { overscroll-behavior-y: none; overscroll-behavior-x: none; }
-dialog, .cs-pop, .bk { overscroll-behavior: contain; }
+dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a list never scrolls (or refreshes) the page behind */
+
+/* transaction rows: title and amount on one line; category/account on the left, date under the amount */
+.row .amt-col { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+.row .amt-col .sub { font-size: 12px; white-space: nowrap; }

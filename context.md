@@ -287,9 +287,13 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: (1) The Overview sample-data banner has a short "Try" button (description stays next to the question), (`data-act=demo-on`), not a switch. (2) Reverted the global `overscroll-behavior: none`: pull-to-refresh
+  stays enabled in phone browsers (still disabled in the installed app); only lists/dialogs contain their scroll. (3) Transaction rows: title and amount on one line, date under
+  the amount (`.amt-col`), the "Uncategorized" badge removed.
+
 - 2026-11-01: The Overview sample-data offer now uses the yellow banner style (`.demo-bar.sample-promo`) at the top of the page instead of a white card.
 
-- 2026-11-01: `overscroll-behavior: none` on html/body for every display mode (was installed-app only) so a downward pull at the top of a page in a phone browser does not trigger
+- 2026-11-01 (REVERTED, see above): `overscroll-behavior: none` on html/body for every display mode (was installed-app only) so a downward pull at the top of a page in a phone browser does not trigger
   pull-to-refresh. Not verifiable from the sandbox. If Chrome on iOS still refreshes (it ignores overscroll-behavior), the fallback is to make `#app` the scroll container
   (position: fixed; overflow-y: auto) so the document itself never scrolls; that touches `window.scrollTo` uses and the e2e scroll checks.
 

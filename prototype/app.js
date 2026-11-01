@@ -702,14 +702,14 @@ function txnRow(t) {
     const xfer = !!t.transfer_id;
     return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
     <div><div class="title">${esc(t.note)}<span class="badge">${xfer ? __('Transfer') : __('Investment')}</span></div>
-    <div class="sub">${__('Transfer')} · ${esc(walletOf(t.wallet_id)?.name || '')} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div>
-    <div class="amt num">${t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div></div>`;
+    <div class="sub">${__('Transfer')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
+    <div class="amt-col"><div class="amt num">${t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   }
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
-    <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${!c ? ('<span class="badge">' + __('Uncategorized') + '</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
-    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))} · ${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div>
-    <div class="amt num ${t.type}">${sign}${money(t.amount_minor, t.currency)}</div></div>`;
+    <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
+    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}</div></div>
+    <div class="amt-col"><div class="amt num ${t.type}">${sign}${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
 }
 function filteredTxns() {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
@@ -911,7 +911,7 @@ function viewAuth() {
 /* loading screen: the logo with an orbiting coin, a soft pulse and a running bar; the line under it changes every few seconds (pure CSS, no timers) */
 /* a new account (balance under 1 USD) gets a one-tap way to try the app with sample data, without hunting for the Settings switch */
 const samplePromo = () => (!state.real && toUSD(totalBalance(), cur()) < 1
-  ? `<div class="demo-bar sample-promo" role="status"><span><b>${__('Just looking around?')}</b> · ${__('Test Stiver now with sample data')}</span><label class="switch"><input type="checkbox" data-demo aria-label="${__('Use sample data')}"></label></div>` : '');
+  ? `<div class="demo-bar sample-promo" role="status"><span><b>${__('Just looking around?')}</b> · ${__('Test Stiver now with sample data')}</span><button class="btn secondary" data-act="demo-on">${__('Try')}</button></div>` : '');
 const viewSplash = (msg) => `<div class="onboard"><div class="splash" role="status" aria-live="polite" aria-label="${esc(__(msg))}">
   <div class="splash-mark"><span class="ring"></span><span class="ring r2"></span><img src="icon.svg" alt=""><i class="orbit"><b></b></i></div>
   <div class="splash-name">Stiver</div>
@@ -1428,6 +1428,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'goto') location.hash = '#/' + el.dataset.route;
+  else if (act === 'demo-on') setDemo(true);
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }

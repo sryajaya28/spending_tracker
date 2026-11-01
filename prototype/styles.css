@@ -694,3 +694,12 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .pl.down { color: var(--bad); font-weight: 600; }
 :root[data-theme="dark"] .pl.up { color: #4fd9a0; }
 .hs-row .legend-btn { padding: 0 0 0 6px; }
+/* "Use mobile app experience": a prominent button, mobile browsers only */
+.install-cta { width: 100%; justify-content: center; background: linear-gradient(135deg, #4a44c6, #7a6ff0); box-shadow: 0 8px 20px rgba(74, 68, 198, .35); font-size: 16px; }
+:root[data-theme="dark"] .install-cta { background: linear-gradient(135deg, var(--fill), var(--fill-2)); box-shadow: 0 8px 20px rgba(0, 0, 0, .4); }
+.land-install { margin-top: 12px; }
+.ov-install { grid-column: 1 / -1; }
+.install-steps { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 12px; }
+.install-steps li { display: flex; align-items: center; gap: 12px; font-size: 15px; }
+.handoff-code { font-size: 24px; font-weight: 800; letter-spacing: .12em; text-align: center; margin: 10px 0 6px; color: var(--ink); }
+.hint .handoff-code + small { display: block; text-align: center; }

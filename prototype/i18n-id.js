@@ -1,6 +1,21 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Use mobile app experience": "Pakai pengalaman aplikasi seluler",
+ "Full screen, faster to open, no browser bars.": "Layar penuh, lebih cepat dibuka, tanpa bilah browser.",
+ "Tap the Share button in Safari": "Ketuk tombol Bagikan di Safari",
+ "Choose \"Add to Home Screen\"": "Pilih \"Tambah ke Layar Utama\"",
+ "Open Stiver from your Home Screen": "Buka Stiver dari Layar Utama",
+ "Open the browser menu (⋮)": "Buka menu browser (⋮)",
+ "Choose \"Install app\" or \"Add to Home screen\"": "Pilih \"Instal aplikasi\" atau \"Tambahkan ke layar utama\"",
+ "Open Stiver from your Home screen": "Buka Stiver dari layar utama",
+ "Transfer from browser": "Transfer dari browser",
+ "Transfer code": "Kode transfer",
+ "Signed in from your browser": "Masuk dari browser kamu",
+ "That transfer code is wrong or expired": "Kode transfer salah atau sudah kedaluwarsa",
+ "Works once, for 15 minutes. The browser signs out after the app takes over.": "Berlaku sekali, selama 15 menit. Browser akan keluar setelah aplikasi mengambil alih.",
+ "Done": "Selesai",
+ "Signed in on your phone browser? Open \"Use mobile app experience\" there and enter the code it shows.": "Sudah masuk di browser ponsel? Buka \"Pakai pengalaman aplikasi seluler\" di sana dan masukkan kode yang muncul.",
  "The average price is kept in {ccy}, converted at the latest rate.": "Harga rata-rata disimpan dalam {ccy}, dikonversi dengan kurs terbaru.",
  "optional": "opsional",
  "Average price": "Harga rata-rata",

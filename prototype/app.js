@@ -796,6 +796,7 @@ function viewOverview() {
       <div class="delta"><b>${pctFmt(balChange)}</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
+    ${installBtn('ov-install')}
     <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
       <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
       ${flowChart(months, incs, exps)}</section>
@@ -952,6 +953,50 @@ function mountCaptcha() {
 }
 /* ---------- landing page (what signed-out visitors see first) ---------- */
 const langSelect = () => `<select class="lang-select" data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+/* ---------- install as an app (mobile browsers only) ---------- */
+const IS_STANDALONE = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+const IS_IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const MOBILE_BROWSER = !IS_STANDALONE && (IS_IOS || /Android/i.test(navigator.userAgent));
+let installPrompt = null;   // Android Chrome offers a real install prompt
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; });
+const installBtn = (cls) => (MOBILE_BROWSER ? `<button type="button" class="btn lg install-cta ${cls || ''}" data-act="install-app">📲 ${__('Use mobile app experience')}</button>` : '');
+const fmtHandoff = (c) => c.slice(0, 5) + '-' + c.slice(5);
+const handoffInUrl = () => { const q = location.hash.split('?')[1] || ''; return new URLSearchParams(q).get('handoff') || ''; };
+async function installDialog() {
+  if (installPrompt) { try { installPrompt.prompt(); await installPrompt.userChoice; } catch { /* the steps below still apply */ } installPrompt = null; return; }
+  let code = '';
+  if (state.auth.status === 'in' && Cloud.configured) {
+    try {
+      code = (await Cloud.createHandoff()) || '';
+      // adding to the Home Screen saves this address, so the app can pick the session up by itself
+      if (code) history.replaceState(null, '', location.pathname + location.search + '#/overview?handoff=' + code);
+    } catch { code = ''; }
+  }
+  const steps = IS_IOS
+    ? [__('Tap the Share button in Safari'), __('Choose "Add to Home Screen"'), __('Open Stiver from your Home Screen')]
+    : [__('Open the browser menu (⋮)'), __('Choose "Install app" or "Add to Home screen"'), __('Open Stiver from your Home screen')];
+  open(`<h2>${__('Use mobile app experience')}</h2><p class="muted" style="margin-top:-10px">${__('Full screen, faster to open, no browser bars.')}</p>
+    <ol class="install-steps">${steps.map((t, i) => `<li><span class="step-n">${i + 1}</span><span>${t}</span></li>`).join('')}</ol>
+    ${code ? `<div class="hint">${__("You're signed in here, so the app should open already signed in. If it asks you to sign in, tap \"Transfer from browser\" and enter this code:")}<div class="handoff-code num">${fmtHandoff(code)}</div><small>${__('Works once, for 15 minutes. The browser signs out after the app takes over.')}</small></div>` : ''}
+    <div class="actions"><button type="button" class="btn" data-act="close">${__('Done')}</button></div>`);
+}
+function handoffDialog() {
+  open(`<h2>${__('Transfer from browser')}</h2><p class="muted" style="margin-top:-10px">${__('Signed in on your phone browser? Open "Use mobile app experience" there and enter the code it shows.')}</p>
+    <form data-form="handoff" style="display:contents"><label class="field">${__('Transfer code')}<input name="code" required autocomplete="off" autocapitalize="characters" maxlength="12" placeholder="ABCDE-FGHJK"></label>
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Transfer')}</button></div></form>`);
+}
+/* the app was opened with a code in its address (or one was typed): claim it once and sign in */
+async function claimHandoff(code, quiet) {
+  try { if (await Cloud.claimHandoff(code)) { toast(__('Signed in from your browser')); return true; } } catch { /* falls through */ }
+  if (!quiet) toast(__('That transfer code is wrong or expired'));
+  return false;
+}
+function consumeHandoffFromUrl() {
+  const code = handoffInUrl(); if (!code) return;
+  history.replaceState(null, '', location.pathname + location.search + '#/overview');   // never leave the code in the address
+  if (!Cloud.configured) return;
+  Cloud.getSession().then((s) => { if (!s) claimHandoff(code, true); }).catch(() => {});
+}
 function viewLanding() {
   const feat = (ic, title, text) => `<div class="feat"><span class="feat-ic" aria-hidden="true">${ic}</span><h3>${__(title)}</h3><p>${__(text)}</p></div>`;
   const step = (n, text) => `<li><span class="step-n">${n}</span><span>${__(text)}</span></li>`;
@@ -963,6 +1008,7 @@ function viewLanding() {
       <h1>${__('Your money, finally in one place.')}</h1>
       <p class="land-sub">${__('Track spending, set budgets, and watch your net worth grow across savings, investments and loans. Simple, private and built for how you actually live.')}</p>
       <div class="land-cta"><button class="btn lg" data-act="auth-view" data-view="signup">${__('Get started')}</button><button class="btn secondary lg" data-act="auth-view" data-view="signin">${__('Sign in')}</button></div>
+      ${installBtn('land-install')}
     </div>
   </section>
   <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, browse your days, check budgets and your portfolio, and move money between accounts.')}</p>
@@ -1017,7 +1063,8 @@ function viewAuth() {
     <label class="field">${__('Password')}<input name="password" type="password" required autocomplete="current-password"></label>
     ${captchaBox()}<button class="btn lg" type="submit">${__('Sign in')}</button>
     <p class="muted" style="text-align:center">${authLink('forgot', 'Forgot password?')}</p>
-    <p class="muted" style="text-align:center">${__('New here?')} ${authLink('signup', 'Create an account')}</p></form>`;
+    <p class="muted" style="text-align:center">${__('New here?')} ${authLink('signup', 'Create an account')}</p>
+    ${IS_STANDALONE ? `<p class="muted" style="text-align:center"><button type="button" class="legend-btn" data-act="transfer-dialog">${__('Transfer from browser')}</button></p>` : ''}</form>`;
   return `<div class="onboard">${body}<p class="legal-links"><a href="privacy.html">${__('Privacy Policy')}</a> · <a href="terms.html">${__('Terms of Service')}</a></p></div>`;
 }
 /* loading screen: the logo with an orbiting coin, a soft pulse and a running bar; the line under it changes every few seconds (pure CSS, no timers) */
@@ -1674,6 +1721,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
+  else if (act === 'install-app') installDialog();
+  else if (act === 'transfer-dialog') handoffDialog();
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
@@ -1925,6 +1974,7 @@ document.addEventListener('submit', async (e) => {
     else D().investments.push({ id: uid(), name, archived: false });
     save(); close(); render(); toast('Account saved');
   }
+  if (kind === 'handoff') { const ok = await claimHandoff(v.code); if (ok) close(); return; }
   if (kind === 'cost') {
     const h = D().holdings.find((x) => x.id === f.dataset.id), price = parseFloat(v.avgprice);
     if (!(price > 0)) { toast('Enter a price above zero'); return; }
@@ -2104,6 +2154,7 @@ function removeSample() {
 setLang(initialLang()); applyTheme(initialTheme());
 if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);
 else { Object.assign(state.auth, { status: 'out', error: 'The app is not connected to Supabase (missing config).' }); render(); }
+consumeHandoffFromUrl();
 /* live fiat rates replace the demo ones (works without a Finnhub key; falls back silently) */
 getJSON(`/api/fx?currencies=${Object.keys(RATES).join(',')}`).then((fx) => {
   Object.assign(RATES, fx.rates); api.fx = { source: fx.source, date: fx.date };

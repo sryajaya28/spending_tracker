@@ -251,5 +251,15 @@ const Cloud = (() => {
     reset: (email, captchaToken) => client.auth.resetPasswordForEmail(email, { redirectTo: appUrl(), captchaToken }),
     setPassword: (password) => client.auth.updateUser({ password }),
     signOut: (scope) => client.auth.signOut({ scope: scope || 'local' }),
+    /* hand this signed-in session to the installed app: a short single-use code (15 minutes), claimed once on the other side */
+    async createHandoff() {
+      const session = must(await client.auth.getSession()).session; if (!session) return null;
+      return must(await client.rpc('create_handoff', { p_refresh_token: session.refresh_token }));
+    },
+    async claimHandoff(code) {
+      const token = must(await client.rpc('claim_handoff', { p_code: code })); if (!token) return false;
+      const { error } = await client.auth.refreshSession({ refresh_token: token });
+      return !error;
+    },
   };
 })();

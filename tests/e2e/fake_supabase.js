@@ -50,8 +50,17 @@
     }
   }
   const mkSession = (email) => ({ user: { id: uid, email }, access_token: 'x' });
+  // session handoff (browser -> installed app): codes live in localStorage so a second page of the same browser context can claim one
+  const handoffs = () => JSON.parse(localStorage.getItem('__handoffs') || '{}');
+  const rpc = async (fn, args) => {
+    const h = handoffs();
+    if (fn === 'create_handoff') { if (!session) return { data: null, error: { message: 'not signed in' } }; const code = 'AB' + String(Object.keys(h).length + 1).padStart(2, '0') + 'XYZK' + 'K2'; h[code] = args.p_refresh_token || 'rt'; localStorage.setItem('__handoffs', JSON.stringify(h)); return { data: code, error: null }; }
+    if (fn === 'claim_handoff') { const code = String(args.p_code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); const t = h[code] || null; delete h[code]; localStorage.setItem('__handoffs', JSON.stringify(h)); return { data: t, error: null }; }
+    return { data: null, error: { message: 'unknown rpc' } };
+  };
   window.supabase = { createClient: () => ({
     from: (t) => new Q(t),
+    rpc,
     auth: {
       onAuthStateChange: (f) => { cb = f; setTimeout(() => f('INITIAL_SESSION', session), 0); return { data: { subscription: {} } }; },
       signInWithPassword: async ({ email, password, options }) => {
@@ -66,7 +75,8 @@
       resetPasswordForEmail: async (e, o) => { window.__reset = [e, o]; return { error: null }; },
       updateUser: async (a) => { window.__upd = a; return { error: null }; },
       signOut: async (o) => { window.__signOut = o; if (!o || o.scope !== 'others') { session = null; setTimeout(() => cb('SIGNED_OUT', null), 0); } return { error: null }; },
-      getSession: async () => ({ data: { session }, error: null }),
+      getSession: async () => ({ data: { session: session && { ...session, refresh_token: 'rt-1' } }, error: null }),
+      refreshSession: async ({ refresh_token }) => { if (!refresh_token) return { error: { message: 'no token' } }; session = mkSession('a@b.co'); setTimeout(() => cb('SIGNED_IN', session), 0); return { data: { session }, error: null }; },
     },
   }) };
 })();

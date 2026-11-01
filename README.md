@@ -72,6 +72,8 @@ scenarios live in `regression_scenario.md`: add or edit the relevant ones whenev
 It is generated from the app by `node tools/design/export.js` (dev server running); regenerate and commit it after UI changes.
 See `design/README.md` for how to import it into Figma and build the design system.
 
+The iPhone launch images (`prototype/splash/`) are made from the splash by `node tools/design/startup_images.js`; rerun it when the logo or splash colours change.
+
 ## Before wider release
 
 - Finnhub's free plan is for personal use. A public product needs a suitable plan or another data source.

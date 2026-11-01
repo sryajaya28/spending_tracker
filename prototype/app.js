@@ -419,7 +419,8 @@ const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))
   .reduce((a, h) => a + holdingUSD(h, k), 0);
 const isFiatQty = (x) => x === true || (!!x && typeof x !== 'boolean' && assetInfo(typeof x === 'string' ? x : x.symbol)?.type === 'cash');
-const qtyFmt = (q, of = false) => new Intl.NumberFormat(locale(), { maximumFractionDigits: isFiatQty(of) ? 2 : 8 }).format(q);   // of: true, a holding or a symbol; cash in a fiat currency shows at most 2 decimals   // cash in a fiat currency: at most 2 decimals (also hides float noise like 560.99999999)
+const fiatOf = (of) => (of && of !== true ? assetInfo(typeof of === 'string' ? of : of.symbol)?.cash : '') || '';
+const qtyFmt = (q, of = false) => new Intl.NumberFormat(fiatOf(of) ? nativeLocale(fiatOf(of)) : locale(), { maximumFractionDigits: isFiatQty(of) ? 2 : 8 }).format(q);   // fiat cash uses its currency's own separators (IDR 46.600.561), like money()   // of: true, a holding or a symbol; cash in a fiat currency shows at most 2 decimals   // cash in a fiat currency: at most 2 decimals (also hides float noise like 560.99999999)
 const pctFmt = (p) => (p === null ? '—' : `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`);
 const pf = () => state.ui.pf || cur();
 /* time frame of the Portfolio chart and history list (month granularity) */
@@ -1621,7 +1622,7 @@ function sourceOptions(side, h, selected) {
   const cashes = D().holdings.filter((x) => x.id !== h?.id && assetInfo(x.symbol).type === 'cash' && activeAccounts().some((a) => a.id === x.account_id) && (!h || x.account_id === h.account_id));
   const sel = (v) => (v === selected ? 'selected' : '');
   return `<optgroup label="Accounts">${ws.map((w) => `<option value="w:${w.id}" ${sel('w:' + w.id)}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</optgroup>`
-    + (cashes.length ? `<optgroup label="${__('Cash balance')}">${cashes.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(accountName(x.account_id))} (${esc(assetInfo(x.symbol).symbol)}) · ${qtyFmt(heldNow(x), true)}</option>`).join('')}</optgroup>` : '')
+    + (cashes.length ? `<optgroup label="${__('Cash balance')}">${cashes.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(accountName(x.account_id))} (${esc(assetInfo(x.symbol).symbol)}) · ${qtyFmt(heldNow(x), x)}</option>`).join('')}</optgroup>` : '')
     + (st.length || fresh.length ? `<optgroup label="Stablecoins">${st.map((x) => `<option value="h:${x.id}" ${sel('h:' + x.id)}>${esc(assetInfo(x.symbol).symbol)} · ${qtyFmt(heldNow(x))} held (${esc(accountName(x.account_id))})</option>`).join('')}${fresh.map((s) => `<option value="n:${s}" ${sel('n:' + s)}>${s} · new in ${esc(accountName(h.account_id))}</option>`).join('')}</optgroup>` : '');
 }
 function parseSource(val) {

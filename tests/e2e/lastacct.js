@@ -12,6 +12,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const add = async (type, wallet, amount) => { await p.evaluate((t) => txnDialog(null, t), type); await p.selectOption('select[name=wallet]', wallet); await p.fill('input[name=amount]', amount); await p.click('#dlg button[type=submit]'); await settle(); };
   // before anything is used: the first account in the reporting currency
   await p.evaluate(() => txnDialog(null, 'expense')); assert.equal(await sel(), ids.w1, 'default before any use'); await p.click('[data-act=close]');
+  // nothing remembered on this device: the account of the latest expense/income on record is used
+  await p.evaluate((id) => { D().transactions.unshift({ id: 'old1', type: 'expense', amount_minor: 100, currency: D().wallets[0].currency, wallet_id: id, category_id: null, note: 'old', occurred_at: isoDate(new Date()) }); localStorage.removeItem('stiver.lastacct.v1'); }, ids.w3);
+  await p.evaluate(() => txnDialog(null, 'expense')); assert.equal(await sel(), ids.w3, 'falls back to the latest expense on record'); await p.click('[data-act=close]');
+  await p.evaluate(() => { D().transactions = D().transactions.filter((t) => t.id !== 'old1'); localStorage.removeItem('stiver.lastacct.v1'); });
   // an expense from the second account: the next expense starts on it, income still on its own default
   await add('expense', ids.w2, '10');
   await p.evaluate(() => txnDialog(null, 'expense')); assert.equal(await sel(), ids.w2, 'expense follows the last one used'); await p.click('[data-act=close]');

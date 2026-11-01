@@ -288,6 +288,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Fix: the preselected account now also works for records made before it was remembered, on another device, or after clearing storage: with nothing remembered, `latestAcct` uses the account of the latest matching record (newest expense/income not dated in the future; for Invest the newest buy's paying account and its investment account). A value remembered on this device still wins.
 - 2026-11-01: Day rows on Transactions have no hover/pressed/focus background (it stayed highlighted after a tap on touch screens); the chevron shows open/closed.
 - 2026-11-01: Transaction amounts have one colour for income and expense (the +/− sign tells them apart); the green income colour on `.amt.income` was removed, including the day totals.
 - 2026-11-01: The open part of a day on Transactions (`.day-body`) has its own rounded block background: light grey (#eceef5) in light mode, lighter indigo (#272566) in dark mode, so it separates from the day rows.

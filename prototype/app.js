@@ -1286,8 +1286,19 @@ function rememberAcct(kind, value) {
   if (state.real || !value) return;   // sample data never writes it
   try { const m = JSON.parse(localStorage.getItem(ACCT_KEY) || '{}'); m[kind] = value; localStorage.setItem(ACCT_KEY, JSON.stringify(m)); } catch { /* storage unavailable */ }
 }
+/* with nothing remembered on this device (first use, another phone, records added before this existed) the account of the latest matching record is used */
+function latestAcct(kind) {
+  const today = todayIso(), list = D().transactions;   // newest first
+  if (kind === 'expense' || kind === 'income') { const t = list.find((x) => x.type === kind && x.occurred_at <= today && (x.wallet_id || coinOf(x))); return t ? (t.wallet_id || 'h:' + coinOf(t).id) : ''; }
+  const t = list.find((x) => x.type === 'transfer' && x.trade_id && x.flow === 'out' && x.occurred_at <= today);
+  if (!t) return '';
+  if (kind === 'invest') return 'w:' + t.wallet_id;
+  const h = D().holdings.find((x) => x.trades.some((tr) => tr.id === t.trade_id)); return h ? h.account_id : '';
+}
 function recallAcct(kind, optionsHtml) {   // only a value that is still one of the options (not archived or removed)
-  try { const v = (JSON.parse(localStorage.getItem(ACCT_KEY) || '{}'))[kind]; return v && optionsHtml.includes(`value="${v}"`) ? v : ''; } catch { return ''; }
+  const ok = (v) => v && optionsHtml.includes(`value="${v}"`);
+  try { const v = (JSON.parse(localStorage.getItem(ACCT_KEY) || '{}'))[kind]; if (ok(v)) return v; } catch { /* storage unavailable */ }
+  const d = latestAcct(kind); return ok(d) ? d : '';
 }
 function acctOptions(type, selected) {
   const ws = D().wallets.filter((w) => !w.archived), coins = stableHoldings(), accts = activeAccounts();

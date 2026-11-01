@@ -969,16 +969,16 @@ async function installDialog() {
     try {
       code = (await Cloud.createHandoff()) || '';
       // adding to the Home Screen saves this address, so the app can pick the session up by itself
-      if (code) history.replaceState(null, '', location.pathname + location.search + '#/overview?handoff=' + code);
+      if (code) { history.replaceState(null, '', location.pathname + location.search + '#/overview?handoff=' + code); setHandoffCookie(code); }
     } catch { code = ''; }
   }
   const steps = IS_IOS
-    ? [__('Tap the Share button (Safari: bottom bar; Chrome: address bar)'), __('Choose "Add to Home Screen"'), __('Open Stiver from your Home Screen')]
+    ? [__('Tap the Share button (Safari: bottom bar; Chrome: address bar)'), __('Scroll down the list and tap "Add to Home Screen"'), __('Open Stiver from your Home Screen')]
     : [__('Open the browser menu (⋮)'), __('Choose "Install app" or "Add to Home screen"'), __('Open Stiver from your Home screen')];
   open(`<h2>${__('Use mobile app experience')}</h2><p class="muted" style="margin-top:-10px">${__('Full screen, faster to open, no browser bars.')}</p>
     <ol class="install-steps">${steps.map((t, i) => `<li><span class="step-n">${i + 1}</span><span>${t}</span></li>`).join('')}</ol>
     ${code ? `<div class="hint">${__("You're signed in here, so the app should open already signed in. If it asks you to sign in, tap \"Transfer from browser\" and enter this code:")}<div class="handoff-code num">${fmtHandoff(code)}</div><small>${__('Works once, for 15 minutes. The browser signs out after the app takes over.')}</small></div>` : ''}
-    <div class="actions">${IS_IOS && navigator.share ? `<button type="button" class="btn secondary" data-act="share-app">${__('Open share menu')}</button>` : ''}<button type="button" class="btn" data-act="close">${__('Done')}</button></div>`);
+    <div class="actions"><button type="button" class="btn" data-act="close">${__('Done')}</button></div>`);
 }
 function handoffDialog() {
   open(`<h2>${__('Transfer from browser')}</h2><p class="muted" style="margin-top:-10px">${__('Signed in on your phone browser? Open "Use mobile app experience" there and enter the code it shows.')}</p>
@@ -991,11 +991,17 @@ async function claimHandoff(code, quiet) {
   if (!quiet) toast(__('That transfer code is wrong or expired'));
   return false;
 }
+/* iPhone ignores the address when adding to the Home Screen (it uses the manifest start page) but may copy the browser's cookies into the new app, so the code also rides in a short-lived cookie */
+const HANDOFF_COOKIE = 'stiver_handoff';
+const setHandoffCookie = (code) => { document.cookie = `${HANDOFF_COOKIE}=${code}; path=/; max-age=900; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`; };
+const clearHandoffCookie = () => { document.cookie = `${HANDOFF_COOKIE}=; path=/; max-age=0; SameSite=Lax`; };
+const handoffInCookie = () => (document.cookie.split('; ').find((c) => c.startsWith(HANDOFF_COOKIE + '=')) || '').slice(HANDOFF_COOKIE.length + 1);
 function consumeHandoffFromUrl() {
-  const code = handoffInUrl(); if (!code) return;
-  history.replaceState(null, '', location.pathname + location.search + '#/overview');   // never leave the code in the address
+  const fromUrl = handoffInUrl(), code = fromUrl || (IS_STANDALONE ? handoffInCookie() : '');   // only the installed app takes the cookie, the browser keeps its own session
+  if (!code) return;
+  if (fromUrl) history.replaceState(null, '', location.pathname + location.search + '#/overview');   // never leave the code in the address
   if (!Cloud.configured) return;
-  Cloud.getSession().then((s) => { if (!s) claimHandoff(code, true); }).catch(() => {});
+  Cloud.getSession().then((s) => { if (!s) claimHandoff(code, true).then(clearHandoffCookie); else clearHandoffCookie(); }).catch(() => {});
 }
 function viewLanding() {
   const feat = (ic, title, text) => `<div class="feat"><span class="feat-ic" aria-hidden="true">${ic}</span><h3>${__(title)}</h3><p>${__(text)}</p></div>`;
@@ -1008,7 +1014,7 @@ function viewLanding() {
       <h1>${__('Your money, finally in one place.')}</h1>
       <p class="land-sub">${__('Track spending, set budgets, and watch your net worth grow across savings, investments and loans. Simple, private and built for how you actually live.')}</p>
       <div class="land-cta-wrap"><div class="land-cta"><button class="btn lg" data-act="auth-view" data-view="signup">${__('Get started')}</button><button class="btn secondary lg" data-act="auth-view" data-view="signin">${__('Sign in')}</button></div>
-      ${installBtn('land-install')}</div>
+      ${installBtn('land-install')}${IS_STANDALONE ? `<button type="button" class="legend-btn land-transfer" data-act="transfer-dialog">${__('Signed in on your browser? Transfer from browser')}</button>` : ''}</div>
     </div>
   </section>
   <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, browse your days, check budgets and your portfolio, and move money between accounts.')}</p>
@@ -1722,7 +1728,6 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
-  else if (act === 'share-app') { navigator.share({ title: 'Stiver', url: location.href }).catch(() => {}); }   // the share sheet has Add to Home Screen (Safari and Chrome on iPhone)
   else if (act === 'transfer-dialog') handoffDialog();
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }

@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Signed in on your browser? Transfer from browser": "Sudah masuk di browser? Transfer dari browser",
+ "Scroll down the list and tap \"Add to Home Screen\"": "Gulir daftar ke bawah dan ketuk \"Tambah ke Layar Utama\"",
  "Open share menu": "Buka menu bagikan",
  "Tap the Share button (Safari: bottom bar; Chrome: address bar)": "Ketuk tombol Bagikan (Safari: bilah bawah; Chrome: bilah alamat)",
  "Use mobile app experience": "Pakai pengalaman aplikasi seluler",

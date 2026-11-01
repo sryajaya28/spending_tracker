@@ -28,10 +28,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     assert(!/handoff/.test(await app.evaluate(() => location.hash)), 'the code is removed from the address'); assert.equal(await app.$$eval('.install-cta', (e) => e.length), 0, 'no button inside the installed app');
     // the code worked once only
     const again = await mk({ ctx }, true); await again.p.goto(url); await again.p.waitForSelector('.land'); await again.p.waitForTimeout(500); assert.equal(await again.p.$$eval('.shell', (e) => e.length), 0, 'single use'); }
-  // typing the code by hand in the installed app
-  await p.click('#dlg [data-act=close]'); await p.click('.ov-install'); await p.waitForSelector('.handoff-code'); const code2 = (await p.innerText('.handoff-code')).trim();
-  { const { p: app } = await mk({ ctx }, true); await app.goto('http://127.0.0.1:5180/'); await app.waitForSelector('.land'); await app.click('.land-cta [data-view=signin]'); await app.waitForSelector('[data-act=transfer-dialog]');
-    await app.click('[data-act=transfer-dialog]'); await app.fill('input[name=code]', 'WRONG-CODE1'); await app.click('#dlg button[type=submit]'); await app.waitForTimeout(400); console.log('DLG', await app.evaluate(() => [document.querySelector('#dlg').open, document.querySelector('#dlg').innerText.slice(0,80), document.body.innerText.slice(0,100)])); assert.equal(await app.$$eval('.shell', (e) => e.length), 0, 'a wrong code is refused');
+  // iPhone ignores the address when adding to the Home Screen, so the code also rides in a short-lived cookie that the installed app picks up
+  await p.click('#dlg [data-act=close]'); await p.click('.ov-install'); await p.waitForSelector('.handoff-code'); assert(/stiver_handoff=/.test(await p.evaluate(() => document.cookie)), 'cookie set');
+  { const { p: app } = await mk({ ctx }, true); await app.goto('http://127.0.0.1:5180/'); await app.waitForSelector('.shell', { timeout: 8000 }); assert(!/stiver_handoff/.test(await app.evaluate(() => document.cookie)), 'cookie cleared after use'); }
+  // the browser itself never takes the cookie
+  await p.click('#dlg [data-act=close]'); await p.click('.ov-install'); await p.waitForSelector('.handoff-code'); { const again = await mk({ ctx }); await again.p.goto('http://127.0.0.1:5180/'); await again.p.waitForSelector('.land'); await again.p.waitForTimeout(500); assert.equal(await again.p.$$eval('.shell', (e) => e.length), 0, 'a browser (not the installed app) does not take the cookie'); }
+  // typing the code by hand in the installed app (cookie removed so the app cannot pick it up by itself)
+  await p.click('#dlg [data-act=close]'); await p.click('.ov-install'); await p.waitForSelector('.handoff-code'); const code2 = (await p.innerText('.handoff-code')).trim(); await ctx.clearCookies();
+  { const { p: app } = await mk({ ctx }, true); await app.goto('http://127.0.0.1:5180/'); await app.waitForSelector('.land'); await app.waitForSelector('.land-transfer');
+    await app.click('[data-act=transfer-dialog]'); await app.fill('input[name=code]', 'WRONG-CODE1'); await app.click('#dlg button[type=submit]'); await app.waitForTimeout(400); assert.equal(await app.$$eval('.shell', (e) => e.length), 0, 'a wrong code is refused');
     await app.fill('input[name=code]', code2.toLowerCase()); await app.click('#dlg button[type=submit]'); await app.waitForSelector('.shell', { timeout: 8000 }); }
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').filter((l) => l.includes('handoff.js')).slice(0, 2).join(' | ')); process.exit(1); });

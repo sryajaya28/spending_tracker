@@ -420,7 +420,7 @@ dialog { background: var(--surface); }
 /* daily view on Transactions */
 .daybox { width: 44px; height: 44px; border-radius: 12px; background: var(--soft); display: grid; place-content: center; text-align: center; line-height: 1.1; }
 .daybox b { font-size: 17px; } .daybox small { color: var(--muted); font-size: 11px; text-transform: uppercase; }
-.back-link { display: inline-block; font-size: 13px; color: var(--muted); margin-bottom: 4px; text-decoration: none; }
+.back-link { display: inline-block; font-size: 13px; color: var(--muted); margin-bottom: 12px; text-decoration: none; }
 .back-link:hover { color: var(--ink); }
 
 /* donut chart */

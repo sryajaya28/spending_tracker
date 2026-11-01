@@ -74,7 +74,7 @@ Automated: `donut`, `ovocc`, `budgetbar`, `run`.
 |---|---|---|
 | TX-01 | Open Activity | Line 1: the search box on the **left** (placeholder "Search") and the period dropdown on the **right**; **no `+ Add` button on phones** (the bottom bar Add does it), it stays at the end of line 1 on desktop. Line 2: the three filters keep their full labels **All categories / All occasions (only when occasions exist) / All accounts**, sized in proportion so none is cut off at 360-390 px. |
 | TX-02 | Daily list | One row per day, newest first: day number and month, weekday, count, income and spent, net (green/red). Transfers count in the number but not in income or spent. |
-| TX-03 | Tap a day | Opens `#/transactions/YYYY-MM-DD`: that day's transactions, Back link, `+ Add` prefilled with that date. Edit/delete works; Back returns to the list. |
+| TX-03 | Tap a day | Opens `#/transactions/YYYY-MM-DD`: that day's transactions, Back link with clear space between it and the date, a **Search** box under the header (filters that day's rows by note or category; "No transactions match." when none; cleared when you open another day), `+ Add` prefilled with that date. Edit/delete works; Back returns to the list. |
 | TX-04 | Search, category, account filters | List narrows; they combine; "Uncategorized" works; the account filter can pick a USDT/USDC holding. |
 | TX-05 | Add an expense: Account first, then amount | Amount label follows the account's currency (IDR, USD, USDT...). Date defaults to today. Repeat field present. Saved row appears under its day. |
 | TX-06 | Add income / expense with no category | AI-style auto-tag if history matches (badge AI), otherwise "Uncategorized". With a category chosen: no AI badge. |
@@ -307,5 +307,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: CN-01/02/08 use the `Investment Account` group and `Name (USDT)` format.
 - 2026-11-01: TX-01 (new Activity header) and PF-01 (no "after loans" label).
 - 2026-11-01: ST-02 rewritten for the Expense / Income groups and the phone-only top-5 limit.
+- 2026-11-01: TX-03 covers the day page search box and the Back link spacing.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

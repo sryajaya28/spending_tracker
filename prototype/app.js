@@ -734,11 +734,14 @@ function txnListHtml() {
   }).join('');
 }
 // the detail page for one day: every transaction on it
+const dayTxns = (d) => { const ql = (state.ui.dayQ || '').trim().toLowerCase(); return D().transactions.filter((t) => t.occurred_at === d && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql))); };
+const dayListHtml = (d) => { const l = dayTxns(d); return l.length ? l.map(txnRow).join('') : '<div class="empty">' + __(state.ui.dayQ ? 'No transactions match.' : 'No transactions on this day.') + '</div>'; };
 function viewDay(d) {
   const l = D().transactions.filter((t) => t.occurred_at === d), inc = sumBy(l, 'income'), exp = sumBy(l, 'expense');
   return `${topbar('Transactions', countLabel(l.length) + ' · ' + __('Income') + ' ' + money(inc, cur()) + ' · ' + __('Spent') + ' ' + money(exp, cur()))}
   <section class="card"><div class="card-head"><div><a class="back-link" href="#/transactions">← ${__('Back to Transactions')}</a><h2>${esc(dayTitle(d))}</h2></div><div class="tools"><button class="btn" data-act="add-txn" data-date="${d}">${__('+ Add')}</button></div></div>
-    <div class="list" id="day-list">${l.length ? l.map(txnRow).join('') : '<div class="empty">' + __('No transactions on this day.') + '</div>'}</div></section>`;
+    <div class="txn-top"><input data-filter="dayq" placeholder="${__('Search')}" value="${esc(state.ui.dayQ || '')}" aria-label="${__('Search note or category')}"></div>
+    <div class="list" id="day-list">${dayListHtml(d)}</div></section>`;
 }
 function viewTransactions() {
   const list = inMonth(state.ui.month);
@@ -1369,7 +1372,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'theme-toggle') { applyTheme(effectiveTheme() === 'dark' ? 'light' : 'dark'); render(); }
   else if (act === 'wallet-menu') { state.ui.walletMenu = state.ui.walletMenu === id ? null : id; render(); }
   else if (act === 'add-txn') txnDialog(null, type, undefined, date);
-  else if (act === 'open-day') location.hash = '#/transactions/' + id;
+  else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
   else if (act === 'view-transfer') transferDetail(id);
@@ -1533,6 +1536,7 @@ async function pickAsset(a, form) {
 document.addEventListener('input', (e) => {
   if (e.target.form?.dataset.form === 'trade' && ['quantity', 'amount'].includes(e.target.name)) tradeHint(e.target.form);
   if (e.target.name === 'assetq') runAssetSearch();
+  if (e.target.matches('[data-filter="dayq"]')) { state.ui.dayQ = e.target.value; const l = $('#day-list'); if (l) l.innerHTML = dayListHtml(routeArg()); }
   if (e.target.matches('[data-filter="q"]')) { state.ui.q = e.target.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
 });
 document.addEventListener('keydown', (e) => {

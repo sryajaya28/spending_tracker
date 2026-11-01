@@ -21,6 +21,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); await p.waitForSelector('#day-list .row');
   assert.equal((await p.$$('#day-list .row')).length, 3);
   assert((await p.evaluate(() => location.hash)).endsWith('/transactions/' + m + '-05'));
+  // the day page has its own search
+  await p.fill('.txn-top input[data-filter=dayq]', 'lunch'); assert.equal((await p.$$('#day-list .row')).length, 1, 'search narrows the day'); await p.fill('.txn-top input[data-filter=dayq]', 'zzz'); assert((await p.innerText('#day-list')).includes('No transactions match')); await p.fill('.txn-top input[data-filter=dayq]', ''); assert.equal((await p.$$('#day-list .row')).length, 3);
   assert((await p.innerText('.sidebar a.active')).includes('Transactions'));
   await p.screenshot({ path: __dirname + '/out/daily_detail.png' });
   await p.click('#day-list .row'); assert((await p.$$('#dlg')).length >= 1); await p.click('[data-act=close]');

@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Loan payment": "Pembayaran pinjaman",
  "Loan Account": "Akun Pinjaman",
  "Savings Account": "Akun Tabungan",
  "Paid": "Dibayar",

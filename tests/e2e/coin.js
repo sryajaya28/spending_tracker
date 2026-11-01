@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const qty = () => p.evaluate((id) => D().holdings.find((h) => h.id === id).quantity, hid);
   const add = async (type, amount, note) => { await p.evaluate(() => txnDialog(null)); await p.click(`#dlg label:has(input[name=type][value=${type}])`); await p.selectOption('select[name=wallet]', 'h:' + hid); await p.fill('input[name=amount]', String(amount)); await p.fill('textarea[name=note]', note); await p.click('#dlg button[type=submit]'); await settle(); };
   // the dialog offers the coin and switches the amount unit
-  await p.evaluate(() => txnDialog(null)); assert((await p.innerText('select[name=wallet]')).includes('Exchange (USDT)')); await p.selectOption('select[name=wallet]', 'h:' + hid); assert((await p.innerText('[data-amt-label]')).includes('USDT')); await p.click('[data-act=close]');
+  await p.evaluate(() => txnDialog(null)); assert((await p.innerText('select[name=wallet]')).includes('Exchange') && !(await p.innerText('select[name=wallet]')).includes('(USDT)')); await p.selectOption('select[name=wallet]', 'h:' + hid); assert((await p.innerText('[data-amt-label]')).includes('USDT')); await p.click('[data-act=close]');
   await add('income', 250.5, 'Salary USDT'); assert.equal(await qty(), 1250.5);
   let l = await log(); const ev = l.find((o) => o.table === 'holding_events'), tx = l.find((o) => o.table === 'transactions');
   assert(ev && ev.rows.some((r) => r.note === 'income' && +r.quantity_delta === 250.5), JSON.stringify(ev)); assert(tx.rows[0].wallet_id === null && tx.rows[0].holding_event_id && tx.rows[0].currency === 'USD' && tx.rows[0].amount_minor === 25050 && tx.rows[0].type === 'income');
@@ -24,7 +24,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // counts as income/spending, not wallet money; shows the coin as its place
   const totals = await p.evaluate(() => ({ inc: sumBy(inMonth(state.ui.month), 'income'), exp: sumBy(inMonth(state.ui.month), 'expense'), cash: walletBalance(D().wallets[0]) }));
   assert(totals.inc > 0 && totals.exp > 0 && totals.cash === 0, JSON.stringify(totals));
-  assert.equal(await p.evaluate(() => txnWhere(D().transactions.find((t) => t.note === 'Hosting'))), 'Exchange (USDT)');
+  assert.equal(await p.evaluate(() => txnWhere(D().transactions.find((t) => t.note === 'Hosting'))), 'Exchange');
   // saved and loaded back from the database rows
   const back = await p.evaluate(async () => { const d = await Cloud.load(); const h = d.holdings.find((x) => x.symbol === 'USDT'); return { q: h.quantity, kinds: h.trades.map((t) => t.kind).sort(), txn: d.transactions.filter((t) => !t.wallet_id).length }; });
   assert.deepEqual(back, { q: 1150.5, kinds: ['expense', 'income'], txn: 2 });

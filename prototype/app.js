@@ -754,7 +754,7 @@ function loanHistoryDialog(l, kind = 'loan') {
     <div class="hs-row"><span>${lent ? __('Lent') : __('Original amount')}</span><b class="num">${shown(l.original_minor)}</b></div>
     ${chargedOf(l) ? `<div class="hs-row"><span>${__('Charged to this account')}</span><b class="num">+${shown(chargedOf(l))}</b></div>` : ''}
     <div class="hs-row"><span>${lent ? __('Repaid') : __('Paid')}</span><b class="num">${shown(paidOf(l))}</b></div></div>
-  <div class="list">${rows.map((p) => `<div class="pay-row"><span>${esc(fmt(p.date))}</span><span class="num">${p.kind === 'charge' ? '+' : ''}${shown(p.amount_minor)}${p.kind === 'charge' ? ` <small class="muted">${__('charged')}</small>` : ''}</span>${p.kind === 'charge' ? '<span></span>' : `<button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: lent ? __('repayment') : __('payment') })}">×</button>`}</div>`).join('') || `<p class="muted">${__('No {what}s yet.', { what: lent ? __('repayment') : __('payment') })}</p>`}</div>
+  <div class="list">${rows.map((p) => `<div class="pay-row"><span>${esc(fmt(p.date))}</span><span class="num">${p.kind === 'charge' ? '+' : ''}${shown(p.amount_minor)}</span>${p.kind === 'charge' ? '<span></span>' : `<button class="icon-x" data-act="delete-payment" data-kind="${kind}" data-id="${l.id}" data-pid="${p.id}" aria-label="${__('Remove {what}', { what: lent ? __('repayment') : __('payment') })}">×</button>`}</div>`).join('') || `<p class="muted">${__('No {what}s yet.', { what: lent ? __('repayment') : __('payment') })}</p>`}</div>
   <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
 function paymentDialog(l, kind = 'loan') {
@@ -917,7 +917,8 @@ function viewOverview() {
   </div>`;
 }
 
-function txnRow(t) {
+function txnRow(t, loanView) {
+  if (t.type === 'loan_payment') return `<div class="row"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
@@ -926,7 +927,7 @@ function txnRow(t) {
     <div class="sub">${__('Transfer')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
     <div class="amt-col"><div class="amt num">${t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   }
-  const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
+  const c = catOf(t.category_id), sign = loanView || t.type === 'income' ? '+' : '−';   // on a loan, what was charged raises it (+) and a payment lowers it (−)
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
     <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
     <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}</div></div>
@@ -936,26 +937,33 @@ function filteredTxns() {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
   return D().transactions.filter((t) => t.occurred_at <= todayIso()   // upcoming (future-dated) entries are not part of the history yet
     && (occ || inPeriod(t.occurred_at, state.ui.month))
-    && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2))) && (!occ || t.occasion_id === occ)
+    && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2)) || (wallet.startsWith('l:') && t.loan_id === wallet.slice(2))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
+}
+/* the Transactions page filtered to a loan account: what was charged to it (expenses paid with it) and the payments made on it */
+const loanViewId = () => (state.ui.wallet && state.ui.wallet.startsWith('l:') ? state.ui.wallet.slice(2) : '');
+function loanPaymentRows() {
+  const id = loanViewId(), l = id && D().loans.find((x) => x.id === id), { q, cat, occ } = state.ui, ql = q.trim().toLowerCase(); if (!l || cat || occ) return [];
+  return l.payments.filter((p) => p.kind !== 'charge' && p.date <= todayIso() && inPeriod(p.date, state.ui.month) && (!ql || __('Loan payment').toLowerCase().includes(ql)))
+    .map((p) => ({ id: 'pay:' + p.id, type: 'loan_payment', amount_minor: p.amount_minor, currency: l.currency, occurred_at: p.date, note: __('Loan payment'), loan_id: l.id }));
 }
 const dayTitle = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
 const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions', { n });
 // one row per day with the day's totals (transfers are neither income nor spending)
 /* days are collapsible: tap a day to open its transactions in place; Expand all / Hide all for the whole list. A search opens every matching day. */
 function txnListHtml() {
-  const rows = filteredTxns();
+  const loanView = !!loanViewId(), rows = [...filteredTxns(), ...loanPaymentRows()];
   if (!rows.length) return '<div class="empty">' + __('No transactions match.') + '</div>';
   const days = {};
   rows.forEach((t) => { (days[t.occurred_at] = days[t.occurred_at] || []).push(t); });
   const keys = Object.keys(days).sort().reverse(), searching = !!state.ui.q.trim();
   const group = (d) => {
-    const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = inc - exp, open = searching || state.ui.openDays.has(d);
+    const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = loanView ? l.reduce((a, t) => a + (t.type === 'loan_payment' ? -amt(t) : amt(t)), 0) : inc - exp, open = searching || state.ui.openDays.has(d);
     return `<div class="day-group ${open ? 'open' : ''}" data-day="${d}"><div class="row day-row" data-act="toggle-day" data-id="${d}" tabindex="0" role="button" aria-expanded="${open}"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
     <div><div class="title">${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long' }))}</div>
     <div class="sub">${countLabel(l.length)}</div></div>
-    <div class="amt num ${net < 0 ? 'expense' : net > 0 ? 'income' : ''}">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div><span class="day-chev" aria-hidden="true">›</span></div>
-    <div class="day-body">${l.map(txnRow).join('')}</div></div>`;
+    <div class="amt num">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div><span class="day-chev" aria-hidden="true">›</span></div>
+    <div class="day-body">${l.map((t) => txnRow(t, loanView)).join('')}</div></div>`;
   };
   return `<div class="day-tools"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></div>${keys.map(group).join('')}`;
 }
@@ -976,7 +984,7 @@ function viewTransactions() {
     <div class="filters scroll-row">
       <select data-filter="cat" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
       ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option>${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}</select></div>
+      <select data-filter="wallet" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option><optgroup label="${__('Savings Account')}">${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>${stableHoldings().length ? `<optgroup label="${__('Investment Account')}">${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(coinLabel(h))}</option>`).join('')}</optgroup>` : ''}${D().loans.length ? `<optgroup label="${__('Loan Account')}">${D().loans.map((l) => `<option value="l:${l.id}" ${state.ui.wallet === 'l:' + l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</optgroup>` : ''}</select></div>
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 
@@ -1332,8 +1340,10 @@ function transferDetail(gid) {
 /* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
    linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
 const coinOf = (t) => (t && !t.wallet_id && t.trade_id ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
-const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; if (t.loan_id) return D().loans.find((l) => l.id === t.loan_id)?.name || '';  const h = coinOf(t); return h ? `${accountName(h.account_id)} (${assetInfo(h.symbol).symbol})` : ''; };
-const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`;
+const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; if (t.loan_id) return D().loans.find((l) => l.id === t.loan_id)?.name || '';  const h = coinOf(t); return h ? coinLabel(h) : ''; };
+/* an investment account holding stablecoins: just the account name; the coin is added only when the account holds more than one stablecoin */
+const coinLabel = (h) => accountName(h.account_id) + (D().holdings.filter((x) => x.account_id === h.account_id && assetInfo(x.symbol).type === 'stablecoin').length > 1 ? ` (${assetInfo(h.symbol).symbol})` : '');
+const coinOption = (h, sel) => `<option value="h:${h.id}" ${sel ? 'selected' : ''}>${esc(coinLabel(h))}</option>`;
 function recordCoinTxn(h, { type, quantity, date, note, category_id, category_source, ai_confidence, occasion_id, id, tradeId }) {
   const tid = tradeId || uid(), side = type === 'income' ? 'buy' : 'sell', amount_minor = Math.max(1, Math.round(quantity * 100));
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
@@ -1372,7 +1382,7 @@ function acctOptions(type, selected, noNew) {
   const sel = (v) => (v === selected ? 'selected' : '');
   const loans = type === 'expense' ? activeLoans() : [];   // a loan account can pay for expenses; what is paid raises the loan
   return (ws.length ? `<optgroup label="${__('Savings Account')}">${ws.map((w) => `<option value="${w.id}" ${sel(w.id)}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</optgroup>` : '')
-    + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(accountName(h.account_id))} (${esc(assetInfo(h.symbol).symbol)})</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '')
+    + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(coinLabel(h))}</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '')
     + (loans.length ? `<optgroup label="${__('Loan Account')}">${loans.map((l) => `<option value="l:${l.id}" ${sel('l:' + l.id)}>${esc(l.name)} (${esc(l.currency)})</option>`).join('')}</optgroup>` : '');
 }
 /* the amount's unit and step follow the chosen account */
@@ -1887,7 +1897,10 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-loan') loanDialog();
   else if (act === 'edit-loan') loanDialog(find(D().loans));
   else if (act === 'pay-loan') paymentDialog(find(D().loans), 'loan');
-  else if (act === 'history-loan') loanHistoryDialog(find(D().loans), 'loan');
+  else if (act === 'history-loan') {   // the Transactions page on that loan, in the period of its latest entry (change the period to go back in time)
+    const l = find(D().loans), last = l.payments.filter((p) => p.date <= todayIso()).map((p) => p.date).sort().pop();
+    Object.assign(state.ui, { wallet: 'l:' + id, month: last ? periodKeyOf(last) : currentPeriod(), cat: '', occ: '', q: '' }); location.hash = '#/transactions';
+  }
   else if (act === 'history-lent') loanHistoryDialog(find(D().lent), 'lent');
   else if (act === 'archive-loan') { find(D().loans).archived = true; save(); close(); render(); toast('Loan archived'); }
   else if (act === 'add-lent') lentDialog();

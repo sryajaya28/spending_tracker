@@ -45,7 +45,7 @@ Automated: `run`, `sample`, `confirm`, `csp`, `landshot`.
 | UI-03 | Phone: open every page (Overview, Activity, Budgets, Portfolio and its tabs, Settings, landing, sign-in, an open dialog) | No horizontal scroll or sideways panning; nothing is cut off at the right edge. |
 | UI-04 | Phone: double-tap and pinch | The page does not zoom; tapping a text field does not zoom. |
 | UI-05 | Phone, installed from Safari "Add to Home Screen" **(manual)** | Opens full screen with no browser bars; icon is the Stiver logo; status bar visible; no pull-down bounce. A link opened inside another app still shows that app's bar (expected). |
-| UI-06 | Phone bottom bar | Overview, Activity, raised **Add**, Budgets, Portfolio. "Add" label is on the same line as the other labels. No floating + button. Settings is reached from the round profile icon top right. |
+| UI-06 | Phone bottom bar | Overview, Activity, raised **Add**, Budgets, Portfolio. "Add" label is on the same line as the other labels. No floating + button. Settings is reached from the round profile icon top right. The labels sit close to the bottom edge (no big empty band under them, also on iPhones with a home indicator **(manual)**), and the last item of every page can scroll fully above the bar. |
 | UI-07 | Desktop | Left sidebar with Overview, Transactions, Budgets, Portfolio, Settings; top-right name pill opens Settings. No bottom bar. |
 | UI-08 | Open any add/edit dialog | The phone keyboard does **not** open until a field is tapped. |
 | UI-09 | Pages have no helper subtitles under titles | Titles stand alone; spacing is compact. |
@@ -303,5 +303,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: IV-08 now describes the disclaimer as an (i) tooltip next to the Investments title.
 - 2026-11-01: OV-01 hero percentage is now the balance change %, not the saved-income %.
 - 2026-11-01: OV-05 rewritten: Overview Budgets card shows only the overall budget, button renamed Details, whole card opens Budgets.
+- 2026-11-01: UI-06 notes the tighter space under the bottom bar labels.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

@@ -287,6 +287,8 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: Phone bottom bar: less space under the labels (padding 6px top, 2px + 40% of the home-indicator inset at the bottom, was 8px + 100%); page bottom padding reduced to match.
+
 - 2026-11-01: Overview Budgets card shows only the overall budget (no category tiles, no special occasions), the button is "Details", and the whole card
   (`.tap-card`, `data-act=goto`) opens the Budgets page. Full budgets and occasions live on the Budgets page.
 

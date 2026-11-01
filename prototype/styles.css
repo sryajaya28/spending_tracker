@@ -766,3 +766,7 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .day-group.open .day-body { display: block; }
 .day-row { grid-template-columns: 44px minmax(0, 1fr) auto 14px; }
 .day-body { margin-left: 4px; padding-left: 6px; }
+/* Money Flow tooltip: month, income, spending, net */
+#flow-tip { transform: translate(-50%, 0); text-align: left; padding: 8px 12px; display: grid; gap: 3px; min-width: 150px; }
+#flow-tip > div { display: flex; justify-content: space-between; gap: 14px; } #flow-tip .tip-h { opacity: .75; font-weight: 500; }
+#flow-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }

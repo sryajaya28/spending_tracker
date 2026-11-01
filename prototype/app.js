@@ -503,9 +503,10 @@ function bindFlow(months, inc, exp) {
     const i = Math.max(0, Math.min(months.length - 1, Math.round(((vx - pl) / (W - pl - pr)) * (months.length - 1))));
     const cx = pl + ((W - pl - pr) * i) / (months.length - 1);
     cur$.setAttribute('x1', cx); cur$.setAttribute('x2', cx); cur$.setAttribute('opacity', 1);
-    const net = inc[i] - exp[i];
-    tip.textContent = `${monthLabel(months[i], 'short')}: net ${net >= 0 ? '+' : '−'}${money(Math.abs(net), cur())}`;
-    tip.style.left = `${(cx / W) * r.width}px`; tip.style.top = `${r.height * 0.3}px`; tip.style.opacity = 1;
+    const net = inc[i] - exp[i], line = (dot, label, v) => `<div><span><i style="background:${dot}"></i>${label}</span><b class="num">${v}</b></div>`;
+    tip.innerHTML = `<div class="tip-h">${esc(monthLabel(months[i], 'short'))}</div>${line('#A5A8FF', __('Income'), '+' + money(inc[i], cur()))}${line('#F5B800', __('Spending'), '−' + money(exp[i], cur()))}${line('#fff', __('Net'), (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()))}`;
+    const half = tip.offsetWidth / 2 + 4;
+    tip.style.left = `${Math.max(half, Math.min(r.width - half, (cx / W) * r.width))}px`; tip.style.top = '4px'; tip.style.opacity = 1;
   });
   svg.addEventListener('pointerleave', () => { tip.style.opacity = 0; cur$.setAttribute('opacity', 0); });
 }

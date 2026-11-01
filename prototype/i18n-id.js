@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Net": "Bersih",
  "Hide all": "Tutup semua",
  "Expand all": "Buka semua",
  "Tap Add to Home Screen": "Ketuk Tambah ke Layar Utama",

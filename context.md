@@ -287,6 +287,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: **WIP (not live in the UI):** migration 17 adds `holdings.cost_currency` and `holding_events.unit_price` for average-price / P&L tracking (already applied to production); `cloud.js` persists/loads them as `h.ccy`, `h.open_price`, `tr.price`. App-level cost engine and UI still to come.
 - 2026-11-01: Investment accounts can hold a **fiat cash balance**: a holding with key `CASH:<CUR>` (`customAssets[...] = { cash: 'IDR', type: 'cash' }`, priced at face value from `RATES`,
   stored as asset_type `manual` + `provider_symbol` `cash:IDR`, so no migration). Created from the asset picker (type "Cash balance"); Deposit/Withdraw reuse the buy/sell code with a savings
   account as the other side; the same account's cash is offered under Pay with > Cash balance when buying or selling assets (paired trades, as with stablecoins). Sample data has IDR cash in

@@ -38,16 +38,16 @@ const Cloud = (() => {
       const cat = catalog.get(h.symbol), meta = d.customAssets[h.symbol] || {};
       R.holdings.push({
         id: h.id, account_id: h.account_id, symbol: h.symbol, provider_symbol: cat ? null : meta.cash ? `cash:${meta.cash}` : meta.yh ? `yh:${meta.yh}|${meta.mult || 1}|${meta.type || 'stock'}` : meta.fh || null,
-        name: cat ? cat[0] : meta.name || h.symbol, asset_type: cat ? cat[1] : meta.type === 'commodity' || meta.type === 'cash' ? 'manual' : meta.type || 'manual', archived: false, since_month: `${h.since}-01`,
+        name: cat ? cat[0] : meta.name || h.symbol, asset_type: cat ? cat[1] : meta.type === 'commodity' || meta.type === 'cash' ? 'manual' : meta.type || 'manual', archived: false, since_month: `${h.since}-01`, cost_currency: h.ccy || null,
       });
       const opening = r12(h.quantity - h.trades.reduce((a, tr) => a + tradeSign(tr) * tr.quantity, 0));
       if (Math.abs(opening) > 1e-12) {
         h.open_id ||= crypto.randomUUID();
-        R.holding_events.push({ id: h.open_id, holding_id: h.id, occurred_at: `${h.since}-01`, quantity_delta: opening, note: 'opening', pair_id: null });
+        R.holding_events.push({ id: h.open_id, holding_id: h.id, occurred_at: `${h.since}-01`, quantity_delta: opening, note: 'opening', pair_id: null, unit_price: h.open_price ?? null });
       }
       h.trades.forEach((tr) => {
         tradeIds.add(tr.id);
-        R.holding_events.push({ id: tr.id, holding_id: h.id, occurred_at: tr.date, quantity_delta: r12(tradeSign(tr) * tr.quantity), note: tr.kind || null, pair_id: tr.via ? (tr.id < tr.via.pair ? tr.id : tr.via.pair) : null });
+        R.holding_events.push({ id: tr.id, holding_id: h.id, occurred_at: tr.date, quantity_delta: r12(tradeSign(tr) * tr.quantity), note: tr.kind || null, pair_id: tr.via ? (tr.id < tr.via.pair ? tr.id : tr.via.pair) : null, unit_price: tr.price ?? null });
       });
     });
     d.transactions.forEach((t) => R.transactions.push({
@@ -108,6 +108,7 @@ const Cloud = (() => {
       const trades = evs.filter((e) => e.note !== 'opening').map((e) => {
         const delta = +e.quantity_delta, side = delta > 0 ? 'buy' : 'sell', tr = { id: e.id, date: e.occurred_at, side, quantity: Math.abs(delta) };
         if (e.note === 'income' || e.note === 'expense') tr.kind = e.note;
+        if (e.unit_price != null) tr.price = +e.unit_price;
         const pair = e.pair_id && S.holding_events.find((x) => x.pair_id === e.pair_id && x.id !== e.id);
         if (pair) {
           const oh = holdingById.get(pair.holding_id);
@@ -119,7 +120,8 @@ const Cloud = (() => {
         return tr;
       });
       const out = { id: h.id, account_id: h.account_id, symbol: h.symbol, quantity: r12(evs.reduce((a, e) => a + +e.quantity_delta, 0)), since: h.since_month.slice(0, 7), trades };
-      if (open) out.open_id = open.id;
+      if (open) { out.open_id = open.id; if (open.unit_price != null) out.open_price = +open.unit_price; }
+      if (h.cost_currency) out.ccy = h.cost_currency;
       if (!catalog.has(h.symbol)) {
         const m = latestManual.get(h.symbol);
         d.customAssets[h.symbol] = { symbol: baseSym(h.symbol), name: h.name || h.symbol, type: h.asset_type };

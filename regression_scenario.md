@@ -60,6 +60,7 @@ Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
 | ID | Scenario | Expected |
 |---|---|---|
 | OV-01 | Hero card | Total Balance equals the sum of all non-archived accounts (and equals Portfolio > Savings). Shows the period's change in amount and as a **% of the balance it started with** (e.g. `−0.8%` next to `−IDR 680,886 this month`; both always have the same sign; `—` when the starting balance is zero or negative). No "N accounts" label. No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
+| OV-01b | Sample-data offer on an empty account | When the total balance is **under 1 USD** (a new or empty account) and sample mode is off, a card titled "Just looking around?" with the line "Test Stiver now with sample data" and a switch appears right under the hero card. Turning it on shows the demo account and the sample banner (the card disappears; "Back to my data" restores the own data and the card). With a real balance of 1 USD or more the card is not shown. Settings > Account > Use sample data still works. |
 | OV-02 | Desktop layout | Hero spans the full width; below it a two-column grid: Money Flow and Spending, then Budgets and Recent transactions side by side with no empty cell. Phone: single column. |
 | OV-03 | Money Flow | Six periods of income and spending; hover/tap a point shows net for that period. Saved shows income minus spending of the selected period. |
 | OV-04 | Spending donut | Top 5 categories + Others. Hover (desktop) or tap (phone) an arc: centre shows name, amount and % of total; tap the same arc or elsewhere to clear. Empty month: grey ring and zero total. No category buttons under it. **Details** opens the breakdown with expandable sub-categories. |
@@ -318,5 +319,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: TX-07b: tapping the search box must not close the list (phone keyboard resizes the page).
 - 2026-11-01: TX-07b: "Category not found" note above the Add new category button when the search has no match.
 - 2026-11-01: Added UI-12 (the new loading screen).
+- 2026-11-01: Added OV-01b (sample-data offer on Overview for empty accounts).
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.

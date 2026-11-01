@@ -84,7 +84,7 @@ infrastructure names, see section 8).
   tap, builds the list (optgroups as headings), writes the value and dispatches `input` + `change`. Add `data-native` to a select to keep the OS picker.
 - **Language:** English and Bahasa Indonesia (about 510 strings). **Appearance:** match device / light / dark.
   Both saved to the profile and remembered per device.
-- **Sample data** is a demo mode (switch in Settings): a seeded demo account lives only in memory, saves are disabled,
+- **Sample data** is a demo mode (switch in Settings, and a card on Overview for empty accounts): a seeded demo account lives only in memory, saves are disabled,
   a banner explains it, and turning it off restores the user's own data.
 - Legal pages: `prototype/privacy.html`, `prototype/terms.html`. Brand files in `prototype/brand/`.
 
@@ -286,6 +286,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: Overview shows a "Just looking around?" card with a sample-data switch (`samplePromo`, `.sample-promo`) when the total balance is under 1 USD and sample
+  mode is off, so new users can try the app without finding the Settings toggle. It reuses the `[data-demo]` switch handler.
 
 - 2026-11-01: New loading screen (`viewSplash`, `.splash*` CSS): floating logo with a pulsing ring and an orbiting coin, a running bar, and a line that rotates through four
   friendly messages with pure CSS (no timers); respects `prefers-reduced-motion`; themed for dark mode.

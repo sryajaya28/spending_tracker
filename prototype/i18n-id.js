@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Test Stiver now with sample data": "Uji coba Stiver sekarang dengan data contoh",
+ "Just looking around?": "Hanya ingin melihat-lihat?",
  "Fetching your finances…": "Mengambil data keuangan Anda…",
  "Waking up Stiver…": "Membangunkan Stiver…",
  "Almost there…": "Hampir selesai…",

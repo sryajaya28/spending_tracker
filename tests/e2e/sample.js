@@ -12,6 +12,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 12345, currency: D().wallets[0].currency, occurred_at: isoDate(new Date()), note: 'MY REAL ONE', category_source: 'user', ai_confidence: null }); save(); });
   await settle(); await log();
   const own = await snap(); assert.equal(own.txns, 1);
+  // an empty account (balance under 1 USD) gets a one-tap sample-data switch on Overview
+  await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.waitForSelector('.sample-promo [data-demo]');
+  await p.click('.sample-promo .switch'); await p.waitForSelector('.demo-bar'); assert.equal(await p.$$('.sample-promo').then((a) => a.length), 0, 'promo disappears in sample mode'); assert((await snap()).demo);
+  await p.click('[data-act=demo-off]'); await p.waitForFunction(() => !state.real); await p.waitForSelector('.sample-promo');
+  await p.evaluate(() => { D().wallets[0].opening_balance_minor = 50000000; render(); }); assert.equal(await p.$$('.sample-promo').then((a) => a.length), 0, 'no promo once there is a real balance'); await p.evaluate(() => { D().wallets[0].opening_balance_minor = 0; });
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-demo]');
   assert(!(await p.$('.demo-bar')));
   // toggle ON: demo data shows, banner appears, own data untouched

@@ -684,6 +684,7 @@ function viewOverview() {
       <div class="delta"><b>${pctFmt(balChange)}</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
+    ${samplePromo()}
     <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
       <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
       ${flowChart(months, incs, exps)}</section>
@@ -916,6 +917,9 @@ function viewAuth() {
   return `<div class="onboard">${body}<p class="legal-links"><a href="privacy.html">${__('Privacy Policy')}</a> · <a href="terms.html">${__('Terms of Service')}</a></p></div>`;
 }
 /* loading screen: the logo with an orbiting coin, a soft pulse and a running bar; the line under it changes every few seconds (pure CSS, no timers) */
+/* a new account (balance under 1 USD) gets a one-tap way to try the app with sample data, without hunting for the Settings switch */
+const samplePromo = () => (!state.real && toUSD(totalBalance(), cur()) < 1
+  ? `<section class="card sample-promo"><div><b>${__('Just looking around?')}</b><small>${__('Test Stiver now with sample data')}</small></div><label class="switch"><input type="checkbox" data-demo aria-label="${__('Use sample data')}"></label></section>` : '');
 const viewSplash = (msg) => `<div class="onboard"><div class="splash" role="status" aria-live="polite" aria-label="${esc(__(msg))}">
   <div class="splash-mark"><span class="ring"></span><span class="ring r2"></span><img src="icon.svg" alt=""><i class="orbit"><b></b></i></div>
   <div class="splash-name">Stiver</div>

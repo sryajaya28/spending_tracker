@@ -611,3 +611,9 @@ select:not([data-native]) { pointer-events: none; }
 @keyframes sp-bar { 0% { transform: translateX(-110%); } 100% { transform: translateX(240%); } }
 @keyframes sp-msg { 0% { opacity: 0; transform: translateY(6px); } 4%, 22% { opacity: 1; transform: none; } 26%, 100% { opacity: 0; transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) { .splash-mark, .splash-mark .ring, .splash-mark .orbit, .splash-bar i { animation: none; } .splash-msg span { animation: none; } .splash-msg span:first-child { opacity: 1; } }
+
+/* sample-data offer on an empty account */
+.sample-promo { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; }
+.sample-promo > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sample-promo small { color: var(--muted); font-size: 13px; }
+.sample-promo .switch { flex: none; }

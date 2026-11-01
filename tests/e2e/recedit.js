@@ -36,7 +36,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.deepEqual(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort()), before, 'past entries still on their old account and amounts');
   assert.equal(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').every((t) => t.wallet_id !== window.__w2)), true);
   // expenses show red, income green in the list
-  assert(await p.$('.cat-row .pl.down'), 'expense amount is red'); 
+  assert(await p.$('.cat-row .pl.down'), 'expense amount is red'); assert(!/[−+]{2}/.test(await p.innerText('.cat-row .pl.down')), 'one sign only');
   // a date in the past is refused
   await p.click('[data-act=rec-manage]'); await p.evaluate(() => { document.querySelector('input[name=next]').removeAttribute('min'); }); await p.fill('input[name=next]', '2026-01-01'); await p.click('#dlg button[type=submit]'); assert.equal(await p.evaluate(() => D().recurring[0].next), newDate, 'a past date is not accepted'); await p.click('[data-act=close]');
   console.log('ok', JSON.stringify(errs)); await b.close();

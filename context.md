@@ -290,6 +290,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-01: **App-styled calendar** (`prototype/datepicker.js`, in the service worker shell, cache `stiver-shell-v7`): tapping any date field opens a popover calendar in the app's design (month header with arrows, weekday row, day grid, **Today**, selected/today marks, `min`/`max` respected, light and dark) instead of the iOS/OS calendar; the `<input type=date>` stays in the DOM (ISO value, forms, tests; made non-interactive by CSS like the dropdown selects), typing still works, Esc or a tap outside closes only the calendar, `data-native` keeps the OS one. **Active filters are highlighted** on Transactions: category, occasion, account and search get a tinted `f-on` style (brand colour, bold) while set.
 - 2026-11-01: Budgets page: the Special occasions button reads **+ Add** (was + Occasion) and the **By category** card got its own **+ Add** (`add-budget` with `data-preset="category"`, `budgetDialog(null, 'category')` preselects the first category without a budget).
 - 2026-11-01: The special-occasion card button that opens the occasion's expenses is now labelled **Details** (was Expenses).
 - 2026-11-01: Amounts paid/received in a stablecoin are written as `USDT 5,584.00` / `USDC ...` (`coinAmount`) instead of `$5,584.00` in transaction rows and the Recurring list (totals and reports still convert to the reporting currency).

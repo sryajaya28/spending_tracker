@@ -803,3 +803,26 @@ dialog { overscroll-behavior: contain; } .cs-scroll, .dlg { overscroll-behavior:
 /* dropdown groups (Savings / Investment / Loan accounts...): a tinted title band and a gap before each new group */
 .cs-group { background: var(--soft); border-radius: 8px; margin: 10px 6px 4px; padding: 6px 10px; color: var(--ink); font-weight: 700; }
 .cs-scroll .cs-group:first-child { margin-top: 4px; }
+
+/* a filter that is set (category, occasion, account, search) is highlighted so it is clear the list is filtered */
+.filters select.f-on, .txn-top input.f-on { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); border: 1.5px solid var(--brand); font-weight: 600; }
+.filters.scroll-row select.f-on { border-width: 1.5px; }
+:root[data-theme="dark"] .filters select.f-on, :root[data-theme="dark"] .txn-top input.f-on { background: color-mix(in srgb, var(--brand) 24%, var(--surface)); }
+
+/* app-styled calendar (datepicker.js) */
+input[type="date"]:not([data-native]) { pointer-events: none; }
+.dp-pop { position: fixed; z-index: 1000; margin: 0; inset: auto; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 18px 40px rgba(30, 27, 75, .22); padding: 12px; animation: cs-in .12s ease-out; }
+.dp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.dp-title { font-size: 15px; text-transform: capitalize; }
+.dp-nav { width: 36px; height: 36px; border: 0; border-radius: 50%; background: var(--soft); color: var(--ink); font-size: 20px; line-height: 1; display: grid; place-items: center; padding: 0; }
+.dp-wk, .dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+.dp-wk span { font-size: 11px; font-weight: 600; color: var(--muted); padding: 6px 0; text-transform: uppercase; }
+.dp-grid { gap: 2px; }
+.dp-day { height: 38px; border: 0; border-radius: 50%; background: none; color: var(--ink); font-size: 15px; padding: 0; }
+.dp-day:hover:not(:disabled) { background: var(--soft); }
+.dp-day.today { box-shadow: inset 0 0 0 1.5px var(--brand-2); }
+.dp-day.on { background: var(--navy); color: #fff; font-weight: 700; box-shadow: none; }
+.dp-day:disabled { opacity: .3; }
+.dp-foot { display: flex; justify-content: flex-start; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.dp-today { border: 0; background: none; color: var(--brand); font-weight: 600; font-size: 14px; padding: 6px 8px; border-radius: 10px; }
+.dp-today:disabled { opacity: .35; }

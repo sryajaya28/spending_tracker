@@ -980,11 +980,11 @@ function viewDay(d) {
 function viewTransactions() {
   const list = inMonth(state.ui.month);
   return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
-  <section class="card"><div class="txn-top"><input data-filter="q" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true)}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
+  <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true)}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
     <div class="filters scroll-row">
-      <select data-filter="cat" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
-      ${D().occasions.length ? `<select data-filter="occ" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option><optgroup label="${__('Savings Account')}">${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>${stableHoldings().length ? `<optgroup label="${__('Investment Account')}">${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(coinLabel(h))}</option>`).join('')}</optgroup>` : ''}${D().loans.length ? `<optgroup label="${__('Loan Account')}">${D().loans.map((l) => `<option value="l:${l.id}" ${state.ui.wallet === 'l:' + l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</optgroup>` : ''}</select></div>
+      <select data-filter="cat" class="${state.ui.cat ? 'f-on' : ''}" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${esc(c.name)}</option>`).join('')}</select>
+      ${D().occasions.length ? `<select data-filter="occ" class="${state.ui.occ ? 'f-on' : ''}" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
+      <select data-filter="wallet" class="${state.ui.wallet ? 'f-on' : ''}" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option><optgroup label="${__('Savings Account')}">${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>${stableHoldings().length ? `<optgroup label="${__('Investment Account')}">${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(coinLabel(h))}</option>`).join('')}</optgroup>` : ''}${D().loans.length ? `<optgroup label="${__('Loan Account')}">${D().loans.map((l) => `<option value="l:${l.id}" ${state.ui.wallet === 'l:' + l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</optgroup>` : ''}</select></div>
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 
@@ -1269,7 +1269,7 @@ function open(html) { dlg().innerHTML = `<div class="dlg" tabindex="-1">${html}<
 const close = () => dlg().open && dlg().close();
 /* a tap or click on the dimmed area outside a modal closes it (web and phone). A press that starts inside and is released outside (selecting text), or a tap that only closes an open dropdown list, does not. */
 let downOnBackdrop = false, listOpenAtDown = false;
-window.addEventListener('pointerdown', () => { listOpenAtDown = !!document.querySelector('.cs-pop'); }, true);   // before the dropdown closes its own list
+window.addEventListener('pointerdown', () => { listOpenAtDown = !!document.querySelector('.cs-pop, .dp-pop'); }, true);   // before the dropdown closes its own list
 dlg().addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === dlg() && !listOpenAtDown; });
 dlg().addEventListener('click', (e) => { if (e.target === dlg() && downOnBackdrop) close(); downOnBackdrop = false; });
 const catOptions = (type, sel, withNew) => `<option value="">${__('— None (AI may suggest) —')}</option>${catTree(type).map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${c.id === sel ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}${withNew ? `<option value="__new" data-cta>＋ ${__('Add new category')}</option>` : ''}`;
@@ -1987,7 +1987,7 @@ document.addEventListener('change', (e) => {
   if (t.matches('[data-trend]')) { if (t.dataset.trend === 'n') { state.ui.trendN = +t.value; state.ui.trendCat = state.ui.trendCat || ''; } else state.ui.trendCat = t.value; $('#trend-chart').innerHTML = trendChart(); }
   else if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
-  else if (t.matches('[data-filter]')) { state.ui[t.dataset.filter] = t.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
+  else if (t.matches('[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
   else if (t.name === 'category' && t.form?.dataset.form === 'txn') {
     const q = $('.quick-cat', t.form);
     if (t.value === '__new') { t.value = t.dataset.prev || ''; q.hidden = false; q.scrollIntoView({ block: 'nearest' }); }   // open the add-category form; no keyboard until a field is tapped
@@ -2066,7 +2066,7 @@ document.addEventListener('input', (e) => {
   if (e.target.name === 'assetq') runAssetSearch();
   if (e.target.name === 'message' && e.target.form?.dataset.form === 'support') $('#support-count').textContent = `${e.target.value.length}/${SUPPORT_MAX_CHARS}`;
   if (e.target.matches('[data-filter="dayq"]')) { state.ui.dayQ = e.target.value; const l = $('#day-list'); if (l) l.innerHTML = dayListHtml(routeArg()); }
-  if (e.target.matches('[data-filter="q"]')) { state.ui.q = e.target.value; const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
+  if (e.target.matches('[data-filter="q"]')) { state.ui.q = e.target.value; e.target.classList.toggle('f-on', !!e.target.value.trim()); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && e.target.name?.startsWith('qc_')) { e.preventDefault(); quickAddCategory(e.target.form); return; }   // Enter adds the category, not the transaction

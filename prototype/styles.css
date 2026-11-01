@@ -826,3 +826,7 @@ input[type="date"]:not([data-native]) { pointer-events: none; }
 .dp-foot { display: flex; justify-content: flex-start; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
 .dp-today { border: 0; background: none; color: var(--brand); font-weight: 600; font-size: 14px; padding: 6px 8px; border-radius: 10px; }
 .dp-today:disabled { opacity: .35; }
+
+.day-tools.has-reset { justify-content: space-between; }
+.day-tools-r { display: inline-flex; align-items: center; gap: 8px; }
+.reset-filters { color: var(--brand); font-weight: 600; padding-left: 4px; }

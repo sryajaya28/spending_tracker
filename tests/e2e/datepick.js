@@ -32,5 +32,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.selectOption('select[data-filter=cat]', ''); assert(!(await p.$eval('select[data-filter=cat]', (e) => e.classList.contains('f-on'))), 'cleared');
   await p.fill('input[data-filter=q]', 'abc'); assert(await p.$eval('input[data-filter=q]', (e) => e.classList.contains('f-on')), 'search highlighted'); await p.fill('input[data-filter=q]', '');
   await p.selectOption('select[data-filter=wallet]', await p.evaluate(() => D().wallets[0].id)); assert(await p.$eval('select[data-filter=wallet]', (e) => e.classList.contains('f-on')), 'account highlighted');
+  // Reset filters: only while a filter is active; clears search, category, occasion and account (not the period)
+  await p.evaluate(() => { location.hash = '#/overview'; location.hash = '#/transactions'; }); await p.waitForTimeout(200);
+  await p.selectOption('select[data-filter=wallet]', ''); await p.selectOption('select[data-filter=cat]', ''); await p.fill('input[data-filter=q]', ''); assert.equal(await p.$$eval('[data-act=reset-filters]', (e) => e.length), 0, 'no reset when nothing is filtered');
+  const per = await p.evaluate(() => state.ui.month); await p.selectOption('select[data-filter=cat]', cat); await p.fill('input[data-filter=q]', 'zzzz'); assert.equal(await p.$$eval('[data-act=reset-filters]', (e) => e.length), 1, 'reset shows while filtered (also with no results)');
+  await p.click('[data-act=reset-filters]'); await p.waitForTimeout(150); assert.equal(await p.$$eval('[data-act=reset-filters]', (e) => e.length), 0); assert.equal(await p.inputValue('input[data-filter=q]'), ''); assert.equal(await p.inputValue('select[data-filter=cat]'), ''); assert.equal(await p.$$eval('.filters .f-on, .txn-top .f-on', (e) => e.length), 0, 'highlights cleared'); assert.equal(await p.evaluate(() => state.ui.month), per, 'period is kept');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message.slice(0, 400), (e.stack || '').split('\n').filter((l) => l.includes('datepick.js')).slice(0, 2).join(' | ')); process.exit(1); });

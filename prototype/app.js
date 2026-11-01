@@ -953,7 +953,9 @@ const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions',
 /* days are collapsible: tap a day to open its transactions in place; Expand all / Hide all for the whole list. A search opens every matching day. */
 function txnListHtml() {
   const loanView = !!loanViewId(), rows = [...filteredTxns(), ...loanPaymentRows()];
-  if (!rows.length) return '<div class="empty">' + __('No transactions match.') + '</div>';
+  const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet);
+  const reset = anyFilter ? `<button type="button" class="legend-btn reset-filters" data-act="reset-filters">${__('Reset filters')}</button>` : '';
+  if (!rows.length) return (reset ? `<div class="day-tools">${reset}</div>` : '') + '<div class="empty">' + __('No transactions match.') + '</div>';
   const days = {};
   rows.forEach((t) => { (days[t.occurred_at] = days[t.occurred_at] || []).push(t); });
   const keys = Object.keys(days).sort().reverse(), searching = !!state.ui.q.trim();
@@ -965,7 +967,7 @@ function txnListHtml() {
     <div class="amt num">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div><span class="day-chev" aria-hidden="true">›</span></div>
     <div class="day-body">${l.map((t) => txnRow(t, loanView)).join('')}</div></div>`;
   };
-  return `<div class="day-tools"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></div>${keys.map(group).join('')}`;
+  return `<div class="day-tools ${reset ? 'has-reset' : ''}">${reset}<span class="day-tools-r"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></span></div>${keys.map(group).join('')}`;
 }
 // the detail page for one day: every transaction on it
 const dayTxns = (d) => { const ql = (state.ui.dayQ || '').trim().toLowerCase(); return D().transactions.filter((t) => t.occurred_at === d && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql))); };
@@ -1875,6 +1877,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-txn') txnDialog(null, type, undefined, date);
   else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
   else if (act === 'toggle-day') { const g = el.closest('.day-group'), on = !g.classList.contains('open'); g.classList.toggle('open', on); el.setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(id); else state.ui.openDays.delete(id); }
+  else if (act === 'reset-filters') { Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); render(); }
   else if (act === 'days-all' || act === 'days-none') { $$('#txn-list .day-group').forEach((g) => { const on = act === 'days-all'; g.classList.toggle('open', on); $('.day-row', g).setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(g.dataset.day); else state.ui.openDays.delete(g.dataset.day); }); }
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
@@ -1987,7 +1990,8 @@ document.addEventListener('change', (e) => {
   if (t.matches('[data-trend]')) { if (t.dataset.trend === 'n') { state.ui.trendN = +t.value; state.ui.trendCat = state.ui.trendCat || ''; } else state.ui.trendCat = t.value; $('#trend-chart').innerHTML = trendChart(); }
   else if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
-  else if (t.matches('[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
+  // (the search box is handled on input: a change event from a removed, focused box must not bring its old text back)
+  else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
   else if (t.name === 'category' && t.form?.dataset.form === 'txn') {
     const q = $('.quick-cat', t.form);
     if (t.value === '__new') { t.value = t.dataset.prev || ''; q.hidden = false; q.scrollIntoView({ block: 'nearest' }); }   // open the add-category form; no keyboard until a field is tapped

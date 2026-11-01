@@ -1,6 +1,7 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Reset filters": "Atur ulang filter",
  "Next month": "Bulan berikutnya",
  "Previous month": "Bulan sebelumnya",
  "Today": "Hari ini",

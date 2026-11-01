@@ -22,13 +22,15 @@ const nativeLocale = (cur) => NATIVE_LOCALE[cur] || locale();
 const curFmt = (cur) => new Intl.NumberFormat(nativeLocale(cur), { style: 'currency', currency: cur, minimumFractionDigits: expOf(cur), maximumFractionDigits: expOf(cur) });
 const toMinor = (major, cur) => Math.round(major * 10 ** expOf(cur));
 const toMajor = (minor, cur) => minor / 10 ** expOf(cur);
-const money = (minor, cur) => curFmt(cur).format(toMajor(minor, cur));
+/* rupiah is always written "Rp 1.234" with a (non-breaking) space, whatever the device's number formatting says */
+const rpSpace = (str) => str.replace(/Rp[\s\u00a0]*(?=\d)/g, 'Rp\u00a0');
+const money = (minor, cur) => rpSpace(curFmt(cur).format(toMajor(minor, cur)));
 const convert = (minor, from, to) => (from === to ? minor : Math.round((toMajor(minor, from) / RATES[from]) * RATES[to] * 10 ** expOf(to)));
 const usdToMinor = (usd, cur) => toMinor(usd * RATES[cur], cur);
 const compact = (minor, cur) => new Intl.NumberFormat(nativeLocale(cur), { notation: 'compact', maximumFractionDigits: 1 }).format(toMajor(minor, cur));
 function moneyHtml(minor, cur) {
   return curFmt(cur).formatToParts(toMajor(minor, cur))
-    .map((p) => (p.type === 'fraction' || p.type === 'decimal' ? `<span class="dim">${p.value}</span>` : esc(p.value))).join('');
+    .map((p) => (p.type === 'fraction' || p.type === 'decimal' ? `<span class="dim">${p.value}</span>` : esc(p.value))).join('').replace(/Rp[\s\u00a0]*(?=\d|<)/g, 'Rp\u00a0');
 }
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -398,7 +400,7 @@ const usdOfCcy = (x, ccy) => x / RATES[ccy];
 const signed = (n, text) => (n > 0 ? '+' : n < 0 ? '−' : '') + text;
 const pctText = (p) => `${p >= 0 ? '+' : '−'}${Math.abs(p).toFixed(1)}%`;
 /* a per-unit price in its own currency (cents and small decimals kept) */
-const priceFmt = (x, ccy) => new Intl.NumberFormat(nativeLocale(ccy), { style: 'currency', currency: ccy, minimumFractionDigits: 0, maximumFractionDigits: Math.abs(x) >= 1000 || expOf(ccy) === 0 ? 0 : Math.abs(x) >= 1 ? 2 : 6 }).format(x);
+const priceFmt = (x, ccy) => rpSpace(new Intl.NumberFormat(nativeLocale(ccy), { style: 'currency', currency: ccy, minimumFractionDigits: 0, maximumFractionDigits: Math.abs(x) >= 1000 || expOf(ccy) === 0 ? 0 : Math.abs(x) >= 1 ? 2 : 6 }).format(x));
 const holdingUSD = (h, k) => (!liveIn(h.since, k) ? 0 : Math.max(0, qtyAt(h, k)) * assetInfo(h.symbol).usd(k));
 const portfolioUSD = (k, accId) => D().holdings
   .filter((h) => (accId ? h.account_id === accId : activeAccounts().some((a) => a.id === h.account_id)))

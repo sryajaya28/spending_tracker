@@ -12,6 +12,8 @@ on 2026-10-31. It contains **no secrets**: it says where each secret lives, neve
 3. **Also update `README.md`** whenever the change affects what it describes (features, how to run, how it is built,
    deploying, release checklist), and `docs/NEXT_STEPS.md` when priorities or known gaps change.
 4. Never put secrets in this file, the README or any committed file: say where a secret lives, never what it is.
+5. **Keep `regression_scenario.md` current** (detailed regression scenarios per feature, plus which e2e test covers what): for every new or
+   changed feature, add or edit the relevant scenarios in the same commit, and add a line to that file's change log.
 
 `CLAUDE.md` at the repo root repeats this rule so assistant sessions load it automatically.
 
@@ -124,10 +126,12 @@ prototype/          the app: index.html, app.js (UI, ~1.7k lines), cloud.js (aut
                     brand/ (logo svg/png 120+512), media/ (demo video mp4+webm, poster), vendor/supabase.js (v2.45.4)
 api/index.py        Vercel function for /api/* (Finnhub proxy, FX)
 tools/              dev_server.py (local server + same API), build_email_templates.py
-supabase/migrations/  13 SQL files (see section 6)        supabase/templates/  6 auth email templates + README
+supabase/migrations/  16 SQL files (see section 6)        supabase/templates/  6 auth email templates + README
 supabase/tests/     pgTAP tests (first migrations only)
 tests/e2e/          Playwright browser tests with a fake Supabase; run_all.sh; record_demo_tour.js
 docs/NEXT_STEPS.md  roadmap, rules, known gaps            vercel.json  hosting, rewrites, security headers
+regression_scenario.md  manual regression scenarios per feature + automated coverage map (keep current)
+tests/test_yahoo.py  python check of the Yahoo price source (stubbed)
 .env.example        FINNHUB_API_KEY=                      .claude/launch.json  dev server config
 ```
 
@@ -279,6 +283,9 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 ## 18. Changelog
 
 Newest first. One line per change; keep it short and dated.
+
+- 2026-11-01: Added `regression_scenario.md` (manual regression scenarios per area + automated coverage map) and made keeping it current part of
+  the working agreement (section 0, `CLAUDE.md`, README).
 
 - 2026-11-01: Asset type option "Gold, oil & more" renamed "Commodities".
 

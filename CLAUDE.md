@@ -6,4 +6,6 @@
    its Changelog). Also update `README.md` when the change affects what it describes, and `docs/NEXT_STEPS.md` when
    priorities or known gaps change.
 3. Never commit secrets. `context.md` and the README say where secrets live, never what they are.
-4. Run `bash tests/e2e/run_all.sh` before pushing UI or data-layer changes. Pushing to `main` deploys to production.
+4. **Keep `regression_scenario.md` current:** when a feature is added or changed, add or edit the matching manual test
+   scenarios (and the automated-coverage map) in the same commit.
+5. Run `bash tests/e2e/run_all.sh` before pushing UI or data-layer changes. Pushing to `main` deploys to production.

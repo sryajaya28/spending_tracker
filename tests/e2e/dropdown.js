@@ -47,7 +47,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('.cs-search', 'coffee'); assert.equal(await p.$eval('.cs-empty', (e) => getComputedStyle(e).display), 'none', 'note hides when something matches'); await p.click('.cs-opt:has-text("Coffee")'); assert.equal(await p.$eval('#dlg select[name=category]', (s) => s.selectedOptions[0].textContent.includes('Coffee')), true);
   // income shows the USDT choices in their own group heading
   await p.click('#dlg label:has(input[name=type][value=income])'); await tap('#dlg select[name=wallet]'); await p.waitForSelector('.cs-group');
-  assert((await p.innerText('.cs-group')).toLowerCase().includes('investment account')); await p.keyboard.press('Escape'); await p.click('[data-act=close]');
+  assert((await p.$$eval('.cs-group', (g) => g.map((x) => x.textContent.toLowerCase()))).some((t) => t.includes('investment account')) && (await p.$$eval('.cs-group', (g) => g.length)) >= 2, 'titled groups'); await p.keyboard.press('Escape'); await p.click('[data-act=close]');
   // outside a dialog: the month picker changes the period
   await p.evaluate(() => { location.hash = '#/budgets'; render(); }); await p.waitForSelector('select[data-bind=month]');
   await tap('select[data-bind=month]'); await p.waitForSelector('.cs-pop'); const before = await p.evaluate(() => state.ui.month);

@@ -42,6 +42,7 @@
       if (cta && empty) parent.appendChild(empty);   // the "not found" note sits just above the add entry (the last item of the scrolling list)
       const el = document.createElement('div'); el.className = 'cs-opt' + (opt.selected && !cta ? ' on' : '') + (opt.disabled ? ' dis' : '') + (cta ? ' cs-cta' : ''); el.setAttribute('role', 'option');
       el.setAttribute('aria-selected', String(opt.selected)); const t = document.createElement('span'); t.textContent = opt.dataset.list || opt.textContent; el.appendChild(t);
+      if (opt.dataset.tag) { const g = document.createElement('span'); g.className = 'cs-tag'; g.textContent = opt.dataset.tag; el.appendChild(g); }   // data-tag: a small label at the end of the row (e.g. "Budget Added")
       const i = rows.length; rows.push({ opt, el, cta, hidden: false, key: (opt.dataset.s || opt.textContent).toLowerCase() });
       el.addEventListener('click', (e) => { e.stopPropagation(); choose(i); });
       el.addEventListener('pointermove', () => { if (act !== i) setActive(i, false); });

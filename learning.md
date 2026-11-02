@@ -131,6 +131,9 @@ only worked after a detour. Keep each item short and say what to do instead.
   - I again put a `//` comment in the middle of a generated line (a template-string replacement) and it broke the file: keep explanations out of replaced single-line code, put them on their own line. `node --check` caught it at once.
   - A `required` field inside a hidden block blocks form submit (the browser cannot focus it): validate in the handler instead, or toggle `required`.
   - A rule that hides things ("occasions show only in the months they span") looks like a bug to the owner when something they just set up is missing. When adding a feature next to it, check what the page will show for the new data (a future trip) before saying it works.
+  - Tests that type an emoji key by key can race a focus timer (select-on-focus): make timers check the state still matches, and type whole values with `fill` when the real input is a single event. A flaky test that fails at different lines is a race, not a typo: loop it (8x) before and after the fix.
+  - Date-dependent fixtures keep biting: fixed dates (Nov 6-8) made tests fail once the date passed. Build occasion/trip dates relative to today.
+  - CSS on phones can be a grid (`.brow.wrap` is 44px 1fr, tools on their own row): check the layout in a screenshot after adding a row type.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

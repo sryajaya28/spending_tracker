@@ -64,8 +64,9 @@ const assert = require('assert');
 
   // special occasion: create, tag an expense, see progress, view its expenses, delete
   await page.click('[data-act=add-occasion-budget]'); await page.fill('input[name=name]', 'Bali Trip'); await page.fill('input[name=amount]', '10000000');
-  await page.fill('input[name=start]', '2026-10-01'); await page.click('#dlg button[type=submit]'); await settle();
-  l = await log(); assert(l.some((o) => o.table === 'occasions' && o.rows[0].name === 'Bali Trip' && o.rows[0].amount_minor === 10000000 && o.rows[0].start_date === '2026-10-01'));
+  const tripStart = await page.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 20); return isoDate(d); });   // upcoming, so it stays on the Budgets list whatever today is
+  await page.fill('input[name=start]', tripStart); await page.click('#dlg button[type=submit]'); await settle();
+  l = await log(); assert(l.some((o) => o.table === 'occasions' && o.rows[0].name === 'Bali Trip' && o.rows[0].amount_minor === 10000000 && o.rows[0].start_date === tripStart));
   assert((await text()).includes('Bali Trip'));
   await page.evaluate(() => { location.hash = '#/transactions'; });
   await page.click('[data-act=add-txn]'); await page.fill('input[name=amount]', '2500000');
@@ -86,7 +87,8 @@ const assert = require('assert');
   await page.evaluate(() => { location.hash = '#/budgets'; });
   await page.click('[data-act=edit-occasion]'); await page.click('[data-act=archive-occasion]'); await settle();
   l = await log(); assert(l.some((o) => o.table === 'occasions' && o.rows[0].archived === true));
-  await page.click('[data-act=edit-occasion]'); await page.click('[data-act=delete-occasion]'); await settle();
+  await page.evaluate(() => { location.hash = '#/settings'; });   // an archived occasion is history: it is managed from Settings
+  await page.click('#occasions-card [data-act=edit-occasion]'); await page.click('[data-act=delete-occasion]'); await settle();
   l = await log(); console.log('occasion delete ops', l.map((o) => o.op + ':' + o.table).join(' '));
   assert(l[0].table === 'transactions' && l[0].rows[0].occasion_id === null && l[1].op === 'delete' && l[1].table === 'occasions');
   // reload keeps occasions

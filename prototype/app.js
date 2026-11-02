@@ -474,7 +474,13 @@ function toast(msg) {
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600);
 }
 const tile = (c, sm) => `<span class="tile ${sm ? 'sm' : ''}" style="--c:${c ? c.color : '#94A3B8'}">${c ? c.icon : '❔'}</span>`;
-const monthSelect = (short) => `<select class="pill-select" data-bind="month" aria-label="${__('Month')}">${lastMonths(6).reverse().map((k) => `<option value="${k}" ${k === state.ui.month ? 'selected' : ''}>${short ? periodShort(k) : monthLabel(k)}</option>`).join('')}</select>`;
+/* the periods the pickers offer: from the one holding the first transaction up to the current one (at least the last 6) */
+function periodChoices() {
+  const first = (D().transactions || []).reduce((m, t) => (t.occurred_at < m ? t.occurred_at : m), '9999-12-31'), cur = currentPeriod();
+  const from = first === '9999-12-31' ? cur : periodKeyOf(first), months = (+cur.slice(0, 4) - +from.slice(0, 4)) * 12 + (+cur.slice(5, 7) - +from.slice(5, 7)) + 1;
+  return lastMonths(Math.min(240, Math.max(6, months)));
+}
+const monthSelect = (short, withAll) => `<select class="pill-select" data-bind="month" aria-label="${__('Month')}">${withAll ? `<option value="all" ${state.ui.allPeriods ? 'selected' : ''}>${__('All periods')}</option>` : ''}${[...new Set([...periodChoices(), state.ui.month])].sort().reverse().map((k) => `<option value="${k}" ${k === state.ui.month && !(withAll && state.ui.allPeriods) ? 'selected' : ''}>${short ? periodShort(k) : monthLabel(k)}</option>`).join('')}</select>`;
 const routeParts = () => (location.hash.replace('#/', '') || 'overview').split('?')[0].split('/');
 const route = () => { const r = routeParts()[0]; return r === 'wallets' ? 'portfolio' : r; };
 const routeArg = () => routeParts()[1] || '';
@@ -559,7 +565,7 @@ document.addEventListener('focusin', (e) => { const g = e.target.closest && e.ta
 /* the icon row shows only while the icon field is active: it opens on focus and closes when focus moves elsewhere
    (tapping an icon in the row keeps the field focused, see the pointerdown handler) */
 const iconPicksOf = (inp) => inp.form && inp.form.querySelector(`.icon-picks[data-for="${inp.name}"]`);
-document.addEventListener('focusin', (e) => { if (e.target.classList?.contains('icon-input')) { iconPicksOf(e.target)?.classList.add('open'); setTimeout(() => e.target.select(), 0); } });   // typing or an emoji replaces the current icon
+document.addEventListener('focusin', (e) => { if (e.target.classList?.contains('icon-input')) { iconPicksOf(e.target)?.classList.add('open'); const at = e.target.value; setTimeout(() => { if (e.target.value === at && document.activeElement === e.target) e.target.select(); }, 0); } });   // typing or an emoji replaces the current icon
 document.addEventListener('focusout', (e) => { if (e.target.classList?.contains('icon-input')) { const row = iconPicksOf(e.target); if (row && !row.contains(e.relatedTarget)) row.classList.remove('open'); } });
 document.addEventListener('pointerdown', (e) => { if (e.target.closest?.('.icon-pick')) e.preventDefault(); });   // keep the focus (and the keyboard state) on the icon field
 
@@ -954,7 +960,7 @@ function txnRow(t, loanView) {
 function filteredTxns(upcoming = false) {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
   return D().transactions.filter((t) => (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
-    && (occ || inPeriod(t.occurred_at, state.ui.month))
+    && (occ || state.ui.allPeriods || inPeriod(t.occurred_at, state.ui.month))
     && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2)) || (wallet.startsWith('l:') && t.loan_id === wallet.slice(2))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
 }
@@ -962,7 +968,7 @@ function filteredTxns(upcoming = false) {
 const loanViewId = () => (state.ui.wallet && state.ui.wallet.startsWith('l:') ? state.ui.wallet.slice(2) : '');
 function loanPaymentRows() {
   const id = loanViewId(), l = id && D().loans.find((x) => x.id === id), { q, cat, occ } = state.ui, ql = q.trim().toLowerCase(); if (!l || cat || occ) return [];
-  return l.payments.filter((p) => p.kind !== 'charge' && p.date <= todayIso() && inPeriod(p.date, state.ui.month) && (!ql || __('Loan payment').toLowerCase().includes(ql)))
+  return l.payments.filter((p) => p.kind !== 'charge' && p.date <= todayIso() && (state.ui.allPeriods || inPeriod(p.date, state.ui.month)) && (!ql || __('Loan payment').toLowerCase().includes(ql)))
     .map((p) => ({ id: 'pay:' + p.id, type: 'loan_payment', amount_minor: p.amount_minor, currency: l.currency, occurred_at: p.date, note: __('Loan payment'), loan_id: l.id }));
 }
 const dayTitle = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
@@ -1006,9 +1012,9 @@ function viewDay(d) {
     <div class="list" id="day-list">${dayListHtml(d)}</div></section>`;
 }
 function viewTransactions() {
-  const list = inMonth(state.ui.month);
-  return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
-  <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true)}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
+  const all = !!state.ui.allPeriods, list = all ? D().transactions.filter((t) => t.occurred_at <= todayIso()) : inMonth(state.ui.month);
+  return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: all ? __('All periods') : monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
+  <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true, true)}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
     <div class="filters scroll-row">
       <select data-filter="cat" class="${state.ui.cat ? 'f-on' : ''}" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}</select>
       ${D().occasions.length ? `<select data-filter="occ" class="${state.ui.occ ? 'f-on' : ''}" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
@@ -1029,8 +1035,34 @@ function viewBudgets() {
       : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>
   <section class="card"><div class="card-head"><h2>${__('By category')}</h2><button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button></div>
     ${rest.length ? rest.map((b) => `<div class="brow tap-row" data-act="cat-txns" data-cat="${b.category_id}" tabindex="0" role="link" aria-label="${esc(__('See {name} transactions', { name: b.name }))}">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
-  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion-budget">${__('+ Add')}</button></div>
-    ${(() => { const all = occasionStatus().filter((o) => o.hasBudget), live = all.filter((o) => !o.archived && occasionInMonth(o, state.ui.month)), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
+  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><div class="tools">${occasionStatus().some(occasionIsPast) ? `<button class="chip" data-act="occasion-history">${__('History')}</button>` : ''}<button class="btn" data-act="add-occasion-budget">${__('+ Add')}</button></div></div>
+    ${(() => { const live = occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, state.ui.month)); return live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>'); })()}</section></div>`;
+}
+/* an occasion is history once it is archived or its end (or its only) date has passed; undated ones are not */
+const occasionIsPast = (o) => !!o.archived || (!!(o.end || o.start) && (o.end || o.start) < todayIso());
+/* what "Details" opens on the Transactions page: the one period holding the occasion's expenses, or All periods when they span several;
+   with none yet, the period of its start date (or the current one) */
+function occasionView(o) {
+  const periods = [...new Set(D().transactions.filter((t) => t.occasion_id === o.id).map((t) => periodKeyOf(t.occurred_at)))];
+  return periods.length > 1 ? { all: true, month: state.ui.month } : { all: false, month: periods[0] || periodKeyOf(o.start || todayIso()) };
+}
+/* "Mar 10 – Mar 12, 2026" (the year once when both dates are in the same year); "Dec 28, 2025 – Jan 2, 2026" otherwise */
+function occasionDates(o) {
+  const L = (d, y) => new Date(d + 'T00:00').toLocaleDateString(locale(), y ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' });
+  const a = o.start, b = o.end; if (!a && !b) return ''; if (!a || !b || a === b) return L(a || b, true);
+  return a.slice(0, 4) === b.slice(0, 4) ? `${L(a)} – ${L(b, true)}` : `${L(a, true)} – ${L(b, true)}`;
+}
+function occasionHistoryDialog() {
+  const list = occasionStatus().filter(occasionIsPast).sort((a, b) => (b.end || b.start || '').localeCompare(a.end || a.start || '') || a.name.localeCompare(b.name));
+  const row = (o) => {
+    const dates = occasionDates(o), amount = money(o.spent, cur()) + (o.hasBudget ? ` · ${Math.round(o.pct)}%` : '');   // total spent, and its share of the budget when there is one
+    return `<div class="brow wrap occ-hist"><span class="tile" style="--c:#EC4899">🎉</span><div><div class="meta"><span>${esc(o.name)}${o.archived ? ' <span class="badge">' + __('Archived') + '</span>' : ''}</span></div>
+      ${dates ? `<small class="muted">${esc(dates)}</small>` : ''}<small class="occ-amt num">${amount}</small></div>
+      <div class="tools"><button class="btn secondary" data-act="view-occasion" data-id="${o.id}">${__('Details')}</button></div></div>`;
+  };
+  open(`<h2>${__('Past special occasions')}</h2>
+  <div class="list up-list">${list.map(row).join('') || ('<div class="empty">' + __('No past special occasions yet.') + '</div>')}</div>
+  <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
 const occasionRow = (o) => {
   const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
@@ -1276,7 +1308,7 @@ function render() {
       : viewSplash('Fetching your finances…');
     return;
   }
-  if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); }   // a new start day (or switching demo/real data) re-selects the current period
+  if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); state.ui.allPeriods = false; }   // a new start day (or switching demo/real data) re-selects the current period
   const r = VIEWS[route()] ? route() : 'overview';
   app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${bottomNav()}`;
   if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);   // the asset page (#/portfolio/<id>) has no value chart
@@ -1466,9 +1498,9 @@ function budgetDialog(b, preset) {
 /* a special occasion groups expenses (a trip, a birthday dinner). The budget is optional: leave it empty to only tag spending.
    From Budgets (fromBudget) the user adds a budget to a pre-added occasion (picked from a list) or to a new one. */
 function occasionDialog(o, fromBudget) {
-  const cands = fromBudget && !o ? D().occasions.filter((x) => !x.archived && !(x.amount_minor > 0)) : [];
+  const cands = fromBudget && !o ? D().occasions.filter((x) => !x.archived) : [], free = cands.filter((x) => !(x.amount_minor > 0)), taken = cands.filter((x) => x.amount_minor > 0);   // every occasion is listed; the ones that already have a budget are greyed out
   const title = o ? __('Edit special occasion') : fromBudget ? __('Add occasion budget') : __('New special occasion');
-  const pick = cands.length ? `<label class="field">${__('Occasion')}<select name="pick" data-occ-pick>${cands.map((x) => `<option value="${x.id}" data-ccy="${x.currency}">🎉 ${esc(x.name)}</option>`).join('')}<option value="__new" data-ccy="">${__('+ New occasion')}</option></select></label>` : '';
+  const pick = cands.length ? `<label class="field">${__('Occasion')}<select name="pick" data-occ-pick>${free.map((x, i) => `<option value="${x.id}" data-ccy="${x.currency}" ${i === 0 ? 'selected' : ''}>🎉 ${esc(x.name)}</option>`).join('')}${taken.map((x) => `<option value="${x.id}" data-ccy="${x.currency}" data-tag="${__('Budget Added')}" disabled>🎉 ${esc(x.name)}</option>`).join('')}<option value="__new" data-ccy="" ${free.length ? '' : 'selected'}>${__('+ New occasion')}</option></select></label>` : '';
   open(`<h2>${title}</h2><form data-form="occasion" data-id="${o?.id || ''}" data-from-budget="${fromBudget ? 1 : ''}" style="display:contents">
     ${pick}
     <div class="occ-new"><label class="field">${__('Name')}<input name="name" maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}"></label></div>
@@ -1961,7 +1993,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-txn') txnDialog(null, type, undefined, date);
   else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
   else if (act === 'toggle-day') { const g = el.closest('.day-group'), on = !g.classList.contains('open'); g.classList.toggle('open', on); el.setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(id); else state.ui.openDays.delete(id); }
-  else if (act === 'cat-txns') { Object.assign(state.ui, { cat: el.dataset.cat, q: '', occ: '', wallet: '' }); forgetScroll('#/transactions'); location.hash = '#/transactions'; }   // a budget row opens its transactions for the same period
+  else if (act === 'cat-txns') { Object.assign(state.ui, { cat: el.dataset.cat, q: '', occ: '', wallet: '', allPeriods: false }); forgetScroll('#/transactions'); location.hash = '#/transactions'; }   // a budget row opens its transactions for the same period
   else if (act === 'reset-filters') { Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); render(); }
   else if (act === 'days-all' || act === 'days-none') { $$('#txn-list .day-group').forEach((g) => { const on = act === 'days-all'; g.classList.toggle('open', on); $('.day-row', g).setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(g.dataset.day); else state.ui.openDays.delete(g.dataset.day); }); }
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
@@ -1981,18 +2013,19 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-wallet') walletDialog();
   else if (act === 'add-occasion') occasionDialog();
   else if (act === 'add-occasion-budget') occasionDialog(null, true);
+  else if (act === 'occasion-history') occasionHistoryDialog();
   else if (act === 'add-occasion-txn') txnDialog(null, 'expense', occasionOf(id));
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
   else if (act === 'delete-occasion') { D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
-  else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); state.ui.month = periodKeyOf(o.start || isoDate(new Date())); forgetScroll('#/transactions'); location.hash = '#/transactions'; render(); }
+  else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); const view = occasionView(o); state.ui.month = view.month; state.ui.allPeriods = view.all; if (el.closest('#dlg')) close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; render(); }
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
   else if (act === 'edit-loan') loanDialog(find(D().loans));
   else if (act === 'pay-loan') paymentDialog(find(D().loans), 'loan');
   else if (act === 'history-loan') {   // the Transactions page on that loan, in the period of its latest entry (change the period to go back in time)
     const l = find(D().loans), last = l.payments.filter((p) => p.date <= todayIso()).map((p) => p.date).sort().pop();
-    Object.assign(state.ui, { wallet: 'l:' + id, month: last ? periodKeyOf(last) : currentPeriod(), cat: '', occ: '', q: '' }); forgetScroll('#/transactions'); location.hash = '#/transactions';
+    Object.assign(state.ui, { wallet: 'l:' + id, month: last ? periodKeyOf(last) : currentPeriod(), cat: '', occ: '', q: '', allPeriods: false }); forgetScroll('#/transactions'); location.hash = '#/transactions';
   }
   else if (act === 'see-upcoming') upcomingDialog();
   else if (act === 'history-lent') loanHistoryDialog(find(D().lent), 'lent');
@@ -2048,14 +2081,14 @@ document.addEventListener('click', (e) => {
     save(); close(); render(); toast('Transaction deleted');
   }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
-  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); });
+  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; resetPeriodView(); state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
   else if (act === 'support') supportDialog();
   else if (act === 'shot-del') { supportShots.splice(+el.dataset.i, 1); $('#shots').innerHTML = supportShotsHtml(); }
   else if (act === 'trend-detail') trendDialog(el.dataset.k);
-  else if (act === 'trend-go') { state.ui.month = el.dataset.k; state.ui.cat = el.dataset.cat || ''; state.ui.occ = ''; state.ui.q = ''; state.ui.wallet = ''; close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; }
+  else if (act === 'trend-go') { state.ui.month = el.dataset.k; state.ui.allPeriods = false; state.ui.cat = el.dataset.cat || ''; state.ui.occ = ''; state.ui.q = ''; state.ui.wallet = ''; close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; }
   else if (act === 'guide-tab') { state.ui.guide = el.dataset.k; $('#install-guide').innerHTML = installGuide(state.ui.guide); }
   else if (act === 'transfer-dialog') handoffDialog();
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
@@ -2076,7 +2109,7 @@ document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.matches('input[name=shots]')) { addSupportShots(t.files).then(() => { t.value = ''; }); return; }
   if (t.matches('[data-trend]')) { if (t.dataset.trend === 'n') { state.ui.trendN = +t.value; state.ui.trendCat = state.ui.trendCat || ''; } else state.ui.trendCat = t.value; $('#trend-chart').innerHTML = trendChart(); }
-  else if (t.matches('[data-bind="month"]')) { state.ui.month = t.value; render(); }
+  else if (t.matches('[data-bind="month"]')) { if (t.value === 'all') state.ui.allPeriods = true; else { state.ui.allPeriods = false; state.ui.month = t.value; } render(); }   // "all": Transactions only, the period itself is kept for the other pages
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
   // (the search box is handled on input: a change event from a removed, focused box must not bring its old text back)
   else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
@@ -2478,13 +2511,15 @@ async function submitAuth(kind, v, f) {
   render();
 }
 
+/* a new session (sign-in, sign-out) always starts on the current period, never on "All periods" or an old period */
+const resetPeriodView = () => { state.ui.allPeriods = false; state.ui.monthSrc = null; };
 async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
-  if (!session) { state.data = null; state.real = null; Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); return; }
+  if (!session) { state.data = null; state.real = null; resetPeriodView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); return; }
   stopPolling(); a.email = session.user.email || a.email;
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
-  Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
+  resetPeriodView(); Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
   render(); loadUserData();
 }
 let loadSeq = 0;

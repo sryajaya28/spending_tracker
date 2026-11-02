@@ -864,3 +864,15 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 /* occasion dialog: name, currency and dates are hidden while an existing occasion is picked (only its budget is asked) */
 .occ-new[hidden] { display: none !important; }
 .two:has(> :only-child) { grid-template-columns: 1fr; }
+
+/* a small tag at the end of a dropdown row (e.g. "Budget Added" on an occasion that already has a budget) */
+.cs-tag { flex: none; margin-left: auto; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--soft); color: var(--muted); }
+.cs-opt.dis { opacity: 1; }
+.cs-opt.dis > span:first-child { opacity: .5; }
+
+/* Past special occasions pop-up: name in ink, Details beside the text (a 3-column row on phones too) */
+#dlg .brow.wrap.occ-hist:not(.cat-row) { grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; }
+#dlg .brow.wrap.occ-hist:not(.cat-row) > .tools { grid-column: auto; justify-content: flex-end; flex-wrap: nowrap; }
+#dlg .occ-hist .meta, #dlg .occ-hist .meta span { color: var(--ink); font-weight: 600; }
+#dlg .occ-hist small { display: block; margin-top: 2px; }
+#dlg .occ-hist .occ-amt { color: var(--ink); font-weight: 600; }

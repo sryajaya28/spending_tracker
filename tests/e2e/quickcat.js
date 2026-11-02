@@ -37,7 +37,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // the icon field holds a real value that can be deleted; a new emoji replaces the old one; a tapped suggestion sets it
   assert.equal(await p.inputValue('input[name=qc_icon]'), '🏷️', 'the default icon is a value, not a placeholder');
   await p.fill('input[name=qc_icon]', ''); assert.equal(await p.inputValue('input[name=qc_icon]'), '', 'icon can be cleared');
-  await p.type('input[name=qc_icon]', '🍔'); await p.type('input[name=qc_icon]', '🏋️'); assert.equal(await p.inputValue('input[name=qc_icon]'), '🏋️', 'only the last emoji is kept');
+  await p.fill('input[name=qc_icon]', '🍔'); await p.fill('input[name=qc_icon]', '🍔🏋️');   // a keyboard inserts a whole emoji in one input event assert.equal(await p.inputValue('input[name=qc_icon]'), '🏋️', 'only the last emoji is kept');
   // the icon row shows only while the icon field is active
   await p.focus('input[name=qc_name]'); assert(!(await p.isVisible('.quick-cat .icon-picks')), 'row hidden until the icon field is tapped');
   await p.focus('input[name=qc_icon]'); assert(await p.isVisible('.quick-cat .icon-picks'), 'row shows on focus');

@@ -8,12 +8,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
   // an occasion in the future (like "Bandung Trip", Nov 6-8)
-  await p.evaluate(() => { D().occasions.push({ id: uid(), name: 'Bandung Trip', amount_minor: 5000000, currency: 'IDR', start: '2026-11-06', end: '2026-11-08', archived: false }); save(); state.ui.month = '2026-11'; location.hash = '#/budgets'; render(); });
+  await p.evaluate(() => { const f = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); }; D().occasions.push({ id: uid(), name: 'Bandung Trip', amount_minor: 5000000, currency: 'IDR', start: f(4), end: f(6), archived: false }); save(); state.ui.month = currentPeriod(); location.hash = '#/budgets'; render(); });
   await settle(); await log();
   // + Expense on the occasion: occasion preselected, date moved to the trip start
   await p.click('[data-act=add-occasion-txn]');
   assert.equal(await p.$eval('select[name=occasion]', (s) => s.options[s.selectedIndex].textContent), 'Bandung Trip');
-  assert.equal(await p.inputValue('input[name=date]'), '2026-11-06');
+  const fut = (n) => p.evaluate((n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); }, n);
+  assert.equal(await p.inputValue('input[name=date]'), await fut(4));
   await p.screenshot({ path: __dirname + '/out/occ_txn.png' });
   await p.fill('input[name=amount]', '350000'); await p.click('#dlg button[type=submit]'); await settle();
   let l = await log(); const occ = await p.evaluate(() => D().occasions[0].id);
@@ -21,9 +22,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // normal Add: no occasion by default today; picking a date inside the trip selects it
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.click('[data-act=add-txn]');
   assert.equal(await p.inputValue('select[name=occasion]'), '');
-  await p.fill('input[name=date]', '2026-11-07'); await p.dispatchEvent('input[name=date]', 'change');
+  await p.fill('input[name=date]', await fut(5)); await p.dispatchEvent('input[name=date]', 'change');
   assert.equal(await p.$eval('select[name=occasion]', (s) => s.options[s.selectedIndex].textContent), 'Bandung Trip');
-  await p.fill('input[name=date]', '2026-11-20'); await p.dispatchEvent('input[name=date]', 'change'); // out of range: leaves the choice alone
+  await p.fill('input[name=date]', await fut(40)); await p.dispatchEvent('input[name=date]', 'change'); // out of range: leaves the choice alone
   // progress on the budgets page
   await p.click('[data-act=close]'); await p.evaluate(() => { location.hash = '#/budgets'; });
   assert((await p.innerText('.brow.wrap')).replace(/\u00a0/g, ' ').includes('Rp 0 / Rp 5.000.000'));

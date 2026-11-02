@@ -287,8 +287,8 @@ const D = () => state.data;
 const cur = () => D().profile.currency;
 const occasionOf = (id) => D().occasions.find((o) => o.id === id);
 /* special-occasion budgets: a one-off amount; spent = expenses tagged to it (converted to the reporting currency) */
-// an occasion belongs to the months its dates span (or any month with an expense tagged to it); undated ones show every month
-const occasionInMonth = (o, k) => !o.start || (o.start <= periodEnd(k) && (o.end || o.start) >= periodStart(k)) || D().transactions.some((t) => t.occasion_id === o.id && inPeriod(t.occurred_at, k));
+// an occasion shows in the periods its dates span, while it is upcoming or ongoing (it has not ended yet), and in any period with an expense tagged to it; undated ones show every month
+const occasionInMonth = (o, k) => !o.start || (o.start <= periodEnd(k) && (o.end || o.start) >= periodStart(k)) || (o.end || o.start) >= todayIso() || D().transactions.some((t) => t.occasion_id === o.id && inPeriod(t.occurred_at, k));
 function occasionStatus() {
   return D().occasions.map((o) => {
     const txns = D().transactions.filter((t) => t.occasion_id === o.id && t.type === 'expense' && t.occurred_at <= todayIso());

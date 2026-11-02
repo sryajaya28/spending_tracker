@@ -130,6 +130,7 @@ only worked after a detour. Keep each item short and say what to do instead.
   - Look at the owner's real rows (read-only SQL) before guessing: the bug was an unlinked entry (`first_tx` missing on 4 of 5 rules), not the edit form. Fixing the edit path alone would not have repaired data that was already inconsistent; add a one-time repair too.
   - I again put a `//` comment in the middle of a generated line (a template-string replacement) and it broke the file: keep explanations out of replaced single-line code, put them on their own line. `node --check` caught it at once.
   - A `required` field inside a hidden block blocks form submit (the browser cannot focus it): validate in the handler instead, or toggle `required`.
+  - A rule that hides things ("occasions show only in the months they span") looks like a bug to the owner when something they just set up is missing. When adding a feature next to it, check what the page will show for the new data (a future trip) before saying it works.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

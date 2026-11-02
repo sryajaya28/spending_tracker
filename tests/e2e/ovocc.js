@@ -20,6 +20,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await card.click({ position: { x: 20, y: 120 } }); await p.waitForFunction(() => location.hash === '#/budgets');
   // the occasion shows on the Budgets page, only in the months it spans (or that have its expenses)
   const rowOn = async (m) => { await p.evaluate((m) => { state.ui.month = m; render(); }, m); return (await p.innerText('main')).includes('Bandung Trip'); };
-  assert.equal(await rowOn('2026-09'), false, 'hidden in September'); assert.equal(await rowOn('2026-11'), true, 'shown in its own month');
+  assert.equal(await rowOn('2026-11'), true, 'shown in its own month');
+  // an occasion that has not ended yet shows in every period (a trip next month is on Budgets already); one that ended shows only in its own periods
+  await p.evaluate(() => { D().occasions.length = 0; const f = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); }; D().occasions.push({ id: uid(), name: 'Next Trip', amount_minor: 9000000, currency: 'IDR', start: f(45), end: f(49), archived: false }, { id: uid(), name: 'Old Trip', amount_minor: 3000000, currency: 'IDR', start: '2026-03-10', end: '2026-03-12', archived: false }); });
+  const named = async (m, n) => { await p.evaluate((m) => { state.ui.month = m; render(); }, m); return (await p.innerText('main')).includes(n); };
+  assert.equal(await named(await p.evaluate(() => currentPeriod()), 'Next Trip'), true, 'upcoming trip shows now'); assert.equal(await named('2026-09', 'Old Trip'), false, 'ended trip hidden in a later period'); assert.equal(await named('2026-03', 'Old Trip'), true, 'ended trip shown in its own period');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.error('FAIL', e); process.exit(1); });

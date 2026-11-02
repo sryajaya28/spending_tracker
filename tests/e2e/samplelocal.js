@@ -9,6 +9,8 @@ const EXPECT = {
   EUR: { banks: ['ING', 'Deutsche Bank'], inv: ['Trade Republic', 'Interactive Brokers'], merchant: /Lidl|REWE|Deutsche Bahn|Amazon|Café/, stock: 'ASML' },
   GBP: { banks: ['Barclays', 'Lloyds Bank'], inv: ['Hargreaves Lansdown', 'Trading 212'], merchant: /Tesco|Pret A Manger|TfL|Amazon UK|Greggs/, stock: 'HSBA' },
   AUD: { banks: ['CommBank', 'ANZ'], inv: ['CommSec', 'Stake'], merchant: /Woolworths|Coles|Flat white|Opal|Kmart/, stock: 'CBA' },
+  INR: { banks: ['HDFC Bank', 'SBI'], inv: ['Zerodha', 'Groww'], merchant: /BigBasket|DMart|Zomato|Swiggy|Blinkit|Chai Point|Amazon India|Flipkart/, stock: 'RELIANCE' },
+  PHP: { banks: ['BDO', 'BPI'], inv: ['COL Financial', 'Interactive Brokers'], merchant: /SM Supermarket|Puregold|Jollibee|GrabFood|Shopee|Palengke|Lazada|foodpanda/, stock: 'BDO' },
   CNY: { banks: ['ICBC', 'China Merchants Bank'], inv: ['Futu Niuniu', 'Tiger Brokers'], merchant: /Hema Fresh|Luckin Coffee|DiDi|Taobao|Meituan Waimai/, stock: '600519' },
 };
 (async () => {

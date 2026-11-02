@@ -128,6 +128,8 @@ DICT.id = {
  "+ Cash": "+ Kas",
  "Currency not found": "Mata uang tidak ditemukan",
  "Indonesian rupiah": "Rupiah Indonesia",
+ "Indian rupee": "Rupee India",
+ "Philippine peso": "Peso Filipina",
  "US dollar": "Dolar AS",
  "Euro": "Euro",
  "British pound": "Poundsterling",

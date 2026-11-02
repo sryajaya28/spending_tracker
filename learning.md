@@ -144,6 +144,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - Check the fallback currency path when changing sample data (unknown currency = USD profile with USD-priced holdings): prices are in the holding's cost currency, money in the account's.
   - A card that stretches to its neighbour in a grid cannot also grow with its own content: put the flexible list in an absolutely positioned box (`inset: 0; overflow: hidden`) and hide the rows that do not fit, so it never changes the row height. A bare test account has short neighbours: force the neighbour's height in the test instead of assuming the real layout.
   - Session state lives in more than `state`: the URL hash and the page's scroll position also survive logout/login. Reset them (with `history.replaceState`, which does not fire `hashchange`) whenever a session starts or ends, and tell a real login (`SIGNED_IN`) from reopening with a saved session (`INITIAL_SESSION`).
+  - A host the sandbox cannot reach can still be checked through the deployed app: Vercel's `web_fetch_vercel_url` on the app's own `/api/...` endpoint returned the real Frankfurter rates. Check live data that way instead of trusting documentation search alone.
+  - Built-in fallback rates go stale (INR 88 vs 94.95 live): keep them in the right ballpark, they show whenever the rate service is down.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

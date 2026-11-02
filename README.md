@@ -20,7 +20,7 @@ See `context.md` for the full project context (architecture, services, decisions
   stocks and ETFs with live Finnhub prices, buys and sells), Lent (money others owe you), Loan (debts you owe).
 - **Net worth** with month-over-month growth in your preferred currency (IDR, USD, EUR, GBP, SGD, AUD, JPY).
 - **English and Bahasa Indonesia**, and **light / dark / match-device** appearance, both saved to your account.
-- **Sample data** is a switch in Settings: a demo account in memory that never touches your real data. It is localized to the reporting currency (IDR, SGD, HKD, JPY, USD, EUR, GBP, AUD, CNY; others use USD) with local banks, e-wallets, merchants, brokers and stocks.
+- **Sample data** is a switch in Settings: a demo account in memory that never touches your real data. It is localized to the reporting currency (IDR, SGD, HKD, JPY, USD, EUR, GBP, AUD, CNY, INR, PHP; others use USD) with local banks, e-wallets, merchants, brokers and stocks.
 
 ## Run it locally
 

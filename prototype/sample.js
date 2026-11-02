@@ -168,6 +168,38 @@
     stocks: [['600519.SS', 'Kweichow Moutai', '600519.SS', 215, 52000, 0.86], ['300750.SZ', 'CATL', '300750.SZ', 35, 39000, 1.07], ['601318.SS', 'Ping An Insurance', '601318.SS', 7, 19000, 0.93], ['000858.SZ', 'Wuliangye', '000858.SZ', 17, 14000, 1.12]],
   });
 
+  // India: amounts come out in lakhs and crores (₹ is written 12,34,567 and shortened to 12.3 L / 1.2 Cr on charts)
+  SAMPLE.INR = mk({
+    pl: 0.38, names: ['HDFC Bank', 'SBI', 'ICICI Bank', 'Cash', 'Paytm', 'PhonePe', 'Google Pay'],
+    subs: [['JioHotstar', 4, 'Entertainment/Streaming'], ['Spotify', 3, 'Subscription']], bill: ['Jio Fiber + Airtel mobile', 45],
+    plan: [
+      ['Groceries', 5, 4, 42, ['BigBasket|Supermarket', 'DMart|Supermarket', 'Blinkit|Supermarket', 'Sabzi mandi|Fresh market']],
+      ['Dining', 9, 1.5, 21, ['Chai Point|Coffee', 'Starbucks|Coffee', 'Zomato|Delivery', 'Swiggy|Delivery', 'Biryani Blues|Restaurants', 'Udupi cafe|Restaurants']],
+      ['Transport', 8, 0.8, 18, ['Delhi Metro|Public transit', 'Uber|Ride-hailing', 'Ola|Ride-hailing', 'Indian Oil fuel|Fuel', 'Auto rickshaw']],
+      ['Shopping', 2, 10, 115, ['Amazon India', 'Flipkart', 'Myntra']], ['Bills & Utilities', 3, 18, 80, ['BESCOM electricity', 'Jio Fiber + Airtel mobile', 'Piped gas & water']],
+      ['Entertainment', 2, 3, 22, ['PVR Cinemas|Movies', 'BookMyShow events|Events']], ['Health', 1, 6, 35, ['Apollo Pharmacy', 'Cult.fit gym']],
+    ],
+    trip: ['Goa Trip', 970], lentName: 'Rohan', home: [330000, 8.5], car: [24000, 9.2],
+    invest: { a: 'Zerodha', b: 'Groww' },
+    stocks: [['RELIANCE.NS', 'Reliance Industries', 'RELIANCE.NS', 33, 52000, 0.88], ['TCS.NS', 'Tata Consultancy Services', 'TCS.NS', 44, 39000, 0.95], ['HDFCBANK.NS', 'HDFC Bank', 'HDFCBANK.NS', 19, 26000, 1.05], ['INFY.NS', 'Infosys', 'INFY.NS', 20, 17000, 1.1]],
+  });
+
+  // Philippines
+  SAMPLE.PHP = mk({
+    pl: 0.45, names: ['BDO', 'BPI', 'Metrobank', 'Cash', 'GCash', 'Maya', 'GrabPay'],
+    subs: [['Netflix', 9, 'Entertainment/Streaming'], ['Spotify', 5, 'Subscription']], bill: ['Globe fiber + mobile', 55],
+    plan: [
+      ['Groceries', 5, 4, 42, ['SM Supermarket|Supermarket', 'Puregold|Supermarket', 'Robinsons Supermarket|Supermarket', 'Palengke|Fresh market']],
+      ['Dining', 9, 1.5, 21, ['Jollibee|Restaurants', 'Starbucks|Coffee', 'GrabFood|Delivery', 'foodpanda|Delivery', 'Mang Inasal|Restaurants', 'Coffee Bean|Coffee']],
+      ['Transport', 8, 0.8, 18, ['MRT / LRT (Beep card)|Public transit', 'Grab|Ride-hailing', 'Angkas|Ride-hailing', 'Petron fuel|Fuel', 'Parking & toll']],
+      ['Shopping', 2, 10, 115, ['Shopee', 'Lazada', 'SM Department Store']], ['Bills & Utilities', 3, 18, 80, ['Meralco electricity', 'Globe fiber + mobile', 'Maynilad water']],
+      ['Entertainment', 2, 3, 22, ['SM Cinema|Movies', 'Ticketnet concerts|Events']], ['Health', 1, 6, 35, ['Mercury Drug', 'Anytime Fitness']],
+    ],
+    trip: ['Boracay Trip', 900], lentName: 'Jun', home: [220000, 6.5], car: [18000, 7.5],
+    invest: { a: 'COL Financial', b: 'Interactive Brokers' },
+    stocks: [['BDO.PS', 'BDO Unibank', 'BDO.PS', 2.6, 30000, 0.9], ['SM.PS', 'SM Investments', 'SM.PS', 15.5, 26000, 1.05], ['TEL.PS', 'PLDT', 'TEL.PS', 23, 17000, 0.95], ['JFC.PS', 'Jollibee Foods', 'JFC.PS', 4.5, 12000, 1.1]],
+  });
+
   // fill in what every non-rupiah profile derives the same way: loans, the friend you lent to, opening prices of the global assets
   const pmt = (principal, rate, years) => { const r = rate / 1200, n = years * 12; return r ? (principal * r) / (1 - (1 + r) ** -n) : principal / n; };
   const USD_COST = { VOO: 470, AAPL: 190, MSFT: 380, NVDA: 98, BTC: 52000, ETH: 2800, XAUG: 94 };   // average buy prices in USD
@@ -209,6 +241,12 @@
     CNY: { fee: [2.0, 0.2, 1.0, 1.2], occ: {
       stay: ['Hangzhou Staycation', 'Hotel by West Lake', 'Dinner at Lou Wai Lou'], weekend: ['Chengdu Weekend', 'Hotel on Chunxi Road', 'High-speed rail tickets', 'Hotpot dinner', 'Dan dan noodles lunch', 'Panda souvenirs'],
       long: ['Yunnan Holiday', 'Hotel in Lijiang', 'China Eastern flights', 'Bai cuisine dinner', 'Gifts for the family', 'Farewell hotpot lunch'], anniv: ['Anniversary dinner', 'Dinner at the Bund'], birthday: "Mom's Birthday" } },
+    INR: { fee: [0.4, 0.06, 1.0, 1.2], occ: {
+      stay: ['Lonavala Staycation', 'Resort in Lonavala', 'Dinner at the resort'], weekend: ['Jaipur Weekend', 'Haveli in Jaipur', 'IRCTC train tickets', 'Laal Maas dinner', 'Dal baati lunch', 'Bandhani souvenirs'],
+      long: ['Kerala Holiday', 'Houseboat in Alleppey', 'IndiGo flights', 'Kerala sadya dinner', 'Gifts for the family', 'Farewell appam lunch'], anniv: ['Anniversary dinner', 'Dinner at the Taj'], birthday: "Maa's Birthday" } },
+    PHP: { fee: [0.45, 0.1, 1.5, 1.7], occ: {
+      stay: ['Tagaytay Staycation', 'Hotel in Tagaytay', 'Bulalo dinner'], weekend: ['Baguio Weekend', 'Hotel in Baguio', 'Victory Liner bus tickets', 'Strawberry taho and dinner', 'Pinikpikan lunch', 'Pasalubong from Baguio'],
+      long: ['Palawan Holiday', 'Resort in El Nido', 'Cebu Pacific flights', 'Seafood dinner', 'Pasalubong for the family', 'Farewell kinilaw lunch'], anniv: ['Anniversary dinner', 'Dinner in BGC'], birthday: "Nanay's Birthday" } },
   };
   Object.entries(EXTRA).forEach(([c, x]) => Object.assign(SAMPLE[c], x));
   window.SAMPLE = SAMPLE;

@@ -55,7 +55,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(moves.length >= 1 && moves.every((r) => /^Transfer to /.test(r.t)), JSON.stringify(tr));
   assert(moves.every((r) => r.badges.length === 0 && !/^[+−-]/.test(r.amt) && !/Top up/i.test(r.t)), JSON.stringify(tr));
   // transfer rows carry the circular-arrows icon (an inline SVG), the fee row its 💸 category icon
-  assert.equal(await p.$$eval('#txn-list .day-group.open .day-body .row', (rs) => rs.filter((r) => /^Transfer to /.test(r.querySelector('.title').textContent)).every((r) => !!r.querySelector('.tile svg'))), true, 'transfer rows have the circular arrows icon');
+  assert.equal(await p.$$eval('#txn-list .day-group.open .day-body .row', (rs) => { const m = rs.filter((r) => /^Transfer to /.test(r.querySelector('.title').textContent)); return m.length > 0 && m.every((r) => !!r.querySelector('.amt .xfer-ico svg') && !/[+−]/.test(r.querySelector('.amt').textContent)); }), true, 'a transfer amount starts with the circular arrows, not + or −');
   // its fee is a separate expense: − sign, no tag, the Fee category with its icon
   assert(feeRow && feeRow.amt.startsWith('−') && feeRow.badges.length === 0, JSON.stringify(tr));
   assert.deepEqual(await p.evaluate(() => { const f = D().transactions.find((t) => t.transfer_id && t.type === 'expense'), c = catOf(f.category_id); return [c && c.name, c && c.icon]; }), ['Fee', '💸'], 'the fee is in the Fee category');

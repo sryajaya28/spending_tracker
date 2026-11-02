@@ -27,6 +27,17 @@ const EXPECT = {
     });
     assert(E.banks.every((n) => r.names.includes(n)), cur + ' banks ' + r.names); assert(E.inv.every((n) => r.inv.includes(n)), cur + ' platforms ' + r.inv);
     assert(r.notes.some((n) => E.merchant.test(n)), cur + ' merchants ' + r.notes.slice(0, 8)); assert(r.holdSyms.includes(E.stock), cur + ' stock ' + r.holdSyms);
+    // every scenario is there in every currency: fees (transfer and investment, in the Fee category), investment trades, 12 periods of history, and each kind of special occasion
+    const sc = await p.evaluate(() => {
+      const d = state.data, fee = d.categories.find((c) => c.name === 'Fee'), fees = d.transactions.filter((t) => t.type === 'expense' && fee && t.category_id === fee.id), today = todayIso();
+      const trades = d.holdings.flatMap((h) => h.trades.map((t) => ({ h, t }))), months = new Set(d.transactions.map((t) => periodKeyOf(t.occurred_at)));
+      const st = occasionStatus(), kind = (o) => (o.archived ? 'archived' : !o.start ? 'undated' : o.end < today ? 'ended' : o.start > today ? 'upcoming' : 'ongoing');
+      const multi = (o) => new Set(d.transactions.filter((t) => t.occasion_id === o.id).map((t) => periodKeyOf(t.occurred_at))).size;
+      return { fee: !!fee && fee.icon === '💸', transferFee: fees.filter((t) => t.transfer_id).length, investFee: fees.filter((t) => /^Investment fee/.test(t.note)).length, buy: trades.some((x) => x.t.side === 'buy'), sell: trades.some((x) => x.t.side === 'sell'),
+        legs: trades.every((x) => d.transactions.some((t) => t.trade_id === x.t.id)), months: months.size, kinds: st.map(kind).sort().join(), noBudget: st.filter((o) => !o.hasBudget).length, spansTwo: st.some((o) => multi(o) > 1), spentPast: st.filter((o) => kind(o) === 'ended').every((o) => o.count > 0), pastN: st.filter(occasionIsPast).length };
+    });
+    assert(sc.fee && sc.transferFee >= 6 && sc.investFee === 2 && sc.buy && sc.sell && sc.legs, cur + ' fees and trades ' + JSON.stringify(sc));
+    assert(sc.months >= 12, cur + ' history ' + sc.months); assert.equal(sc.kinds, 'archived,ended,ended,ongoing,undated,upcoming', cur + ' occasion kinds ' + sc.kinds); assert(sc.noBudget === 2 && sc.spansTwo && sc.spentPast && sc.pastN === 3, cur + ' occasions ' + JSON.stringify(sc));
     assert.equal(r.uncategorized, 0, cur + ' every transaction is categorized'); assert(r.minBal >= 0, cur + ' no negative account'); assert(r.total > 0 && r.curr && r.cashOk, cur + ' ' + JSON.stringify([r.total, r.curr, r.cashOk]));
     assert.equal(r.noCost.length, 0, cur + ' sample holdings carry an average price: ' + r.noCost); assert(r.loans === 3 && r.recurring === 5 && r.budgets === 7, cur);
     // the pages render with this data

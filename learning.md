@@ -140,6 +140,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - A `//` comment inside a line I rewrote with a script swallowed the rest of that test line (a whole assertion) AGAIN, and the test kept passing. After editing a test line, re-read it, and keep comments on their own line. A suspicious "still passes" after changing behaviour means an assertion may not be running.
   - Writing to the database on load (adding the Fee category) shows up as an extra upsert in tests that count what is sent: drain the log after sign-in and test the load-time save in its own test.
   - A linked pair of rows (a trade leg and its fee) must not share `trade_id`: cloud.js maps it to `holding_event_id` and a lookup keeps one row per event.
+  - A scenario that depends on the owner's period start day must not rely on a calendar month: the 25th-to-24th period put my "two-period" sample occasion in one period. Make such data span more than a month (40 days).
+  - Check the fallback currency path when changing sample data (unknown currency = USD profile with USD-priced holdings): prices are in the holding's cost currency, money in the account's.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

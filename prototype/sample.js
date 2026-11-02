@@ -177,5 +177,39 @@
     P.lent = [P.lentName, BASE.lent[0], BASE.lent[1], 'Loan to a friend'];
     P.cost = USD_COST;
   });
+
+  // Per-country scenarios: special occasions of every kind (names and what was bought are local) and the fees a bank or broker charges
+  // (bank transfer, e-wallet top-up, buying, selling). Fees: rupiah in IDR, USD-scale elsewhere (scaled like every other amount).
+  // occ.stay / weekend / long / anniv: [occasion name, ...what it was spent on]; occ.birthday: an occasion with no dates and no budget.
+  const EXTRA = {
+    IDR: { fee: [6500, 1000, 9000, 11000], occ: {
+      stay: ['Staycation Bandung', 'Hotel Santika', 'Makan malam Dago'], weekend: ['Liburan Yogyakarta', 'Hotel Malioboro', 'Tiket kereta KAI', 'Gudeg Yu Djum', 'Bakmi Jawa', 'Oleh-oleh bakpia'],
+      long: ['Mudik & Liburan Panjang', 'Hotel di Surabaya', 'Tiket pesawat Garuda', 'Makan malam keluarga', 'Hadiah untuk keluarga', 'Makan siang perpisahan'], anniv: ['Makan malam Anniversary', 'Dinner di Plaza Indonesia'], birthday: 'Ulang Tahun Ibu' } },
+    SGD: { fee: [2.2, 0.3, 1.3, 1.5], occ: {
+      stay: ['Sentosa Staycation', 'Hotel on Sentosa', 'Dinner at RWS'], weekend: ['KL Weekend', 'Hotel in Bukit Bintang', 'KTM train tickets', 'Jalan Alor dinner', 'Nasi lemak lunch', 'Pasar Seni souvenirs'],
+      long: ['Japan Holiday', 'Hotel in Osaka', 'Scoot flights', 'Dotonbori dinner', 'Gifts for family', 'Farewell ramen lunch'], anniv: ['Anniversary dinner', 'Dinner at Marina Bay'], birthday: "Mum's Birthday" } },
+    HKD: { fee: [2.6, 0.4, 1.4, 1.6], occ: {
+      stay: ['Cheung Chau Staycation', 'Seaside guesthouse', 'Seafood dinner'], weekend: ['Macau Weekend', 'Hotel in Taipa', 'TurboJET ferry tickets', 'Portuguese dinner', 'Egg tart lunch', 'Pastry souvenirs'],
+      long: ['Taiwan Holiday', 'Hotel in Taipei', 'Cathay flights', 'Shilin night market', 'Gifts for friends', 'Farewell dim sum'], anniv: ['Anniversary dinner', 'Dinner in Tsim Sha Tsui'], birthday: "Dad's Birthday" } },
+    JPY: { fee: [1.6, 0.8, 5, 6], occ: {
+      stay: ['Hakone Onsen Stay', 'Ryokan in Hakone', 'Kaiseki dinner'], weekend: ['Kyoto Weekend', 'Hotel in Gion', 'Shinkansen tickets', 'Kyoto ramen dinner', 'Matcha lunch', 'Yatsuhashi souvenirs'],
+      long: ['Hokkaido Summer Trip', 'Hotel in Sapporo', 'ANA flights', 'Sushi dinner', 'Omiyage for coworkers', 'Farewell seafood lunch'], anniv: ['Anniversary dinner', 'Dinner in Ginza'], birthday: "Dad's Birthday" } },
+    USD: { fee: [2.5, 0.2, 1.2, 1.4], occ: {
+      stay: ['Beach Staycation', 'Seaside hotel', 'Seafood dinner'], weekend: ['Nashville Weekend', 'Hotel downtown', 'Amtrak tickets', 'Hot chicken dinner', 'BBQ lunch', 'Souvenirs on Broadway'],
+      long: ['Summer Road Trip', 'Motels on the road', 'Rental car', 'Diner dinner', 'Gifts for the family', 'Farewell brunch'], anniv: ['Anniversary dinner', 'Steakhouse dinner'], birthday: "Mom's Birthday" } },
+    EUR: { fee: [2.2, 0.3, 1.1, 1.3], occ: {
+      stay: ['Spa Staycation', 'Spa hotel', 'Dinner at the spa'], weekend: ['Paris Weekend', 'Hotel in Montmartre', 'Thalys tickets', 'Bistro dinner', 'Croissant lunch', 'Souvenirs at Montmartre'],
+      long: ['Italy Holiday', 'Hotel in Rome', 'Ryanair flights', 'Trattoria dinner', 'Gifts for the family', 'Farewell pizza lunch'], anniv: ['Anniversary dinner', 'Dinner in the old town'], birthday: "Mama's Birthday" } },
+    GBP: { fee: [2.4, 0.3, 1.2, 1.4], occ: {
+      stay: ['Brighton Staycation', 'Seafront hotel', 'Fish and chips dinner'], weekend: ['Edinburgh Weekend', 'Hotel on the Royal Mile', 'LNER train tickets', 'Haggis dinner', 'Pub lunch', 'Tartan souvenirs'],
+      long: ['Cornwall Holiday', 'Cottage in St Ives', 'Rental car', 'Pasty dinner', 'Gifts for the family', 'Farewell cream tea'], anniv: ['Anniversary dinner', 'Dinner in Soho'], birthday: "Mum's Birthday" } },
+    AUD: { fee: [2.3, 0.3, 1.2, 1.4], occ: {
+      stay: ['Gold Coast Staycation', 'Beachfront hotel', 'Seafood dinner'], weekend: ['Melbourne Weekend', 'Hotel on Collins St', 'V/Line train tickets', 'Laneway dinner', 'Flat white and brunch', 'Souvenirs at Queen Vic Market'],
+      long: ['Tasmania Holiday', 'Cabin in Cradle Mountain', 'Rental car', 'Pub dinner', 'Gifts for the family', 'Farewell fish and chips'], anniv: ['Anniversary dinner', 'Dinner in Fitzroy'], birthday: "Mum's Birthday" } },
+    CNY: { fee: [2.0, 0.2, 1.0, 1.2], occ: {
+      stay: ['Hangzhou Staycation', 'Hotel by West Lake', 'Dinner at Lou Wai Lou'], weekend: ['Chengdu Weekend', 'Hotel on Chunxi Road', 'High-speed rail tickets', 'Hotpot dinner', 'Dan dan noodles lunch', 'Panda souvenirs'],
+      long: ['Yunnan Holiday', 'Hotel in Lijiang', 'China Eastern flights', 'Bai cuisine dinner', 'Gifts for the family', 'Farewell hotpot lunch'], anniv: ['Anniversary dinner', 'Dinner at the Bund'], birthday: "Mom's Birthday" } },
+  };
+  Object.entries(EXTRA).forEach(([c, x]) => Object.assign(SAMPLE[c], x));
   window.SAMPLE = SAMPLE;
 })();

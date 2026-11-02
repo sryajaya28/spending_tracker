@@ -72,5 +72,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // more than you hold is refused
   await p.evaluate(() => { holdingDialog(null, D().investments[0].id, { invest: true }); }); await p.waitForSelector('#dlg input[name=side]', { state: 'attached' }); await p.evaluate(() => { document.querySelector('#dlg input[name=side][value=sell]').click(); }); await p.waitForSelector('#dlg select[name=sellasset]');
   await p.fill('#dlg [name=quantity]', '9999'); await p.fill('#dlg [name=fundamount]', '10'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(150); assert((await p.evaluate(() => document.getElementById('toast').textContent)).includes('only hold'), 'refused'); await p.click('#dlg .dlg-x');
+  // a sale paid into the account's own cash still records its loss (and a profit) on the Transactions page, with no bank account
+  const cs = await p.evaluate(() => { const d = D(), h = d.holdings.find((x) => x.id === 'h1'), cash = { id: 'hc', account_id: h.account_id, symbol: 'CASH:' + cur(), quantity: 0, since: '2026-01', trades: [] }; d.holdings.push(cash);
+    const base = d.transactions.length; h.open_price = 100; h.trades = []; h.quantity = 5; h.ccy = cur();
+    recordTrade(h, { side: 'sell', quantity: 2, source: { kind: 'holding', holding: cash }, amount: 150, date: todayIso(), price: 75 });   // cost 200, sold for 150: loss 50
+    const rec = d.transactions.slice(base).filter((t) => t.trade_id); const row = rec[0]; const tr = h.trades[0];
+    const out = { n: rec.length, type: row && row.type, wallet: row && row.wallet_id, amt: row && row.amount_minor, cat: row && catOf(row.category_id).name, where: row && txnWhere(row), spent: sumBy(inMonth(currentPeriod()), 'expense'), budget: budgetStatus(currentPeriod()).length };
+    out.cashQty = cash.quantity; const rm = removeTrade(h, tr); out.afterUndo = d.transactions.filter((t) => t.trade_id === tr.id).length; out.rm = rm; return out; });
+  assert.equal(cs.n, 1, JSON.stringify(cs)); assert.deepEqual([cs.type, cs.wallet, cs.cat], ['expense', null, 'Investment Loss'], JSON.stringify(cs)); assert.equal(cs.amt, await p.evaluate(() => toMinor(50, cur())), 'loss of 50'); assert.equal(cs.where, 'Stockbit'); assert(cs.spent > 0, 'counts as spending'); assert.equal(cs.afterUndo, 0, 'undoing the sale removes it');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

@@ -1699,8 +1699,11 @@ function transferDetail(gid) {
 }
 /* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
    linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
-const coinOf = (t) => (t && !t.wallet_id && t.trade_id ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
-const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; if (t.loan_id) return D().loans.find((l) => l.id === t.loan_id)?.name || '';  const h = coinOf(t); return h ? coinLabel(h) : ''; };
+/* the profit or loss of a sale paid into an investment account's own cash (no bank account): no wallet, tied to the sale */
+const isSaleRecord = (t) => !!t && !t.wallet_id && !!t.trade_id && t.id === detId('pnl', t.trade_id);
+const coinOf = (t) => (t && !t.wallet_id && t.trade_id && !isSaleRecord(t) ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
+const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; if (t.loan_id) return D().loans.find((l) => l.id === t.loan_id)?.name || '';  if (isSaleRecord(t)) { const sh = D().holdings.find((x) => x.trades.some((y) => y.id === t.trade_id)); return sh ? accountName(sh.account_id) : ''; }
+  const h = coinOf(t); return h ? coinLabel(h) : ''; };
 /* an investment account holding stablecoins: just the account name; the coin is added only when the account holds more than one stablecoin */
 const coinLabel = (h) => accountName(h.account_id) + (D().holdings.filter((x) => x.account_id === h.account_id && assetInfo(x.symbol).type === 'stablecoin').length > 1 ? ` (${assetInfo(h.symbol).symbol})` : '');
 /* an amount paid or received in a stablecoin is written with the coin, not a dollar sign: "USDT 5,584.00" */
@@ -2116,6 +2119,22 @@ function pnlCategory(profit) {
   if (!sc) { sc = { id: defaultCatId(name, 'Capital Gain'), parent_id: par.id, name: 'Capital Gain', type, icon: '📈', color, archived: false }; d.categories.push(sc); }
   return sc;
 }
+/* a sale paid into the account's own cash or coin has no bank account, but its profit or loss still is Capital Gain income or an Investment Loss expense:
+   a record with no wallet, tied to the sale (same id as the wallet kind: removed together with the sale) */
+function addSaleRecord(h, tradeId) {
+  const tr = h.trades.find((x) => x.id === tradeId);
+  if (!tr || tr.side !== 'sell' || !tr.via || !trackCost(h) || D().transactions.some((t) => t.id === detId('pnl', tradeId))) return false;
+  const hc = holdingCost(h), pi = hc.per[tradeId]; if (!hc.known || !pi || !Number.isFinite(pi.realized)) return false;
+  const pnl = toMinor(pi.realized, hc.ccy); if (!pnl) return false;
+  D().transactions.push({ id: detId('pnl', tradeId), wallet_id: null, trade_id: tradeId, category_id: pnlCategory(pnl > 0).id, type: pnl > 0 ? 'income' : 'expense', amount_minor: Math.abs(pnl), currency: hc.ccy, occurred_at: tr.date, note: `${assetInfo(h.symbol).symbol} ${pnl > 0 ? __('profit') : __('loss')}`, category_source: 'user', ai_confidence: null });
+  return true;
+}
+/* sales made before this existed: add the missing record for each */
+function backfillSaleRecords() {
+  let n = 0; D().holdings.forEach((h) => { h.trades.forEach((tr) => { if (tr.side === 'sell' && tr.via && tr.date <= todayIso() && addSaleRecord(h, tr.id)) n++; }); });
+  if (n) sortTxns();
+  return n > 0;
+}
 function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
   const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
   const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && tr.date.slice(0, 7) < hh.since) hh.since = tr.date.slice(0, 7); };
@@ -2146,6 +2165,7 @@ function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
   s.quantity = r12(s.quantity + (side === 'buy' ? -amount : amount));
   addTrade(h, { id, date, side, quantity, via: { holding_id: s.id, symbol: ssym, quantity: amount, pair: mirror }, ...px });
   addTrade(s, { id: mirror, date, side: side === 'buy' ? 'sell' : 'buy', quantity: amount, via: { holding_id: h.id, symbol: sym, quantity, pair: id } });
+  addSaleRecord(h, id);
 }
 
 /* undo a trade (and its paired trade, or the wallet transfer) */
@@ -2155,7 +2175,7 @@ function removeTrade(h, tr) {
   if (back < -1e-12 || oback < -1e-12) return false;
   h.quantity = r12(Math.max(0, back)); h.trades = h.trades.filter((x) => x.id !== tr.id);
   if (ot) { other.quantity = r12(Math.max(0, oback)); other.trades = other.trades.filter((x) => x.id !== ot.id); }
-  D().transactions = D().transactions.filter((t) => t.trade_id !== tr.id && t.id !== detId('pnl', tr.id));   // the wallet gets its money back (and the profit or loss record goes)
+  D().transactions = D().transactions.filter((t) => t.trade_id !== tr.id && t.trade_id !== ot?.id && t.id !== detId('pnl', tr.id) && !(ot && t.id === detId('pnl', ot.id)));   // the wallet gets its money back (and the profit or loss record goes)
   return true;
 }
 
@@ -2391,7 +2411,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'transfer') transferDialog();
   else if (act === 'view-transfer') transferDetail(id);
   else if (act === 'delete-transfer') { D().transactions = D().transactions.filter((t) => t.transfer_id !== id); save(); close(); render(); toast('Transfer deleted'); }
-  else if (act === 'edit-txn') txnDialog(find(D().transactions));
+  else if (act === 'edit-txn') { const tx = find(D().transactions); if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
   else if (act === 'rec-del') { close(); D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
@@ -2980,7 +3000,7 @@ async function loadUserData() {
     if (mine !== loadSeq) return;   // a newer load took over
     state.real = null; state.data = loaded;
     state.data.livePrices = loadPrices();
-    const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(); if (addedCats || addedFee) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
+    const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(), addedSales = backfillSaleRecords(); if (addedCats || addedFee || addedSales) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
     if (api.finnhub || api.yahoo) refreshPrices(true);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's

@@ -94,7 +94,7 @@ const CATS = [
   ['Groceries', 'expense', '🛒', '#4A44C6'], ['Dining', 'expense', '🍽️', '#8B8FF0'], ['Transport', 'expense', '🚌', '#F5B800'],
   ['Shopping', 'expense', '🛍️', '#EC4899'], ['Bills & Utilities', 'expense', '🧾', '#14B8A6'], ['Entertainment', 'expense', '🎬', '#F97316'],
   ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'],
-  ['Housing', 'expense', '🏠', '#A855F7'], ['Loan Repayment', 'expense', '🏦', '#6366F1'], ['Pet', 'expense', '🐶', '#F59E0B'],
+  ['Housing', 'expense', '🏠', '#A855F7'], ['Loan Payment', 'expense', '🏦', '#6366F1'], ['Pet', 'expense', '🐶', '#F59E0B'],
   ['Education', 'expense', '📚', '#06B6D4'], ['Insurance', 'expense', '🛡️', '#10B981'], ['Personal Care', 'expense', '💇', '#D946EF'],
   ['Family & Kids', 'expense', '👨‍👩‍👧', '#FB7185'], ['Gifts & Donations', 'expense', '🎁', '#F43F5E'], ['Taxes', 'expense', '🏛️', '#78716C'],
   ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
@@ -114,7 +114,7 @@ const SUBS = {
   Health: [['Doctor', '🧑‍⚕️'], ['Pharmacy', '💊'], ['Dental', '🦷'], ['Fitness', '🏋️']],
   Travel: [['Flights', '🛫'], ['Hotels', '🏨'], ['Activities', '🎡']],
   Housing: [['Rent', '🔑'], ['Home maintenance', '🛠️'], ['Furniture & decor', '🛋️'], ['Property tax', '🏡']],
-  'Loan Repayment': [['Mortgage', '🏠'], ['Car loan', '🚗'], ['Personal loan', '🤝'], ['Credit card', '💳'], ['Student loan', '🎓']],
+  'Loan Payment': [['Mortgage', '🏠'], ['Car loan', '🚗'], ['Personal loan', '🤝'], ['Credit card', '💳'], ['Student loan', '🎓']],
   Pet: [['Pet food', '🦴'], ['Vet & medicine', '💉'], ['Grooming', '✂️']],
   Education: [['Tuition', '🎓'], ['Courses & books', '📖'], ['School supplies', '✏️']],
   Insurance: [['Life', '🕊️'], ['Health', '🏥'], ['Vehicle', '🚙'], ['Home', '🏡']],
@@ -127,9 +127,12 @@ const SUBS = {
 /* every account gets the whole list on first load when it has no transactions and no budgets yet; accounts with data only get the ones below
    (so their own categories do not suddenly multiply). A category that already exists by name (archived ones too) is never added twice,
    and sub-categories are only added under a parent created here. Returns true when something was added. */
-const ESSENTIAL_CATS = ['Housing', 'Loan Repayment', 'Pet'];
+const ESSENTIAL_CATS = ['Housing', 'Loan Payment', 'Pet'];
 function ensureDefaultCategories() {
   const d = D(), full = d.transactions.length === 0 && d.budgets.length === 0; let changed = false;
+  // the default was first called "Loan Repayment": rename it (only when "Loan Payment" does not exist yet)
+  const oldLoan = d.categories.find((c) => !c.parent_id && c.name.trim().toLowerCase() === 'loan repayment');
+  if (oldLoan && !d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === 'loan payment')) { oldLoan.name = 'Loan Payment'; changed = true; }
   CATS.forEach(([n, type, icon, color]) => {
     if (!full && !ESSENTIAL_CATS.includes(n)) return;
     if (d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === n.toLowerCase())) return;
@@ -318,10 +321,10 @@ function seed(name, cur) {
     { id: uid(), name: 'Car loan', type: 'car', currency: cur, original_minor: A(L.car[0]), monthly_minor: A(L.car[1]), rate: L.car[2], since, archived: false, payments: payments(A(L.car[1]), 6) },
     { id: cardId, name: 'Credit card', type: 'card', currency: cur, original_minor: A(L.card[0]), monthly_minor: A(L.card[1]), rate: 0, since, archived: false, payments: [...payments(A(L.card[1]), 3), ...cardCharges] },
   ];
-  // the last payments of the car loan were made from a bank account: each is an expense there (category Loan Repayment) linked to the loan's payment
+  // the last payments of the car loan were made from a bank account: each is an expense there (category Loan Payment) linked to the loan's payment
   loans[1].payments.slice(-3).forEach((p) => {
     if (p.date > isoDate(today)) return;
-    const t = { id: uid(), type: 'expense', amount_minor: p.amount_minor, currency: cur, occurred_at: p.date, wallet_id: b1.id, note: `Loan payment · ${loans[1].name}`, category_id: catId['Loan Repayment'], category_source: 'user', ai_confidence: null };
+    const t = { id: uid(), type: 'expense', amount_minor: p.amount_minor, currency: cur, occurred_at: p.date, wallet_id: b1.id, note: loans[1].name, category_id: catId['Loan Payment'], category_source: 'user', ai_confidence: null };
     txns.push(t); p.txn_id = t.id;
   });
   const lent = [{ id: uid(), name: P.lent[0], currency: cur, original_minor: A(P.lent[1]), note: P.lent[3], due: isoDate(new Date(today.getFullYear(), today.getMonth() + 3, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 10)), amount_minor: A(P.lent[2]) }] }];
@@ -523,12 +526,12 @@ const activeLoans = () => D().loans.filter((l) => !l.archived);
 const paidOf = (l, upto) => l.payments.filter((p) => p.kind !== 'charge' && (!upto || p.date <= upto)).reduce((a, p) => a + p.amount_minor, 0);
 /* things paid with this loan as the account (expenses on a credit card...): they raise what is owed */
 const chargedOf = (l, upto) => l.payments.filter((p) => p.kind === 'charge' && (!upto || p.date <= upto)).reduce((a, p) => a + p.amount_minor, 0);
-/* a loan payment made from an account is an expense on that account (category Loan Repayment), linked to the payment by payment.txn_id:
+/* a loan payment made from an account is an expense on that account (category Loan Payment), linked to the payment by payment.txn_id:
    the loan balance goes down, the account goes down, it counts as spending, and lists show only the account's record */
 const repaymentOf = (txnId) => { for (const l of D().loans) { const p = l.payments.find((x) => x.txn_id === txnId && x.kind !== 'charge'); if (p) return { loan: l, payment: p }; } return null; };
 function loanRepaymentCategory() {
   const d = D(); let c = d.categories.find((x) => !x.parent_id && x.type === 'expense' && x.name.trim().toLowerCase() === 'loan repayment');
-  if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Loan Repayment'); c = { id: uid(), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: uid(), parent_id: c.id, name: sn, type, icon: sic, color, archived: false })); }
+  if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Loan Payment'); c = { id: uid(), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: uid(), parent_id: c.id, name: sn, type, icon: sic, color, archived: false })); }
   return c;
 }
 const loanBalance = (l, upto) => Math.max(0, l.original_minor + chargedOf(l, upto || todayIso()) - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
@@ -759,7 +762,10 @@ function viewAsset(h) {
   <section class="card"><div class="card-head"><h2>${__('History')}</h2></div>${tradeList(h)}</section>`;
 }
 /* the reporting-currency dropdown, right next to the big amount */
-const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`;
+/* flags for the currency lists (emoji: they show in the list, the chosen value stays the plain code) */
+const CCY_FLAG = { IDR: '🇮🇩', USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', SGD: '🇸🇬', AUD: '🇦🇺', JPY: '🇯🇵', HKD: '🇭🇰', CNY: '🇨🇳', INR: '🇮🇳', PHP: '🇵🇭' };
+const flagLabel = (c) => (CCY_FLAG[c] ? `${CCY_FLAG[c]}  ${c}` : c);
+const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>`;
 function viewPortfolio() {
   const hid = routeArg(), ah = hid && D().holdings.find((x) => x.id === hid); if (ah) return viewAsset(ah);
   const months = lastMonths(6), vc = pf(), base = cur(), tab = state.ui.pfTab || 'savings';
@@ -841,7 +847,7 @@ function loanDialog(l) {
   open(`<h2>${l ? __('Edit loan') : __('Add loan')}</h2><form data-form="loan" data-id="${l?.id || ''}" style="display:contents">
     <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Car loan')}"></label>
     <div class="two"><label class="field">${__('Type')}<select name="type">${Object.entries(LOAN_TYPES).map(([k, v]) => `<option value="${k}" ${k === (l?.type || 'car') ? 'selected' : ''}>${__(v)}</option>`).join('')}</select></label>
-      <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
+      <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
     <div class="two"><label class="field">${l ? __('Original amount') : __('Amount owed now')}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
       <label class="field">${__('Monthly payment')}<input name="monthly" type="number" min="0" step="any" value="${l ? toMajor(l.monthly_minor, l.currency) : ''}"></label></div>
     <label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" min="0" step="any" value="${l?.rate || ''}"></label>
@@ -851,7 +857,7 @@ function lentDialog(l) {
   open(`<h2>${l ? __('Edit money lent') : __('Add money lent')}</h2><form data-form="lent" data-id="${l?.id || ''}" style="display:contents">
     <label class="field">${__('Who borrowed it')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Budi')}"></label>
     <div class="two"><label class="field">${__('Amount lent')}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
-      <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''}>${c}</option>`).join('')}</select></label></div>
+      <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
     <div class="two"><label class="field">${__('Due date (optional)')}<input name="due" type="date" value="${esc(l?.due || '')}"></label>
       <label class="field">${__('Note (optional)')}<input name="note" maxlength="60" value="${esc(l?.note || '')}" placeholder="${__('e.g. Laptop repair')}"></label></div>
     <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-lent" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -876,8 +882,8 @@ function paymentDialog(l, kind = 'loan') {
       <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
     ${lent ? '' : (() => { const ws = D().wallets.filter((w) => !w.archived && w.currency === l.currency), opts = ws.map((w) => `<option value="${w.id}">${esc(w.name)}</option>`).join(''), pick = recallAcct('repay', opts) || (ws[0] ? ws[0].id : '');
       return `<label class="field">${__('Paid from')}<select name="account" data-pay-from><option value="">${__('No account, just record the payment')}</option>${ws.map((w) => `<option value="${w.id}" ${w.id === pick ? 'selected' : ''}>${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('')}</select></label>`; })()}
-    <p class="hint">${lent ? __('Repayments lower what you are owed. They are not counted as income.') : __('Payments lower the loan balance and your debt in net worth. Paid from an account, the amount also leaves that account and counts as spending under Loan Repayment.')}</p>
-    <div class="actions"><button class="btn" type="submit">${lent ? __('Save repayment') : __('Save payment')}</button></div></form>`);
+    <p class="hint">${lent ? __('Repayments lower what you are owed. They are not counted as income.') : __('Payments lower the loan balance and your debt in net worth. Paid from an account, the amount also leaves that account and counts as spending under Loan Payment.')}</p>
+    <div class="actions"><button class="btn" type="submit">${lent ? __('Save repayment') : __('Submit Payment')}</button></div></form>`);
 }
 
 /* ---------- views ---------- */
@@ -1080,16 +1086,17 @@ function viewOverview() {
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     ${installBtn('ov-install')}
+    <section class="card tap-card ov-bud-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
+      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })} · ${Math.round(global.pct)}%</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
+      <div class="ov-buds">${tiles.map((b) => `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, Math.round(b.pct))}" aria-label="${esc(__('All spending'))} ${Math.round(b.pct)}%"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div>`).join('')}</div>
+      ${moreRows.length ? `<div class="ov-more"><div class="ov-more-in">${moreRows.join('')}</div></div>` : ''}</section>
     <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
       <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
       ${flowChart(months, incs, exps)}</section>
     <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools">${monthSelect()}<button class="chip" data-act="breakdown">${__('Details')}</button></div></div>
       ${halfDonut(cats, exp)}</section>
  ${trendCard()}
-    <section class="card tap-card ov-bud-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
-      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })} · ${Math.round(global.pct)}%</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
-      <div class="ov-buds">${tiles.map((b) => `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, Math.round(b.pct))}" aria-label="${esc(__('All spending'))} ${Math.round(b.pct)}%"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div>`).join('')}</div>
-      ${moreRows.length ? `<div class="ov-more"><div class="ov-more-in">${moreRows.join('')}</div></div>` : ''}</section>
+
   <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map((t) => txnRow(t)).join('')}</div></section>
   </div>`;
 }
@@ -1261,7 +1268,7 @@ function viewSettings() {
   ${recurringCard()}
   <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
     <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
-    <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''}>${c}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Budget period starts on')}</div><div class="field"><select data-setting="period" aria-label="${__('Budget period starts on')}">${Array.from({ length: 28 }, (_, n) => `<option value="${n + 1}" ${n + 1 === periodDay() ? 'selected' : ''}>${n === 0 ? __('Day 1 (calendar month)') : __('Day {n}', { n: n + 1 })}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Language')}</div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Appearance')}</div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div></section>
@@ -1420,7 +1427,7 @@ function viewAuth() {
     <label class="field">${__('Name')}<input name="name" required placeholder="${__('Ari Nolan')}" autocomplete="name"></label>
     ${emailField}
     <label class="field">${__('Password')}<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"></label>
-    <label class="field">${__('Reporting currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option>${c}</option>`).join('')}</select></label>
+    <label class="field">${__('Reporting currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>
     ${captchaBox()}<button class="btn lg" type="submit">${__('Create account')}</button>
     <p class="muted" style="text-align:center">${__("We'll email you a link to confirm your address. Already have an account?")} ${authLink('signin', 'Sign in')}</p></form>`;
   else if (v === 'forgot') body = `<form class="card" data-form="forgot">${logo}
@@ -1676,7 +1683,7 @@ function occasionDialog(o, fromBudget) {
   open(`<h2>${title}</h2><form data-form="occasion" data-id="${o?.id || ''}" data-from-budget="${fromBudget ? 1 : ''}" style="display:contents">
     ${pick}
     <div class="occ-new"><label class="field">${__('Name')}<input name="name" maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}"></label></div>
-    <div class="two">${o ? '' : `<label class="field occ-new">${__('Currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
+    <div class="two">${o ? '' : `<label class="field occ-new">${__('Currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>`}
       <label class="field"><span data-occ-amt>${o ? __('Budget ({cur})', { cur: esc(o.currency) }) + (fromBudget ? '' : ' · ' + __('optional')) : fromBudget ? __('Budget') : __('Budget (optional)')}</span><input name="amount" type="number" min="1" step="any" ${fromBudget ? 'required' : ''} value="${o && o.amount_minor > 0 ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
     <div class="two occ-new"><label class="field">${__('Starts (optional)')}<input name="start" type="date" value="${esc(o?.start || '')}"></label>
       <label class="field">${__('Ends (optional)')}<input name="end" type="date" value="${esc(o?.end || '')}"></label></div>
@@ -1749,7 +1756,7 @@ function walletDialog(w) {
     <label class="field">${__('Name')}<input name="name" required maxlength="40" placeholder="${__('Savings')}" value="${esc(w?.name || '')}"></label>
     <div class="two"><label class="field">${__('Type')}<select name="type">${types.map(([k, n]) => `<option value="${k}" ${k === w?.type ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></label>
     ${w ? `<label class="field">${__('Currency')}<input value="${esc(w.currency)}" disabled></label>`
-      : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''}>${x}</option>`).join('')}</select></label>`}</div>
+      : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((x) => `<option ${x === cur() ? 'selected' : ''} data-list="${flagLabel(x)}">${x}</option>`).join('')}</select></label>`}</div>
     <label class="field">${w ? __('Current balance ({cur})', { cur: esc(w.currency) }) : __('Opening balance')}<input name="${w ? 'balance' : 'opening'}" type="number" step="any" required value="${w ? toMajor(walletBalance(w), w.currency) : 0}"></label>
     <p class="hint">${w ? __("Changing the balance adjusts this account's starting amount, so your past transactions stay exactly as they are. The currency can't be changed because existing transactions use it.") : __('Pick any currency, for example USD for savings. Totals convert to your reporting currency ({cur}).', { cur: esc(cur()) })}</p>
     <div class="actions">${w ? `<button type="button" class="btn danger" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${w ? __('Save') : __('Add')}</button></div></form>`);
@@ -1823,7 +1830,7 @@ function holdingDialog(h, accId, opts = {}) {
 const CCY_NAMES = { IDR: 'Indonesian rupiah', USD: 'US dollar', EUR: 'Euro', GBP: 'British pound', SGD: 'Singapore dollar', AUD: 'Australian dollar', JPY: 'Japanese yen', HKD: 'Hong Kong dollar', CNY: 'Chinese yuan' , INR: 'Indian rupee', PHP: 'Philippine peso'};
 /* the currency an asset is usually quoted in */
 const defaultPriceCcy = (a, fallback) => (a.yh && /\.JK$/.test(a.yh) ? 'IDR' : a.yh || a.fh || ['crypto', 'stock', 'etf', 'commodity'].includes(a.type) ? 'USD' : fallback);
-const ccyOptions = (sel) => Object.keys(RATES).map((c) => `<option value="${c}" ${c === sel ? 'selected' : ''}>${c}</option>`).join('');
+const ccyOptions = (sel) => Object.keys(RATES).map((c) => `<option value="${c}" ${c === sel ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('');
 const ccyName = (c) => __(CCY_NAMES[c] || c);
 /* Cash balance type: the text box becomes a searchable list of currencies and the choice goes straight into that field (no chip below) */
 function syncPickType(form) {
@@ -2580,7 +2587,7 @@ document.addEventListener('submit', async (e) => {
     if (acct) {
       // the money comes out of that account: not more than it holds (a credit card may go below zero; a future-dated payment is not checked yet)
       if (acct.type !== 'card' && v.date <= todayIso() && applied > walletBalance(acct)) { toast(__("{name} doesn't have enough balance ({amount} available)", { name: acct.name, amount: money(Math.max(0, walletBalance(acct)), acct.currency) })); return; }
-      const t = { id: uid(), type: 'expense', amount_minor: applied, currency: l.currency, occurred_at: v.date, wallet_id: acct.id, note: `${__('Loan payment')} · ${l.name}`, category_id: loanRepaymentCategory().id, category_source: 'user', ai_confidence: null };
+      const t = { id: uid(), type: 'expense', amount_minor: applied, currency: l.currency, occurred_at: v.date, wallet_id: acct.id, note: l.name, category_id: loanRepaymentCategory().id, category_source: 'user', ai_confidence: null };
       D().transactions.push(t); pay.txn_id = t.id; rememberAcct('repay', acct.id); sortTxns();
     } else if (f.dataset.kind !== 'lent') rememberAcct('repay', '');
     l.payments.push(pay);

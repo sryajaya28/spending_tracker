@@ -11,6 +11,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { D().profile.name = 'Surya'; }); await p.waitForTimeout(100); await log();
   await p.evaluate(() => { location.hash = '#/portfolio'; }); await p.waitForSelector('.hero-cur select');
   assert.equal(await p.inputValue('.hero-cur select'), 'IDR');
+  assert((await p.$$eval('.hero-cur option', (o) => o.map((x) => x.dataset.list))).every((l, i) => /^\p{Regional_Indicator}{2}\s+[A-Z]{3}$/u.test(l)), 'every currency has a flag in the list');
   assert.deepStrictEqual(await p.$$eval('.hero-cur option', (o) => o.map((x) => x.textContent)), ['IDR', 'USD', 'EUR', 'GBP', 'SGD', 'AUD', 'JPY', 'HKD', 'CNY', 'INR', 'PHP']);
   await p.screenshot({ path: __dirname + '/out/hero_cur.png', clip: { x: 0, y: 0, width: 631, height: 420 } });
   await p.selectOption('.hero-cur select', 'USD'); await settle();

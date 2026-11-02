@@ -159,6 +159,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - A `<button>` styled as a chip shows the browser's default border while a link chip does not: reset `border` on shared pill classes instead of fixing one screen.
   - Check the schema before assuming a migration: `debt_payments.transaction_id` already existed for loan charges and had no constraint tying it to `kind`, so linking repayments needed no SQL, only the cloud.js mapping.
   - When one action must create two records (payment + expense) decide the single source of truth for display up front (here: the account's expense), and make edit and delete keep the pair in sync.
+  - Reordering sections breaks tests that assume neighbours or scroll position (wide-screen height test, donut mouse coordinates): scroll targets into view in tests and look up neighbours by role, not by DOM position.
+  - Flag emoji are not drawn on Windows desktop browsers; they are fine for phones. If desktop Windows matters, ship SVG flags instead (CSP allows data: images).
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

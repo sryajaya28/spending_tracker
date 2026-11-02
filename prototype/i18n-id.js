@@ -20,6 +20,7 @@ DICT.id = {
  "Choose an icon": "Pilih ikon",
  "Add occasion budget": "Tambah anggaran acara",
  "Budget Added": "Anggaran Ditambahkan",
+ "No payment": "Tanpa pembayaran",
  "{name} doesn't have enough balance ({amount} available)": "Saldo {name} tidak cukup (tersedia {amount})",
  "Now you're set!": "Sekarang kamu siap!",
  "Your first transaction is in. Stiver is ready for you.": "Transaksi pertamamu sudah masuk. Stiver siap dipakai.",

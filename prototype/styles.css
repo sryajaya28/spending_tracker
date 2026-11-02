@@ -941,3 +941,5 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 
 /* a chip that is a <button> (Details, History, Archived...) looks exactly like one that is a link: no browser border */
 button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor: pointer; }
+
+.field input[name=fundamount]:disabled { opacity: .5; cursor: not-allowed; }

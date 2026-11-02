@@ -1826,6 +1826,8 @@ function syncFeeBox(form, src, isCash) {
 function syncFund(form) {
   const src = parseSource(form.fund.value), label = $('[data-fund-amt]', form);
   label.textContent = src ? __('Amount paid ({unit})', { unit: sourceUnit(src) }) : __('Amount paid');
+  // "Already owned (no payment)": there is nothing paid, so the amount cannot be filled in
+  form.fundamount.disabled = !src; form.fundamount.placeholder = src ? __('amount') : __('No payment'); if (!src) form.fundamount.value = '';
   syncFeeBox(form, src, false);
   syncOwnPrice(form);
 }

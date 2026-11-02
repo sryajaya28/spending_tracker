@@ -57,5 +57,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.screenshot({ path: __dirname + '/out/cash.png' });
   // fiat cash shows at most 2 decimals (float noise like 46,600,560.99999999 IDR is rounded), other assets keep up to 8
   assert.deepEqual(await p.evaluate(() => [qtyFmt(46600560.99999999, 'CASH:IDR'), qtyFmt(12.3456, true), qtyFmt(0.12345678, 'BTC')]), ['46.600.561', '12.35', '0.12345678']);
+  // Add asset: "Already owned (no payment)" disables Amount paid (and clears it); choosing a payment source enables it again
+  await p.evaluate(() => { location.hash = '#/portfolio'; holdingDialog(null, D().investments[0].id, {}); }); await p.waitForSelector('#dlg select[name=fund]');
+  await p.selectOption('#dlg select[name=fund]', ''); assert.equal(await p.$eval('#dlg input[name=fundamount]', (e) => e.disabled), true, 'disabled when already owned');
+  const srcOpt = await p.$eval('#dlg select[name=fund]', (s) => [...s.options].find((o) => o.value)?.value);
+  await p.selectOption('#dlg select[name=fund]', srcOpt); assert.equal(await p.$eval('#dlg input[name=fundamount]', (e) => e.disabled), false, 'enabled with a payment source'); await p.fill('#dlg input[name=fundamount]', '5000');
+  await p.selectOption('#dlg select[name=fund]', ''); assert.deepEqual(await p.$eval('#dlg input[name=fundamount]', (e) => [e.disabled, e.value]), [true, ''], 'back to already owned: disabled and cleared'); await p.click('#dlg .dlg-x');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').filter((l) => l.includes('cashacct.js')).slice(0, 2).join(' | ')); process.exit(1); });

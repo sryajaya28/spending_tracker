@@ -25,12 +25,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('input[name=amount]', '5000'); assert.equal(await p.inputValue('input[name=price]'), '500', 'price follows amount');
   await p.click('#dlg button[type=submit]'); await settle();
   g = await get(); assert.equal(g.q, 20); near(g.avg, 450, 'blended average'); near(g.cost, 9000, 'cost after buy');
+  await p.evaluate((id) => { D().customAssets['CASH:USD'] = { symbol: 'USD', name: 'Cash (USD)', type: 'cash', cash: 'USD' }; D().holdings.push({ id: 'cashx', account_id: D().holdings.find((h) => h.id === id).account_id, symbol: 'CASH:USD', quantity: 0, since: '2026-01', trades: [] }); }, g.id);
   // 3. sell 5 at 600: realized 5 x (600 - 450) = 750, average stays 450
   await p.evaluate((id) => tradeDialog(D().holdings.find((h) => h.id === id), 'sell'), g.id);
   await p.fill('input[name=quantity]', '5'); await p.fill('input[name=price]', '600'); await p.click('#dlg button[type=submit]'); await settle();
   g = await get(); assert.equal(g.q, 15); near(g.avg, 450, 'average unchanged by a sell'); near(g.realized, 750, 'realized'); near(g.cost, 6750, 'cost after sell');
   // the amount of the sell credited the account
-  const w = await p.evaluate(() => walletBalance(D().wallets[0])); assert.equal(w, 5000000000 - 500000 + 300000, 'bank paid 5000.00 for the buy and received 3000.00');
+  const w = await p.evaluate(() => [walletBalance(D().wallets[0]), D().holdings.find((h) => h.id === 'cashx').quantity]); assert.deepEqual(w, [5000000000 - 500000, 3000], 'bank paid 5000.00 for the buy; the 3000.00 sale went into the investment account cash');
   // 3b. paid from an account in another currency (IDR): the price follows that account and is converted into the holding's currency (USD)
   const idw = await p.evaluate(() => { const w = { ...D().wallets[0], id: uid(), name: 'BCA', currency: 'IDR', opening_balance_minor: 100000000 }; D().wallets.push(w); save(); return w.id; });
   await p.evaluate((id) => tradeDialog(D().holdings.find((h) => h.id === id), 'buy'), g.id);

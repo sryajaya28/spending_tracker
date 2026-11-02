@@ -437,3 +437,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - P&L month page: a sale's sub line is "qty SYMBOL sold · {investment account}".
 - Sell an asset into the investment account's cash holding: the loss/profit still appears on Transactions (account = investment account name), is not editable, and disappears when the sale is undone. Older such sales get their record on load (tests/e2e/invest.js).
 - P&L page: the period dropdown switches between All time and any period (tests/e2e/invest.js).
+- Sell: Receive into lists only the investment account's cash / stablecoins (formatted "Account (SYMBOL) · amount"), never a bank account; no fee box; withdrawing Cash to a bank still works. Tests: invest, fees, avgprice, cashacct.

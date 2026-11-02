@@ -963,3 +963,4 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .pnl-chev { display: inline-block; margin-left: 4px; font-size: 16px; line-height: 1; transition: transform .15s; }
 .mrow.open .pnl-chev { transform: rotate(90deg); }
 .holding-row .amt.amt-mid { align-self: center; padding-top: 0; }
+[data-fee-box][hidden] { display: none !important; }   /* the fee box only exists for a bank account */

@@ -24,6 +24,7 @@ DICT.id = {
  "Realized Profit & Loss": "Untung & rugi terealisasi",
  "This follows the sale. Change or undo the sale on the asset.": "Mengikuti penjualan. Ubah atau batalkan penjualannya di asetnya.",
  "Period": "Periode",
+ "Add a Cash balance to this account first": "Tambahkan saldo Kas ke akun ini dulu",
  "1 sale": "1 penjualan",
  "{n} sales": "{n} penjualan",
  "No sales yet. Profit and loss appear here when you sell an asset.": "Belum ada penjualan. Untung dan rugi muncul di sini saat kamu menjual aset.",

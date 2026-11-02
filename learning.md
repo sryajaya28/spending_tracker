@@ -146,6 +146,7 @@ only worked after a detour. Keep each item short and say what to do instead.
   - Session state lives in more than `state`: the URL hash and the page's scroll position also survive logout/login. Reset them (with `history.replaceState`, which does not fire `hashchange`) whenever a session starts or ends, and tell a real login (`SIGNED_IN`) from reopening with a saved session (`INITIAL_SESSION`).
   - A host the sandbox cannot reach can still be checked through the deployed app: Vercel's `web_fetch_vercel_url` on the app's own `/api/...` endpoint returned the real Frankfurter rates. Check live data that way instead of trusting documentation search alone.
   - Built-in fallback rates go stale (INR 88 vs 94.95 live): keep them in the right ballpark, they show whenever the rate service is down.
+  - When a list gets a button-plus-pop-up for a state (History, Archived), remove that state from the inline list in the same change and update every test that clicked rows of that state in the list.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

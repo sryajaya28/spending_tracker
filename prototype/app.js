@@ -1579,17 +1579,24 @@ function syncOccPick(form) {
   $$('.occ-new', form).forEach((e) => { e.hidden = !isNew; });
   const lab = $('[data-occ-amt]', form); if (lab) lab.textContent = isNew ? __('Budget') : __('Budget ({cur})', { cur: ccy });
 }
-/* Settings > Special occasions: every occasion, with or without a budget (the ones with a budget also show on Budgets) */
-function occasionsCard() {
+/* Settings > Special occasions: the active occasions, with or without a budget (the ones with a budget also show on Budgets).
+   Archived ones are not listed here: the Archived button opens them in a pop-up (Edit there reopens or deletes one). */
+const occasionSettingsRow = (o) => {
   const fmt = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' });
-  const list = occasionStatus().sort((a, b) => (+!!a.archived - +!!b.archived) || (b.start || '').localeCompare(a.start || '') || a.name.localeCompare(b.name));
-  const row = (o) => {
-    const dates = [o.start, o.end].filter(Boolean).map(fmt).join(' – '), bits = [dates, o.hasBudget ? __('Budget {amount}', { amount: money(o.amount_minor, o.currency) }) : __('No budget'), countLabel(o.count)].filter(Boolean);
-    return `<div class="brow cat-row"><span class="tile" style="--c:#EC4899">🎉</span><div class="cat-main"><b class="cat-name">${esc(o.name)}${o.archived ? ' <span class="badge">' + __('Archived') + '</span>' : ''}</b><small class="muted">${esc(bits.join(' · '))}</small></div>
-      <div class="tools"><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">${__('Edit')}</button></div></div>`;
-  };
-  return `<section class="card" id="occasions-card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Add')}</button></div>
-    ${list.length ? list.map(row).join('') : ('<div class="empty">' + __('No special occasions yet. Add one (a trip, a birthday dinner) to tag expenses to it, with or without a budget.') + '</div>')}</section>`;
+  const dates = [o.start, o.end].filter(Boolean).map(fmt).join(' – '), bits = [dates, o.hasBudget ? __('Budget {amount}', { amount: money(o.amount_minor, o.currency) }) : __('No budget'), countLabel(o.count)].filter(Boolean);
+  return `<div class="brow cat-row"><span class="tile" style="--c:#EC4899">🎉</span><div class="cat-main"><b class="cat-name">${esc(o.name)}</b><small class="muted">${esc(bits.join(' · '))}</small></div>
+    <div class="tools"><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">${__('Edit')}</button></div></div>`;
+};
+function occasionsCard() {
+  const list = occasionStatus().filter((o) => !o.archived).sort((a, b) => (b.start || '').localeCompare(a.start || '') || a.name.localeCompare(b.name));
+  return `<section class="card" id="occasions-card"><div class="card-head"><h2>${__('Special occasions')}</h2><div class="tools"><button class="chip" data-act="occasion-archived">${__('Archived')}</button><button class="btn" data-act="add-occasion">${__('+ Add')}</button></div></div>
+    ${list.length ? list.map(occasionSettingsRow).join('') : ('<div class="empty">' + __('No special occasions yet. Add one (a trip, a birthday dinner) to tag expenses to it, with or without a budget.') + '</div>')}</section>`;
+}
+function archivedOccasionsDialog() {
+  const list = occasionStatus().filter((o) => o.archived).sort((a, b) => (b.end || b.start || '').localeCompare(a.end || a.start || '') || a.name.localeCompare(b.name));
+  open(`<h2>${__('Archived special occasions')}</h2>
+  <div class="list up-list">${list.map(occasionSettingsRow).join('') || ('<div class="empty">' + __('No archived special occasions.') + '</div>')}</div>
+  <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
 const SWATCHES = ['#4A44C6', '#8B8FF0', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#EF4444', '#0EA5E9', '#22C55E', '#94A3B8'];
 function catDialog(c, parentId) {
@@ -2103,6 +2110,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-occasion') occasionDialog();
   else if (act === 'add-occasion-budget') occasionDialog(null, true);
   else if (act === 'occasion-history') occasionHistoryDialog();
+  else if (act === 'occasion-archived') archivedOccasionsDialog();
   else if (act === 'add-occasion-txn') txnDialog(null, 'expense', occasionOf(id));
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }

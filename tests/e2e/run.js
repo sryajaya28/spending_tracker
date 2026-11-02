@@ -89,7 +89,8 @@ const assert = require('assert');
   await page.click('[data-act=edit-occasion]'); await page.click('[data-act=archive-occasion]'); await settle();
   l = await log(); assert(l.some((o) => o.table === 'occasions' && o.rows[0].archived === true));
   await page.evaluate(() => { location.hash = '#/settings'; });   // an archived occasion is history: it is managed from Settings
-  await page.click('#occasions-card [data-act=edit-occasion]'); await page.click('[data-act=delete-occasion]'); await settle();
+  assert.equal(await page.$$eval('#occasions-card [data-act=edit-occasion]', (e) => e.length), 0, 'an archived occasion is not listed in the Settings card');
+  await page.click('#occasions-card [data-act=occasion-archived]'); await page.click('#dlg [data-act=edit-occasion]'); await page.click('[data-act=delete-occasion]'); await settle();   // it is in the Archived pop-up
   l = await log(); console.log('occasion delete ops', l.map((o) => o.op + ':' + o.table).join(' '));
   assert(l[0].table === 'transactions' && l[0].rows[0].occasion_id === null && l[1].op === 'delete' && l[1].table === 'occasions');
   // reload keeps occasions

@@ -20,6 +20,8 @@ DICT.id = {
  "Choose an icon": "Pilih ikon",
  "Add occasion budget": "Tambah anggaran acara",
  "Budget Added": "Anggaran Ditambahkan",
+ "Archived special occasions": "Acara khusus yang diarsipkan",
+ "No archived special occasions.": "Belum ada acara khusus yang diarsipkan.",
  "Fee (optional)": "Biaya (opsional)",
  "Fee, optional ({cur})": "Biaya, opsional ({cur})",
  "Investment fee": "Biaya investasi",

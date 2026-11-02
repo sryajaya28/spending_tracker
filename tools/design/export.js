@@ -51,6 +51,7 @@ const SCREENS = [
   ['dialog-average-price', 'dialog', `costDialog(D().holdings.find((h) => h.symbol === 'NVDA'));`],
   ['dialog-budget', 'dialog', `budgetDialog();`],
   ['dialog-occasion', 'dialog', `occasionDialog();`],
+  ['dialog-occasion-archived', 'dialog', `D().occasions.push({ id: uid(), name: 'Anniversary Dinner', amount_minor: null, currency: cur(), start: '2026-04-14', end: '2026-04-14', archived: true }); archivedOccasionsDialog();`],
   ['dialog-occasion-history', 'dialog', `D().occasions.push({ id: uid(), name: 'Lombok Trip', amount_minor: 4000000, currency: cur(), start: '2026-03-10', end: '2026-03-12', archived: false }, { id: uid(), name: 'Anniversary', amount_minor: null, currency: cur(), start: '', end: '', archived: true }); occasionHistoryDialog();`],
   ['dialog-occasion-budget', 'dialog', `D().occasions.push({ id: uid(), name: 'Wedding', amount_minor: null, currency: cur(), start: '', end: '', archived: false }); occasionDialog(null, true);`],
   ['dialog-account', 'dialog', `walletDialog();`],

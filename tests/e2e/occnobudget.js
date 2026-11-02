@@ -45,6 +45,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.$$eval('.cs-pop .cs-opt.dis .cs-tag', (e) => e.map((x) => x.textContent).join()), 'Budget Added,Budget Added', 'greyed rows carry the tag');
   await p.keyboard.press('Escape'); await p.click('#dlg [data-act=close]'); await p.evaluate(() => { D().occasions = D().occasions.filter((o) => o.name !== 'Pending Party'); render(); });
   await p.evaluate(() => { location.hash = '#/settings'; render(); });
+  // 4c. Settings: archived occasions are not listed; the Archived button (left of + Add, like History on Budgets) opens them in a pop-up, where Edit can reopen one
+  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('#occasions-card');
+  assert.equal(await p.$$eval('#occasions-card .card-head .tools > *', (e) => e.map((x) => x.textContent.trim()).join('|')), 'Archived|+ Add', 'Archived sits left of + Add');
+  await p.click('#occasions-card [data-act=occasion-archived]'); await p.waitForSelector('#dlg .empty'); assert((await p.innerText('#dlg')).includes('No archived special occasions.')); await p.click('#dlg [data-act=close]');
+  await p.evaluate(() => { D().occasions.find((o) => o.name === 'Bali Trip').archived = true; render(); });
+  assert(!(await p.innerText('#occasions-card')).includes('Bali Trip'), 'archived: not in the card');
+  await p.click('#occasions-card [data-act=occasion-archived]'); await p.waitForSelector('#dlg [data-act=edit-occasion]'); assert((await p.innerText('#dlg')).includes('Bali Trip'), 'archived: in the pop-up');
+  await p.click('#dlg [data-act=edit-occasion]'); await p.click('#dlg [data-act=archive-occasion]'); await settle();   // Reopen
+  assert((await p.innerText('#occasions-card')).includes('Bali Trip'), 'reopened: back in the card');
   // 5. removing the budget in Edit keeps the occasion in Settings and takes it off Budgets
   await p.click(`#occasions-card [data-act=edit-occasion][data-id="${await p.evaluate(() => D().occasions.find((o) => o.name === 'Wedding').id)}"]`); await p.fill('#dlg input[name=amount]', ''); await p.click('#dlg button[type=submit]'); await settle();
   assert((await p.innerText('#occasions-card')).includes('Wedding'));

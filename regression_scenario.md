@@ -430,3 +430,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Investment tab shows a "Realized P&L" section (same layout as Investment growth): chart, month rows with only net P&L (green +, red −, plain Rp 0), "See more (n)".
 - Tap a month row: opens a page with the month's realized P&L by day (symbol · qty sold); back link returns to Portfolio.
 - Cash (IDR) quantities use dots (85.000.000). Automated: `tests/e2e/invest.js`.
+- Realized P&L month page: days are collapsed rows like Transactions (count + net); tap a day to expand each sale. Cash (IDR) holding row has no % and the amount is centred. Automated: `tests/e2e/invest.js`.

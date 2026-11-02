@@ -735,7 +735,7 @@ function holdingRow(h, vc, accTotal) {
   // name and "quantity SYMBOL"; value and share on the right. The price and actions are in the detail (tap a row).
   return `<div class="row holding-row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
     <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h), h)} ${esc(info.symbol)}</div></div>
-    <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${rowTail(h, value, accTotal)}</div></div></div>`;
+    <div class="amt num${info.cash ? ' amt-mid' : ''}">${money(usdToMinor(value, vc), vc)}${info.cash ? '' : `<div class="sub">${rowTail(h, value, accTotal)}</div>`}</div></div>`;
 }
 /* under the value: profit or loss against your cost when it is known, otherwise the share of the account */
 function rowTail(h, value, accTotal) {
@@ -818,7 +818,13 @@ function realizedPnl() {
 function pnlDays(list) {
   const days = new Map(), fmt = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
   list.forEach((e) => { (days.get(e.date) || days.set(e.date, []).get(e.date)).push(e); });
-  return `<div class="pnl-days">${[...days.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([d, es]) => `<div class="pnl-day"><div class="pnl-dh"><b>${esc(fmt(d))}</b><b class="num">${pnlText(es.reduce((a, e) => a + e.pnl, 0))}</b></div>${es.map((e) => `<div class="pnl-ent"><span>${esc(e.symbol)} · ${qtyFmt(e.qty, e.h)} ${__('sold')}</span><span class="num">${pnlText(e.pnl)}</span></div>`).join('')}</div>`).join('')}</div>`;
+  const cnt = (n) => (n === 1 ? __('1 sale') : __('{n} sales', { n }));
+  const ent = (e) => { const info = assetInfo(e.symbol); return `<div class="row"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span><div><div class="title">${esc(info.name)}</div><div class="sub num">${qtyFmt(e.qty, e.h)} ${esc(info.symbol)} ${__('sold')}</div></div><div class="amt num">${pnlText(e.pnl)}</div></div>`; };
+  return [...days.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([d, es]) => { const open = state.ui.openDays.has(d);
+    return `<div class="day-group ${open ? 'open' : ''}" data-day="${d}"><div class="row day-row" data-act="toggle-day" data-id="${d}" tabindex="0" role="button" aria-expanded="${open}"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
+    <div><div class="title">${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long' }))}</div><div class="sub">${cnt(es.length)}</div></div>
+    <div class="amt num">${pnlText(es.reduce((a, e) => a + e.pnl, 0))}</div><span class="day-chev" aria-hidden="true">›</span></div>
+    <div class="day-body">${es.map(ent).join('')}</div></div>`; }).join('');
 }
 const pnlText = (v) => (v === 0 ? `<span class="pl">${money(0, cur())}</span>` : `<span class="pl ${v > 0 ? 'up' : 'down'}">${v > 0 ? '+' : '−'}${money(Math.abs(v), cur())}</span>`);
 /* the Realized profit & loss section of the Investment tab: the same component as "Investment growth month over month" (range, chart, month rows, See more),

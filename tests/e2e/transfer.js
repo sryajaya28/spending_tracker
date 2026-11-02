@@ -48,7 +48,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('#txn-list .row');
   const dayRows = await p.$$('#txn-list .day-row'); assert(dayRows.length >= 1); await dayRows[0].click(); await p.waitForSelector('#txn-list .day-group.open .day-body .row');
   assert((await txt()).includes('Transfer to Cash')); const before = await bal('Bank');
-  await p.click('#txn-list .day-group.open .day-body .row:has-text("Transfer to Cash")'); assert((await p.innerText('#dlg')).includes('Delete transfer')); assert((await p.innerText('#dlg')).includes('Fee'));
+  // a transfer is only fund movement: no Transfer tag and no +/- sign on its rows; the fee is spending and keeps its − sign and its tag
+  const tr = await p.$$eval('#txn-list .day-group.open .day-body .row', (rs) => rs.map((r) => ({ t: r.querySelector('.title').textContent, amt: r.querySelector('.amt').textContent.trim(), badges: [...r.querySelectorAll('.badge')].map((b) => b.textContent.trim()) })));
+  const moves = tr.filter((r) => /^Transfer (to|from) /.test(r.t)), feeRow = tr.find((r) => r.badges.includes('Transfer fee'));
+  assert(moves.length >= 1 && moves.every((r) => /^Transfer to /.test(r.t)), 'one record per transfer: the sender\'s: ' + JSON.stringify(tr)); assert(moves.every((r) => !r.badges.includes('Transfer') && !/^[+−-]/.test(r.amt) && !/Top up/i.test(r.t)), JSON.stringify(tr));   // the note typed with the transfer is not repeated in the list assert(feeRow && feeRow.amt.startsWith('−'), JSON.stringify(tr));
+  // the receiving leg is kept out of the lists, except when that account is the one being filtered
+  assert.deepEqual(await p.evaluate(() => { const inn = D().transactions.find((t) => t.transfer_id && t.flow === 'in'); const a = filteredTxns().some((t) => t.id === inn.id); state.ui.wallet = inn.wallet_id; const b = filteredTxns().some((t) => t.id === inn.id); state.ui.wallet = ''; return [a, b]; }), [false, true], 'receiving leg only under its own account filter');
+  await p.click('#txn-list .day-group.open .day-body .row:has-text("Transfer to Cash")'); assert((await p.innerText('#dlg')).includes('Delete transfer')); assert((await p.innerText('#dlg')).includes('Fee')); assert((await p.innerText('#dlg')).includes('Top up'), 'the note is shown in the transfer detail');
   await p.click('[data-act=delete-transfer]'); await settle(); l = await log();
   assert(l.some((o) => o.op === 'delete' && o.table === 'transactions' && o.where[0][1].length === 3), JSON.stringify(l.map((o) => o.op + o.table)));
   assert.equal(await bal('Bank'), before + 200000 + 6500); assert.equal(await bal('Cash'), 50000);

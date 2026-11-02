@@ -10,6 +10,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
   await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('#occasions-card'); await log();
+  // History is always on Budgets (left of + Add), also when nothing is past yet: it then says so
+  await p.evaluate(() => { location.hash = '#/budgets'; render(); }); assert.equal(await p.$$eval('.card-head:has(h2:text-is("Special occasions")) .tools > *', (e) => e.map((x) => x.textContent.trim()).join('|')), 'History|+ Add');
+  await p.click('[data-act=occasion-history]'); await p.waitForSelector('#dlg .empty'); assert((await p.innerText('#dlg')).includes('No past special occasions yet.')); await p.click('#dlg [data-act=close]');
+  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('#occasions-card');
   // 1. Settings: add an occasion with no budget
   await p.click('#occasions-card [data-act=add-occasion]'); await p.fill('#dlg input[name=name]', 'Wedding'); assert(!(await p.$eval('#dlg input[name=amount]', (e) => e.required)), 'budget is optional here');
   await p.click('#dlg button[type=submit]'); await settle();
@@ -68,7 +72,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.selectOption('select[data-bind=month]', 'all'); assert.equal(await p.evaluate(() => state.ui.allPeriods), true); assert.equal(await p.evaluate(() => state.ui.month), before, 'the period itself is unchanged');
   assert.equal(await p.$eval('select[data-bind=month]', (e) => e.value), 'all');
   assert.equal(await p.evaluate(() => filteredTxns().length === D().transactions.filter((t) => t.occurred_at <= todayIso()).length), true, 'all past transactions are listed');
+  // the list spans several periods: each one has its own heading, in order, and a single period has none
+  await p.evaluate(() => { D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 50000, currency: 'IDR', occurred_at: '2026-01-05', note: 'Earlier', category_source: 'user', ai_confidence: null }); state.ui.allPeriods = true; render(); });
+  const heads = await p.$$eval('#txn-list .period-head', (e) => e.map((x) => x.textContent.trim())); assert(heads.length >= 2 && new Set(heads).size === heads.length, JSON.stringify(heads));
+  assert.equal(await p.$$eval('#txn-list .day-tools', (e) => getComputedStyle(e[0]).justifyContent), 'flex-end', 'Expand all / Hide all stay on the right'); assert.equal(await p.$eval('#txn-list .day-tools .legend-btn', (e) => { const c = getComputedStyle(e); return c.paddingLeft === c.paddingRight && c.justifyContent === 'center'; }), true, 'the text is centred inside its pressed pill');
+  assert.equal(await p.evaluate(() => { const r = [...document.querySelectorAll('#txn-list > *')].map((e) => e.className.split(' ')[0]); return r.indexOf('period-head') < r.indexOf('day-group'); }), true, 'a heading comes before its days');
   await p.selectOption('select[data-bind=month]', before); assert.equal(await p.evaluate(() => state.ui.allPeriods), false, 'choosing a period leaves All periods');
+  await p.evaluate(() => { D().transactions = D().transactions.filter((t) => t.note !== 'Earlier'); render(); });
+  assert.equal(await p.$$eval('#txn-list .period-head', (e) => e.length), 0, 'one period: no headings');
   // 9. a new session starts on the current period, not on All periods
   await p.selectOption('select[data-bind=month]', 'all'); assert.equal(await p.evaluate(() => state.ui.allPeriods), true);
   await p.evaluate(() => { resetPeriodView(); render(); }); assert.equal(await p.evaluate(() => [state.ui.allPeriods, state.ui.month === currentPeriod()]).then((x) => x.join()), 'false,true', 'back on the current period');

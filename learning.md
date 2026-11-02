@@ -134,6 +134,9 @@ only worked after a detour. Keep each item short and say what to do instead.
   - Tests that type an emoji key by key can race a focus timer (select-on-focus): make timers check the state still matches, and type whole values with `fill` when the real input is a single event. A flaky test that fails at different lines is a race, not a typo: loop it (8x) before and after the fix.
   - Date-dependent fixtures keep biting: fixed dates (Nov 6-8) made tests fail once the date passed. Build occasion/trip dates relative to today.
   - CSS on phones can be a grid (`.brow.wrap` is 44px 1fr, tools on their own row): check the layout in a screenshot after adding a row type.
+  - A button that appears only when data exists looks "missing" to the owner (History hidden until a past occasion existed). Show entry points always and put the empty state in what they open.
+  - Read the owner's follow-up carefully before reworking: "center align these" turned out to mean the text inside the pressed pill, not the row (three messages to get there). When the wording is ambiguous and cheap to check, do the most literal reading and say which one, instead of changing the layout.
+  - A `:hover` background sticks after a tap on phones (already in this file): scope hover colours to `@media (hover: hover)` and give touch a short `:active` state.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

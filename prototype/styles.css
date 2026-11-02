@@ -169,7 +169,7 @@ dialog::backdrop { background: rgba(30, 27, 75, .45); backdrop-filter: blur(3px)
 .onboard .logo { padding: 0; }
 
 .legend-btn { display: inline-flex; align-items: center; gap: 10px; background: none; border: 0; color: var(--muted); padding: 4px 8px 4px 4px; border-radius: 12px; }
-.legend-btn:hover { background: var(--soft); color: var(--ink); }
+@media (hover: hover) { .legend-btn:hover { background: var(--soft); color: var(--ink); } }   /* no hover colour on touch screens: it stays on after a tap */
 .brow.indent { padding-left: 34px; }
 .brow.indent .tile { margin-left: 0; }
 
@@ -876,3 +876,12 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 #dlg .occ-hist .meta, #dlg .occ-hist .meta span { color: var(--ink); font-weight: 600; }
 #dlg .occ-hist small { display: block; margin-top: 2px; }
 #dlg .occ-hist .occ-amt { color: var(--ink); font-weight: 600; }
+
+/* heading for each period when the Transactions list spans several (All periods) */
+.period-head { display: flex; align-items: center; gap: 10px; margin: 18px 4px 8px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--brand); }
+.period-head::after { content: ""; flex: 1; height: 1.5px; border-radius: 2px; background: color-mix(in srgb, var(--brand) 25%, var(--line)); }
+.day-tools + .period-head, .list > .period-head:first-child { margin-top: 10px; }
+
+/* Expand all / Hide all / Reset filters: they stay on the right; the pressed highlight is a pill with the text in its middle */
+.day-tools .legend-btn { padding: 5px 12px; justify-content: center; border-radius: 99px; }
+.day-tools .legend-btn:active { background: var(--soft); color: var(--ink); }

@@ -60,6 +60,12 @@ const periodShort = (k) => {
   const f = (iso) => new Date(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)).toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
   return `${f(periodStart(k))}–${f(periodEnd(k))}`;
 };
+/* a period's full heading with the year(s): "November 2026", or "Oct 25 – Nov 24, 2026" when periods do not start on the 1st */
+const periodHeading = (k) => {
+  if (periodDay() === 1) return monthLabel(k);
+  const a = periodStart(k), b = periodEnd(k), f = (iso, y) => new Date(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)).toLocaleDateString(locale(), y ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' });
+  return a.slice(0, 4) === b.slice(0, 4) ? `${f(a)} – ${f(b, true)}` : `${f(a, true)} – ${f(b, true)}`;
+};
 const periodName = (k) => (periodDay() === 1 ? new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'long' }) : monthLabel(k));
 const lastMonths = (n) => { const c = currentPeriod(), t = new Date(+c.slice(0, 4), +c.slice(5, 7) - 1, 1); return Array.from({ length: n }, (_, i) => monthKey(new Date(t.getFullYear(), t.getMonth() - (n - 1 - i), 1))); };
 
@@ -919,7 +925,7 @@ function viewOverview() {
   const global = bs.find((b) => b.category_id === null);
   const tiles = global ? [global] : [];   // Overview shows only the overall budget; the Budgets page has the rest
   const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
-  const recent = D().transactions.filter((t) => t.occurred_at <= todayIso()).slice(0, 6);   // upcoming entries are not listed here either
+  const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}
   <div class="grid">
     <section class="card hero"><div class="label">${__('Total Balance')}${infoTip('ov-total', __('Savings + investments'))}</div>
@@ -941,15 +947,20 @@ function viewOverview() {
   </div>`;
 }
 
+/* a transfer leg is stored as "Transfer to Gopay · top up" (the note after the dot is what the user typed): lists show only the first part */
+/* a transfer between your own accounts is listed once, as the sender's record; the receiving leg only shows when that account is the one being filtered */
+const hiddenLeg = (t, wallet = state.ui.wallet) => t.type === 'transfer' && !!t.transfer_id && t.flow === 'in' && wallet !== t.wallet_id;
+const transferTitle = (t) => String(t.note || '').split(' · ')[0];
+const transferNote = (t) => String(t.note || '').split(' · ').slice(1).join(' · ');
 function txnRow(t, loanView) {
   if (t.type === 'loan_payment') return `<div class="row"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
     return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
-    <div><div class="title">${esc(t.note)}<span class="badge">${xfer ? __('Transfer') : __('Investment')}</span></div>
+    <div><div class="title">${esc(xfer ? transferTitle(t) : t.note)}${xfer ? '' : '<span class="badge">' + __('Investment') + '</span>'}</div>
     <div class="sub">${__('Transfer')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
-    <div class="amt-col"><div class="amt num">${t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+    <div class="amt-col"><div class="amt num">${xfer ? '' : t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   }
   const c = catOf(t.category_id), sign = loanView || t.type === 'income' ? '+' : '−';   // on a loan, what was charged raises it (+) and a payment lowers it (−)
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
@@ -959,7 +970,7 @@ function txnRow(t, loanView) {
 }
 function filteredTxns(upcoming = false) {
   const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
-  return D().transactions.filter((t) => (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
+  return D().transactions.filter((t) => !hiddenLeg(t) && (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
     && (occ || state.ui.allPeriods || inPeriod(t.occurred_at, state.ui.month))
     && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2)) || (wallet.startsWith('l:') && t.loan_id === wallet.slice(2))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
@@ -992,7 +1003,10 @@ function txnListHtml() {
     <div class="amt num">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div><span class="day-chev" aria-hidden="true">›</span></div>
     <div class="day-body">${l.map((t) => txnRow(t, loanView)).join('')}</div></div>`;
   };
-  return `<div class="day-tools ${reset ? 'has-reset' : ''}">${reset}<span class="day-tools-r"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></span></div>${keys.map(group).join('')}${upBtn}`;
+  // when the list spans several periods (All periods, or an occasion across months) each period gets its own heading
+  const multi = new Set(keys.map(periodKeyOf)).size > 1; let lastP = '';
+  const head = (d) => { if (!multi) return ''; const k = periodKeyOf(d); if (k === lastP) return ''; lastP = k; return `<div class="period-head" role="heading" aria-level="3"><span>${esc(periodHeading(k))}</span></div>`; };
+  return `<div class="day-tools ${reset ? 'has-reset' : ''}">${reset}<span class="day-tools-r"><button type="button" class="legend-btn" data-act="days-all">${__('Expand all')}</button><span class="muted">·</span><button type="button" class="legend-btn" data-act="days-none">${__('Hide all')}</button></span></div>${keys.map((d) => head(d) + group(d)).join('')}${upBtn}`;
 }
 /* the future-dated entries of the period (same filters), soonest first; tap one to edit it */
 function upcomingDialog() {
@@ -1002,10 +1016,10 @@ function upcomingDialog() {
   <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
 // the detail page for one day: every transaction on it
-const dayTxns = (d) => { const ql = (state.ui.dayQ || '').trim().toLowerCase(); return D().transactions.filter((t) => t.occurred_at === d && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql))); };
+const dayTxns = (d) => { const ql = (state.ui.dayQ || '').trim().toLowerCase(); return D().transactions.filter((t) => t.occurred_at === d && !hiddenLeg(t, '') && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql))); };
 const dayListHtml = (d) => { const l = dayTxns(d); return l.length ? l.map((t) => txnRow(t)).join('') : '<div class="empty">' + __(state.ui.dayQ ? 'No transactions match.' : 'No transactions on this day.') + '</div>'; };
 function viewDay(d) {
-  const l = D().transactions.filter((t) => t.occurred_at === d), inc = sumBy(l, 'income'), exp = sumBy(l, 'expense');
+  const l = D().transactions.filter((t) => t.occurred_at === d && !hiddenLeg(t, '')), inc = sumBy(l, 'income'), exp = sumBy(l, 'expense');
   return `${topbar('Transactions', countLabel(l.length) + ' · ' + __('Income') + ' ' + money(inc, cur()) + ' · ' + __('Spent') + ' ' + money(exp, cur()))}
   <section class="card"><div class="card-head"><div><a class="back-link" href="#/transactions">← ${__('Back to Transactions')}</a><h2>${esc(dayTitle(d))}</h2></div><div class="tools"><button class="btn" data-act="add-txn" data-date="${d}">${__('+ Add')}</button></div></div>
     <div class="txn-top"><input data-filter="dayq" placeholder="${__('Search')}" value="${esc(state.ui.dayQ || '')}" aria-label="${__('Search note or category')}"></div>
@@ -1035,7 +1049,7 @@ function viewBudgets() {
       : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>
   <section class="card"><div class="card-head"><h2>${__('By category')}</h2><button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button></div>
     ${rest.length ? rest.map((b) => `<div class="brow tap-row" data-act="cat-txns" data-cat="${b.category_id}" tabindex="0" role="link" aria-label="${esc(__('See {name} transactions', { name: b.name }))}">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
-  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><div class="tools">${occasionStatus().some(occasionIsPast) ? `<button class="chip" data-act="occasion-history">${__('History')}</button>` : ''}<button class="btn" data-act="add-occasion-budget">${__('+ Add')}</button></div></div>
+  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><div class="tools"><button class="chip" data-act="occasion-history">${__('History')}</button><button class="btn" data-act="add-occasion-budget">${__('+ Add')}</button></div></div>
     ${(() => { const live = occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, state.ui.month)); return live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>'); })()}</section></div>`;
 }
 /* an occasion is history once it is archived or its end (or its only) date has passed; undated ones are not */
@@ -1400,6 +1414,7 @@ function transferDetail(gid) {
   open(`<h2>${__('Transfer')}</h2>
     ${row('From', esc(walletOf(out?.wallet_id)?.name || '—'))}${row('To', esc(walletOf(inn?.wallet_id)?.name || '—'))}
     ${out ? row('Sent', money(out.amount_minor, out.currency)) : ''}${inn ? row('Received', money(inn.amount_minor, inn.currency)) : ''}${fee ? row('Fee', money(fee.amount_minor, fee.currency)) : ''}
+    ${(out && transferNote(out)) ? row('Note', esc(transferNote(out))) : ''}
     ${row('Date', esc(new Date((out || inn || fee).occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })))}
     <p class="hint">${__('Deleting removes the transfer and its fee, and both account balances go back to what they were.')}</p>
     <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">${__('Delete transfer')}</button><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);

@@ -29,6 +29,7 @@ const SCREENS = [
   ['overview', 'page', PAGE('#/overview')],
   ['transactions', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' });`)],
   ['transactions-expanded', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' });`) + ` setTimeout(() => document.querySelector('[data-act=days-all]')?.click(), 0);`],
+  ['transactions-all-periods', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '', allPeriods: true });`) + ` setTimeout(() => document.querySelector('[data-act=days-all]')?.click(), 0);`],
   ['transactions-filtered', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', occ: '', wallet: '', cat: D().categories.find((c) => c.name === 'Dining').id });`)],
   ['transactions-loan-account', 'page', PAGE('#/transactions', `const l = D().loans.find((x) => x.name === 'Credit card'); Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: 'l:' + l.id, month: periodKeyOf(l.payments.filter((p) => p.date <= todayIso()).map((p) => p.date).sort().pop()) });`) + ` setTimeout(() => document.querySelector('[data-act=days-all]')?.click(), 0);`],
   ['budgets', 'page', PAGE('#/budgets', `state.ui.month = currentPeriod();`)],

@@ -63,7 +63,7 @@ const assert = require('assert');
   l = await log(); assert(l.length === 1 && l[0].op === 'upsert' && l[0].table === 'budgets' && l[0].rows[0].amount_minor === 3500000, JSON.stringify(l.map((o) => o.op + o.table)));
 
   // special occasion: create, tag an expense, see progress, view its expenses, delete
-  await page.click('[data-act=add-occasion]'); await page.fill('input[name=name]', 'Bali Trip'); await page.fill('input[name=amount]', '10000000');
+  await page.click('[data-act=add-occasion-budget]'); await page.fill('input[name=name]', 'Bali Trip'); await page.fill('input[name=amount]', '10000000');
   await page.fill('input[name=start]', '2026-10-01'); await page.click('#dlg button[type=submit]'); await settle();
   l = await log(); assert(l.some((o) => o.table === 'occasions' && o.rows[0].name === 'Bali Trip' && o.rows[0].amount_minor === 10000000 && o.rows[0].start_date === '2026-10-01'));
   assert((await text()).includes('Bali Trip'));

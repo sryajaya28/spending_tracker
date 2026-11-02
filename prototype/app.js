@@ -292,8 +292,8 @@ const occasionInMonth = (o, k) => !o.start || (o.start <= periodEnd(k) && (o.end
 function occasionStatus() {
   return D().occasions.map((o) => {
     const txns = D().transactions.filter((t) => t.occasion_id === o.id && t.type === 'expense' && t.occurred_at <= todayIso());
-    const budget = convert(o.amount_minor, o.currency, cur()), spent = txns.reduce((a, t) => a + amt(t), 0), pct = (spent * 100) / budget;
-    return { ...o, count: txns.length, budget, spent, remaining: budget - spent, pct, status: spent > budget ? 'exceeded' : pct >= 80 ? 'warning' : 'ok' };
+    const hasBudget = o.amount_minor > 0, budget = hasBudget ? convert(o.amount_minor, o.currency, cur()) : 0, spent = txns.reduce((a, t) => a + amt(t), 0), pct = hasBudget ? (spent * 100) / budget : 0;
+    return { ...o, hasBudget, count: txns.length, budget, spent, remaining: budget - spent, pct, status: hasBudget && spent > budget ? 'exceeded' : pct >= 80 ? 'warning' : 'ok' };   // an occasion may have no budget: it only groups expenses
   });
 }
 const catOf = (id) => D().categories.find((c) => c.id === id);
@@ -1029,8 +1029,8 @@ function viewBudgets() {
       : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>
   <section class="card"><div class="card-head"><h2>${__('By category')}</h2><button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button></div>
     ${rest.length ? rest.map((b) => `<div class="brow tap-row" data-act="cat-txns" data-cat="${b.category_id}" tabindex="0" role="link" aria-label="${esc(__('See {name} transactions', { name: b.name }))}">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
-  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Add')}</button></div>
-    ${(() => { const all = occasionStatus(), live = all.filter((o) => !o.archived && occasionInMonth(o, state.ui.month)), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
+  <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion-budget">${__('+ Add')}</button></div>
+    ${(() => { const all = occasionStatus().filter((o) => o.hasBudget), live = all.filter((o) => !o.archived && occasionInMonth(o, state.ui.month)), past = all.filter((o) => o.archived); return (live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>')) + (past.length ? `<h3 class="muted" style="margin:16px 0 6px;font-size:13px">${__('Past occasions')}</h3>${past.map(occasionRow).join('')}` : ''); })()}</section></div>`;
 }
 const occasionRow = (o) => {
   const dates = [o.start, o.end].filter(Boolean).map((d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })).join(' – ');
@@ -1063,6 +1063,7 @@ function viewSettings() {
   return `${topbar('Settings', 'Profile, currency and privacy')}
   <div class="stack">
   ${categoriesCard()}
+  ${occasionsCard()}
   ${recurringCard()}
   <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
     <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
@@ -1462,15 +1463,41 @@ function budgetDialog(b, preset) {
     <p class="hint">${__('Applies from {month} onward until you set a new amount.', { month: esc(monthLabel(state.ui.month)) })}</p>
     <div class="actions">${b ? `<button type="button" class="btn danger" data-act="delete-budget" data-id="${b.id}">${__('Delete')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
-function occasionDialog(o) {
-  open(`<h2>${o ? __('Edit special occasion') : __('New special occasion')}</h2><form data-form="occasion" data-id="${o?.id || ''}" style="display:contents">
-    <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}"></label>
-    <div class="two">${o ? '' : `<label class="field">${__('Currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
-      <label class="field">${o ? __('Budget ({cur})', { cur: esc(o.currency) }) : __('Budget')}<input name="amount" type="number" min="1" step="any" required value="${o ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
-    <div class="two"><label class="field">${__('Starts (optional)')}<input name="start" type="date" value="${esc(o?.start || '')}"></label>
+/* a special occasion groups expenses (a trip, a birthday dinner). The budget is optional: leave it empty to only tag spending.
+   From Budgets (fromBudget) the user adds a budget to a pre-added occasion (picked from a list) or to a new one. */
+function occasionDialog(o, fromBudget) {
+  const cands = fromBudget && !o ? D().occasions.filter((x) => !x.archived && !(x.amount_minor > 0)) : [];
+  const title = o ? __('Edit special occasion') : fromBudget ? __('Add occasion budget') : __('New special occasion');
+  const pick = cands.length ? `<label class="field">${__('Occasion')}<select name="pick" data-occ-pick>${cands.map((x) => `<option value="${x.id}" data-ccy="${x.currency}">🎉 ${esc(x.name)}</option>`).join('')}<option value="__new" data-ccy="">${__('+ New occasion')}</option></select></label>` : '';
+  open(`<h2>${title}</h2><form data-form="occasion" data-id="${o?.id || ''}" data-from-budget="${fromBudget ? 1 : ''}" style="display:contents">
+    ${pick}
+    <div class="occ-new"><label class="field">${__('Name')}<input name="name" maxlength="40" value="${esc(o?.name || '')}" placeholder="${__('e.g. Bali Trip, Birthday Dinner')}"></label></div>
+    <div class="two">${o ? '' : `<label class="field occ-new">${__('Currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option ${c === cur() ? 'selected' : ''}>${c}</option>`).join('')}</select></label>`}
+      <label class="field"><span data-occ-amt>${o ? __('Budget ({cur})', { cur: esc(o.currency) }) + (fromBudget ? '' : ' · ' + __('optional')) : fromBudget ? __('Budget') : __('Budget (optional)')}</span><input name="amount" type="number" min="1" step="any" ${fromBudget ? 'required' : ''} value="${o && o.amount_minor > 0 ? toMajor(o.amount_minor, o.currency) : ''}"></label></div>
+    <div class="two occ-new"><label class="field">${__('Starts (optional)')}<input name="start" type="date" value="${esc(o?.start || '')}"></label>
       <label class="field">${__('Ends (optional)')}<input name="end" type="date" value="${esc(o?.end || '')}"></label></div>
-    <p class="hint">${__('Expenses you tag to this occasion still count in your monthly budgets. This budget is an extra view of what the occasion costs.')}</p>
+    <p class="hint">${o || !fromBudget ? __('Without a budget the occasion only groups the expenses you tag to it. Expenses tagged to it still count in your monthly budgets.') : __('Expenses you tag to this occasion still count in your monthly budgets. This budget is an extra view of what the occasion costs.')}</p>
     <div class="actions">${o ? `<button type="button" class="btn danger" data-act="delete-occasion" data-id="${o.id}">${__('Delete')}</button><button type="button" class="btn secondary" data-act="archive-occasion" data-id="${o.id}">${o.archived ? __('Reopen') : __('Archive')}</button>` : ''}<button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
+  const f = $('#dlg form'); if (f) syncOccPick(f);
+}
+/* when an existing occasion is picked its name, dates and currency are fixed: only the budget is asked */
+function syncOccPick(form) {
+  const sel = form.elements.pick; if (!sel) return;
+  const isNew = sel.value === '__new', ccy = sel.selectedOptions[0]?.dataset.ccy || '';
+  $$('.occ-new', form).forEach((e) => { e.hidden = !isNew; });
+  const lab = $('[data-occ-amt]', form); if (lab) lab.textContent = isNew ? __('Budget') : __('Budget ({cur})', { cur: ccy });
+}
+/* Settings > Special occasions: every occasion, with or without a budget (the ones with a budget also show on Budgets) */
+function occasionsCard() {
+  const fmt = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' });
+  const list = occasionStatus().sort((a, b) => (+!!a.archived - +!!b.archived) || (b.start || '').localeCompare(a.start || '') || a.name.localeCompare(b.name));
+  const row = (o) => {
+    const dates = [o.start, o.end].filter(Boolean).map(fmt).join(' – '), bits = [dates, o.hasBudget ? __('Budget {amount}', { amount: money(o.amount_minor, o.currency) }) : __('No budget'), countLabel(o.count)].filter(Boolean);
+    return `<div class="brow cat-row"><span class="tile" style="--c:#EC4899">🎉</span><div class="cat-main"><b class="cat-name">${esc(o.name)}${o.archived ? ' <span class="badge">' + __('Archived') + '</span>' : ''}</b><small class="muted">${esc(bits.join(' · '))}</small></div>
+      <div class="tools"><button class="btn secondary" data-act="edit-occasion" data-id="${o.id}">${__('Edit')}</button></div></div>`;
+  };
+  return `<section class="card" id="occasions-card"><div class="card-head"><h2>${__('Special occasions')}</h2><button class="btn" data-act="add-occasion">${__('+ Add')}</button></div>
+    ${list.length ? list.map(row).join('') : ('<div class="empty">' + __('No special occasions yet. Add one (a trip, a birthday dinner) to tag expenses to it, with or without a budget.') + '</div>')}</section>`;
 }
 const SWATCHES = ['#4A44C6', '#8B8FF0', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#EF4444', '#0EA5E9', '#22C55E', '#94A3B8'];
 function catDialog(c, parentId) {
@@ -1953,6 +1980,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'pick-icon') { const f = el.closest('form')?.elements[el.dataset.for]; if (f) { f.value = el.dataset.e; f.dispatchEvent(new Event('input', { bubbles: true })); } }
   else if (act === 'add-wallet') walletDialog();
   else if (act === 'add-occasion') occasionDialog();
+  else if (act === 'add-occasion-budget') occasionDialog(null, true);
   else if (act === 'add-occasion-txn') txnDialog(null, 'expense', occasionOf(id));
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
@@ -2125,6 +2153,7 @@ async function pickAsset(a, form, quiet) {
   catch { $('#picked-price').textContent = __('price unavailable'); fb.hidden = false; }
 }
 
+document.addEventListener('change', (e) => { if (e.target.matches && e.target.matches('select[data-occ-pick]')) syncOccPick(e.target.form); });
 document.addEventListener('input', (e) => {
   if (e.target.form?.dataset.form === 'trade' && ['quantity', 'amount', 'price'].includes(e.target.name)) { syncTradePrice(e.target.form, e.target.name); tradeHint(e.target.form); }
   if (e.target.name === 'assetq') runAssetSearch();
@@ -2223,10 +2252,13 @@ document.addEventListener('submit', async (e) => {
     save(); close(); render(); toast(__('Moved {amount} from {from} to {to}', { amount: money(amount, A.currency), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.currency) }) : '')); return;
   }
   if (kind === 'occasion') {
-    const existing = f.dataset.id && occasionOf(f.dataset.id), c = existing ? existing.currency : v.currency, minor = toMinor(parseFloat(v.amount), c), name = v.name.trim();
-    if (!name || !(minor > 0)) { toast('Enter a name and a budget above zero'); return; }
-    if (v.start && v.end && v.end < v.start) { toast('The end date is before the start date'); return; }
-    const fields = { name, amount_minor: minor, start: v.start || '', end: v.end || '' };
+    const picked = !f.dataset.id && v.pick && v.pick !== '__new' ? occasionOf(v.pick) : null, existing = (f.dataset.id && occasionOf(f.dataset.id)) || picked, c = existing ? existing.currency : v.currency;
+    const raw = String(v.amount || '').trim(), minor = raw === '' ? null : toMinor(parseFloat(raw), c), name = picked ? picked.name : (v.name || '').trim();
+    if (!name) { toast('Enter a name'); return; }
+    if (raw !== '' && !(minor > 0)) { toast('The budget must be above zero'); return; }
+    if (f.dataset.fromBudget && minor === null) { toast('Enter a budget above zero'); return; }
+    if (!picked && v.start && v.end && v.end < v.start) { toast('The end date is before the start date'); return; }
+    const fields = picked ? { amount_minor: minor } : { name, amount_minor: minor, start: v.start || '', end: v.end || '' };   // no budget = null: the occasion only groups expenses
     if (existing) Object.assign(existing, fields); else D().occasions.push({ id: uid(), currency: c, archived: false, ...fields });
     save(); close(); render(); toast('Occasion saved'); return;
   }

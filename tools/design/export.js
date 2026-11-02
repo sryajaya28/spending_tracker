@@ -50,6 +50,7 @@ const SCREENS = [
   ['dialog-average-price', 'dialog', `costDialog(D().holdings.find((h) => h.symbol === 'NVDA'));`],
   ['dialog-budget', 'dialog', `budgetDialog();`],
   ['dialog-occasion', 'dialog', `occasionDialog();`],
+  ['dialog-occasion-budget', 'dialog', `D().occasions.push({ id: uid(), name: 'Wedding', amount_minor: null, currency: cur(), start: '', end: '', archived: false }); occasionDialog(null, true);`],
   ['dialog-account', 'dialog', `walletDialog();`],
   ['dialog-category', 'dialog', `catDialog();`],
   ['dialog-loan-payment', 'dialog', `paymentDialog(D().loans[0], 'loan');`],
@@ -138,6 +139,7 @@ const COMPONENTS = [
   { group: 'rows', name: 'transaction', setup: PAGE('#/overview'), sel: '.list .row[data-act=edit-txn]' },
   { group: 'rows', name: 'day', setup: TX, sel: '.day-group' },
   { group: 'rows', name: 'holding', setup: PAGE('#/portfolio', `state.ui.pfTab = 'investment';`), sel: '.holding-row' },
+  { group: 'rows', name: 'occasion-settings', setup: PAGE('#/settings'), sel: '#occasions-card .brow' },
   { group: 'rows', name: 'budget', setup: PAGE('#/budgets'), sel: '.brow' },
 ];
 

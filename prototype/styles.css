@@ -860,3 +860,7 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 
 /* legend under the Spending donut: same colours as the arcs, centred, wraps */
 .donut-legend { justify-content: center; margin-top: 14px; }
+
+/* occasion dialog: name, currency and dates are hidden while an existing occasion is picked (only its budget is asked) */
+.occ-new[hidden] { display: none !important; }
+.two:has(> :only-child) { grid-template-columns: 1fr; }

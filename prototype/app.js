@@ -1702,7 +1702,7 @@ function transferDetail(gid) {
 /* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
    linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
 /* the profit or loss of a sale paid into an investment account's own cash (no bank account): no wallet, tied to the sale */
-const isSaleRecord = (t) => !!t && !t.wallet_id && !!t.trade_id && t.id === detId('pnl', t.trade_id);
+const isSaleRecord = (t) => !!t && !t.wallet_id && !!t.trade_id && (t.id === detId('pnl', t.trade_id) || t.id === detId('fee', t.trade_id));
 const coinOf = (t) => (t && !t.wallet_id && t.trade_id && !isSaleRecord(t) ? D().holdings.find((h) => h.trades.some((x) => x.id === t.trade_id)) : null);
 const txnWhere = (t) => { const w = walletOf(t.wallet_id); if (w) return w.name; if (t.loan_id) return D().loans.find((l) => l.id === t.loan_id)?.name || '';  if (isSaleRecord(t)) { const sh = D().holdings.find((x) => x.trades.some((y) => y.id === t.trade_id)); return sh ? accountName(sh.account_id) : ''; }
   const h = coinOf(t); return h ? coinLabel(h) : ''; };
@@ -1945,7 +1945,7 @@ function syncSellForm(form, rebuild) {
   if (rebuild) { const keep = form.fund.value; form.fund.innerHTML = sourceOptions('sell', h, keep); }
   const src = parseSource(form.fund.value), label = $('[data-fund-amt]', form);
   label.textContent = src ? __('Amount received ({unit})', { unit: sourceUnit(src) }) : __('Amount received');
-  syncFeeBox(form, src, false);
+  syncFeeBox(form, src, false, true);
 }
 function holdingDialog(h, accId, opts = {}) {
   if (!h) state.ui.pickType = opts.pickType || '';   // the asset picker starts on All (or Cash balance from the + Cash button)
@@ -1995,10 +1995,11 @@ function syncPickType(form) {
   else if (form.asset.value.startsWith('CASH:')) { form.asset.value = ''; form.assetmeta.value = ''; $('#picked').hidden = true; }
 }
 /* a fee is asked only when the other side is a normal account (it is charged to that account, in its currency); not for cash deposits */
-function syncFeeBox(form, src, isCash) {
+/* a purchase paid from a bank account, or a sale of an asset (received in the investment account itself), can carry the broker's fee */
+function syncFeeBox(form, src, isCash, sell) {
   const box = $('[data-fee-box]', form); if (!box) return;
-  const on = !!src && src.kind === 'wallet' && !isCash; box.hidden = !on;
-  if (on) $('[data-fee-label]', box).textContent = __('Fee, optional ({cur})', { cur: src.wallet.currency }); else form.fee.value = '';
+  const on = !!src && !isCash && (src.kind === 'wallet' || !!sell); box.hidden = !on;
+  if (on) $('[data-fee-label]', box).textContent = __('Fee, optional ({cur})', { cur: sourceUnit(src) }); else form.fee.value = '';
 }
 /* the amount's unit follows the payment source: a wallet's currency, or coins for a stablecoin */
 function syncFund(form) {
@@ -2132,6 +2133,14 @@ function addSaleRecord(h, tradeId) {
   D().transactions.push({ id: detId('pnl', tradeId), wallet_id: null, trade_id: tradeId, category_id: pnlCategory(pnl > 0).id, type: pnl > 0 ? 'income' : 'expense', amount_minor: Math.abs(pnl), currency: hc.ccy, occurred_at: tr.date, note: `${assetInfo(h.symbol).symbol} ${pnl > 0 ? __('profit') : __('loss')}`, category_source: 'user', ai_confidence: null });
   return true;
 }
+/* the broker's fee on a sale received in the account's own cash or coin: taken out of that cash (its own event, so the balance is right) and an expense in Fee, no wallet */
+function addSaleFee(s, fee, date, note, mirror) {
+  const info = assetInfo(s.symbol), ccy = info.type === 'cash' ? info.cash : 'USD', minor = toMinor(fee, ccy), tid = detId('feetrade', mirror);
+  if (!(minor > 0)) return;
+  s.quantity = r12(s.quantity - fee);
+  s.trades.push({ id: tid, date, side: 'sell', kind: 'expense', quantity: fee, amount_minor: minor, currency: ccy, wallet_id: null });
+  D().transactions.push({ id: detId('fee', tid), wallet_id: null, trade_id: tid, category_id: feeCategory().id, type: 'expense', amount_minor: minor, currency: ccy, occurred_at: date, note, category_source: 'user', ai_confidence: null });
+}
 /* sales made before this existed: add the missing record for each */
 function backfillSaleRecords() {
   let n = 0; D().holdings.forEach((h) => { h.trades.forEach((tr) => { if (tr.side === 'sell' && tr.via && tr.date <= todayIso() && addSaleRecord(h, tr.id)) n++; }); });
@@ -2169,16 +2178,19 @@ function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
   addTrade(h, { id, date, side, quantity, via: { holding_id: s.id, symbol: ssym, quantity: amount, pair: mirror }, ...px });
   addTrade(s, { id: mirror, date, side: side === 'buy' ? 'sell' : 'buy', quantity: amount, via: { holding_id: h.id, symbol: sym, quantity, pair: id } });
   addSaleRecord(h, id);
+  if (side === 'sell' && fee > 0) addSaleFee(s, fee, date, `${__('Investment fee')} (${word} ${qtyFmt(quantity)} ${sym})`, mirror);
 }
 
 /* undo a trade (and its paired trade, or the wallet transfer) */
 function removeTrade(h, tr) {
   const other = tr.via ? D().holdings.find((x) => x.id === tr.via.holding_id) : null, ot = other?.trades.find((x) => x.id === tr.via.pair);
-  const back = h.quantity - tradeSign(tr) * tr.quantity, oback = ot ? other.quantity - tradeSign(ot) * ot.quantity : 0;
+  // a broker fee taken from the cash of this sale goes back with it
+  const feeIds = [tr.id, ot?.id].filter(Boolean).map((x) => detId('feetrade', x)), feeOf = (hh) => (hh ? hh.trades.filter((x) => feeIds.includes(x.id)).reduce((a, x) => a + x.quantity, 0) : 0);
+  const back = h.quantity + feeOf(h) - tradeSign(tr) * tr.quantity, oback = ot ? other.quantity + feeOf(other) - tradeSign(ot) * ot.quantity : 0;
   if (back < -1e-12 || oback < -1e-12) return false;
-  h.quantity = r12(Math.max(0, back)); h.trades = h.trades.filter((x) => x.id !== tr.id);
-  if (ot) { other.quantity = r12(Math.max(0, oback)); other.trades = other.trades.filter((x) => x.id !== ot.id); }
-  D().transactions = D().transactions.filter((t) => t.trade_id !== tr.id && t.trade_id !== ot?.id && t.id !== detId('pnl', tr.id) && !(ot && t.id === detId('pnl', ot.id)));   // the wallet gets its money back (and the profit or loss record goes)
+  h.quantity = r12(Math.max(0, back)); h.trades = h.trades.filter((x) => x.id !== tr.id && !feeIds.includes(x.id));
+  if (ot) { other.quantity = r12(Math.max(0, oback)); other.trades = other.trades.filter((x) => x.id !== ot.id && !feeIds.includes(x.id)); }
+  D().transactions = D().transactions.filter((t) => t.trade_id !== tr.id && t.trade_id !== ot?.id && !feeIds.includes(t.trade_id) && t.id !== detId('pnl', tr.id) && !(ot && t.id === detId('pnl', ot.id)));   // the wallet gets its money back (and the profit or loss record goes)
   return true;
 }
 
@@ -2224,7 +2236,7 @@ function syncTradeForm(form, rebuild) {
   $('[data-trade-wallet]', form).textContent = buy ? __('Pay with') : __('Receive into');
   $('[data-trade-amt]', form).textContent = `${buy ? __('Amount paid') : __('Amount received')} (${src ? sourceUnit(src) : ''})`;
   const pu = $('[data-price-unit]', form); if (pu) pu.textContent = __('Price per unit ({ccy})', { ccy: srcCcy(src) });
-  syncFeeBox(form, src, assetInfo(h.symbol).cash);
+  syncFeeBox(form, src, assetInfo(h.symbol).cash, !buy);
   syncTradePrice(form, 'source');
   tradeHint(form);
 }
@@ -2860,7 +2872,8 @@ document.addEventListener('submit', async (e) => {
     const qty = parseFloat(v.quantity), amount = parseAmount(src, v.amount);
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
     if (side === 'sell' && qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h), h), symbol: info.symbol })); return; }
-    const fee = src.kind === 'wallet' && v.fee ? toMinor(parseFloat(v.fee), src.wallet.currency) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    const fee = v.fee ? (src.kind === 'wallet' ? toMinor(parseFloat(v.fee), src.wallet.currency) : side === 'sell' && !info.cash ? parseFloat(v.fee) : 0) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    if (side === 'sell' && src.kind !== 'wallet' && fee > amount) { toast(__('The fee is more than the amount received')); return; }
     const short = payShortfall(src, side, amount + (side === 'buy' ? fee : 0)); if (short) { toast(short); return; }   // a buy needs the fee on top of the amount
     recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price), fee });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty, h)} ${info.symbol}`); return;
@@ -2871,7 +2884,8 @@ document.addEventListener('submit', async (e) => {
     const qty = parseFloat(v.quantity), amount = src ? parseAmount(src, v.fundamount) : 0;
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
     if (qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h), h), symbol: assetInfo(h.symbol).symbol })); return; }
-    const fee = src.kind === 'wallet' && v.fee ? toMinor(parseFloat(v.fee), src.wallet.currency) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    const fee = v.fee ? (src.kind === 'wallet' ? toMinor(parseFloat(v.fee), src.wallet.currency) : parseFloat(v.fee)) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    if (src.kind !== 'wallet' && fee > amount) { toast(__('The fee is more than the amount received')); return; }
     recordTrade(h, { side: 'sell', quantity: qty, source: src, amount, date: v.date, fee });
     state.ui.pfTab = 'investment'; rememberAcct('investsell', v.fund);
     save(); close(); render(); toast(`${__('Sold')} ${qtyFmt(qty, h)} ${assetInfo(h.symbol).symbol}`); return;

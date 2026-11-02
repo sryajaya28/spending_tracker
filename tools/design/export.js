@@ -97,7 +97,8 @@ const COMPONENTS = [
   { group: 'text', name: 'badges', setup: `location.hash = '#/overview'; render(); const b = document.createElement('section'); b.className = 'card'; b.id = 'badge-specimen'; b.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap'; b.innerHTML = '<span class="badge ok">On track</span><span class="badge warning">Almost there</span><span class="badge exceeded">Over budget</span><span class="badge">Upcoming</span><span class="badge ai">AI</span><span class="badge">Personal loan</span>'; setTimeout(() => document.querySelector('.grid').prepend(b), 150);`, sel: '#badge-specimen' },
   // banners and notices
   { group: 'banners', name: 'sample-data', setup: PAGE('#/overview'), sel: '.demo-bar' },
-  { group: 'banners', name: 'sample-promo', setup: PAGE('#/overview'), sel: '.sample-promo', demo: false },
+  // the small banner is for an account that has started (a transaction) but has no money yet; a brand-new one gets the first-run screen instead
+  { group: 'banners', name: 'sample-promo', setup: `D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 100, currency: D().wallets[0].currency, note: 'x', occurred_at: todayIso(), category_source: 'user', ai_confidence: null });` + PAGE('#/overview'), sel: '.sample-promo', demo: false },
   { group: 'banners', name: 'hint', setup: `paymentDialog(D().loans[0], 'loan');`, sel: '#dlg .hint' },
   // graphs
   { group: 'graphs', name: 'money-flow-line', setup: PAGE('#/overview'), sel: '#flow' },

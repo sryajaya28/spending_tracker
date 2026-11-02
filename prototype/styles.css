@@ -943,3 +943,6 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor: pointer; }
 
 .field input[name=fundamount]:disabled { opacity: .5; cursor: not-allowed; }
+
+/* the circular-arrows icon on transfer rows */
+.tile svg { width: 20px; height: 20px; color: var(--c); stroke-width: 2; }

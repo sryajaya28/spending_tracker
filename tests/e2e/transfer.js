@@ -54,6 +54,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // one record per transfer (the sender's), only the amount (no tag, no sign), and the note typed with it is not repeated in the list
   assert(moves.length >= 1 && moves.every((r) => /^Transfer to /.test(r.t)), JSON.stringify(tr));
   assert(moves.every((r) => r.badges.length === 0 && !/^[+−-]/.test(r.amt) && !/Top up/i.test(r.t)), JSON.stringify(tr));
+  // transfer rows carry the circular-arrows icon (an inline SVG), the fee row its 💸 category icon
+  assert.equal(await p.$$eval('#txn-list .day-group.open .day-body .row', (rs) => rs.filter((r) => /^Transfer to /.test(r.querySelector('.title').textContent)).every((r) => !!r.querySelector('.tile svg'))), true, 'transfer rows have the circular arrows icon');
   // its fee is a separate expense: − sign, no tag, the Fee category with its icon
   assert(feeRow && feeRow.amt.startsWith('−') && feeRow.badges.length === 0, JSON.stringify(tr));
   assert.deepEqual(await p.evaluate(() => { const f = D().transactions.find((t) => t.transfer_id && t.type === 'expense'), c = catOf(f.category_id); return [c && c.name, c && c.icon]; }), ['Fee', '💸'], 'the fee is in the Fee category');

@@ -75,6 +75,7 @@ const lastMonths = (n) => { const c = currentPeriod(), t = new Date(+c.slice(0, 
 /* ---------- icons ---------- */
 const ICON = {
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  transfer: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',   /* circular arrows */
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/><path d="M9 10h6M9 13.5h4"/>',
   home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
   trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
@@ -1159,13 +1160,13 @@ const transferNote = (t) => String(t.note || '').split(' · ').slice(1).join(' �
 function txnRow(t, loanView) {
   if (t.type === 'loan_payment') return `<div class="row" data-act="loan-payment" data-id="${t.loan_id}" data-pid="${String(t.id).replace('pay:', '')}" tabindex="0"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   const lr = t.type === 'transfer' && !t.transfer_id && lentRepaymentOf(t.id);
-  if (lr) return `<div class="row" data-act="lent-repayment" data-id="${lr.lent.id}" data-pid="${lr.payment.id}" tabindex="0"><span class="tile" style="--c:#0EA5A4">🤝</span>
+  if (lr) return `<div class="row" data-act="lent-repayment" data-id="${lr.lent.id}" data-pid="${lr.payment.id}" tabindex="0"><span class="tile" style="--c:#4A44C6">${icon('transfer')}</span>
     <div><div class="title">${esc(t.note)}</div><div class="sub">${esc(catOf(t.category_id)?.name || __('Lent Repayment'))} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
     <div class="amt-col"><div class="amt num">${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
-    return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
+    return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? icon('transfer') : t.flow === 'out' ? '📈' : '💵'}</span>
     <div><div class="title">${esc(xfer ? transferTitle(t) : t.note)}${xfer ? '' : '<span class="badge">' + __('Investment') + '</span>'}</div>
     <div class="sub">${__('Transfer')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
     <div class="amt-col"><div class="amt num">${xfer ? '' : t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;

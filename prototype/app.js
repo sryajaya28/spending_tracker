@@ -845,7 +845,7 @@ function pnlSection(rm, vc) {
 /* one month of realized profit and loss on its own page, day by day */
 function viewPnlMonth(k) {
   const list = realizedPnl().filter((e) => inPeriod(e.date, k)), net = list.reduce((a, e) => a + e.pnl, 0);
-  return `${topbar('Portfolio', __('Realized P&L'))}
+  return `${topbar('Realized Profit & Loss')}
   <section class="card"><div class="card-head"><div><a class="back-link" href="#/portfolio">← ${__('Back to Portfolio')}</a><h2>${esc(periodHeading(k))}</h2></div></div>
     <div class="big num" style="font-size:26px;margin:4px 0 12px">${pnlText(net)}</div>
     ${list.length ? pnlDays(list) : '<div class="empty">' + __('No sales in this period.') + '</div>'}</section>`;

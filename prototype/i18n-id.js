@@ -21,6 +21,7 @@ DICT.id = {
  "Add occasion budget": "Tambah anggaran acara",
  "Budget Added": "Anggaran Ditambahkan",
  "Profit & loss": "Untung & rugi",
+ "Realized Profit & Loss": "Untung & rugi terealisasi",
  "1 sale": "1 penjualan",
  "{n} sales": "{n} penjualan",
  "No sales yet. Profit and loss appear here when you sell an asset.": "Belum ada penjualan. Untung dan rugi muncul di sini saat kamu menjual aset.",

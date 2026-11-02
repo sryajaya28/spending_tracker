@@ -87,7 +87,7 @@ const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const CATS = [
   ['Groceries', 'expense', '🛒', '#4A44C6'], ['Dining', 'expense', '🍽️', '#8B8FF0'], ['Transport', 'expense', '🚌', '#F5B800'],
   ['Shopping', 'expense', '🛍️', '#EC4899'], ['Bills & Utilities', 'expense', '🧾', '#14B8A6'], ['Entertainment', 'expense', '🎬', '#F97316'],
-  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'], ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
   ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Other income', 'income', '➕', '#94A3B8'],
 ];
 // sample accounts per country are defined in sample.js
@@ -964,7 +964,7 @@ function txnRow(t, loanView) {
   }
   const c = catOf(t.category_id), sign = loanView || t.type === 'income' ? '+' : '−';   // on a loan, what was charged raises it (+) and a payment lowers it (−)
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
-    <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.transfer_id ? ('<span class="badge">' + __('Transfer fee') + '</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
+    <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
     <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}</div></div>
     <div class="amt-col"><div class="amt num ${t.type}">${sign}${coinOf(t) ? coinAmount(coinOf(t), t.amount_minor) : money(t.amount_minor, t.currency)}</div><div class="sub">${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
 }
@@ -1648,6 +1648,7 @@ function holdingDialog(h, accId, opts = {}) {
       <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
     <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest ? (recallAcct('invest', sourceOptions('buy', null, '')) || (firstW ? 'w:' + firstW.id : '')) : '')}</select></label>
       <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
+ <label class="field" data-fee-box hidden><span data-fee-label>${__('Fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
     <label class="field">${invest ? __('Quantity bought') : __('Quantity you hold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
     <div class="two" data-own-price><label class="field">${__('Average price')}<input name="avgprice" type="number" min="0" step="any" placeholder="${__('optional')}"></label>
       <label class="field">${__('Price currency')}<select name="pccy">${ccyOptions(cur())}</select></label></div>
@@ -1670,10 +1671,17 @@ function syncPickType(form) {
   if (cash) { pickAsset({ key: 'CASH:' + sel.value, symbol: sel.value, name: `Cash (${sel.value})`, type: 'cash', cash: sel.value }, form, true); $('#asset-results').hidden = true; }
   else if (form.asset.value.startsWith('CASH:')) { form.asset.value = ''; form.assetmeta.value = ''; $('#picked').hidden = true; }
 }
+/* a fee is asked only when the other side is a normal account (it is charged to that account, in its currency); not for cash deposits */
+function syncFeeBox(form, src, isCash) {
+  const box = $('[data-fee-box]', form); if (!box) return;
+  const on = !!src && src.kind === 'wallet' && !isCash; box.hidden = !on;
+  if (on) $('[data-fee-label]', box).textContent = __('Fee, optional ({cur})', { cur: src.wallet.currency }); else form.fee.value = '';
+}
 /* the amount's unit follows the payment source: a wallet's currency, or coins for a stablecoin */
 function syncFund(form) {
   const src = parseSource(form.fund.value), label = $('[data-fund-amt]', form);
   label.textContent = src ? __('Amount paid ({unit})', { unit: sourceUnit(src) }) : __('Amount paid');
+  syncFeeBox(form, src, false);
   syncOwnPrice(form);
 }
 /* the average-price fields are for assets you already owned (no payment) and that have a cost (not cash or stablecoins) */
@@ -1747,7 +1755,25 @@ async function freshFx() {
     if (fx && fx.rates) { Object.assign(RATES, fx.rates); api.fx = { source: fx.source, date: fx.date }; }
   } catch { /* offline: the rates already loaded are used */ }
 }
-function recordTrade(h, { side, quantity, source, amount, date, price }) {
+/* the default "Fee" category (expense, 💸): every fee is recorded under it. It is created when missing (existing accounts get it on load);
+   one the user archived or renamed in place is reused as long as it is still called Fee. */
+function feeCategory() {
+  const d = D(); let c = d.categories.find((x) => !x.parent_id && x.type === 'expense' && x.name.trim().toLowerCase() === 'fee');
+  if (!c) { c = { id: uid(), parent_id: null, name: 'Fee', type: 'expense', icon: '💸', color: '#94A3B8', archived: false }; d.categories.push(c); }
+  return c;
+}
+/* a fee is its own expense on the account it was paid from */
+function addFeeRecord(wallet, minor, date, note) {
+  if (!(minor > 0)) return;
+  D().transactions.push({ id: uid(), wallet_id: wallet.id, category_id: feeCategory().id, type: 'expense', amount_minor: minor, currency: wallet.currency, occurred_at: date, note, category_source: 'user', ai_confidence: null });
+}
+/* on load: make sure the Fee category exists and give earlier transfer fees (they had no category) that category; true when something changed */
+function ensureFeeCategory() {
+  const n = D().categories.length, c = feeCategory(); let changed = D().categories.length !== n;
+  D().transactions.forEach((t) => { if (t.type === 'expense' && t.transfer_id && !t.category_id) { t.category_id = c.id; changed = true; } });
+  return changed;
+}
+function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
   const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
   const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && tr.date.slice(0, 7) < hh.since) hh.since = tr.date.slice(0, 7); };
   h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity));
@@ -1763,6 +1789,7 @@ function recordTrade(h, { side, quantity, source, amount, date, price }) {
     addTrade(h, { id, date, side, quantity, amount_minor: amount, currency: w.currency, wallet_id: w.id, ...px });
     D().transactions.push({ id: uid(), trade_id: id, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in',
       amount_minor: amount, currency: w.currency, occurred_at: date, note: `${word} ${qtyFmt(quantity)} ${sym}`, category_source: 'user', ai_confidence: null });
+    addFeeRecord(w, fee, date, `${__('Investment fee')} (${word} ${qtyFmt(quantity)} ${sym})`);   // what the broker charged, from the same account
     sortTxns();
     return;
   }
@@ -1813,6 +1840,7 @@ function tradeDialog(h, side) {
     <div class="two"><label class="field">${__('Quantity')}<input name="quantity" type="number" min="0" step="any" required placeholder="e.g. 0.01"></label>
       <label class="field"><span data-trade-amt></span><input name="amount" type="number" min="0" step="any" required placeholder="${__('amount')}"></label></div>
     ${trackCost(h) ? `<label class="field"><span data-price-unit></span><input name="price" type="number" min="0" step="any" placeholder="${__('fills in from the amount')}"></label>` : ''}
+    <label class="field" data-fee-box hidden><span data-fee-label>${__('Fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
     <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>
     <p class="hint" id="trade-hint"></p>
     <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -1826,6 +1854,7 @@ function syncTradeForm(form, rebuild) {
   $('[data-trade-wallet]', form).textContent = buy ? __('Pay with') : __('Receive into');
   $('[data-trade-amt]', form).textContent = `${buy ? __('Amount paid') : __('Amount received')} (${src ? sourceUnit(src) : ''})`;
   const pu = $('[data-price-unit]', form); if (pu) pu.textContent = __('Price per unit ({ccy})', { ccy: srcCcy(src) });
+  syncFeeBox(form, src, assetInfo(h.symbol).cash);
   syncTradePrice(form, 'source');
   tradeHint(form);
 }
@@ -1904,7 +1933,7 @@ function generateRecurring(r, date) {
     const base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: date, transfer_id: detId(r.id, date, 'g') }, extra = sp.note ? ` · ${sp.note}` : '';
     add({ id: detId(r.id, date, 'o'), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: sp.amount_minor, currency: A.currency, note: __('Transfer to {name}', { name: B.name }) + extra, ...base });
     add({ id: detId(r.id, date, 'i'), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: sp.received_minor, currency: B.currency, note: __('Transfer from {name}', { name: A.name }) + extra, ...base });
-    if (sp.fee_minor > 0) add({ id: detId(r.id, date, 'f'), wallet_id: A.id, type: 'expense', amount_minor: sp.fee_minor, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base });
+    if (sp.fee_minor > 0) add({ id: detId(r.id, date, 'f'), wallet_id: A.id, type: 'expense', amount_minor: sp.fee_minor, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base, category_id: feeCategory().id });
   } else if (r.kind === 'invest') {
     const src = parseSource(sp.fund); if (!src || (src.kind === 'wallet' && !src.wallet) || (src.kind === 'holding' && !src.holding)) return;
     let h = D().holdings.find((x) => x.account_id === sp.account && x.symbol === sp.symbol);
@@ -2293,7 +2322,7 @@ document.addEventListener('submit', async (e) => {
     const gid = uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: v.date, transfer_id: gid }, extra = v.note.trim() ? ` · ${v.note.trim()}` : '';
     D().transactions.push({ id: uid(), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.currency, note: __('Transfer to {name}', { name: B.name }) + extra, ...base });
     D().transactions.push({ id: uid(), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.currency, note: __('Transfer from {name}', { name: A.name }) + extra, ...base });
-    if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base });
+    if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base, category_id: feeCategory().id });
     if (v.repeat) addRule('transfer', v.repeat, v.date, { from: A.id, to: B.id, amount_minor: amount, received_minor: received, fee_minor: fee, note: v.note.trim() });
     sortTxns();
     state.ui.month = periodKeyOf(v.date) <= currentPeriod() ? periodKeyOf(v.date) : state.ui.month;
@@ -2423,8 +2452,9 @@ document.addEventListener('submit', async (e) => {
     const qty = parseFloat(v.quantity), amount = parseAmount(src, v.amount);
     if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
     if (side === 'sell' && qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h), h), symbol: info.symbol })); return; }
-    const short = payShortfall(src, side, amount); if (short) { toast(short); return; }
-    recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price) });
+    const fee = src.kind === 'wallet' && v.fee ? toMinor(parseFloat(v.fee), src.wallet.currency) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    const short = payShortfall(src, side, amount + (side === 'buy' ? fee : 0)); if (short) { toast(short); return; }   // a buy needs the fee on top of the amount
+    recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price), fee });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty, h)} ${info.symbol}`); return;
   }
   if (kind === 'holding') {
@@ -2456,11 +2486,12 @@ document.addEventListener('submit', async (e) => {
     const src = parseSource(v.fund), paid = src ? parseAmount(src, v.fundamount || 0) : 0;
     if (src && !(paid > 0)) { toast('Enter the amount you paid'); return; }
     if (src && src.kind === 'holding' && assetInfo(src.holding.symbol).type === 'cash' && src.holding.account_id !== v.account) { toast('That cash balance belongs to another investment account'); return; }
-    if (src) { const short = payShortfall(src, 'buy', paid); if (short) { toast(short); return; } }
+    const fee = src && src.kind === 'wallet' && v.fee ? toMinor(parseFloat(v.fee), src.wallet.currency) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    if (src) { const short = payShortfall(src, 'buy', paid + fee); if (short) { toast(short); return; } }
     let h = D().holdings.find((x) => x.account_id === v.account && x.symbol === sym);
     if (!h) { h = { id: uid(), account_id: v.account, symbol: sym, quantity: 0, since: monthKey(new Date()), trades: [] }; D().holdings.push(h); }
     if (src) {
-      recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()) });
+      recordTrade(h, { side: 'buy', quantity: qty, source: src, amount: paid, date: v.date || isoDate(new Date()), fee });
       if (v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
     } else addOpening(h, qty, parseFloat(v.avgprice), v.pccy);
     if (f.dataset.invest) { state.ui.pfTab = 'investment'; rememberAcct('invest', v.fund); rememberAcct('investacct', v.account); }
@@ -2546,6 +2577,7 @@ async function loadUserData() {
     if (mine !== loadSeq) return;   // a newer load took over
     state.real = null; state.data = loaded;
     state.data.livePrices = loadPrices();
+    if (ensureFeeCategory()) save();   // every account has the Fee category; earlier transfer fees get it too
     if (api.finnhub || api.yahoo) refreshPrices(true);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's

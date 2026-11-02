@@ -50,8 +50,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert((await txt()).includes('Transfer to Cash')); const before = await bal('Bank');
   // a transfer is only fund movement: no Transfer tag and no +/- sign on its rows; the fee is spending and keeps its − sign and its tag
   const tr = await p.$$eval('#txn-list .day-group.open .day-body .row', (rs) => rs.map((r) => ({ t: r.querySelector('.title').textContent, amt: r.querySelector('.amt').textContent.trim(), badges: [...r.querySelectorAll('.badge')].map((b) => b.textContent.trim()) })));
-  const moves = tr.filter((r) => /^Transfer (to|from) /.test(r.t)), feeRow = tr.find((r) => r.badges.includes('Transfer fee'));
-  assert(moves.length >= 1 && moves.every((r) => /^Transfer to /.test(r.t)), 'one record per transfer: the sender\'s: ' + JSON.stringify(tr)); assert(moves.every((r) => !r.badges.includes('Transfer') && !/^[+−-]/.test(r.amt) && !/Top up/i.test(r.t)), JSON.stringify(tr));   // the note typed with the transfer is not repeated in the list assert(feeRow && feeRow.amt.startsWith('−'), JSON.stringify(tr));
+  const moves = tr.filter((r) => /^Transfer (to|from) /.test(r.t)), feeRow = tr.find((r) => /^Transfer fee/.test(r.t));
+  // one record per transfer (the sender's), only the amount (no tag, no sign), and the note typed with it is not repeated in the list
+  assert(moves.length >= 1 && moves.every((r) => /^Transfer to /.test(r.t)), JSON.stringify(tr));
+  assert(moves.every((r) => r.badges.length === 0 && !/^[+−-]/.test(r.amt) && !/Top up/i.test(r.t)), JSON.stringify(tr));
+  // its fee is a separate expense: − sign, no tag, the Fee category with its icon
+  assert(feeRow && feeRow.amt.startsWith('−') && feeRow.badges.length === 0, JSON.stringify(tr));
+  assert.deepEqual(await p.evaluate(() => { const f = D().transactions.find((t) => t.transfer_id && t.type === 'expense'), c = catOf(f.category_id); return [c && c.name, c && c.icon]; }), ['Fee', '💸'], 'the fee is in the Fee category');
   // the receiving leg is kept out of the lists, except when that account is the one being filtered
   assert.deepEqual(await p.evaluate(() => { const inn = D().transactions.find((t) => t.transfer_id && t.flow === 'in'); const a = filteredTxns().some((t) => t.id === inn.id); state.ui.wallet = inn.wallet_id; const b = filteredTxns().some((t) => t.id === inn.id); state.ui.wallet = ''; return [a, b]; }), [false, true], 'receiving leg only under its own account filter');
   await p.click('#txn-list .day-group.open .day-body .row:has-text("Transfer to Cash")'); assert((await p.innerText('#dlg')).includes('Delete transfer')); assert((await p.innerText('#dlg')).includes('Fee')); assert((await p.innerText('#dlg')).includes('Top up'), 'the note is shown in the transfer detail');

@@ -137,6 +137,9 @@ only worked after a detour. Keep each item short and say what to do instead.
   - A button that appears only when data exists looks "missing" to the owner (History hidden until a past occasion existed). Show entry points always and put the empty state in what they open.
   - Read the owner's follow-up carefully before reworking: "center align these" turned out to mean the text inside the pressed pill, not the row (three messages to get there). When the wording is ambiguous and cheap to check, do the most literal reading and say which one, instead of changing the layout.
   - A `:hover` background sticks after a tap on phones (already in this file): scope hover colours to `@media (hover: hover)` and give touch a short `:active` state.
+  - A `//` comment inside a line I rewrote with a script swallowed the rest of that test line (a whole assertion) AGAIN, and the test kept passing. After editing a test line, re-read it, and keep comments on their own line. A suspicious "still passes" after changing behaviour means an assertion may not be running.
+  - Writing to the database on load (adding the Fee category) shows up as an extra upsert in tests that count what is sent: drain the log after sign-in and test the load-time save in its own test.
+  - A linked pair of rows (a trade leg and its fee) must not share `trade_id`: cloud.js maps it to `holding_event_id` and a lookup keeps one row per event.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

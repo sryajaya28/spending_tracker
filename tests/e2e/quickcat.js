@@ -7,6 +7,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
+  await settle(); await log();   // the Fee category is added on first load: not part of this test
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.click('[data-act=add-txn]');
   await p.fill('input[name=amount]', '45000'); await p.fill('textarea[name=note]', 'Gym snack');
   assert(await p.$eval('.quick-cat', (e) => e.hidden));

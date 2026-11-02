@@ -36,6 +36,7 @@ const assert = require('assert');
   await page.waitForSelector('.shell');
   assert((await text()).includes('Overview') || (await text()).length > 100);
   console.log('signed in, shell rendered');
+  await page.evaluate(() => Cloud.idle()); assert((await log()).some((o) => o.table === 'categories' && o.rows.some((r) => r.name === 'Fee')), 'the Fee category is added on first load'); await log();
 
   // add a transaction
   await page.evaluate(() => { location.hash = '#/transactions'; });

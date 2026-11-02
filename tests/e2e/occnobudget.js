@@ -52,7 +52,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { D().occasions.find((o) => o.name === 'Bali Trip').archived = true; render(); });
   assert(!(await p.innerText('#occasions-card')).includes('Bali Trip'), 'archived: not in the card');
   await p.click('#occasions-card [data-act=occasion-archived]'); await p.waitForSelector('#dlg [data-act=edit-occasion]'); assert((await p.innerText('#dlg')).includes('Bali Trip'), 'archived: in the pop-up');
-  await p.click('#dlg [data-act=edit-occasion]'); await p.click('#dlg [data-act=archive-occasion]'); await settle();   // Reopen
+  // on a phone the buttons (Delete, Reopen, Save; Cancel is the ✕ in the corner) stay inside the dialog's padding
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(200);
+  await p.click('#dlg [data-act=edit-occasion]'); await p.waitForSelector('#dlg [data-act=archive-occasion]');
+  const ab = await p.evaluate(() => { const d = document.querySelector('#dlg .dlg').getBoundingClientRect(); return [...document.querySelectorAll('#dlg .actions > *')].map((x) => { const q = x.getBoundingClientRect(); return { t: x.textContent.trim(), l: q.left - d.left, r: d.right - q.right }; }); });
+  assert(ab.length === 3 && ab.every((x) => x.l >= 20 && x.r >= 20), 'buttons inside the padding: ' + JSON.stringify(ab)); assert.equal(await p.$$eval('#dlg .actions button', (e) => e.filter((x) => /cancel/i.test(x.textContent)).length), 0, 'no Cancel button'); assert.equal(await p.$$eval('#dlg > .dlg > .dlg-x', (e) => e.length), 1, 'the ✕ is there');
+  await p.setViewportSize({ width: 1280, height: 1000 }); await p.waitForTimeout(150);
+  await p.click('#dlg [data-act=archive-occasion]'); await settle();   // Reopen
   assert((await p.innerText('#occasions-card')).includes('Bali Trip'), 'reopened: back in the card');
   // 5. removing the budget in Edit keeps the occasion in Settings and takes it off Budgets
   await p.click(`#occasions-card [data-act=edit-occasion][data-id="${await p.evaluate(() => D().occasions.find((o) => o.name === 'Wedding').id)}"]`); await p.fill('#dlg input[name=amount]', ''); await p.click('#dlg button[type=submit]'); await settle();

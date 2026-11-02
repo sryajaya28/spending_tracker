@@ -147,6 +147,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - A host the sandbox cannot reach can still be checked through the deployed app: Vercel's `web_fetch_vercel_url` on the app's own `/api/...` endpoint returned the real Frankfurter rates. Check live data that way instead of trusting documentation search alone.
   - Built-in fallback rates go stale (INR 88 vs 94.95 live): keep them in the right ballpark, they show whenever the rate service is down.
   - When a list gets a button-plus-pop-up for a state (History, Archived), remove that state from the inline list in the same change and update every test that clicked rows of that state in the list.
+  - I put a `//` comment mid-line in a one-line function (`open()`) for the third time, and `node --check` caught it. Rule: comments go on their own line above, never at the end of a line that I am inserting into with a script.
+  - Removing a control from many templates (Cancel) changes tests that count buttons or their `data-act`s: grep the tests for the selector before and after.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

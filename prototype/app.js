@@ -128,6 +128,9 @@ const SUBS = {
    (so their own categories do not suddenly multiply). A category that already exists by name (archived ones too) is never added twice,
    and sub-categories are only added under a parent created here. Returns true when something was added. */
 const ESSENTIAL_CATS = ['Housing', 'Loan Payment', 'Pet'];
+/* default categories get a fixed id per user and name: two devices (or two loads) that both notice a default is missing create the SAME rows,
+   so the second save is a harmless repeat instead of a "duplicate key" error that threw the whole save away */
+const defaultCatId = (name, sub) => detId('defcat', state.auth.uid || '', name, sub || '');
 function ensureDefaultCategories() {
   const d = D(), full = d.transactions.length === 0 && d.budgets.length === 0; let changed = false;
   // the default was first called "Loan Repayment": rename it (only when "Loan Payment" does not exist yet)
@@ -136,8 +139,8 @@ function ensureDefaultCategories() {
   CATS.forEach(([n, type, icon, color]) => {
     if (!full && !ESSENTIAL_CATS.includes(n)) return;
     if (d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === n.toLowerCase())) return;
-    const parent = { id: uid(), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(parent); changed = true;
-    (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: uid(), parent_id: parent.id, name: sn, type, icon: sic, color, archived: false }));
+    const parent = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(parent); changed = true;
+    (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: defaultCatId(n, sn), parent_id: parent.id, name: sn, type, icon: sic, color, archived: false }));
   });
   return changed;
 }
@@ -530,8 +533,8 @@ const chargedOf = (l, upto) => l.payments.filter((p) => p.kind === 'charge' && (
    the loan balance goes down, the account goes down, it counts as spending, and lists show only the account's record */
 const repaymentOf = (txnId) => { for (const l of D().loans) { const p = l.payments.find((x) => x.txn_id === txnId && x.kind !== 'charge'); if (p) return { loan: l, payment: p }; } return null; };
 function loanRepaymentCategory() {
-  const d = D(); let c = d.categories.find((x) => !x.parent_id && x.type === 'expense' && x.name.trim().toLowerCase() === 'loan repayment');
-  if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Loan Payment'); c = { id: uid(), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: uid(), parent_id: c.id, name: sn, type, icon: sic, color, archived: false })); }
+  const d = D(); let c = d.categories.find((x) => !x.parent_id && x.type === 'expense' && x.name.trim().toLowerCase() === 'loan payment');
+  if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Loan Payment'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: defaultCatId(n, sn), parent_id: c.id, name: sn, type, icon: sic, color, archived: false })); }
   return c;
 }
 const loanBalance = (l, upto) => Math.max(0, l.original_minor + chargedOf(l, upto || todayIso()) - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
@@ -855,6 +858,14 @@ function loanDialog(l) {
     <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-loan" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 /* archived loans: listed here, Reopen puts one back with all its payments */
+/* a payment recorded without an account: look at it, or delete it (the loan goes back up by that amount) */
+function loanPaymentDialog(l, pay) {
+  const fmt = new Date(pay.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' });
+  open(`<h2>${__('Loan payment')}</h2><p class="muted" style="margin-top:-10px">${esc(l.name)}</p>
+  <div class="hold-sum"><div class="hs-row"><span>${__('Amount')}</span><b class="num">${money(pay.amount_minor, l.currency)}</b></div><div class="hs-row"><span>${__('Date')}</span><b>${esc(fmt)}</b></div><div class="hs-row"><span>${__('Balance now')}</span><b class="num">${money(loanBalance(l), l.currency)}</b></div></div>
+  <p class="hint">${__('Deleting removes this payment and the loan balance goes back up by its amount. Use Edit on the loan to set the balance you want afterwards.')}</p>
+  <div class="actions"><button type="button" class="btn danger" data-act="delete-payment" data-kind="loan" data-id="${l.id}" data-pid="${pay.id}" data-close="1">${__('Delete payment')}</button></div>`);
+}
 function archivedLoansDialog() {
   const list = D().loans.filter((l) => l.archived);
   open(`<h2>${__('Archived loans')}</h2>
@@ -1115,7 +1126,7 @@ const hiddenLeg = (t, wallet = state.ui.wallet) => t.type === 'transfer' && !!t.
 const transferTitle = (t) => String(t.note || '').split(' · ')[0];
 const transferNote = (t) => String(t.note || '').split(' · ').slice(1).join(' · ');
 function txnRow(t, loanView) {
-  if (t.type === 'loan_payment') return `<div class="row"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+  if (t.type === 'loan_payment') return `<div class="row" data-act="loan-payment" data-id="${t.loan_id}" data-pid="${String(t.id).replace('pay:', '')}" tabindex="0"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
@@ -1938,7 +1949,7 @@ async function freshFx() {
    one the user archived or renamed in place is reused as long as it is still called Fee. */
 function feeCategory() {
   const d = D(); let c = d.categories.find((x) => !x.parent_id && x.type === 'expense' && x.name.trim().toLowerCase() === 'fee');
-  if (!c) { c = { id: uid(), parent_id: null, name: 'Fee', type: 'expense', icon: '💸', color: '#94A3B8', archived: false }; d.categories.push(c); }
+  if (!c) { c = { id: defaultCatId('Fee'), parent_id: null, name: 'Fee', type: 'expense', icon: '💸', color: '#94A3B8', archived: false }; d.categories.push(c); }
   return c;
 }
 /* a fee is its own expense on the account it was paid from */
@@ -2246,6 +2257,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
   else if (act === 'loans-archived') archivedLoansDialog();
+  else if (act === 'loan-payment') { const l = D().loans.find((x) => x.id === id), pay = l && l.payments.find((x) => x.id === el.dataset.pid); if (pay) loanPaymentDialog(l, pay); }
   else if (act === 'unarchive-loan') { const l = find(D().loans); l.archived = false; save(); render(); toast(__('{name} is back', { name: l.name })); if (D().loans.some((x) => x.archived)) archivedLoansDialog(); else close(); }
   else if (act === 'edit-loan') loanDialog(find(D().loans));
   else if (act === 'pay-loan') paymentDialog(find(D().loans), 'loan');
@@ -2260,7 +2272,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-lent') lentDialog(find(D().lent));
   else if (act === 'pay-lent') paymentDialog(find(D().lent), 'lent');
   else if (act === 'archive-lent') { find(D().lent).archived = true; save(); close(); render(); toast('Archived'); }
-  else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans), gone = l.payments.find((p) => p.id === el.dataset.pid); if (gone && gone.txn_id && gone.kind !== 'charge') D().transactions = D().transactions.filter((t) => t.id !== gone.txn_id); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); if (el.closest('#dlg')) loanHistoryDialog(l, el.dataset.kind); }
+  else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans), gone = l.payments.find((p) => p.id === el.dataset.pid); if (gone && gone.txn_id && gone.kind !== 'charge') D().transactions = D().transactions.filter((t) => t.id !== gone.txn_id); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); if (el.dataset.close) close(); else if (el.closest('#dlg')) loanHistoryDialog(l, el.dataset.kind); }
   else if (act === 'pick-type-old') { state.ui.pickType = el.dataset.type; $$('.pill', el.parentElement).forEach((b) => b.classList.toggle('on', b === el)); runAssetSearch(); }
   else if (act === 'pick-asset') pickAsset(state.pick[+el.dataset.i], el.closest('form'));
   else if (act === 'manual-asset') { const f = el.closest('form'); f.asset.value = '__custom'; f.assetmeta.value = ''; $('#picker', f).hidden = true; $('.custom-fields', f).hidden = false; }

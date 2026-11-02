@@ -49,9 +49,17 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.inputValue('#dlg [name=amount]'), String(owed), 'the box shows the current balance'); assert.equal((await p.innerText('#dlg label:has([name=amount])')).trim().startsWith('Amount owed now'), true);
   await p.fill('#dlg [name=amount]', '500000'); await p.click('#dlg button[type=submit]'); await settle();
   assert.deepEqual(await p.evaluate(() => { const l = D().loans[0]; return [loanBalance(l), l.payments.length, l.original_minor]; }), [500000, 2, 500000 - 73800 + 259085], 'balance is what was typed, payments and charges kept');
+  // the category is reused: still exactly one top-level "Loan Payment" after payments were made from an account
+  assert.equal(await p.evaluate(() => D().categories.filter((c) => !c.parent_id && c.name === 'Loan Payment').length), 1, 'one Loan Payment category');
+  // 5b. a payment recorded without an account can be deleted from the app: open its row in the loan's Transactions view, Delete payment
+  await p.evaluate(() => { const l = D().loans[0]; l.payments = [{ id: 'pay1', date: todayIso(), amount_minor: 259085 }]; l.original_minor = 986745; Object.assign(state.ui, { wallet: 'l:loan1', q: '', cat: '', occ: '', month: currentPeriod(), allPeriods: false }); location.hash = '#/transactions'; render(); });
+  await p.waitForSelector('#txn-list .day-row'); await p.click('[data-act=days-all]'); await p.click('#txn-list .day-body .row[data-act=loan-payment]'); await p.waitForSelector('#dlg [data-act=delete-payment]');
+  assert((await p.innerText('#dlg')).replace(/\u00a0/g, ' ').includes('259.085'), 'the pop-up shows the payment'); assert.equal(await p.evaluate(() => loanBalance(D().loans[0])), 986745 - 259085);
+  await p.click('#dlg [data-act=delete-payment]'); await settle();
+  assert.deepEqual(await p.evaluate(() => [D().loans[0].payments.length, loanBalance(D().loans[0]), document.getElementById('dlg').open]), [0, 986745, false], 'deleted, balance back up, pop-up closed');
   // 6. an archived loan is listed under Archived on the Loan tab and Reopen brings it back with its payments
   await p.evaluate(() => { D().loans[0].archived = true; state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); });
   assert.equal(await p.evaluate(() => D().loans.filter((l) => !l.archived).length), 0); await p.click('[data-act=loans-archived]'); await p.waitForSelector('#dlg [data-act=unarchive-loan]'); assert((await p.innerText('#dlg')).includes('Car loan'));
-  await p.click('#dlg [data-act=unarchive-loan]'); await settle(); assert.deepEqual(await p.evaluate(() => [D().loans[0].archived, D().loans[0].payments.length, document.getElementById('dlg').open]), [false, 2, false], 'reopened, payments kept, pop-up closed');
+  await p.click('#dlg [data-act=unarchive-loan]'); await settle(); assert.deepEqual(await p.evaluate(() => [D().loans[0].archived, D().loans[0].payments.length, document.getElementById('dlg').open]), [false, 0, false], 'reopened (nothing lost), pop-up closed');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

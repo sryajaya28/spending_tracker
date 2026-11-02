@@ -161,6 +161,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - When one action must create two records (payment + expense) decide the single source of truth for display up front (here: the account's expense), and make edit and delete keep the pair in sync.
   - Reordering sections breaks tests that assume neighbours or scroll position (wide-screen height test, donut mouse coordinates): scroll targets into view in tests and look up neighbours by role, not by DOM position.
   - Flag emoji are not drawn on Windows desktop browsers; they are fine for phones. If desktop Windows matters, ship SVG flags instead (CSP allows data: images).
+  - After renaming something, grep for every spelling of the old name (lowercase comparisons too): a lowercase `'loan repayment'` lookup survived my rename and created a duplicate category on every repayment, which the database refused. A test that only checks the name of the chosen category cannot see this: assert there is exactly one.
+  - Defaults created independently by two clients need deterministic ids, or the second one hits the unique-name constraint and its whole save is thrown away.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

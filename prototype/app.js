@@ -98,8 +98,8 @@ const CATS = [
   ['Housing', 'expense', '🏠', '#A855F7'], ['Loan Payment', 'expense', '🏦', '#6366F1'], ['Pet', 'expense', '🐶', '#F59E0B'],
   ['Education', 'expense', '📚', '#06B6D4'], ['Insurance', 'expense', '🛡️', '#10B981'], ['Personal Care', 'expense', '💇', '#D946EF'],
   ['Family & Kids', 'expense', '👨‍👩‍👧', '#FB7185'], ['Gifts & Donations', 'expense', '🎁', '#F43F5E'], ['Taxes', 'expense', '🏛️', '#78716C'],
-  ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
-  ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment', 'income', '📈', '#0D9488'],
+  ['Fee', 'expense', '💸', '#94A3B8'], ['Investment Loss', 'expense', '📉', '#DC2626'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment Profit', 'income', '📈', '#0D9488'],
   ['Rental income', 'income', '🏘️', '#65A30D'], ['Business income', 'income', '🏪', '#059669'], ['Refunds & cashback', 'income', '↩️', '#2DD4BF'], ['Gift received', 'income', '🎀', '#4ADE80'], ['Lent Repayment', 'income', '🤝', '#0EA5A4'],
   ['Other income', 'income', '➕', '#94A3B8'],
 ];
@@ -123,8 +123,7 @@ const SUBS = {
   'Family & Kids': [['Childcare', '👶'], ["Kids' activities", '⚽'], ['Baby supplies', '🍼'], ['Parents support', '👵']],
   'Gifts & Donations': [['Gifts', '🎁'], ['Charity', '🤲'], ['Religious giving', '🙏']],
   Taxes: [['Income tax', '📑'], ['Vehicle tax', '🚘'], ['Other taxes', '🧾']],
-  'Investment|income': [['Dividends', '💵'], ['Interest', '🏦'], ['Investment Profit', '📈']],   // a sub-category has its parent's type, so the expense and the income "Investment" each have their own
-  'Investment|expense': [['Investment Loss', '📉']],
+  'Investment Profit': [['Dividends', '💵'], ['Interest', '🏦'], ['Capital Gain', '📈']],   // Investment Loss is a category of its own, without sub-categories
 };
 /* every account gets the whole list on first load when it has no transactions and no budgets yet; accounts with data only get the ones below
    (so their own categories do not suddenly multiply). A category that already exists by name (archived ones too) is never added twice,
@@ -132,21 +131,29 @@ const SUBS = {
 const ESSENTIAL_CATS = ['Housing', 'Loan Payment', 'Pet'];
 /* default categories get a fixed id per user and name: two devices (or two loads) that both notice a default is missing create the SAME rows,
    so the second save is a harmless repeat instead of a "duplicate key" error that threw the whole save away */
-const defaultCatId = (name, sub, type) => detId('defcat', state.auth.uid || '', name, sub || '', name === 'Investment' ? type || '' : '');   // only the two "Investment" parents share a name, so only they need the type
+const defaultCatId = (name, sub) => detId('defcat', state.auth.uid || '', name, sub || '');
 const subsOf = (name, type) => SUBS[name + '|' + type] || SUBS[name] || [];
 function ensureDefaultCategories() {
   const d = D(), full = d.transactions.length === 0 && d.budgets.length === 0; let changed = false;
-  // a top-level "Investment Loss" (made by the first version) moves under the Investment category
-  const legacyLoss = d.categories.find((c) => !c.parent_id && c.type === 'expense' && c.name.trim().toLowerCase() === 'investment loss');
-  if (legacyLoss) { legacyLoss.parent_id = investmentParent('expense').id; changed = true; }
+  // earlier versions had an "Investment" category (income: Dividends, Interest, Investment Profit; expense: Investment Loss).
+  // Now "Investment Profit" is the income category (Dividends, Interest, Capital Gain) and "Investment Loss" an expense category of its own
+  const top = (name, type) => d.categories.find((c) => !c.parent_id && c.type === type && c.name.trim().toLowerCase() === name);
+  const oldInc = top('investment', 'income');
+  if (oldInc && !top('investment profit', 'income')) {
+    oldInc.name = 'Investment Profit'; changed = true;
+    const sp = d.categories.find((c) => c.parent_id === oldInc.id && c.name.trim().toLowerCase() === 'investment profit'); if (sp) sp.name = 'Capital Gain';
+  }
+  const oldExp = top('investment', 'expense');
+  d.categories.filter((c) => c.type === 'expense' && c.name.trim().toLowerCase() === 'investment loss' && c.parent_id).forEach((c) => { c.parent_id = null; changed = true; });
+  if (oldExp && !d.categories.some((c) => c.parent_id === oldExp.id) && !d.transactions.some((t) => t.category_id === oldExp.id) && !d.budgets.some((b) => b.category_id === oldExp.id)) { d.categories = d.categories.filter((c) => c.id !== oldExp.id); changed = true; }
   // the default was first called "Loan Repayment": rename it (only when "Loan Payment" does not exist yet)
   const oldLoan = d.categories.find((c) => !c.parent_id && c.name.trim().toLowerCase() === 'loan repayment');
   if (oldLoan && !d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === 'loan payment')) { oldLoan.name = 'Loan Payment'; changed = true; }
   CATS.forEach(([n, type, icon, color]) => {
     if (!full && !ESSENTIAL_CATS.includes(n)) return;
-    if (d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === n.toLowerCase() && (n !== 'Investment' || c.type === type))) return;
-    const parent = { id: defaultCatId(n, '', type), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(parent); changed = true;
-    subsOf(n, type).forEach(([sn, sic]) => d.categories.push({ id: defaultCatId(n, sn, type), parent_id: parent.id, name: sn, type, icon: sic, color, archived: false }));
+    if (d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === n.toLowerCase() )) return;
+    const parent = { id: defaultCatId(n, ''), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(parent); changed = true;
+    subsOf(n, type).forEach(([sn, sic]) => d.categories.push({ id: defaultCatId(n, sn), parent_id: parent.id, name: sn, type, icon: sic, color, archived: false }));
   });
   return changed;
 }
@@ -323,7 +330,7 @@ function seed(name, cur) {
     // a sale: the cost of what was sold comes back as the investment transfer, the profit on top is its own income record (Capital gains) on the same account
     const costMinor = side === 'sell' ? toMinor(hh.open_price * qty * (RATES[cur] / RATES[hh.ccy || cur]), cur) : amount, profit = side === 'sell' && amount > costMinor && costMinor > 0 ? amount - costMinor : 0;
     txns.push({ id: uid(), trade_id: tid, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in', amount_minor: profit ? costMinor : amount, currency: cur, occurred_at: isoDate(date), note: `${word} ${qty} ${sym}`, category_source: 'user', ai_confidence: null });
-    if (profit) txns.push({ id: detId('pnl', tid), wallet_id: w.id, category_id: catId['Investment/Investment Profit'], type: 'income', amount_minor: profit, currency: cur, occurred_at: isoDate(date), note: `${sym} profit`, category_source: 'user', ai_confidence: null });
+    if (profit) txns.push({ id: detId('pnl', tid), wallet_id: w.id, category_id: catId['Investment Profit/Capital Gain'], type: 'income', amount_minor: profit, currency: cur, occurred_at: isoDate(date), note: `${sym} profit`, category_source: 'user', ai_confidence: null });
     txns.push({ id: uid(), wallet_id: w.id, category_id: catId.Fee, type: 'expense', amount_minor: A(fee), currency: cur, occurred_at: isoDate(date), note: `Investment fee (${word} ${qty} ${sym})`, category_source: 'user', ai_confidence: null });
   });
   // loans: debts you owe. Balance = original - payments, so earlier months can be rebuilt.
@@ -2098,19 +2105,15 @@ function ensureFeeCategory() {
   D().transactions.forEach((t) => { if (t.type === 'expense' && t.transfer_id && !t.category_id) { t.category_id = c.id; changed = true; } });
   return changed;
 }
-/* selling an asset at a profit or loss: the profit is income (Investment > Investment Profit), the loss an expense (Investment > Investment Loss), both on the receiving account.
-   There are two top-level "Investment" categories, one per type (a sub-category has its parent's type). Created on demand with fixed ids (same rows on every device). */
-function investmentParent(type) {
-  const d = D(); let par = d.categories.find((c) => !c.parent_id && c.type === type && c.name.trim().toLowerCase() === 'investment');
-  if (!par) { const n = 'Investment', icon = type === 'income' ? '📈' : '📊', color = type === 'income' ? '#0D9488' : '#DC2626'; par = { id: defaultCatId(n, '', type), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(par); }
-  return par;
-}
+/* selling an asset at a profit or loss: the profit is income in Investment Profit > Capital Gain, the loss an expense in Investment Loss (a category of its own),
+   both on the receiving account. Created on demand with fixed ids (same rows on every device). */
 function pnlCategory(profit) {
-  const d = D(), type = profit ? 'income' : 'expense', name = profit ? 'Investment Profit' : 'Investment Loss', par = investmentParent(type);
-  // a loss category made by the first version (top level) moves under Investment
-  const legacy = !profit && d.categories.find((c) => !c.parent_id && c.type === 'expense' && c.name.trim().toLowerCase() === 'investment loss'); if (legacy) legacy.parent_id = par.id;
-  let sc = d.categories.find((c) => c.parent_id === par.id && c.name.trim().toLowerCase() === name.toLowerCase());
-  if (!sc) { const sub = subsOf('Investment', type).find((x) => x[0] === name); sc = { id: defaultCatId('Investment', name, type), parent_id: par.id, name, type, icon: sub ? sub[1] : par.icon, color: par.color, archived: false }; d.categories.push(sc); }
+  const d = D(), name = profit ? 'Investment Profit' : 'Investment Loss', type = profit ? 'income' : 'expense', [, , icon, color] = CATS.find((x) => x[0] === name);
+  let par = d.categories.find((c) => !c.parent_id && c.type === type && c.name.trim().toLowerCase() === name.toLowerCase());
+  if (!par) { par = { id: defaultCatId(name, ''), parent_id: null, name, type, icon, color, archived: false }; d.categories.push(par); }
+  if (!profit) return par;
+  let sc = d.categories.find((c) => c.parent_id === par.id && c.name.trim().toLowerCase() === 'capital gain');
+  if (!sc) { sc = { id: defaultCatId(name, 'Capital Gain'), parent_id: par.id, name: 'Capital Gain', type, icon: '📈', color, archived: false }; d.categories.push(sc); }
   return sc;
 }
 function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {

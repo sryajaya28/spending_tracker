@@ -433,3 +433,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Realized P&L month page: days are collapsed rows like Transactions (count + net); tap a day to expand each sale. Cash (IDR) holding row has no % and the amount is centred. Automated: `tests/e2e/invest.js`.
 - Default categories: no expense "Investment" in a fresh account; it appears with Investment Loss after the first losing sale. Income "Investment" is still there.
 - Investment Loss counts in Spending totals/breakdown but not in any budget (tests/e2e/invest.js).
+- Categories: Investment Loss (expense, no sub-categories) and Investment Profit (income: Dividends, Interest, Capital Gain); no "Investment" category. A sale at a profit books Capital Gain, at a loss books Investment Loss. Old accounts are migrated on load (tests/e2e/invest.js, onboarding.js).

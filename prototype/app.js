@@ -822,7 +822,7 @@ function viewPortfolio() {
   } else {
     const monthly = activeLoans().reduce((a, l) => a + toUSD(l.monthly_minor, l.currency), 0);
     body = `<section class="card"><div class="card-head"><div><h2>${__('Loans you owe')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(L[5])}</div>
-        <small class="muted">${monthly ? __('{amount} due each month', { amount: m(monthly) }) : __('No monthly payments set')}</small></div><button class="btn" data-act="add-loan">${__('+ Loan')}</button></div></section>
+        <small class="muted">${monthly ? __('{amount} due each month', { amount: m(monthly) }) : __('No monthly payments set')}</small></div><div class="tools">${D().loans.some((l) => l.archived) ? `<button class="chip" data-act="loans-archived">${__('Archived')}</button>` : ''}<button class="btn" data-act="add-loan">${__('+ Loan')}</button></div></div></section>
       <div class="stack" style="margin-top:20px">${[...activeLoans()].sort(byValue((l) => toUSD(loanBalance(l), l.currency))).map((l) => loanCard(l, vc)).join('') || ('<div class="card empty">' + __('No loans. Add a mortgage, car loan or credit card balance to include it in your net worth.') + '</div>')}</div>${growth}`;
   }
 
@@ -853,6 +853,13 @@ function loanDialog(l) {
     <label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" min="0" step="any" value="${l?.rate || ''}"></label>
     ${l ? `<p class="hint">${__('Type what you still owe today. Stiver keeps your payments and charges and adjusts the starting amount ({orig}) behind the scenes.', { orig: money(l.original_minor, l.currency) })}</p>` : ''}
     <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-loan" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
+}
+/* archived loans: listed here, Reopen puts one back with all its payments */
+function archivedLoansDialog() {
+  const list = D().loans.filter((l) => l.archived);
+  open(`<h2>${__('Archived loans')}</h2>
+  <div class="list up-list">${list.map((l) => `<div class="brow cat-row"><span class="tile" style="--c:#4A44C6">🏦</span><div class="cat-main"><b class="cat-name">${esc(l.name)}</b><small class="muted">${esc(__(LOAN_TYPES[l.type] || l.type))} · ${money(loanBalance(l), l.currency)} ${__('remaining')}</small></div><div class="tools"><button class="btn secondary" data-act="unarchive-loan" data-id="${l.id}">${__('Reopen')}</button></div></div>`).join('') || ('<div class="empty">' + __('No archived loans.') + '</div>')}</div>
+  <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
 function lentDialog(l) {
   open(`<h2>${l ? __('Edit money lent') : __('Add money lent')}</h2><form data-form="lent" data-id="${l?.id || ''}" style="display:contents">
@@ -2238,6 +2245,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); const view = occasionView(o); state.ui.month = view.month; state.ui.allPeriods = view.all; if (el.closest('#dlg')) close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; render(); }
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
+  else if (act === 'loans-archived') archivedLoansDialog();
+  else if (act === 'unarchive-loan') { const l = find(D().loans); l.archived = false; save(); render(); toast(__('{name} is back', { name: l.name })); if (D().loans.some((x) => x.archived)) archivedLoansDialog(); else close(); }
   else if (act === 'edit-loan') loanDialog(find(D().loans));
   else if (act === 'pay-loan') paymentDialog(find(D().loans), 'loan');
   else if (act === 'history-loan') {   // the Transactions page on that loan, in the period of its latest entry (change the period to go back in time)

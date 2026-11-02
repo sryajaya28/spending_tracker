@@ -49,5 +49,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.inputValue('#dlg [name=amount]'), String(owed), 'the box shows the current balance'); assert.equal((await p.innerText('#dlg label:has([name=amount])')).trim().startsWith('Amount owed now'), true);
   await p.fill('#dlg [name=amount]', '500000'); await p.click('#dlg button[type=submit]'); await settle();
   assert.deepEqual(await p.evaluate(() => { const l = D().loans[0]; return [loanBalance(l), l.payments.length, l.original_minor]; }), [500000, 2, 500000 - 73800 + 259085], 'balance is what was typed, payments and charges kept');
+  // 6. an archived loan is listed under Archived on the Loan tab and Reopen brings it back with its payments
+  await p.evaluate(() => { D().loans[0].archived = true; state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); });
+  assert.equal(await p.evaluate(() => D().loans.filter((l) => !l.archived).length), 0); await p.click('[data-act=loans-archived]'); await p.waitForSelector('#dlg [data-act=unarchive-loan]'); assert((await p.innerText('#dlg')).includes('Car loan'));
+  await p.click('#dlg [data-act=unarchive-loan]'); await settle(); assert.deepEqual(await p.evaluate(() => [D().loans[0].archived, D().loans[0].payments.length, document.getElementById('dlg').open]), [false, 2, false], 'reopened, payments kept, pop-up closed');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

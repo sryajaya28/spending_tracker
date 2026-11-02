@@ -1,6 +1,6 @@
 // App-shell cache. Never touches non-GET or cross-origin requests, and the prototype
 // has no authenticated API responses to cache (the real app must not cache those).
-const CACHE = 'stiver-shell-v43';
+const CACHE = 'stiver-shell-v44';
 const SHELL = ['./', './index.html', './styles.css', './app.js', './sample.js', './dropdown.js', './datepicker.js', './i18n.js', './i18n-id.js', './cloud.js', './config.js', './vendor/supabase.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

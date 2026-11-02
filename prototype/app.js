@@ -1913,7 +1913,19 @@ function syncFund(form) {
 /* the average-price fields are for assets you already owned (no payment) and that have a cost (not cash or stablecoins) */
 function syncOwnPrice(form) {
   const box = $('[data-own-price]', form); if (!box) return;
-  box.hidden = !!parseSource(form.fund.value) || form.dataset.nocost === '1';
+  box.hidden = form.dataset.nocost === '1';   // cash and stablecoins have no cost to track; otherwise the box is always there (typed when already owned, automatic when paid)
+  syncAvgPrice(form);
+}
+/* paid from an account / coin: the average price is worked out (amount paid / quantity, in that account's currency) and cannot be typed;
+   already owned: you type it with its price currency */
+function syncAvgPrice(form) {
+  const avg = form.avgprice, pc = form.pccy; if (!avg) return;
+  const src = parseSource(form.fund.value);
+  if (!src) { if (avg.dataset.auto) { avg.value = ''; delete avg.dataset.auto; } avg.readOnly = false; avg.placeholder = __('optional'); if (pc) pc.disabled = false; return; }
+  const q = parseFloat(form.quantity.value), a = parseAmount(src, form.fundamount.value || 0), sc = srcCcy(src);
+  avg.readOnly = true; avg.dataset.auto = '1'; avg.placeholder = __('fills in from the amount');
+  if (pc) { if ([...pc.options].some((o) => o.value === sc || o.text === sc)) pc.value = sc; pc.disabled = true; }
+  avg.value = q > 0 && a > 0 ? String(+((src.kind === 'wallet' ? toMajor(a, sc) : a) / q).toPrecision(8)) : '';
 }
 
 /* ---------- trades ----------
@@ -2467,6 +2479,7 @@ document.addEventListener('change', (e) => { if (e.target.matches && e.target.ma
 document.addEventListener('input', (e) => {
   if (e.target.form?.dataset.form === 'trade' && ['quantity', 'amount', 'price'].includes(e.target.name)) { syncTradePrice(e.target.form, e.target.name); tradeHint(e.target.form); }
   if (e.target.name === 'assetq') runAssetSearch();
+  if (e.target.form?.dataset.form === 'holding' && ['quantity', 'fundamount'].includes(e.target.name)) syncAvgPrice(e.target.form);
   if (e.target.classList?.contains('icon-input')) { const v = lastEmoji(e.target.value); if (v !== e.target.value) e.target.value = v; $$('.icon-pick', e.target.form).forEach((b) => b.classList.toggle('on', b.dataset.for === e.target.name && b.dataset.e === v)); }
   if (e.target.name === 'message' && e.target.form?.dataset.form === 'support') $('#support-count').textContent = `${e.target.value.length}/${SUPPORT_MAX_CHARS}`;
   if (e.target.matches('[data-filter="dayq"]')) { state.ui.dayQ = e.target.value; const l = $('#day-list'); if (l) l.innerHTML = dayListHtml(routeArg()); }

@@ -61,5 +61,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const back = await p.evaluate(async () => { const d = await Cloud.load(); const h = d.holdings.find((x) => x.symbol === 'VOO'); return { open: h.open_price, ccy: h.ccy, prices: h.trades.map((t) => t.price).sort((a, b) => a - b) }; });
   assert.equal(back.open, 400); assert.equal(back.ccy, 'USD'); assert.deepEqual(back.prices, [50, 500, 600], JSON.stringify(back));
   await p.screenshot({ path: __dirname + '/out/avgprice.png' });
+  // Invest / Add asset: with an account to pay from, the average price fills in by itself (amount paid / quantity) once both are entered
+  await p.evaluate(() => { D().wallets[0].opening_balance_minor = 900000000; render(); holdingDialog(null, D().investments[0].id, {}); }); await p.waitForSelector('#dlg select[name=fund]');   // Add asset: has both "Already owned" and payment sources (Invest has only the sources)
+  await p.evaluate(() => { const f = document.querySelector('#dlg form'); f.asset.value = 'BTC'; f.assetmeta.value = JSON.stringify({ symbol: 'BTC', name: 'Bitcoin', type: 'crypto' }); });
+  const src = await p.$eval('#dlg select[name=fund]', (s) => [...s.options].find((o) => /^w:/.test(o.value))?.value); await p.selectOption('#dlg select[name=fund]', src);
+  assert.equal(await p.$eval('#dlg input[name=avgprice]', (e) => e.value), '', 'empty until both are entered'); assert.equal(await p.$eval('#dlg input[name=avgprice]', (e) => e.readOnly), true, 'automatic, not typed');
+  await p.fill('#dlg input[name=fundamount]', '1000000'); assert.equal(await p.$eval('#dlg input[name=avgprice]', (e) => e.value), '', 'one of two is not enough');
+  await p.fill('#dlg input[name=quantity]', '5'); assert.equal(await p.$eval('#dlg input[name=avgprice]', (e) => e.value), '200000', 'amount / quantity'); { const pv = await p.$eval('#dlg select[name=pccy]', (e) => e.value + ':' + e.disabled + ':' + [...e.options].map((o) => o.value + '|' + o.text).join(',').slice(0, 80)); const wc = await p.evaluate((s) => walletOf(s.slice(2)).currency, src); assert(pv.startsWith(wc + ':true'), wc + ' / ' + pv); }
+  await p.fill('#dlg input[name=quantity]', '4'); assert.equal(await p.$eval('#dlg input[name=avgprice]', (e) => e.value), '250000', 'follows the quantity');
+  // already owned: cleared and typed by hand again
+  await p.selectOption('#dlg select[name=fund]', ''); assert.deepEqual(await p.$eval('#dlg input[name=avgprice]', (e) => [e.value, e.readOnly]), ['', false], 'already owned: typed by hand'); assert.equal(await p.$eval('#dlg select[name=pccy]', (e) => e.disabled), false);
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack || '').split('\n').slice(0, 8).join(' | ')); process.exit(1); });

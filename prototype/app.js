@@ -1015,7 +1015,7 @@ function sidebar() {
 function bottomNav() {
   const r = route();
   const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
-  return `<nav class="bottom-nav">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Activity')}<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}</nav>`;
+  return `<nav class="bottom-nav">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}</nav>`;
 }
 function topbar(title, sub) {
   const p = D().profile, hour = new Date().getHours();

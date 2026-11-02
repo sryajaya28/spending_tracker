@@ -944,13 +944,26 @@ function trendDialog(k) {
       ${sg.key === 'others' ? '' : `<div class="bk-subs"><button class="legend-btn" data-act="trend-go" data-k="${k}" data-cat="${sg.key === 'none' ? 'none' : sg.cat || ''}">${__('View transactions')}</button></div>`}</div>`).join('') || ('<div class="empty">' + __('No spending in this period.') + '</div>')}</div>
     <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
+/* wide screens: show as many of the other budgets as fit the Budgets card (its height comes from the card next to it); the rest are hidden, never cut in half */
+function fitOverviewBudgets() {
+  const box = $('.ov-more-in'); if (!box) return;
+  const rows = [...box.children]; rows.forEach((r) => { r.hidden = false; });
+  if (!matchMedia('(min-width: 1101px)').matches) return;
+  const room = box.clientHeight; let full = true;
+  rows.forEach((r) => { if (!full || r.offsetTop + r.offsetHeight > room + 1) { r.hidden = true; full = false; } });
+}
+addEventListener('resize', () => requestAnimationFrame(fitOverviewBudgets));
 function viewOverview() {
   const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
   const months = lastMonths(6);
   const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
   const cats = spendByCategory(k), bs = budgetStatus(k);
   const global = bs.find((b) => b.category_id === null);
-  const tiles = global ? [global] : [];   // Overview shows only the overall budget; the Budgets page has the rest
+  const tiles = global ? [global] : [];   // the overall budget is always shown; on wide screens the other budgets fill the rest of the card (see below)
+  // wide screens only (CSS): the other budgets, most used first, then budgeted occasions that are live; the ones that do not fit the card's height are hidden (fitOverviewBudgets)
+  const bRow = (icon, name, spent, budget, pct, status) => `<div class="ov-occ"><div class="meta"><span>${icon} ${esc(name)}</span><span class="num">${money(spent, cur())} / ${money(budget, cur())} · ${Math.round(pct)}%</span></div><div class="bar"><i class="${status}" style="width:${Math.min(100, pct)}%"></i></div></div>`;
+  const moreRows = [...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct).map((b) => bRow(b.icon, b.name, b.spent, b.budget, b.pct, b.status)),
+    ...occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, k)).map((o) => bRow('🎉', o.name, o.spent, o.budget, o.pct, o.status))];
   const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
   const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}
@@ -967,9 +980,10 @@ function viewOverview() {
     <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools"><button class="chip" data-act="breakdown">${__('Details')}</button>${monthSelect()}</div></div>
       ${halfDonut(cats, exp)}</section>
  ${trendCard()}
-    <section class="card tap-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
+    <section class="card tap-card ov-bud-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
       ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })}</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
-      <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('')}</div></section>
+      <div class="ov-buds">${tiles.map((b) => `<div class="ov-occ"><div class="meta"><span>${b.icon} ${esc(b.name)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>`).join('')}</div>
+      ${moreRows.length ? `<div class="ov-more"><div class="ov-more-in">${moreRows.join('')}</div></div>` : ''}</section>
   <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map((t) => txnRow(t)).join('')}</div></section>
   </div>`;
 }
@@ -1356,6 +1370,7 @@ function render() {
   if (r === 'overview') {
     const months = lastMonths(6);
     bindFlow(months, months.map((m) => sumBy(inMonth(m), 'income')), months.map((m) => sumBy(inMonth(m), 'expense')));
+    fitOverviewBudgets(); requestAnimationFrame(fitOverviewBudgets); if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitOverviewBudgets);   // again once the layout and fonts settle
   }
 }
 

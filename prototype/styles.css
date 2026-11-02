@@ -885,3 +885,12 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 /* Expand all / Hide all / Reset filters: they stay on the right; the pressed highlight is a pill with the text in its middle */
 .day-tools .legend-btn { padding: 5px 12px; justify-content: center; border-radius: 99px; }
 .day-tools .legend-btn:active { background: var(--soft); color: var(--ink); }
+
+/* Overview > Budgets on wide screens (the two-column layout): the other budgets fill the room under the overall one; the card keeps the height of its neighbour */
+.ov-more { display: none; }
+@media (min-width: 1101px) {
+  .ov-bud-card { display: flex; flex-direction: column; }
+  .ov-more { display: block; position: relative; flex: 1 1 0; min-height: 0; margin-top: 6px; }
+  .ov-more-in { position: absolute; inset: 0; overflow: hidden; }
+  .ov-more-in > [hidden] { display: none; }
+}

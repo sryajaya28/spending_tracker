@@ -24,6 +24,29 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const mus = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Music').map((t) => [t.occurred_at, t.amount_minor])); assert.deepEqual(mus, [[fut2, 59000]], 'the upcoming first entry moved with the rule: ' + JSON.stringify(mus));
   await p.evaluate(() => { const r = D().recurring.find((x) => x.spec.note === 'Music'); D().transactions.filter((t) => t.note === 'Music').forEach((t) => { t.occurred_at = isoDate(new Date()); }); r.start = isoDate(new Date()); r.next = isoDate(new Date()); r.spec.first_made = isoDate(new Date()); runRecurring(); }); assert.equal(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Music').length), 1, 'still one entry once the date arrives');
   await p.evaluate(() => { D().recurring = D().recurring.filter((r) => r.spec.note !== 'Music'); D().transactions = D().transactions.filter((t) => t.note !== 'Music'); });
+  // an upcoming entry that was never linked to its rule (rule edited before the link existed: new account, earlier date) is repaired once, and no second entry appears
+  const heal = await p.evaluate(() => {
+    const w1 = D().wallets[0], w2 = { id: uid(), name: 'DANA', type: 'ewallet', currency: D().wallets[0].currency, opening_balance_minor: 0, since: monthKey(new Date()), archived: false }, f = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); };
+    D().wallets.push(w2); D().transactions.push({ id: uid(), type: 'expense', amount_minor: 59000, currency: w1.currency, wallet_id: w1.id, category_id: null, note: 'Apple Music', occurred_at: f(21), category_source: 'user' });
+    D().recurring.push({ id: uid(), kind: 'txn', freq: 'monthly', start: f(15), next: f(15), end: '', active: true, spec: { type: 'expense', amount_minor: 59000, currency: w2.currency, wallet_id: w2.id, category_id: null, note: 'Apple Music' } });
+    runRecurring(); const r = D().recurring.find((x) => x.spec.note === 'Apple Music'), l = D().transactions.filter((t) => t.note === 'Apple Music');
+    const out = { n: l.length, wallet: l[0].wallet_id === w2.id, date: l[0].occurred_at === f(15), linked: r.spec.first_tx === l[0].id, made: r.spec.first_made === f(15) };
+    return out;
+  });
+  assert.deepEqual(heal, { n: 1, wallet: true, date: true, linked: true, made: true }, JSON.stringify(heal));
+  await p.evaluate(() => { D().recurring = D().recurring.filter((r) => r.spec.note !== 'Apple Music'); D().transactions = D().transactions.filter((t) => t.note !== 'Apple Music'); D().wallets = D().wallets.filter((w) => w.name !== 'DANA'); });
+  // editing the account in Manage changes the upcoming entry too, even when it was never linked to the rule
+  await p.evaluate(() => {
+    const w1 = D().wallets[0], f = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); };
+    D().wallets.push({ id: uid(), name: 'DANA', type: 'ewallet', currency: w1.currency, opening_balance_minor: 0, since: monthKey(new Date()), archived: false });
+    D().transactions.push({ id: uid(), type: 'expense', amount_minor: 49000, currency: w1.currency, wallet_id: w1.id, category_id: null, note: 'Ecommurz', occurred_at: f(16), category_source: 'user' });
+    D().recurring.push({ id: uid(), kind: 'txn', freq: 'monthly', start: f(16), next: f(16), end: '', active: true, spec: { type: 'expense', amount_minor: 49000, currency: w1.currency, wallet_id: w1.id, category_id: null, note: 'Ecommurz' } });
+    location.hash = '#/settings'; render();
+  });
+  await p.click(`[data-act=rec-manage][data-id="${await p.evaluate(() => D().recurring.find((x) => x.spec.note === 'Ecommurz').id)}"]`);
+  await p.selectOption('#dlg select[name=wallet]', await p.evaluate(() => D().wallets.find((w) => w.name === 'DANA').id)); await p.click('#dlg button[type=submit]'); await settle();
+  assert.deepEqual(await p.evaluate(() => { const l = D().transactions.filter((t) => t.note === 'Ecommurz'); return [l.length, walletOf(l[0].wallet_id).name]; }), [1, 'DANA'], 'the upcoming entry follows the rule edit');
+  await p.evaluate(() => { D().recurring = D().recurring.filter((r) => r.spec.note !== 'Ecommurz'); D().transactions = D().transactions.filter((t) => t.note !== 'Ecommurz'); D().wallets = D().wallets.filter((w) => w.name !== 'DANA'); });
   // 2. edit amount and date; past entries stay as they are
   await p.evaluate(() => { const r0 = D().recurring[0]; r0.start = '2026-06-10'; r0.next = '2026-09-10'; runRecurring(); });   // creates catch-up entries from June
   const before = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort());

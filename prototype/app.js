@@ -1837,9 +1837,34 @@ function generateRecurring(r, date) {
     recordTrade(h, { side: 'buy', quantity: sp.quantity, source: src, amount: parseAmount(src, sp.fundamount), date });
   }
 }
+/* the upcoming entry that stands for a rule's first payment (entered by hand when the rule was created). It is found by its link
+   (spec.first_tx) or, for rules made before that link existed, by the same note and type among entries not linked to another rule. */
+const plainAccount = (w) => !!w && !String(w).startsWith('h:') && !String(w).startsWith('l:');
+function firstEntryOf(r) {
+  const sp = r.spec, T = D().transactions, today = isoDate(new Date()); if (r.kind !== 'txn' || !plainAccount(sp.wallet_id)) return null;
+  const linked = sp.first_tx && T.find((t) => t.id === sp.first_tx); if (linked) return linked.occurred_at > today ? linked : null;
+  const taken = new Set((D().recurring || []).map((x) => x.spec && x.spec.first_tx).filter(Boolean));
+  return T.filter((t) => t.occurred_at > today && t.type === sp.type && (t.note || '') === (sp.note || '') && !t.transfer_id && !t.trade_id && !t.loan_id && !taken.has(t.id)).sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))[0] || null;
+}
+/* make that entry say what the rule says (account, amount, category, date) and remember the link */
+function syncFirstEntry(r, e) {
+  const sp = r.spec; Object.assign(e, { occurred_at: r.next, wallet_id: sp.wallet_id, currency: sp.currency, amount_minor: sp.amount_minor, category_id: sp.category_id || null });
+  sp.first_tx = e.id; sp.first_made = r.next;
+}
+/* rules edited before the entry was linked left their upcoming entry behind (old account, old date): link and update it once */
+function linkFirstEntries() {
+  const d = state.data, today = isoDate(new Date()); let changed = false;
+  (d.recurring || []).forEach((r) => {
+    const sp = r.spec; if (r.active === false || r.kind !== 'txn' || !sp || r.next <= today || (sp.first_tx && d.transactions.some((t) => t.id === sp.first_tx))) return;
+    const e = firstEntryOf(r); if (e) { syncFirstEntry(r, e); changed = true; }
+  });
+  if (changed) sortTxns(d);
+  return changed;
+}
+let relinked = false;   // runRecurring just repaired an upcoming entry (the screen needs a redraw)
 function runRecurring() {
   const d = state.data; if (!d || state.real || !(d.recurring || []).length) return 0;
-  const today = isoDate(new Date()); let n = 0;
+  const today = isoDate(new Date()); let n = 0; const linked = linkFirstEntries(); relinked = linked;
   d.recurring.forEach((r) => {
     if (r.active === false) return;
     for (let guard = 0; r.next <= today && (!r.end || r.next <= r.end) && guard < 400; guard++) {
@@ -1847,10 +1872,10 @@ function runRecurring() {
       generateRecurring(r, r.next); n++; r.next = nextAfter(r, r.next);
     }
   });
-  if (n) { sortTxns(d); save(); }
+  if (n || linked) { sortTxns(d); save(); }
   return n;
 }
-function recurringNow() { const n = runRecurring(); if (n) { render(); toast(__(n === 1 ? '{n} recurring entry added' : '{n} recurring entries added', { n })); } }
+function recurringNow() { const n = runRecurring(); if (!n && relinked) render(); if (n) { render(); toast(__(n === 1 ? '{n} recurring entry added' : '{n} recurring entries added', { n })); } }
 const ruleTitle = (r) => {
   const sp = r.spec;
   if (r.kind === 'txn') { const c = catOf(sp.category_id), w = walletOf(sp.wallet_id) || (String(sp.wallet_id).startsWith('l:') ? { name: (D().loans.find((x) => 'l:' + x.id === sp.wallet_id) || {}).name || '' } : null) || (String(sp.wallet_id).startsWith('h:') ? { name: accountName((D().holdings.find((x) => x.id === sp.wallet_id.slice(2)) || {}).account_id) } : null); return { icon: sp.type === 'income' ? '💵' : '🧾', name: sp.note || (c && c.name) || (sp.type === 'income' ? __('Income') : __('Expense')), amount: `${sp.type === 'income' ? '+' : '−'}${String(sp.wallet_id).startsWith('h:') ? coinAmount(D().holdings.find((x) => x.id === sp.wallet_id.slice(2)), sp.amount_minor) : money(sp.amount_minor, sp.currency)}`, where: w ? w.name : '' }; }
@@ -2301,10 +2326,8 @@ document.addEventListener('submit', async (e) => {
     } else { sp.fund = v.fund; sp.fundamount = String(amount); }
     if (v.next !== r.next) { r.start = v.next; r.next = v.next; }   // later payments keep the new day of the month / week
     // a first payment that is still upcoming (entered by hand when the rule was created) follows the edit; one that already happened is left alone
-    const first = sp.first_tx && D().transactions.find((t) => t.id === sp.first_tx);
-    if (first && first.occurred_at > isoDate(new Date()) && r.kind === 'txn' && !String(sp.wallet_id).startsWith('h:') && !String(sp.wallet_id).startsWith('l:')) {
-      Object.assign(first, { occurred_at: r.next, wallet_id: sp.wallet_id, currency: sp.currency, amount_minor: sp.amount_minor, category_id: sp.category_id || null }); sp.first_made = r.next; sortTxns();
-    } else delete sp.first_made;
+    const first = firstEntryOf(r);
+    if (first) { syncFirstEntry(r, first); sortTxns(); } else delete sp.first_made;
     save(); close(); render(); toast(__('Recurring updated. Entries already made are unchanged.')); return;
   }
   if (kind === 'handoff') { const ok = await claimHandoff(v.code); if (ok) close(); return; }

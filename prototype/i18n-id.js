@@ -467,7 +467,7 @@ DICT.id = {
  "Interest rate (% per year, optional)": "Suku bunga (% per tahun, opsional)",
  "Invest": "Investasi",
  "Investment": "Investasi",
- "Investment growth month over month": "Pertumbuhan investasi bulan ke bulan",
+ "Investment growth": "Pertumbuhan investasi",
  "Investments": "Investasi",
  "Investments with live prices": "Investasi dengan harga langsung",
  "Know what you owe and what you're owed, and record each payment as it happens.": "Ketahui utang dan piutang Anda, dan catat setiap pembayaran saat terjadi.",

@@ -98,7 +98,7 @@ const CATS = [
   ['Housing', 'expense', '🏠', '#A855F7'], ['Loan Payment', 'expense', '🏦', '#6366F1'], ['Pet', 'expense', '🐶', '#F59E0B'],
   ['Education', 'expense', '📚', '#06B6D4'], ['Insurance', 'expense', '🛡️', '#10B981'], ['Personal Care', 'expense', '💇', '#D946EF'],
   ['Family & Kids', 'expense', '👨‍👩‍👧', '#FB7185'], ['Gifts & Donations', 'expense', '🎁', '#F43F5E'], ['Taxes', 'expense', '🏛️', '#78716C'],
-  ['Fee', 'expense', '💸', '#94A3B8'], ['Investment', 'expense', '📊', '#DC2626'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
   ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment', 'income', '📈', '#0D9488'],
   ['Rental income', 'income', '🏘️', '#65A30D'], ['Business income', 'income', '🏪', '#059669'], ['Refunds & cashback', 'income', '↩️', '#2DD4BF'], ['Gift received', 'income', '🎀', '#4ADE80'], ['Lent Repayment', 'income', '🤝', '#0EA5A4'],
   ['Other income', 'income', '➕', '#94A3B8'],
@@ -398,10 +398,9 @@ const walletOf = (id) => D().wallets.find((w) => w.id === id);
 const inMonth = (k) => D().transactions.filter((t) => inPeriod(t.occurred_at, k) && t.occurred_at <= todayIso());   // money not yet received or spent is left out of every total
 /* a transaction's amount in the reporting currency (each wallet keeps its own currency) */
 const amt = (t) => convert(t.amount_minor, t.currency, cur());
-/* the loss on selling an investment is recorded as an expense (Investment Loss) so it reduces the account, but it is not spending:
-   every spending total, the spending breakdown, the trend and the budgets leave it out */
+/* the loss on selling an investment is recorded as an expense (Investment Loss) so it reduces the account, and it counts as spending everywhere (totals, breakdown, trend, the Transactions page), except that budgets leave it out */
 const isInvestLoss = (t) => { if (t.type !== 'expense' || !t.category_id) return false; const c = catOf(t.category_id); return !!c && c.name.trim().toLowerCase() === 'investment loss'; };
-const sumBy = (list, type) => list.filter((t) => t.type === type && !isInvestLoss(t)).reduce((a, t) => a + amt(t), 0);
+const sumBy = (list, type) => list.filter((t) => t.type === type).reduce((a, t) => a + amt(t), 0);
 
 /* signed cash effect of a transaction on its wallet. A 'transfer' (e.g. buying/selling an asset) moves
    money in or out without being income or spending, so budgets and monthly totals ignore it. */
@@ -432,7 +431,7 @@ const catTree = (type) => D().categories.filter((c) => !c.parent_id && !c.archiv
 /* month spend per top-level category, each with its sub-category breakdown */
 function spendTree(k) {
   const tree = new Map();
-  inMonth(k).filter((t) => t.type === 'expense' && !isInvestLoss(t)).forEach((t) => {
+  inMonth(k).filter((t) => t.type === 'expense').forEach((t) => {
     const root = t.category_id ? rootOf(t.category_id) : null;
     if (!tree.has(root)) tree.set(root, { id: root, value: 0, direct: 0, subs: new Map() });
     const n = tree.get(root); n.value += amt(t);
@@ -862,7 +861,7 @@ function viewPortfolio() {
   const share = (v) => (assets > 0 ? Math.round((v / assets) * 100) : 0);
   const rm = pfMonths(), series = rm.map({ savings: savingsUSD, investment: (k) => portfolioUSD(k), lent: lentUSD, loan: loanUSD }[tab]);
   state.chart = { months: rm, series, vc };
-  const titles = { savings: __('Savings over time'), investment: __('Investment growth month over month'), lent: __('Money lent over time'), loan: __('Loan balance over time') };
+  const titles = { savings: __('Savings over time'), investment: __('Investment growth'), lent: __('Money lent over time'), loan: __('Loan balance over time') };
   const months6 = rm.map((k, i) => {
     const d = i ? series[i] - series[i - 1] : null, p = i && series[i - 1] > 0 ? (d / series[i - 1]) * 100 : null;
     const good = p === null ? '' : (tab === 'loan' ? p <= 0 : p >= 0) ? 'up' : 'down';
@@ -1075,7 +1074,7 @@ function trendData() {
     return sel;
   };
   const inScope = (t) => (!sel ? true : !!t.category_id && (t.category_id === sel || (!c.parent_id && rootOf(t.category_id) === sel)));
-  const per = ps.map((k) => { const m = new Map(); inMonth(k).filter((t) => t.type === 'expense' && !isInvestLoss(t) && inScope(t)).forEach((t) => m.set(keyOf(t), (m.get(keyOf(t)) || 0) + amt(t))); return m; });
+  const per = ps.map((k) => { const m = new Map(); inMonth(k).filter((t) => t.type === 'expense' && inScope(t)).forEach((t) => m.set(keyOf(t), (m.get(keyOf(t)) || 0) + amt(t))); return m; });
   const totals = new Map(); per.forEach((m) => m.forEach((v, key) => totals.set(key, (totals.get(key) || 0) + v)));
   const ranked = [...totals].sort((a, b) => b[1] - a[1]).map(([key]) => key), keep = ranked.slice(0, 6), rest = ranked.slice(6);
   const info = (key, i) => {
@@ -2103,7 +2102,7 @@ function ensureFeeCategory() {
    There are two top-level "Investment" categories, one per type (a sub-category has its parent's type). Created on demand with fixed ids (same rows on every device). */
 function investmentParent(type) {
   const d = D(); let par = d.categories.find((c) => !c.parent_id && c.type === type && c.name.trim().toLowerCase() === 'investment');
-  if (!par) { const [n, , icon, color] = CATS.find((x) => x[0] === 'Investment' && x[1] === type); par = { id: defaultCatId(n, '', type), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(par); }
+  if (!par) { const n = 'Investment', icon = type === 'income' ? '📈' : '📊', color = type === 'income' ? '#0D9488' : '#DC2626'; par = { id: defaultCatId(n, '', type), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(par); }
   return par;
 }
 function pnlCategory(profit) {

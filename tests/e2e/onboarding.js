@@ -55,7 +55,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('.onb-step [data-act=add-txn]'); await p.waitForSelector('#dlg [name=amount]'); await p.fill('#dlg [name=amount]', '45000'); await p.click('#dlg button[type=submit]'); await settle();
   await p.waitForSelector('.congrats'); assert((await p.innerText('.congrats')).includes("Now you're set!") && !(await p.isVisible('.onb')), 'celebration, not the stepper');
   assert.equal(await p.$$eval('.congrats .confetti i', (e) => e.length) > 10, true, 'confetti'); assert(!(await p.isVisible('.hero')), 'the normal Overview comes after');
-  await p.click('[data-act=congrats-done]'); await p.waitForSelector('.hero'); assert(!(await p.isVisible('.congrats')) && !(await p.isVisible('.onb')), 'normal Overview'); assert(await p.isVisible('.main .card:has(h2)'));
+  assert.equal((await p.innerText('[data-act=congrats-add]')).trim(), 'Add more transactions');
+  await p.click('[data-act=congrats-add]'); await p.waitForSelector('.hero'); assert(!(await p.isVisible('.congrats')) && !(await p.isVisible('.onb')), 'normal Overview'); assert(await p.isVisible('.main .card:has(h2)'));
+  await p.waitForSelector('#dlg[open] [name=amount]'); await p.click('#dlg .dlg-x'); await p.waitForTimeout(150);   // the Add transaction pop-up is open, ready for the next one
   // it is shown once: leaving and coming back does not repeat it; it also moves on by itself
   await p.evaluate(() => { location.hash = '#/budgets'; }); await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero'); assert(!(await p.isVisible('.congrats')), 'shown once');
   await p.evaluate(() => { state.ui.congrats = true; render(); setTimeout(endCongrats, 300); }); await p.waitForSelector('.congrats'); await p.waitForSelector('.hero', { timeout: 3000 });

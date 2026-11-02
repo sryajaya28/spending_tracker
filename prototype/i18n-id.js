@@ -22,7 +22,7 @@ DICT.id = {
  "Budget Added": "Anggaran Ditambahkan",
  "Now you're set!": "Sekarang kamu siap!",
  "Your first transaction is in. Stiver is ready for you.": "Transaksi pertamamu sudah masuk. Stiver siap dipakai.",
- "See my overview": "Lihat ringkasanku",
+ "Add more transactions": "Tambah transaksi lagi",
  "Skip for now, I'll add transactions later": "Lewati dulu, nanti aku tambah transaksi",
  "Explore Stiver with sample data": "Jelajahi Stiver dengan data contoh",
  "See a full demo account first: accounts, budgets, investments and loans. Nothing you do there is saved.": "Lihat dulu akun demo lengkap: rekening, anggaran, investasi, dan pinjaman. Apa pun yang kamu lakukan di sana tidak disimpan.",

@@ -1015,7 +1015,7 @@ function congratsView() {
   return `<div class="congrats" role="status"><div class="confetti" aria-hidden="true">${bits}</div>
     <div class="cg-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
     <h1>${__("Now you're set!")}</h1><p class="muted">${__('Your first transaction is in. Stiver is ready for you.')}</p>
-    <button type="button" class="btn" data-act="congrats-done">${__('See my overview')}</button></div>`;
+    <button type="button" class="btn" data-act="congrats-add">${__('Add more transactions')}</button></div>`;
 }
 function onboardingView(st) {
   const step = (n, done, title, sub, act, label) => `<div class="onb-step ${done ? 'done' : ''}"><span class="onb-n" aria-hidden="true">${done ? '✓' : n}</span><div class="onb-t"><b>${title}</b><small class="muted">${sub}</small></div>
@@ -2255,7 +2255,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'goto') location.hash = '#/' + el.dataset.route;
   else if (act === 'demo-on') setDemo(true);
   else if (act === 'onb-skip') skipOnboarding();
-  else if (act === 'congrats-done') endCongrats();
+  else if (act === 'congrats-add') { endCongrats(); txnDialog(null, 'expense'); }   // on to the normal Overview, with the Add transaction pop-up open
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }

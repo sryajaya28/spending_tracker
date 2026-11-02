@@ -2167,7 +2167,7 @@ document.addEventListener('click', (e) => {
     save(); close(); render(); toast('Transaction deleted');
   }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
-  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; resetPeriodView(); state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); });
+  else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; resetSessionView(); state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); window.scrollTo(0, 0); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
@@ -2601,13 +2601,21 @@ async function submitAuth(kind, v, f) {
 
 /* a new session (sign-in, sign-out) always starts on the current period, never on "All periods" or an old period */
 const resetPeriodView = () => { state.ui.allPeriods = false; state.ui.monthSrc = null; };
+/* a new login or a logout starts clean: the Overview page, the top of the page, no remembered scroll positions, the current period.
+   The hash is replaced (not assigned) so the browser does not run a second render. */
+function resetSessionView() {
+  resetPeriodView(); Object.keys(scrollPos).forEach((k) => delete scrollPos[k]);
+  history.replaceState(null, '', '#/overview'); lastKey = '#/overview';
+  window.scrollTo(0, 0);
+}
 async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
-  if (!session) { state.data = null; state.real = null; resetPeriodView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); return; }
+  if (!session) { state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
   stopPolling(); a.email = session.user.email || a.email;
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
-  resetPeriodView(); Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
+  if (event === 'SIGNED_IN') resetSessionView(); else resetPeriodView();   // a real login opens Overview at the top; reopening the app with a saved session keeps the page you were on
+  Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
   render(); loadUserData();
 }
 let loadSeq = 0;

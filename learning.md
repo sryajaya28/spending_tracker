@@ -143,6 +143,7 @@ only worked after a detour. Keep each item short and say what to do instead.
   - A scenario that depends on the owner's period start day must not rely on a calendar month: the 25th-to-24th period put my "two-period" sample occasion in one period. Make such data span more than a month (40 days).
   - Check the fallback currency path when changing sample data (unknown currency = USD profile with USD-priced holdings): prices are in the holding's cost currency, money in the account's.
   - A card that stretches to its neighbour in a grid cannot also grow with its own content: put the flexible list in an absolutely positioned box (`inset: 0; overflow: hidden`) and hide the rows that do not fit, so it never changes the row height. A bare test account has short neighbours: force the neighbour's height in the test instead of assuming the real layout.
+  - Session state lives in more than `state`: the URL hash and the page's scroll position also survive logout/login. Reset them (with `history.replaceState`, which does not fire `hashchange`) whenever a session starts or ends, and tell a real login (`SIGNED_IN`) from reopening with a saved session (`INITIAL_SESSION`).
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

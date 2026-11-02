@@ -152,6 +152,7 @@ only worked after a detour. Keep each item short and say what to do instead.
   - A first-run screen changes what every test sees on a bare account (no hero, no charts, no budgets card): list the tests that use a fresh account and give them money/budget (or open dialogs directly) instead of assuming the normal Overview.
   - I added a `//` comment mid-line in a `replace` once more and the file broke; `node --check` right after every script edit is the only reliable guard. Also never `pkill -f` a pattern that appears in my own command line (it killed the shell).
   - Auto-adding data on load (categories) needs a policy for existing accounts: the owner's accounts get only the named essentials, new accounts get the full list.
+  - A completion rule written for the test data ("balance of at least 1 USD") fails for real people who enter small test amounts or rename the default item: define "done" as "differs from the untouched default", and test each way of getting there.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

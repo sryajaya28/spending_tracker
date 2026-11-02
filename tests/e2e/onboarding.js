@@ -31,6 +31,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { D().transactions.length = 0; render(); });
   // 3. steps: an account with money ticks step 1 and the screen stays until there is a budget too
   await p.evaluate(() => { D().wallets[0].opening_balance_minor = 500000000; render(); }); t = await p.innerText('.main'); assert(await p.isVisible('.onb') && t.includes('1 of 3') && t.includes('Done'), 'step 1 done: ' + t);
+  // however the account was set up it counts, so the screen does not linger once there is an account and a budget (renamed Cash, a tiny balance, Cash archived + one new account, a loan)
+  const ways = await p.evaluate(() => { const d = D(), orig = d.wallets[0].opening_balance_minor, base = JSON.stringify([d.wallets, d.loans, d.investments]), out = {}; const reset = () => { [d.wallets, d.loans, d.investments] = JSON.parse(base); };
+    d.wallets[0].opening_balance_minor = 0; out.untouched = setupState().hasAccount;
+    d.wallets[0].name = 'BCA'; out.renamed = setupState().hasAccount; reset();
+    d.wallets[0].opening_balance_minor = 1; out.tinyBalance = setupState().hasAccount; reset();
+    d.wallets[0].archived = true; d.wallets.push({ ...JSON.parse(JSON.stringify(d.wallets[0])), id: uid(), name: 'Cash', archived: false }); d.wallets[1].opening_balance_minor = 0; out.archivedPlusOne = setupState().hasAccount; reset();
+    d.loans.push({ id: uid(), name: 'Car loan', type: 'car', currency: d.wallets[0].currency, original_minor: 1000, monthly_minor: 100, rate: 1, since: '2026-01', archived: false, payments: [] }); out.loan = setupState().hasAccount; reset();
+    d.wallets[0].opening_balance_minor = orig; render(); return out; });
+  assert.deepEqual(ways, { untouched: false, renamed: true, tinyBalance: true, archivedPlusOne: true, loan: true }, JSON.stringify(ways));
   // 4. Set budget -> the Applies-to list has "Add new category"; adding one selects it
   await p.click('.onb-step [data-act=add-budget]'); await p.waitForSelector('#dlg select[name=category]');
   assert((await p.$$eval('#dlg select[name=category] option', (o) => o.map((x) => x.value))).includes('__new'), 'Add new category entry'); assert(!(await p.isVisible('#dlg .quick-cat')));

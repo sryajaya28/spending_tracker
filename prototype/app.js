@@ -997,7 +997,10 @@ addEventListener('resize', () => requestAnimationFrame(fitOverviewBudgets));
    Overview instead of empty charts; afterwards a slim strip keeps pointing at what is still missing. */
 // the first-run screen stays until there is an account and a budget (or a first transaction)
 function setupState() {
-  const d = D(), hasAccount = toUSD(totalBalance(), cur()) >= 1 || d.wallets.filter((w) => !w.archived).length > 1 || d.investments.length > 0, hasBudget = d.budgets.length > 0, hasTx = d.transactions.length > 0;
+  // an account counts as set up when anything differs from the untouched start (one "Cash" account at 0): money in it, another account (archived or not),
+  // the Cash account renamed, or an investment / loan account
+  const d = D(), hasAccount = totalBalance() !== 0 || d.wallets.length > 1 || d.wallets.some((w) => w.name.trim().toLowerCase() !== 'cash') || d.investments.length > 0 || d.loans.length > 0 || (d.lent || []).length > 0;
+  const hasBudget = d.budgets.length > 0, hasTx = d.transactions.length > 0;
   return { hasAccount, hasBudget, hasTx, fresh: !state.real && !hasTx && !(hasAccount && hasBudget), partial: !state.real && (!hasAccount || !hasBudget) };
 }
 function onboardingView(st) {

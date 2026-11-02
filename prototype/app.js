@@ -98,7 +98,7 @@ const CATS = [
   ['Housing', 'expense', '🏠', '#A855F7'], ['Loan Payment', 'expense', '🏦', '#6366F1'], ['Pet', 'expense', '🐶', '#F59E0B'],
   ['Education', 'expense', '📚', '#06B6D4'], ['Insurance', 'expense', '🛡️', '#10B981'], ['Personal Care', 'expense', '💇', '#D946EF'],
   ['Family & Kids', 'expense', '👨‍👩‍👧', '#FB7185'], ['Gifts & Donations', 'expense', '🎁', '#F43F5E'], ['Taxes', 'expense', '🏛️', '#78716C'],
-  ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Fee', 'expense', '💸', '#94A3B8'], ['Investment Loss', 'expense', '📉', '#DC2626'], ['Other', 'expense', '⋯', '#94A3B8'],
   ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment income', 'income', '📈', '#0D9488'],
   ['Rental income', 'income', '🏘️', '#65A30D'], ['Business income', 'income', '🏪', '#059669'], ['Refunds & cashback', 'income', '↩️', '#2DD4BF'], ['Gift received', 'income', '🎀', '#4ADE80'], ['Lent Repayment', 'income', '🤝', '#0EA5A4'],
   ['Other income', 'income', '➕', '#94A3B8'],
@@ -315,7 +315,10 @@ function seed(name, cur) {
     // the price is in the holding's cost currency, the money in the account's
     const date = M0(mb, day), qty = Math.max(1, Math.round(hh.quantity * frac)), price = +(hh.open_price * (side === 'buy' ? 0.96 : 1.12)).toFixed(hh.ccy === cur && expOf(cur) === 0 ? 0 : 2), amount = toMinor(price * qty * (RATES[cur] / RATES[hh.ccy || cur]), cur), tid = uid(), sym = hh.symbol.split('.')[0], word = side === 'buy' ? 'Bought' : 'Sold';
     hh.trades.push({ id: tid, date: isoDate(date), side, quantity: qty, amount_minor: amount, currency: cur, wallet_id: w.id, price });
-    txns.push({ id: uid(), trade_id: tid, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in', amount_minor: amount, currency: cur, occurred_at: isoDate(date), note: `${word} ${qty} ${sym}`, category_source: 'user', ai_confidence: null });
+    // a sale: the cost of what was sold comes back as the investment transfer, the profit on top is its own income record (Capital gains) on the same account
+    const costMinor = side === 'sell' ? toMinor(hh.open_price * qty * (RATES[cur] / RATES[hh.ccy || cur]), cur) : amount, profit = side === 'sell' && amount > costMinor && costMinor > 0 ? amount - costMinor : 0;
+    txns.push({ id: uid(), trade_id: tid, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in', amount_minor: profit ? costMinor : amount, currency: cur, occurred_at: isoDate(date), note: `${word} ${qty} ${sym}`, category_source: 'user', ai_confidence: null });
+    if (profit) txns.push({ id: detId('pnl', tid), wallet_id: w.id, category_id: catId['Investment income/Capital gains'], type: 'income', amount_minor: profit, currency: cur, occurred_at: isoDate(date), note: `${sym} profit`, category_source: 'user', ai_confidence: null });
     txns.push({ id: uid(), wallet_id: w.id, category_id: catId.Fee, type: 'expense', amount_minor: A(fee), currency: cur, occurred_at: isoDate(date), note: `Investment fee (${word} ${qty} ${sym})`, category_source: 'user', ai_confidence: null });
   });
   // loans: debts you owe. Balance = original - payments, so earlier months can be rebuilt.
@@ -1167,9 +1170,9 @@ function txnRow(t, loanView) {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
     return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
-    <div><div class="title">${esc(xfer ? transferTitle(t) : t.note)}${xfer ? '' : '<span class="badge">' + __('Investment') + '</span>'}</div>
-    <div class="sub">${__('Transfer')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
-    <div class="amt-col"><div class="amt num">${xfer ? `<span class="xfer-ico">${icon('transfer')}</span>` : t.flow === 'out' ? '−' : '+'}${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+    <div><div class="title">${esc(xfer ? transferTitle(t) : t.note)}</div>
+    <div class="sub">${xfer ? __('Transfer') : t.flow === 'out' ? __('Buy Invest') : __('Sell Invest')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
+    <div class="amt-col"><div class="amt num"><span class="xfer-ico">${icon('transfer')}</span>${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   }
   const c = catOf(t.category_id), sign = (loanView && !repaymentOf(t.id)) || t.type === 'income' ? '+' : '−';   // on a loan, what was charged raises it (+) and a payment lowers it (−)
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
@@ -1848,12 +1851,40 @@ function costRows(h, vc, row) {
   if (c.q0 > 1e-12 && c.known) out += row(__('Starting price'), `${priceFmt(h.open_price, c.ccy)} <button type="button" class="legend-btn" data-act="set-cost" data-id="${h.id}">${__('Edit')}</button>`);
   return out;
 }
+/* Invest tab: Buy (a new or existing asset) or Sell (something you hold in that account) */
+const buySellSeg = (active) => `<div class="seg"><label><input type="radio" name="side" value="buy" ${active === 'buy' ? 'checked' : ''}>${__('Buy')}</label><label><input type="radio" name="side" value="sell" ${active === 'sell' ? 'checked' : ''}>${__('Sell')}</label></div>`;
+const sellable = (accId) => D().holdings.filter((x) => x.account_id === accId && assetInfo(x.symbol).type !== 'cash' && heldNow(x) > 1e-12);
+const sellAssetOptions = (accId, sel) => sellable(accId).map((x) => `<option value="${x.id}" ${x.id === sel ? 'selected' : ''}>${esc(assetInfo(x.symbol).symbol)} · ${esc(assetInfo(x.symbol).name)} · ${qtyFmt(heldNow(x), x)} ${__('held')}</option>`).join('');
+function sellAssetDialog(accId) {
+  const accounts = activeAccounts(), acc = accounts.find((a) => a.id === accId) || accounts.find((a) => sellable(a.id).length) || accounts[0], list = acc ? sellable(acc.id) : [], first = list[0] || null;
+  const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
+  open(`<h2>${__('Add transaction')}</h2><form data-form="holding" data-invest="1" data-sell="1" style="display:contents">
+    ${kindSeg('invest')}${buySellSeg('sell')}
+    <label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${acc && a.id === acc.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
+    <label class="field">${__('Asset you hold')}<select name="sellasset" data-search data-empty="${__('Asset not found')}">${sellAssetOptions(acc?.id, first?.id) || `<option value="">${__('Nothing to sell in this account')}</option>`}</select></label>
+    <div class="two"><label class="field">${__('Receive into')}<select name="fund">${sourceOptions('sell', first, recallAcct('investsell', sourceOptions('sell', first, '')) || (firstW ? 'w:' + firstW.id : ''))}</select></label>
+      <label class="field"><span data-fund-amt>${__('Amount received')}</span><input name="fundamount" type="number" min="0" step="any" required placeholder="${__('amount')}"></label></div>
+    <label class="field" data-fee-box hidden><span data-fee-label>${__('Fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    <label class="field">${__('Quantity sold')}<input name="quantity" type="number" min="0" step="any" required placeholder="${__('e.g. 0.05')}"></label>
+    <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>
+    <p class="hint">${__('The money goes into the account. Only the cost of what you sold is moved; any profit or loss becomes its own record. It is not counted as spending.')}</p>
+    <div class="actions"><button class="btn" type="submit">${__('Sell')}</button></div></form>`);
+  syncSellForm($('#dlg form'));
+}
+/* keep the sell form in step: the receiving list follows the chosen asset (it cannot pay into itself), the labels follow the receiving account */
+function syncSellForm(form, rebuild) {
+  const h = D().holdings.find((x) => x.id === form.sellasset.value) || null;
+  if (rebuild) { const keep = form.fund.value; form.fund.innerHTML = sourceOptions('sell', h, keep); }
+  const src = parseSource(form.fund.value), label = $('[data-fund-amt]', form);
+  label.textContent = src ? __('Amount received ({unit})', { unit: sourceUnit(src) }) : __('Amount received');
+  syncFeeBox(form, src, false);
+}
 function holdingDialog(h, accId, opts = {}) {
   if (!h) state.ui.pickType = opts.pickType || '';   // the asset picker starts on All (or Cash balance from the + Cash button)
   const accounts = activeAccounts(), info = h && assetInfo(h.symbol), invest = !!opts.invest;
   const ws = D().wallets.filter((w) => !w.archived), firstW = ws.find((w) => w.currency === cur()) || ws[0];
   open(`<h2>${h ? esc(info.name) : invest ? __('Add transaction') : __('Add asset')}</h2><form data-form="holding" data-id="${h?.id || ''}" ${invest ? 'data-invest="1"' : ''} style="display:contents">
-    ${invest ? kindSeg('invest') : ''}
+    ${invest ? kindSeg('invest') + buySellSeg('buy') : ''}
     ${h ? '' : `<label class="field">${__('Account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId || (invest ? recallAcct('investacct', accounts.map((x) => `value="${x.id}"`).join('')) : '')) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>`}
     ${h ? '' : `
     <div class="field" id="picker">${__('Asset')}
@@ -2011,6 +2042,16 @@ function ensureFeeCategory() {
   D().transactions.forEach((t) => { if (t.type === 'expense' && t.transfer_id && !t.category_id) { t.category_id = c.id; changed = true; } });
   return changed;
 }
+/* selling an asset at a profit or loss: the profit is income (category Investment income > Capital gains), the loss an expense (Investment Loss), both on the account that received the sale.
+   Created on demand with fixed ids (same rows on every device). */
+function pnlCategory(profit) {
+  const d = D(), top = (n, type) => d.categories.find((c) => !c.parent_id && c.type === type && c.name.trim().toLowerCase() === n.toLowerCase());
+  const make = (n, type, parent) => { const base = CATS.find((x) => x[0] === (parent ? parent : n)), sub = parent ? (SUBS[parent] || []).find((x) => x[0] === n) : null; const c = { id: defaultCatId(parent || n, parent ? n : ''), parent_id: parent ? top(parent, type).id : null, name: n, type, icon: sub ? sub[1] : base[2], color: base[3], archived: false }; d.categories.push(c); return c; };
+  if (!profit) return top('Investment Loss', 'expense') || make('Investment Loss', 'expense');
+  if (!top('Investment income', 'income')) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Investment income'); d.categories.push({ id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }); }
+  const par = top('Investment income', 'income');
+  return d.categories.find((c) => c.parent_id === par.id && c.name.toLowerCase() === 'capital gains') || make('Capital gains', 'income', 'Investment income');
+}
 function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
   const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
   const addTrade = (hh, tr) => { hh.trades.push(tr); if (tr.side === 'buy' && tr.date.slice(0, 7) < hh.since) hh.since = tr.date.slice(0, 7); };
@@ -2025,8 +2066,12 @@ function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
   if (source.kind === 'wallet') {
     const w = source.wallet;
     addTrade(h, { id, date, side, quantity, amount_minor: amount, currency: w.currency, wallet_id: w.id, ...px });
+    // selling: only the cost of what was sold goes back as a transfer in; the profit or loss on top is its own record (below) on the same account
+    let moved = amount, pnl = 0;
+    if (side === 'sell' && trackCost(h)) { const hc = holdingCost(h), pi = hc.per[id]; if (hc.known && pi && Number.isFinite(pi.realized)) { pnl = toMinor((pi.realized * RATES[w.currency]) / RATES[h.ccy], w.currency); if (amount - pnl <= 0) pnl = 0; moved = amount - pnl; } }
     D().transactions.push({ id: uid(), trade_id: id, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in',
-      amount_minor: amount, currency: w.currency, occurred_at: date, note: `${word} ${qtyFmt(quantity)} ${sym}`, category_source: 'user', ai_confidence: null });
+      amount_minor: moved, currency: w.currency, occurred_at: date, note: `${word} ${qtyFmt(quantity)} ${sym}`, category_source: 'user', ai_confidence: null });
+    if (pnl !== 0) D().transactions.push({ id: detId('pnl', id), wallet_id: w.id, category_id: pnlCategory(pnl > 0).id, type: pnl > 0 ? 'income' : 'expense', amount_minor: Math.abs(pnl), currency: w.currency, occurred_at: date, note: `${sym} ${pnl > 0 ? __('profit') : __('loss')}`, category_source: 'user', ai_confidence: null });
     addFeeRecord(w, fee, date, `${__('Investment fee')} (${word} ${qtyFmt(quantity)} ${sym})`);   // what the broker charged, from the same account
     sortTxns();
     return;
@@ -2046,7 +2091,7 @@ function removeTrade(h, tr) {
   if (back < -1e-12 || oback < -1e-12) return false;
   h.quantity = r12(Math.max(0, back)); h.trades = h.trades.filter((x) => x.id !== tr.id);
   if (ot) { other.quantity = r12(Math.max(0, oback)); other.trades = other.trades.filter((x) => x.id !== ot.id); }
-  D().transactions = D().transactions.filter((t) => t.trade_id !== tr.id);   // the wallet gets its money back
+  D().transactions = D().transactions.filter((t) => t.trade_id !== tr.id && t.id !== detId('pnl', tr.id));   // the wallet gets its money back (and the profit or loss record goes)
   return true;
 }
 
@@ -2407,6 +2452,10 @@ document.addEventListener('change', (e) => {
     if (t.value === '__new') { t.value = t.dataset.prev || ''; q.hidden = false; q.scrollIntoView({ block: 'nearest' }); }   // open the add-category form; no keyboard until a field is tapped
     else { t.dataset.prev = t.value; q.hidden = true; }                                                                    // picking a category hides the add form
   }
+  else if (t.name === 'side' && t.form?.dataset.invest && t.form?.dataset.form === 'holding') { const acc = t.form.account && t.form.account.value; if (t.value === 'sell') sellAssetDialog(acc); else holdingDialog(null, acc, { invest: true }); }
+  else if (t.form?.dataset.sell && t.name === 'account') { sellAssetDialog(t.value); }
+  else if (t.form?.dataset.sell && t.name === 'sellasset') syncSellForm(t.form, true);
+  else if (t.form?.dataset.sell && t.name === 'fund') syncSellForm(t.form);
   else if (t.name === 'type' && t.form?.dataset.form === 'txn') {
     if (t.value === 'invest') holdingDialog(null, null, { invest: true });
     else if (t.value === 'transfer') transferDialog();
@@ -2461,10 +2510,10 @@ function runAssetSearch() {
 }
 async function pickAsset(a, form, quiet) {
   form.asset.value = a.key; form.assetmeta.value = JSON.stringify(a); form.price.value = '';
-  $('#asset-results').hidden = true; form.assetq.value = '';
+  $('#asset-results').hidden = true; form.assetq.value = quiet ? '' : a.symbol;   // the chosen ticker stays in the search box (BBRI), the details below
   form.dataset.nocost = a.type === 'cash' || a.type === 'stablecoin' ? '1' : ''; if (form.pccy) form.pccy.value = defaultPriceCcy(a, form.pccy.value); syncOwnPrice(form);
   const chip = $('#picked'), fb = $('.price-fallback', form); chip.hidden = !!quiet; fb.hidden = true;
-  chip.innerHTML = `<b>${esc(a.symbol)}</b> ${esc(a.name)} <span class="badge">${esc(a.type)}</span> <span class="muted" id="picked-price"></span>`;
+  chip.innerHTML = `${esc(a.name)} <span class="badge">${esc(a.type)}</span> <span class="muted" id="picked-price"></span>`;
   if (!a.fh && !a.yh) return; // built-in asset: priced from the mock catalog
   $('#picked-price').textContent = __('getting price…');
   try {
@@ -2726,6 +2775,17 @@ document.addEventListener('submit', async (e) => {
     const short = payShortfall(src, side, amount + (side === 'buy' ? fee : 0)); if (short) { toast(short); return; }   // a buy needs the fee on top of the amount
     recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price), fee });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty, h)} ${info.symbol}`); return;
+  }
+  if (kind === 'holding' && f.dataset.sell) {
+    const h = D().holdings.find((x) => x.id === v.sellasset), src = parseSource(v.fund);
+    if (!h) { toast(__('Pick an asset you hold')); return; }
+    const qty = parseFloat(v.quantity), amount = src ? parseAmount(src, v.fundamount) : 0;
+    if (!(qty > 0) || !(amount > 0)) { toast('Enter a quantity and an amount above zero'); return; }
+    if (qty > heldNow(h) + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(heldNow(h), h), symbol: assetInfo(h.symbol).symbol })); return; }
+    const fee = src.kind === 'wallet' && v.fee ? toMinor(parseFloat(v.fee), src.wallet.currency) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    recordTrade(h, { side: 'sell', quantity: qty, source: src, amount, date: v.date, fee });
+    state.ui.pfTab = 'investment'; rememberAcct('investsell', v.fund);
+    save(); close(); render(); toast(`${__('Sold')} ${qtyFmt(qty, h)} ${assetInfo(h.symbol).symbol}`); return;
   }
   if (kind === 'holding') {
     if (f.dataset.id) {

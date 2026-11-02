@@ -59,6 +59,7 @@ const SCREENS = [
   ['dialog-loan-payment-delete', 'dialog', `loanPaymentDialog(D().loans[0], D().loans[0].payments[D().loans[0].payments.length - 1]);`],
   ['dialog-lent-repayment', 'dialog', `paymentDialog(D().lent[0], 'lent');`],
   ['dialog-lent-repayment-delete', 'dialog', `lentRepaymentDialog(D().lent[0], D().lent[0].payments[D().lent[0].payments.length - 1]);`],
+  ['dialog-invest-sell', 'dialog', `sellAssetDialog(D().investments[0].id);`],
   ['dialog-archived-loans', 'dialog', `D().loans[0].archived = true; archivedLoansDialog();`],
   ['dialog-occasion-history', 'dialog', `D().occasions.push({ id: uid(), name: 'Lombok Trip', amount_minor: 4000000, currency: cur(), start: '2026-03-10', end: '2026-03-12', archived: false }, { id: uid(), name: 'Anniversary', amount_minor: null, currency: cur(), start: '', end: '', archived: true }); occasionHistoryDialog();`],
   ['dialog-budget-new-category', 'dialog', `budgetDialog(); const s = document.querySelector('#dlg select[name=category]'); s.value = '__new'; s.dispatchEvent(new Event('change', { bubbles: true }));`],

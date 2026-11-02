@@ -166,6 +166,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - NEVER write `open(p, 'w').write(open(p).read())` in a script: opening for write truncates the file before it is read. I emptied app.js that way (`node --check` passes on an empty file!). Check file size after every script edit, and rely on git to restore.
   - When every test suddenly fails at the first step with no page error, check that the main script is not empty or half-loaded (`typeof state`).
   - An author `display` rule (`.two { display: grid }`) silently beats the `[hidden]` attribute: a block I "hid" with `hidden` was visible for weeks. Test visibility with `isVisible`, or add `[hidden] { display: none !important }` for such blocks.
+  - I wrote `open(p,'w').write(open(p).read())` AGAIN at the end of a script (it did not run only because an earlier step failed first). Never end a script with a no-op rewrite of the file; `cp` a backup first and check `wc -c` afterwards.
+  - Visually hidden radio inputs (segmented controls) are not "visible" to Playwright: wait with `{ state: 'attached' }` or click the label.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

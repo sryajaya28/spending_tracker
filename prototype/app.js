@@ -850,15 +850,17 @@ function pnlSection(rm, vc) {
 }
 /* one month of realized profit and loss on its own page, day by day */
 function viewPnlMonth(k) {
-  const list = realizedPnl().filter((e) => inPeriod(e.date, k)), net = list.reduce((a, e) => a + e.pnl, 0);
+  const all = realizedPnl(), whole = k === 'all', list = whole ? all : all.filter((e) => inPeriod(e.date, k)), net = list.reduce((a, e) => a + e.pnl, 0);
+  const keys = [...new Set([currentPeriod(), ...all.map((e) => periodKeyOf(e.date)), ...(whole ? [] : [k])])].sort().reverse();
+  const pick = `<select class="chip pill-select" data-bind="pnlPeriod" aria-label="${__('Period')}"><option value="all" ${whole ? 'selected' : ''}>${__('All time')}</option>${keys.map((x) => `<option value="${x}" ${x === k ? 'selected' : ''}>${esc(periodHeading(x))}</option>`).join('')}</select>`;
   return `${topbar('Realized Profit & Loss')}
-  <section class="card"><div class="card-head"><div><a class="back-link" href="#/portfolio">← ${__('Back to Portfolio')}</a><h2>${esc(periodHeading(k))}</h2></div></div>
+  <section class="card"><div class="card-head"><div><a class="back-link" href="#/portfolio">← ${__('Back to Portfolio')}</a></div>${pick}</div>
     <div class="big num" style="font-size:26px;margin:4px 0 12px">${pnlText(net)}</div>
     ${list.length ? pnlDays(list) : '<div class="empty">' + __('No sales in this period.') + '</div>'}</section>`;
 }
 function viewPortfolio() {
   const hid = routeArg(), ah = hid && D().holdings.find((x) => x.id === hid); if (ah) return viewAsset(ah);
-  if (/^pnl-\d{4}-\d{2}$/.test(hid)) { state.chart = null; state.chart2 = null; return viewPnlMonth(hid.slice(4)); }
+  if (/^pnl-(\d{4}-\d{2}|all)$/.test(hid)) { state.chart = null; state.chart2 = null; return viewPnlMonth(hid.slice(4)); }
   const months = lastMonths(6), vc = pf(), base = cur(), tab = state.ui.pfTab || 'savings';
   const S = months.map(savingsUSD), I = months.map((k) => portfolioUSD(k)), L = months.map(loanUSD), LT = months.map(lentUSD);
   const N = months.map((_, i) => S[i] + I[i] + LT[i] - L[i]);
@@ -2530,6 +2532,7 @@ document.addEventListener('change', (e) => {
   if (t.matches('[data-trend]')) { if (t.dataset.trend === 'n') { state.ui.trendN = +t.value; state.ui.trendCat = state.ui.trendCat || ''; } else state.ui.trendCat = t.value; $('#trend-chart').innerHTML = trendChart(); }
   else if (t.matches('[data-bind="month"]')) { if (t.value === 'all') state.ui.allPeriods = true; else { state.ui.allPeriods = false; state.ui.month = t.value; } render(); }   // "all": Transactions only, the period itself is kept for the other pages
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
+  else if (t.matches('[data-bind="pnlPeriod"]')) { location.hash = '#/portfolio/pnl-' + t.value; }
   // (the search box is handled on input: a change event from a removed, focused box must not bring its old text back)
   else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
   else if (t.name === 'category' && (t.form?.dataset.form === 'txn' || t.form?.dataset.form === 'budget')) {

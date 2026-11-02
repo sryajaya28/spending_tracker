@@ -55,6 +55,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('.day-row'); assert.equal(await p.$$eval('.day-group.open', (e) => e.length), 1, 'tap expands the day');
   const dt = (await p.innerText('.main')).replace(/\u00a0/g, ' ');
   assert(/1 BTC sold · Stockbit/.test(dt) && /2 BTC sold/.test(dt) && dt.includes('+Rp ' + pn.vals[1]) && dt.includes('−Rp 100') && dt.includes('−Rp ' + Math.abs(pn.net)) && dt.includes('Back to Portfolio'), dt); assert.equal(await p.$$eval('.day-group', (e) => e.length), 1, 'grouped by day');
+  const opts = await p.$$eval('select[data-bind=pnlPeriod] option', (o) => o.map((x) => x.value)); assert(opts[0] === 'all' && opts.length >= 2, 'All time plus the periods: ' + opts);
+  await p.selectOption('select[data-bind=pnlPeriod]', 'all'); await p.waitForFunction(() => location.hash === '#/portfolio/pnl-all'); await p.waitForSelector('.day-group'); assert.equal(await p.$eval('select[data-bind=pnlPeriod]', (e) => e.value), 'all'); assert(/Back to Portfolio/.test(await p.innerText('.main')));
+  await p.selectOption('select[data-bind=pnlPeriod]', opts[1]); await p.waitForFunction((h) => location.hash === h, '#/portfolio/pnl-' + opts[1]);
   await p.click('.back-link'); await p.waitForSelector('[data-act=pnl-month]'); assert.equal(await p.evaluate(() => location.hash), '#/portfolio');
   // IDR amounts of cash use dots: 85.000.000 IDR, never 85,000,000
   assert.equal(await p.evaluate(() => { D().customAssets['CASH:IDR'] = { symbol: 'IDR', name: 'Cash (IDR)', type: 'cash', cash: 'IDR' }; const h = { symbol: 'CASH:IDR', quantity: 85000000, trades: [], since: '2026-01', id: 'cx', account_id: D().investments[0].id }; D().holdings.push(h); const t = holdingRow(h, 'IDR', 1).replace(/<[^>]+>/g, ' '); D().holdings = D().holdings.filter((x) => x.id !== 'cx'); return /85\.000\.000 IDR/.test(t) && !/85,000,000/.test(t); }), true, 'cash quantity with dots');

@@ -37,6 +37,8 @@ const assert = require('assert');
   assert((await text()).includes('Overview') || (await text()).length > 100);
   console.log('signed in, shell rendered');
   await page.evaluate(() => Cloud.idle()); assert((await log()).some((o) => o.table === 'categories' && o.rows.some((r) => r.name === 'Fee')), 'the Fee category is added on first load'); await log();
+  // the default account holds some money (an expense cannot be more than the balance); that save is not part of what is checked below
+  await page.evaluate(() => { D().wallets[0].opening_balance_minor = 100000000; save(); }); await page.evaluate(() => Cloud.idle()); await log();
 
   // add a transaction
   await page.evaluate(() => { location.hash = '#/transactions'; });

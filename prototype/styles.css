@@ -938,3 +938,6 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 @keyframes cg-fall { 0% { opacity: 1; transform: translateY(0) rotate(var(--r)); } 100% { opacity: .9; transform: translateY(95vh) rotate(calc(var(--r) + 540deg)); } }
 @media (prefers-reduced-motion: reduce) { .cg-badge, .cg-badge svg, .confetti i { animation: none; } .cg-badge svg { stroke-dashoffset: 0; } .confetti { display: none; } }
 .congrats > :not(.confetti) { position: relative; z-index: 1; }   /* the text stays readable over the confetti */
+
+/* a chip that is a <button> (Details, History, Archived...) looks exactly like one that is a link: no browser border */
+button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor: pointer; }

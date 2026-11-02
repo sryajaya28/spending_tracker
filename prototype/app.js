@@ -531,8 +531,9 @@ function halfDonut(items, total) {
     return `<circle class="dseg" cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="${p.color}" stroke-width="${SW}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}" transform="rotate(-90 ${cx} ${cx})" data-name="${esc(p.name)}" data-amt="${esc(money(p.value, cur()))}" data-pct="${pctTxt}" data-color="${p.color}" tabindex="0" role="img" aria-label="${esc(p.name)}: ${esc(money(p.value, cur()))}, ${pctTxt}"/>`;
   }).join('') : `<circle cx="${cx}" cy="${cx}" r="${R}" fill="none" stroke="#E6E8F5" stroke-width="${SW}"/>`;
   const dflt = `<p>${__('Spent in {month}', { month: esc(periodName(state.ui.month)) })}</p><b class="num" style="--len:${money(total, cur()).length}">${money(total, cur())}</b>`;
+  const legend = total ? `<div class="legend-row donut-legend">${parts.map((p) => `<span><i style="background:${p.color}"></i>${p.icon ? p.icon + ' ' : ''}${esc(p.name)}</span>`).join('')}</div>` : '';   // same colours and order as the arcs
   return `<div class="donut"><svg viewBox="0 0 260 260" class="chart" role="group" aria-label="${__('Spending by category')}">${arcs}</svg>
-    <div class="center" data-default="${esc(dflt)}">${dflt}</div></div>`;
+    <div class="center" data-default="${esc(dflt)}">${dflt}</div></div>${legend}`;
 }
 // centre readout for the donut: hover on a mouse, tap to pin on touch; tap the same arc or anywhere else to clear
 function donutShow(seg) {

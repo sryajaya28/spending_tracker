@@ -23,6 +23,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.mouse.click(...(await at(0.7))); assert((await p.innerText('.donut .center')).includes('20%'), 'tap pins');
   await p.mouse.move(5, 5); assert((await p.innerText('.donut .center')).includes('20%'), 'stays pinned');
   await p.click('.topbar h1'); assert((await p.innerText('.donut .center')).includes('Spent in'), 'cleared');
+  // a legend under the donut lists the same categories, in the same order and colours as the arcs
+  const lg = await p.evaluate(() => ({ names: [...document.querySelectorAll('.donut-legend span')].map((e) => e.textContent.trim()), colors: [...document.querySelectorAll('.donut-legend i')].map((e) => e.style.background), arcs: [...document.querySelectorAll('.donut .dseg')].map((e) => e.getAttribute('data-name')) }));
+  assert(lg.names.length >= 2 && lg.names.length === lg.arcs.length, JSON.stringify(lg)); lg.arcs.forEach((n, i) => assert(lg.names[i].includes(n), n + ' / ' + lg.names[i]));
   // the Budgets card on Overview has its own month picker
   const prev = await p.$eval('.card:has(a[href="#/budgets"]) select[data-bind=month] option:nth-child(2)', (o) => o.value);
   await p.selectOption('.card:has(a[href="#/budgets"]) select[data-bind=month]', prev); assert.equal(await p.evaluate(() => state.ui.month), prev);

@@ -857,3 +857,6 @@ input[type="date"].dp-on { color: transparent; }
 input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 .dp-text { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 14px; pointer-events: none; color: var(--ink); font-size: 15px; white-space: nowrap; overflow: hidden; }
 .dp-text { padding: 0 16px; }
+
+/* legend under the Spending donut: same colours as the arcs, centred, wraps */
+.donut-legend { justify-content: center; margin-top: 14px; }

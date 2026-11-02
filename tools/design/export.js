@@ -94,7 +94,7 @@ const COMPONENTS = [
   { group: 'banners', name: 'hint', setup: `paymentDialog(D().loans[0], 'loan');`, sel: '#dlg .hint' },
   // graphs
   { group: 'graphs', name: 'money-flow-line', setup: PAGE('#/overview'), sel: '#flow' },
-  { group: 'graphs', name: 'spending-donut', setup: PAGE('#/overview'), sel: '.donut' },
+  { group: 'graphs', name: 'spending-donut', setup: PAGE('#/overview'), sel: '.donut', up: 'section' },
   { group: 'graphs', name: 'category-trend-bars', setup: PAGE('#/overview'), sel: '#trend-chart' },
   { group: 'graphs', name: 'portfolio-value', setup: PAGE('#/portfolio', `state.ui.pfTab = 'savings';`), sel: '#pf' },
   { group: 'graphs', name: 'progress-bar', setup: PAGE('#/budgets'), sel: '.brow .bar' },

@@ -9,12 +9,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle()), txt = () => p.evaluate(() => document.body.innerText);
   const bal = (name) => p.evaluate((n) => { const w = D().wallets.find((x) => x.name === n); return walletBalance(w); }, name);
   // only one wallet: refused with a message
-  await p.click('[data-act=transfer]'); await p.waitForTimeout(100); assert((await txt()).includes('Add a second account'));
+  await p.evaluate(() => transferDialog()); await p.waitForTimeout(100); assert((await txt()).includes('Add a second account'));
   await p.evaluate(() => { const m = monthKey(new Date()); D().wallets[0].name = 'Cash'; D().wallets[0].opening_balance_minor = 50000;
     D().wallets.push({ id: uid(), name: 'Bank', type: 'bank', currency: 'IDR', opening_balance_minor: 1000000, since: m, archived: false }, { id: uid(), name: 'USD Savings', type: 'bank', currency: 'USD', opening_balance_minor: 100000, since: m, archived: false }); save(); render(); });
   await settle(); await log();
   // same-currency transfer with a fee
-  await p.click('[data-act=transfer]'); await p.waitForSelector('form[data-form=transfer]');
+  await p.evaluate(() => transferDialog()); await p.waitForSelector('form[data-form=transfer]');
   assert((await p.$$('.seg input[name=txkind]')).length === 4);
   await p.selectOption('select[name=from]', { label: await p.$eval('select[name=from]', (s) => [...s.options].find((o) => /^Bank/.test(o.textContent)).textContent) });
   await p.selectOption('select[name=to]', { label: await p.$eval('select[name=to]', (s) => [...s.options].find((o) => /^Cash/.test(o.textContent)).textContent) });
@@ -29,10 +29,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await bal('Bank'), 1000000 - 200000 - 6500); assert.equal(await bal('Cash'), 50000 + 200000);
   const spend = await p.evaluate(() => sumBy(inMonth(monthKey(new Date())), 'expense')); assert.equal(spend, 6500, 'only the fee counts as spending'); 
   // refused: more than the balance
-  await p.click('[data-act=transfer]'); await p.selectOption('select[name=from]', { index: 0 }); await p.fill('input[name=amount]', '99999999'); await p.click('#dlg button[type=submit]');
+  await p.evaluate(() => transferDialog()); await p.selectOption('select[name=from]', { index: 0 }); await p.fill('input[name=amount]', '99999999'); await p.click('#dlg button[type=submit]');
   assert((await p.evaluate(() => document.getElementById('toast').textContent)).includes("doesn't have enough")); await p.click('[data-act=close]');
   // cross-currency: Bank -> USD Savings, received estimated then edited
-  await p.click('[data-act=transfer]');
+  await p.evaluate(() => transferDialog());
   await p.selectOption('select[name=from]', await p.$eval('select[name=from]', (s) => [...s.options].find((o) => /^Bank/.test(o.textContent)).value));
   await p.selectOption('select[name=to]', await p.$eval('select[name=to]', (s) => [...s.options].find((o) => /^USD Savings/.test(o.textContent)).value));
   assert(!(await p.$eval('[data-recv]', (e) => e.hidden)), 'received field shown');

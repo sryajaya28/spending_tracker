@@ -20,7 +20,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const order = await p.evaluate(() => { const c = document.querySelector('.land-cta').getBoundingClientRect(), i = document.querySelector('.install-cta').getBoundingClientRect(); return i.top >= c.bottom; }); assert(order, 'below Sign in');
   await p.click('.install-cta'); await p.waitForSelector('.install-guide'); assert(!(await p.innerText('#dlg')).includes('Transfer from browser'), 'signed out: no code yet'); await p.click('#dlg [data-act=close]');
   await signIn(p); await p.waitForSelector('.ov-install');
-  const below = await p.evaluate(() => { const h = document.querySelector('.hero').getBoundingClientRect(), i = document.querySelector('.ov-install').getBoundingClientRect(); return i.top >= h.bottom - 1; }); assert(below, 'below Total Balance');
+  const below = await p.evaluate(() => { const h = document.querySelector('.hero, .onb-sample').getBoundingClientRect(), i = document.querySelector('.ov-install').getBoundingClientRect(); return i.top >= h.bottom - 1; }); assert(below, 'below Total Balance (or the sample card on the first-run screen)');
   await p.click('.ov-install'); await p.waitForSelector('.handoff-code'); const shown = (await p.innerText('.handoff-code')).trim(); assert(/^[A-Z0-9]{5}-[A-Z0-9]{5}$/.test(shown), shown);
   const url = await p.evaluate(() => location.href); assert(/#\/overview\?handoff=[A-Z0-9]{10}$/.test(url), url);
   // the installed app (a separate session, standalone) opens that address and is signed in without a password

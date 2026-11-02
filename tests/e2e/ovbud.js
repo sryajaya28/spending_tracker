@@ -7,7 +7,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
-  await p.evaluate(() => { const f = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); }; const m = currentPeriod() + '-01';
+  // an account with money, so Overview is the normal one and not the first-run screen
+  await p.evaluate(() => { D().wallets[0].opening_balance_minor = 100000000; const f = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); }; const m = currentPeriod() + '-01';
     D().budgets.push({ id: uid(), category_id: null, amount_minor: 55000000, currency: 'IDR', start_month: m }); D().categories.filter((c) => c.type === 'expense' && !c.parent_id).slice(0, 8).forEach((c, i) => D().budgets.push({ id: uid(), category_id: c.id, amount_minor: (i + 2) * 1000000, currency: 'IDR', start_month: m }));
     D().occasions.push({ id: uid(), name: 'Bali Trip', amount_minor: 9000000, currency: 'IDR', start: f(10), end: f(14), archived: false }); location.hash = '#/overview'; render(); });
   await p.waitForTimeout(500);

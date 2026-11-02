@@ -88,20 +88,56 @@ const ICON = {
 const icon = (n) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[n]}</svg>`;
 
 /* ---------- mock data / store ---------- */
+/* the default categories: what a new account starts with (the signup seed has the first ones; the app adds the rest on first load, see ensureDefaultCategories)
+   and what the sample data uses. [name, type, icon, colour]; sub-categories are in SUBS. */
 const CATS = [
   ['Groceries', 'expense', '🛒', '#4A44C6'], ['Dining', 'expense', '🍽️', '#8B8FF0'], ['Transport', 'expense', '🚌', '#F5B800'],
   ['Shopping', 'expense', '🛍️', '#EC4899'], ['Bills & Utilities', 'expense', '🧾', '#14B8A6'], ['Entertainment', 'expense', '🎬', '#F97316'],
-  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'], ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
-  ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Other income', 'income', '➕', '#94A3B8'],
+  ['Health', 'expense', '🩺', '#EF4444'], ['Travel', 'expense', '✈️', '#0EA5E9'], ['Subscription', 'expense', '🏷️', '#14B8A6'],
+  ['Housing', 'expense', '🏠', '#A855F7'], ['Loan Repayment', 'expense', '🏦', '#6366F1'], ['Pet', 'expense', '🐶', '#F59E0B'],
+  ['Education', 'expense', '📚', '#06B6D4'], ['Insurance', 'expense', '🛡️', '#10B981'], ['Personal Care', 'expense', '💇', '#D946EF'],
+  ['Family & Kids', 'expense', '👨‍👩‍👧', '#FB7185'], ['Gifts & Donations', 'expense', '🎁', '#F43F5E'], ['Taxes', 'expense', '🏛️', '#78716C'],
+  ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment income', 'income', '📈', '#0D9488'],
+  ['Rental income', 'income', '🏘️', '#65A30D'], ['Business income', 'income', '🏪', '#059669'], ['Refunds & cashback', 'income', '↩️', '#2DD4BF'], ['Gift received', 'income', '🎀', '#4ADE80'],
+  ['Other income', 'income', '➕', '#94A3B8'],
 ];
 // sample accounts per country are defined in sample.js
 // one level of sub-categories under a parent; transactions may point at either
 const SUBS = {
   Groceries: [['Supermarket', '🏬'], ['Fresh market', '🥬']],
   Dining: [['Coffee', '☕'], ['Restaurants', '🍴'], ['Delivery', '🛵']],
-  Transport: [['Fuel', '⛽'], ['Ride-hailing', '🚕'], ['Public transit', '🚇']],
-  Entertainment: [['Movies', '🎬'], ['Streaming', '📺'], ['Events', '🎟️']],
+  Transport: [['Fuel', '⛽'], ['Ride-hailing', '🚕'], ['Public transit', '🚇'], ['Parking & tolls', '🅿️'], ['Vehicle service', '🔧']],
+  Shopping: [['Clothing', '👕'], ['Electronics', '💻'], ['Online shopping', '📦'], ['Hobbies', '🎨']],
+  'Bills & Utilities': [['Electricity', '💡'], ['Water', '🚰'], ['Gas', '🔥'], ['Internet & phone', '🌐']],
+  Entertainment: [['Movies', '🎬'], ['Streaming', '📺'], ['Events', '🎟️'], ['Games', '🎮']],
+  Health: [['Doctor', '🧑‍⚕️'], ['Pharmacy', '💊'], ['Dental', '🦷'], ['Fitness', '🏋️']],
+  Travel: [['Flights', '🛫'], ['Hotels', '🏨'], ['Activities', '🎡']],
+  Housing: [['Rent', '🔑'], ['Home maintenance', '🛠️'], ['Furniture & decor', '🛋️'], ['Property tax', '🏡']],
+  'Loan Repayment': [['Mortgage', '🏠'], ['Car loan', '🚗'], ['Personal loan', '🤝'], ['Credit card', '💳'], ['Student loan', '🎓']],
+  Pet: [['Pet food', '🦴'], ['Vet & medicine', '💉'], ['Grooming', '✂️']],
+  Education: [['Tuition', '🎓'], ['Courses & books', '📖'], ['School supplies', '✏️']],
+  Insurance: [['Life', '🕊️'], ['Health', '🏥'], ['Vehicle', '🚙'], ['Home', '🏡']],
+  'Personal Care': [['Salon & barber', '💈'], ['Skincare & beauty', '🧴'], ['Spa & massage', '💆']],
+  'Family & Kids': [['Childcare', '👶'], ["Kids' activities", '⚽'], ['Baby supplies', '🍼'], ['Parents support', '👵']],
+  'Gifts & Donations': [['Gifts', '🎁'], ['Charity', '🤲'], ['Religious giving', '🙏']],
+  Taxes: [['Income tax', '📑'], ['Vehicle tax', '🚘'], ['Other taxes', '🧾']],
+  'Investment income': [['Dividends', '💵'], ['Interest', '🏦'], ['Capital gains', '📊']],
 };
+/* every account gets the whole list on first load when it has no transactions and no budgets yet; accounts with data only get the ones below
+   (so their own categories do not suddenly multiply). A category that already exists by name (archived ones too) is never added twice,
+   and sub-categories are only added under a parent created here. Returns true when something was added. */
+const ESSENTIAL_CATS = ['Housing', 'Loan Repayment', 'Pet'];
+function ensureDefaultCategories() {
+  const d = D(), full = d.transactions.length === 0 && d.budgets.length === 0; let changed = false;
+  CATS.forEach(([n, type, icon, color]) => {
+    if (!full && !ESSENTIAL_CATS.includes(n)) return;
+    if (d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === n.toLowerCase())) return;
+    const parent = { id: uid(), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(parent); changed = true;
+    (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: uid(), parent_id: parent.id, name: sn, type, icon: sic, color, archived: false }));
+  });
+  return changed;
+}
 
 /* mock price catalog: [symbol, name, type, current USD price, monthly volatility].
    The real app reads these from price_snapshots (filled by a daily job from Finnhub / CoinGecko). */
@@ -957,7 +993,35 @@ function fitOverviewBudgets() {
   rows.forEach((r) => { if (!full || r.offsetTop + r.offsetHeight > room + 1) { r.hidden = true; full = false; } });
 }
 addEventListener('resize', () => requestAnimationFrame(fitOverviewBudgets));
+/* first run: what the user has set up so far. An empty account (no accounts with money, no budget, no transaction) gets a getting-started
+   Overview instead of empty charts; afterwards a slim strip keeps pointing at what is still missing. */
+// the first-run screen stays until there is an account and a budget (or a first transaction)
+function setupState() {
+  const d = D(), hasAccount = toUSD(totalBalance(), cur()) >= 1 || d.wallets.filter((w) => !w.archived).length > 1 || d.investments.length > 0, hasBudget = d.budgets.length > 0, hasTx = d.transactions.length > 0;
+  return { hasAccount, hasBudget, hasTx, fresh: !state.real && !hasTx && !(hasAccount && hasBudget), partial: !state.real && (!hasAccount || !hasBudget) };
+}
+function onboardingView(st) {
+  const step = (n, done, title, sub, act, label) => `<div class="onb-step ${done ? 'done' : ''}"><span class="onb-n" aria-hidden="true">${done ? '✓' : n}</span><div class="onb-t"><b>${title}</b><small class="muted">${sub}</small></div>
+    ${done ? `<span class="onb-ok">${__('Done')}</span>` : `<button type="button" class="btn ${n === 1 ? '' : 'secondary'}" data-act="${act}">${label}</button>`}</div>`;
+  const doneN = [st.hasAccount, st.hasBudget, st.hasTx].filter(Boolean).length;
+  return `${topbar('', 'Here is where your money stands today.')}
+  <div class="onb">
+    <section class="card onb-sample"><span class="onb-flask" aria-hidden="true">🧪</span><h2>${__('Explore Stiver with sample data')}</h2>
+      <p>${__('See a full demo account first: accounts, budgets, investments and loans. Nothing you do there is saved.')}</p>
+      <button type="button" class="btn onb-try" data-act="demo-on">${__('Try sample data')}</button></section>
+    <section class="card onb-steps"><div class="card-head"><h2>${__('Set up your own')}</h2><span class="chip">${__('{n} of 3', { n: doneN })}</span></div>
+      <p class="muted" style="margin-bottom:6px">${__('Three quick steps and Stiver is ready.')}</p>
+      ${step(1, st.hasAccount, __('Add your accounts'), __("Bank, e-wallet or cash, with today's balance"), 'add-wallet', __('Add account'))}
+      ${step(2, st.hasBudget, __('Set a monthly budget'), __('Cap what you spend each month'), 'add-budget', __('Set budget'))}
+      ${step(3, st.hasTx, __('Add your first transaction'), __('Record an expense or income'), 'add-txn', __('Add'))}</section>
+    ${installBtn('ov-install')}
+  </div>`;
+}
+/* after the first steps: one slim line for what is still missing */
+const setupStrip = (st) => (st.partial && !st.fresh
+  ? `<div class="setup-strip" role="status"><span>${__('Finish setting up')}</span>${st.hasAccount ? '' : `<button type="button" class="chip" data-act="add-wallet">${__('Add account')}</button>`}${st.hasBudget ? '' : `<button type="button" class="chip" data-act="add-budget">${__('Set budget')}</button>`}</div>` : '');
 function viewOverview() {
+  const st = setupState(); if (st.fresh) return onboardingView(st);
   const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
   const months = lastMonths(6);
   const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
@@ -970,7 +1034,7 @@ function viewOverview() {
     ...occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, k)).map((o) => bRow('🎉', o.name, o.spent, o.budget, o.pct, o.status))];
   const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
   const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
-  return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}
+  return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}${setupStrip(st)}
   <div class="grid">
     <section class="card hero"><div class="label">${__('Total Balance')}${infoTip('ov-total', __('Savings + investments'))}</div>
       <div class="amount-line"><div class="amount num" style="--len:${money(totalBalance(), cur()).length + 6}">${moneyHtml(totalBalance(), cur())}</div>${heroCurrency(cur())}</div>
@@ -1406,12 +1470,12 @@ const iconField = (name, label, value) => `<label class="field">${label}<input n
 const iconPicks = (name, cur = '') => `<div class="icon-picks" data-for="${name}" role="group" aria-label="${__('Choose an icon')}">${ICON_PICKS.map((e) => `<button type="button" class="icon-pick${e === cur ? ' on' : ''}" data-act="pick-icon" data-for="${name}" data-e="${e}" aria-label="${e}">${e}</button>`).join('')}</div>`;
 /* add a category without leaving the transaction form, then select it */
 function quickAddCategory(form) {
-  const type = form.type.value === 'income' ? 'income' : 'expense', name = form.qc_name.value.trim(), parent = form.qc_parent.value ? catOf(form.qc_parent.value) : null;
+  const type = form.type && form.type.value === 'income' ? 'income' : 'expense', name = form.qc_name.value.trim(), parent = form.qc_parent && form.qc_parent.value ? catOf(form.qc_parent.value) : null;   // the budget form has no type switch and only top-level categories
   if (!name) { toast('Enter a name for the category'); form.qc_name.focus(); return; }
   if (D().categories.some((c) => !c.archived && (c.parent_id || null) === (parent?.id || null) && c.type === type && c.name.toLowerCase() === name.toLowerCase())) { toast('That name already exists here'); return; }
   const c = { id: uid(), parent_id: parent ? parent.id : null, name, type, icon: lastEmoji(form.qc_icon.value) || '🏷️', color: parent ? parent.color : SWATCHES[D().categories.length % SWATCHES.length], archived: false };
   D().categories.push(c); save();
-  $('select[name=category]', form).innerHTML = catOptions(type, c.id, true); $('select[name=category]', form).dataset.prev = c.id;
+  $('select[name=category]', form).innerHTML = form.dataset.form === 'budget' ? budgetCatOptions(c.id, new Set(D().budgets.map((x) => x.category_id))) : catOptions(type, c.id, true); $('select[name=category]', form).dataset.prev = c.id;
   form.qc_name.value = ''; form.qc_icon.value = '🏷️'; $('.quick-cat', form).hidden = true;
   toast(parent ? __('Added {name} under {parent}', { name, parent: parent.name }) : __('Added {name}', { name }));
 }
@@ -1547,12 +1611,19 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
     ${t ? '' : repeatField()}
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + ('">' + __('Delete') + '</button>') : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
+/* the "Applies to" list of a new budget: all spending, each top-level expense category, and "Add new category" (opens the inline form) */
+const budgetCatOptions = (selected, used, withNew = true) => [{ id: '', name: '💰 ' + __('All spending (global)') }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: `${c.icon} ${c.name}` }))]
+  .map((o) => `<option value="${o.id}" ${o.id === selected ? 'selected' : ''}>${esc(o.name)}${used.has(o.id || null) ? ' ' + __('(replace)') : ''}</option>`).join('') + (withNew ? `<option value="__new" data-cta>＋ ${__('Add new category')}</option>` : '');
 function budgetDialog(b, preset) {
   const used = new Set(D().budgets.map((x) => x.category_id));
-  const opts = [{ id: '', name: '💰 ' + __('All spending (global)') }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id, name: `${c.icon} ${c.name}` }))];
+  const opts = [{ id: '', name: '' }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id }))];
   const pick = !b && preset === 'category' ? (opts.find((o) => o.id && !used.has(o.id)) || { id: '' }).id : '';   // the "By category" Add button starts on a category without a budget yet
   open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2><form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
-    <label class="field">${__('Applies to')}<select name="category" data-search data-empty="${__('Category not found')}" ${b ? 'disabled' : ''}>${opts.map((o) => `<option value="${o.id}" ${o.id === (b ? b.category_id || '' : pick) ? 'selected' : ''}>${esc(o.name)}${!b && used.has(o.id || null) ? ' ' + __('(replace)') : ''}</option>`).join('')}</select></label>
+    <label class="field">${__('Applies to')}<select name="category" data-search data-empty="${__('Category not found')}" data-prev="${b ? b.category_id || '' : pick}" ${b ? 'disabled' : ''}>${b ? budgetCatOptions(b.category_id || '', new Set(), false) : budgetCatOptions(pick, used)}</select></label>
+    ${b ? '' : `<div class="quick-cat" hidden>
+      <div class="two"><label class="field">${__('Name')}<input name="qc_name" maxlength="40" placeholder="${__('e.g. Gym, or Snacks')}" autocomplete="off"></label>
+        ${iconField('qc_icon', __('Icon'), '🏷️')}</div>${iconPicks('qc_icon', '🏷️')}
+      <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">${__('Cancel')}</button><button type="button" class="btn" data-act="quick-cat-add">${__('Add category')}</button></div></div>`}
     <label class="field">${__('Monthly limit ({cur})', { cur: esc(cur()) })}<input name="amount" type="number" min="1" step="${expOf(cur()) ? '0.01' : '1'}" required value="${b ? toMajor(b.budget, cur()) : ''}"></label>
     <p class="hint">${__('Applies from {month} onward until you set a new amount.', { month: esc(monthLabel(state.ui.month)) })}</p>
     <div class="actions">${b ? `<button type="button" class="btn danger" data-act="delete-budget" data-id="${b.id}">${__('Delete')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -2210,8 +2281,8 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
   // (the search box is handled on input: a change event from a removed, focused box must not bring its old text back)
   else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
-  else if (t.name === 'category' && t.form?.dataset.form === 'txn') {
-    const q = $('.quick-cat', t.form);
+  else if (t.name === 'category' && (t.form?.dataset.form === 'txn' || t.form?.dataset.form === 'budget')) {
+    const q = $('.quick-cat', t.form); if (!q) return;
     if (t.value === '__new') { t.value = t.dataset.prev || ''; q.hidden = false; q.scrollIntoView({ block: 'nearest' }); }   // open the add-category form; no keyboard until a field is tapped
     else { t.dataset.prev = t.value; q.hidden = true; }                                                                    // picking a category hides the add form
   }
@@ -2638,7 +2709,7 @@ async function loadUserData() {
     if (mine !== loadSeq) return;   // a newer load took over
     state.real = null; state.data = loaded;
     state.data.livePrices = loadPrices();
-    if (ensureFeeCategory()) save();   // every account has the Fee category; earlier transfer fees get it too
+    const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(); if (addedCats || addedFee) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
     if (api.finnhub || api.yahoo) refreshPrices(true);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's

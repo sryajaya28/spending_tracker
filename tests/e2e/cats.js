@@ -18,7 +18,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(!(await txt()).includes('12 categories · 11 sub-categories'), 'no summary line');
   await p.screenshot({ path: __dirname + '/settings_collapsed.png' });
   assert((await p.$$('.brow.indent')).length === 0, 'subs hidden until expanded');
-  assert((await p.$$('[data-act=toggle-cat]')).length === 4, 'four parents have subs');
+  assert.equal((await p.$$('[data-act=toggle-cat]')).length, await p.evaluate(() => D().categories.filter((c) => !c.parent_id && !c.archived && D().categories.some((k) => k.parent_id === c.id)).length), 'every parent with sub-categories has a toggle');
   await p.click('[data-act=toggle-cat]');
   assert((await p.$$('.brow.indent')).length === 3);
   await p.screenshot({ path: __dirname + '/settings_expanded.png' });

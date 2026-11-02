@@ -149,6 +149,9 @@ only worked after a detour. Keep each item short and say what to do instead.
   - When a list gets a button-plus-pop-up for a state (History, Archived), remove that state from the inline list in the same change and update every test that clicked rows of that state in the list.
   - I put a `//` comment mid-line in a one-line function (`open()`) for the third time, and `node --check` caught it. Rule: comments go on their own line above, never at the end of a line that I am inserting into with a script.
   - Removing a control from many templates (Cancel) changes tests that count buttons or their `data-act`s: grep the tests for the selector before and after.
+  - A first-run screen changes what every test sees on a bare account (no hero, no charts, no budgets card): list the tests that use a fresh account and give them money/budget (or open dialogs directly) instead of assuming the normal Overview.
+  - I added a `//` comment mid-line in a `replace` once more and the file broke; `node --check` right after every script edit is the only reliable guard. Also never `pkill -f` a pattern that appears in my own command line (it killed the shell).
+  - Auto-adding data on load (categories) needs a policy for existing accounts: the owner's accounts get only the named essentials, new accounts get the full list.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

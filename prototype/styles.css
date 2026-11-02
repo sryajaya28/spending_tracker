@@ -906,3 +906,20 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 .dlg-x:active { background: color-mix(in srgb, var(--ink) 14%, var(--soft)); }
 .dlg > h2:first-of-type { padding-right: 44px; }
 .dlg .support-form > h2:first-child { padding: 0 44px; }   /* centred title: the same space on both sides */
+
+/* first-run Overview: sample data card first, then the setup steps */
+.onb { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.onb-sample { background: linear-gradient(135deg, #3b35b5 0%, #5a55d6 55%, #8c90f2 100%); color: #fff; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 22px; }
+.onb-sample h2 { color: #fff; font-size: 22px; }
+.onb-sample p { color: rgba(255, 255, 255, .9); margin: 0; }
+.onb-flask { font-size: 30px; line-height: 1; }
+.onb-try { margin-top: 6px; background: #fff; color: #2d2a8f; height: 48px; padding: 0 26px; font-size: 16px; font-weight: 700; }
+.onb-step { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.onb-step:last-child { border-bottom: 0; }
+.onb-n { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--brand); font-weight: 700; }
+.onb-step.done .onb-n { background: #1fa971; color: #fff; }
+.onb-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.onb-ok { color: #1fa971; font-weight: 600; font-size: 14px; }
+.onb-step .btn { flex: none; height: 38px; padding: 0 16px; font-size: 14px; }
+.setup-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; padding: 10px 14px; border-radius: 16px; background: var(--soft); font-size: 14px; font-weight: 600; }
+.setup-strip span { margin-right: 4px; }

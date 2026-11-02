@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // Overview's Budgets card shows only the overall budget ("All spending"): no categories, no occasions
   await p.evaluate(() => { D().budgets.push({ id: uid(), category_id: null, amount_minor: 55000000, currency: 'IDR', start_month: '2026-01-01' }, { id: uid(), category_id: D().categories[0].id, amount_minor: 1000000, currency: 'IDR', start_month: '2026-01-01' }); render(); });
   const card = await p.$('.card:has(h2:text("Budgets"))'); const ct = await card.innerText();
-  assert(ct.includes('All spending') && !ct.includes('Bandung Trip') && !ct.includes('Special occasions') , 'only the overall budget: ' + ct);
+  assert(ct.includes('monthly budget') && !ct.includes('All spending') && !ct.includes('Bandung Trip') && !ct.includes('Special occasions') , 'only the overall budget: ' + ct);
   assert((await card.innerText()).includes('Details') && !(await card.innerText()).includes('Manage'), 'button says Details');
   await card.screenshot({ path: __dirname + '/out/ov_occ.png' });
   // tapping the card (not the month picker) opens the Budgets page

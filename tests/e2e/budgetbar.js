@@ -11,15 +11,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     D().occasions.push({ id: uid(), name: 'Bandung Trip', amount_minor: 5000000, currency: 'IDR', start: '2026-11-06', end: '2026-11-08', archived: false });
     location.hash = '#/overview'; render(); });
   const card = async () => p.$('.card:has(h2:text("Budgets"))');
-  const rows = async () => (await card()).$$eval('.ov-buds .ov-occ', (ts) => ts.map((t) => ({ name: t.querySelector('.meta span').textContent, text: t.querySelector('.meta .num').textContent, w: t.querySelector('.bar i').style.width, barW: t.querySelector('.bar').getBoundingClientRect().width, cardW: t.closest('.card').getBoundingClientRect().width })));
+  const rows = async () => (await card()).$$eval('.ov-buds .bar', (bs) => bs.map((b) => ({ label: b.getAttribute('aria-label'), w: b.querySelector('i').style.width, barW: b.getBoundingClientRect().width, cardW: b.closest('.card').getBoundingClientRect().width })));
   // nothing spent yet: empty bars, 0% visible, and the bar spans the card (no space wasted on the right)
-  let z = await rows(); console.log(JSON.stringify(z.map((r) => [r.name.trim(), r.w, r.text.slice(-4)])));
-  assert.equal(z.length, 1, 'Overview shows only the overall budget'); assert(z.every((r) => r.w === '0%' && r.text.includes('0%')), JSON.stringify(z)); assert(z.every((r) => r.barW > r.cardW * 0.8), 'bars use the card width');
+  let z = await rows(); console.log(JSON.stringify(z.map((r) => [r.label, r.w])));
+  assert.equal(z.length, 1, 'Overview shows only the overall budget'); assert(z.every((r) => r.w === '0%' && r.label.includes('0%')), JSON.stringify(z)); assert(/monthly budget · 0%/.test((await (await card()).innerText()).replace(/\u00a0/g, ' ')), 'the percentage follows "of ... monthly budget" after a dot, like the other rows'); assert(!(await (await card()).innerText()).includes('All spending'), 'no "All spending" label: just the bar under "of ... monthly budget"'); assert(z.every((r) => r.barW > r.cardW * 0.8), 'bars use the card width');
   await (await card()).screenshot({ path: __dirname + '/out/budget_bars_zero.png' });
   // with spending: widths follow the percentage, over-budget turns red
   await p.evaluate(() => { const cat = D().categories.find((c) => c.name === 'Dining'); D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: cat.id, type: 'expense', amount_minor: 3300000, currency: 'IDR', occurred_at: isoDate(new Date()), note: 'Dinner', category_source: 'user', ai_confidence: null }); render(); });
   await p.evaluate(() => { D().budgets.find((b) => b.category_id === null).amount_minor = 3000000; render(); });   // 3.3M spent of 3M
-  const w = await rows(); const all = w.find((r) => r.name.includes('All spending')); assert.equal(all.w, '100%'); assert(all.text.includes('110%'), all.text);
+  const w = await rows(); const all = w[0]; assert.equal(all.w, '100%'); assert(all.label.includes('110%'), all.label); assert(/monthly budget · 110%/.test((await (await card()).innerText()).replace(/\u00a0/g, ' ')), 'percentage follows the spending');
   assert.equal(await (await card()).$$eval('.ov-buds .bar i.exceeded', (e) => e.length), 1);
   await (await card()).screenshot({ path: __dirname + '/out/budget_bars.png' });
   console.log('ok', JSON.stringify(errs)); await b.close();

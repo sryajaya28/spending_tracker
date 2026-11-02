@@ -13,8 +13,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // live rates: both codes are asked for and the answer replaces the built-in fallback
   assert(fxCalls.some((q) => q.split(',').includes('INR') && q.split(',').includes('PHP')), 'INR and PHP are requested: ' + JSON.stringify(fxCalls));
   assert.deepEqual(await p.evaluate(() => [RATES.INR, RATES.PHP]), [90.5, 57.25], 'live rates applied');
-  // an account with money, so Overview shows the hero (the currency chip) and not the first-run screen
-  await p.evaluate(() => { D().wallets[0].opening_balance_minor = 100000000; D().budgets.push({ id: uid(), category_id: null, amount_minor: 5000000, currency: 'IDR', start_month: currentPeriod() + '-01' }); render(); });
+  // setup skipped, so Overview shows the hero (the currency chip) and not the first-run screen
+  await p.evaluate(() => { state.ui.onbSkipped = true; D().wallets[0].opening_balance_minor = 100000000; D().budgets.push({ id: uid(), category_id: null, amount_minor: 5000000, currency: 'IDR', start_month: currentPeriod() + '-01' }); render(); });
   // they are in the currency choices
   assert.deepEqual(await p.$$eval('.hero-cur option', (o) => o.map((x) => x.textContent)).then((l) => ['INR', 'PHP'].filter((c) => l.includes(c))), ['INR', 'PHP']);
   // formatting: Indian grouping (lakh/crore), peso sign

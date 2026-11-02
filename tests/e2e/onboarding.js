@@ -49,8 +49,20 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.deepEqual(sel, { picked: true, parent: null, type: 'expense', hidden: true }, JSON.stringify(sel));
   await p.fill('#dlg [name=amount]', '300000'); await p.click('#dlg button[type=submit]'); await settle();
   assert.equal(await p.evaluate(() => { const c = D().categories.find((x) => x.name === 'Gardening'); return D().budgets.some((x) => x.category_id === c.id && x.amount_minor === toMinor(300000, cur())); }), true, 'budget saved for the new category');
-  // account + budget: the normal Overview
-  await p.waitForSelector('.hero'); assert(!(await p.isVisible('.onb')), 'first-run screen gone'); assert(await p.isVisible('.main .card:has(h2)'), 'normal Overview');
+  // account + budget are done but the first transaction is not: the setup stays (2 of 3) with step 3 to do, and a way to skip
+  await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.onb'); t = await p.innerText('.main'); assert(t.includes('2 of 3') && t.includes('Add your first transaction') && t.includes('Skip for now'), 'stays until step 3: ' + t);
+  // step 3: the first transaction -> "Now you're set!" then the normal Overview
+  await p.click('.onb-step [data-act=add-txn]'); await p.waitForSelector('#dlg [name=amount]'); await p.fill('#dlg [name=amount]', '45000'); await p.click('#dlg button[type=submit]'); await settle();
+  await p.waitForSelector('.congrats'); assert((await p.innerText('.congrats')).includes("Now you're set!") && !(await p.isVisible('.onb')), 'celebration, not the stepper');
+  assert.equal(await p.$$eval('.congrats .confetti i', (e) => e.length) > 10, true, 'confetti'); assert(!(await p.isVisible('.hero')), 'the normal Overview comes after');
+  await p.click('[data-act=congrats-done]'); await p.waitForSelector('.hero'); assert(!(await p.isVisible('.congrats')) && !(await p.isVisible('.onb')), 'normal Overview'); assert(await p.isVisible('.main .card:has(h2)'));
+  // it is shown once: leaving and coming back does not repeat it; it also moves on by itself
+  await p.evaluate(() => { location.hash = '#/budgets'; }); await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero'); assert(!(await p.isVisible('.congrats')), 'shown once');
+  await p.evaluate(() => { state.ui.congrats = true; render(); setTimeout(endCongrats, 300); }); await p.waitForSelector('.congrats'); await p.waitForSelector('.hero', { timeout: 3000 });
+  // skipping: no transaction yet, the user chooses to go straight to the Overview (remembered for this account on this device)
+  await p.evaluate(() => { D().transactions.length = 0; state.ui.onbSkipped = undefined; try { localStorage.removeItem('stiver.onb.skip.' + (state.auth.uid || '')); } catch (e) { /* */ } render(); });
+  await p.waitForSelector('.onb'); await p.click('[data-act=onb-skip]'); await p.waitForSelector('.hero'); assert(!(await p.isVisible('.onb')), 'skipped');
+  assert.equal(await p.evaluate(() => localStorage.getItem('stiver.onb.skip.' + (state.auth.uid || ''))), '1', 'the choice is remembered');
   // 5. with data but no budget a slim strip points at what is missing
   await p.evaluate(() => { D().budgets.length = 0; D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 1000, currency: D().wallets[0].currency, note: 'x', occurred_at: todayIso(), category_source: 'user', ai_confidence: null }); render(); });
   assert(!(await p.isVisible('.onb'))); t = await p.innerText('.setup-strip'); assert(t.includes('Finish setting up') && t.includes('Set budget') && !t.includes('Add account'), t);

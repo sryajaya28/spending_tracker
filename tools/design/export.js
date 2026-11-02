@@ -28,6 +28,8 @@ const SCREENS = [
   ['sign-up', 'auth', `state.auth.view = 'signup'; render();`],
   ['overview', 'page', PAGE('#/overview')],
   // a new account: the getting-started Overview (the real, empty account, not the sample)
+  // the celebration after the last setup step (shown for a few seconds in the app; set directly here so it stays on screen)
+  ['overview-congrats', 'page', `setDemo(false).then(() => { state.ui.congrats = true; location.hash = '#/overview'; render(); window.scrollTo(0, 0); })`],
   ['overview-first-run', 'page', `setDemo(false).then(() => { location.hash = '#/overview'; render(); window.scrollTo(0, 0); })`],
   ['transactions', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' });`)],
   ['transactions-expanded', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' });`) + ` setTimeout(() => document.querySelector('[data-act=days-all]')?.click(), 0);`],

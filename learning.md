@@ -153,6 +153,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - I added a `//` comment mid-line in a `replace` once more and the file broke; `node --check` right after every script edit is the only reliable guard. Also never `pkill -f` a pattern that appears in my own command line (it killed the shell).
   - Auto-adding data on load (categories) needs a policy for existing accounts: the owner's accounts get only the named essentials, new accounts get the full list.
   - A completion rule written for the test data ("balance of at least 1 USD") fails for real people who enter small test amounts or rename the default item: define "done" as "differs from the untouched default", and test each way of getting there.
+  - Read screen recordings of the owner's flow before reasoning about a bug: the video showed my earlier "fix" made the stepper vanish after step 2, while they wanted to finish step 3 and then be congratulated. I had answered a guess about the cause instead of asking what they expected to see at each step.
+  - A mandatory first-run flow needs an exit (Skip), or people who never do the last step are stuck.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

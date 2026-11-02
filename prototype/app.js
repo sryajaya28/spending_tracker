@@ -1001,7 +1001,21 @@ function setupState() {
   // the Cash account renamed, or an investment / loan account
   const d = D(), hasAccount = totalBalance() !== 0 || d.wallets.length > 1 || d.wallets.some((w) => w.name.trim().toLowerCase() !== 'cash') || d.investments.length > 0 || d.loans.length > 0 || (d.lent || []).length > 0;
   const hasBudget = d.budgets.length > 0, hasTx = d.transactions.length > 0;
-  return { hasAccount, hasBudget, hasTx, fresh: !state.real && !hasTx && !(hasAccount && hasBudget), partial: !state.real && (!hasAccount || !hasBudget) };
+  return { hasAccount, hasBudget, hasTx, fresh: !state.real && !hasTx && !onbSkipped(), partial: !state.real && (!hasAccount || !hasBudget) };
+}
+/* "Skip for now" on the first-run screen is remembered on this device (per account) */
+const onbKey = () => 'stiver.onb.skip.' + (state.auth.uid || '');
+function onbSkipped() { if (state.ui.onbSkipped === undefined) { try { state.ui.onbSkipped = localStorage.getItem(onbKey()) === '1'; } catch { state.ui.onbSkipped = false; } } return state.ui.onbSkipped; }
+function skipOnboarding() { state.ui.onbSkipped = true; try { localStorage.setItem(onbKey(), '1'); } catch { /* storage unavailable: skipped for this visit */ } render(); }
+/* the celebration after the last step: shown once, then the normal Overview (a tap or a few seconds) */
+function endCongrats() { if (state.ui.congrats) { state.ui.congrats = false; if (route() === 'overview') render(); } }
+function congratsView() {
+  const colors = ['#4A44C6', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#0EA5E9', '#22C55E'];
+  const bits = Array.from({ length: 30 }, (_, n) => `<i style="--x:${(n * 37) % 100}%;--c:${colors[n % colors.length]};--d:${2.4 + (n % 5) * 0.35}s;--w:${(n % 7) * 0.12}s;--r:${(n * 47) % 180}deg"></i>`).join('');
+  return `<div class="congrats" role="status"><div class="confetti" aria-hidden="true">${bits}</div>
+    <div class="cg-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h1>${__("Now you're set!")}</h1><p class="muted">${__('Your first transaction is in. Stiver is ready for you.')}</p>
+    <button type="button" class="btn" data-act="congrats-done">${__('See my overview')}</button></div>`;
 }
 function onboardingView(st) {
   const step = (n, done, title, sub, act, label) => `<div class="onb-step ${done ? 'done' : ''}"><span class="onb-n" aria-hidden="true">${done ? '✓' : n}</span><div class="onb-t"><b>${title}</b><small class="muted">${sub}</small></div>
@@ -1017,6 +1031,7 @@ function onboardingView(st) {
       ${step(1, st.hasAccount, __('Add your accounts'), __("Bank, e-wallet or cash, with today's balance"), 'add-wallet', __('Add account'))}
       ${step(2, st.hasBudget, __('Set a monthly budget'), __('Cap what you spend each month'), 'add-budget', __('Set budget'))}
       ${step(3, st.hasTx, __('Add your first transaction'), __('Record an expense or income'), 'add-txn', __('Add'))}</section>
+    ${st.hasAccount && st.hasBudget ? `<p class="onb-skip"><button type="button" class="legend-btn" data-act="onb-skip">${__("Skip for now, I'll add transactions later")}</button></p>` : ''}
     ${installBtn('ov-install')}
   </div>`;
 }
@@ -1024,7 +1039,11 @@ function onboardingView(st) {
 const setupStrip = (st) => (st.partial && !st.fresh
   ? `<div class="setup-strip" role="status"><span>${__('Finish setting up')}</span>${st.hasAccount ? '' : `<button type="button" class="chip" data-act="add-wallet">${__('Add account')}</button>`}${st.hasBudget ? '' : `<button type="button" class="chip" data-act="add-budget">${__('Set budget')}</button>`}</div>` : '');
 function viewOverview() {
-  const st = setupState(); if (st.fresh) return onboardingView(st);
+  const st = setupState();
+  if (st.fresh) { state.ui.onbSeen = true; return onboardingView(st); }
+  // the first transaction just ended the first-run screen: congratulate once (only when the account and the budget are set up too)
+  if (state.ui.onbSeen && !state.real) { state.ui.onbSeen = false; if (st.hasAccount && st.hasBudget && st.hasTx) { state.ui.congrats = true; setTimeout(endCongrats, 4200); } }
+  if (state.ui.congrats) return congratsView();
   const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
   const months = lastMonths(6);
   const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
@@ -2235,6 +2254,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'goto') location.hash = '#/' + el.dataset.route;
   else if (act === 'demo-on') setDemo(true);
+  else if (act === 'onb-skip') skipOnboarding();
+  else if (act === 'congrats-done') endCongrats();
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }
@@ -2689,7 +2710,7 @@ const resetPeriodView = () => { state.ui.allPeriods = false; state.ui.monthSrc =
 /* a new login or a logout starts clean: the Overview page, the top of the page, no remembered scroll positions, the current period.
    The hash is replaced (not assigned) so the browser does not run a second render. */
 function resetSessionView() {
-  resetPeriodView(); Object.keys(scrollPos).forEach((k) => delete scrollPos[k]);
+  resetPeriodView(); state.ui.onbSkipped = undefined; state.ui.onbSeen = false; state.ui.congrats = false; Object.keys(scrollPos).forEach((k) => delete scrollPos[k]);
   history.replaceState(null, '', '#/overview'); lastKey = '#/overview';
   window.scrollTo(0, 0);
 }

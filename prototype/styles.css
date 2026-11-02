@@ -923,3 +923,18 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 .onb-step .btn { flex: none; height: 38px; padding: 0 16px; font-size: 14px; }
 .setup-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; padding: 10px 14px; border-radius: 16px; background: var(--soft); font-size: 14px; font-weight: 600; }
 .setup-strip span { margin-right: 4px; }
+
+/* the celebration after the last setup step */
+.congrats { position: relative; min-height: 72vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; padding: 24px; overflow: hidden; }
+.congrats h1 { font-size: 30px; letter-spacing: -.02em; margin: 6px 0 0; }
+.congrats p { max-width: 320px; margin: 0 0 8px; }
+.cg-badge { width: 104px; height: 104px; border-radius: 50%; background: linear-gradient(135deg, #34d399, #16a34a); color: #fff; display: grid; place-items: center; box-shadow: 0 14px 34px rgba(22, 163, 74, .35); animation: cg-pop .7s cubic-bezier(.2, 1.4, .4, 1) both; }
+.cg-badge svg { width: 56px; height: 56px; stroke-dasharray: 30; stroke-dashoffset: 30; animation: cg-draw .5s .4s ease-out forwards; }
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; top: -16px; left: var(--x); width: 9px; height: 15px; border-radius: 2px; background: var(--c); transform: rotate(var(--r)); opacity: 0; animation: cg-fall var(--d) var(--w) ease-in forwards; }
+.onb-skip { text-align: center; margin: 2px 0 0; }
+@keyframes cg-pop { 0% { transform: scale(.2); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes cg-draw { to { stroke-dashoffset: 0; } }
+@keyframes cg-fall { 0% { opacity: 1; transform: translateY(0) rotate(var(--r)); } 100% { opacity: .9; transform: translateY(95vh) rotate(calc(var(--r) + 540deg)); } }
+@media (prefers-reduced-motion: reduce) { .cg-badge, .cg-badge svg, .confetti i { animation: none; } .cg-badge svg { stroke-dashoffset: 0; } .confetti { display: none; } }
+.congrats > :not(.confetti) { position: relative; z-index: 1; }   /* the text stays readable over the confetti */

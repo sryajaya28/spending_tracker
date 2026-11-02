@@ -157,6 +157,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - A mandatory first-run flow needs an exit (Skip), or people who never do the last step are stuck.
   - A new validation breaks every older test that did the forbidden thing with convenient data (spending from a 0 balance): give the test account money first, and drain that save from the log.
   - A `<button>` styled as a chip shows the browser's default border while a link chip does not: reset `border` on shared pill classes instead of fixing one screen.
+  - Check the schema before assuming a migration: `debt_payments.transaction_id` already existed for loan charges and had no constraint tying it to `kind`, so linking repayments needed no SQL, only the cloud.js mapping.
+  - When one action must create two records (payment + expense) decide the single source of truth for display up front (here: the account's expense), and make edit and delete keep the pair in sync.
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

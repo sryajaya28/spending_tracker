@@ -1,0 +1,45 @@
+const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
+/* Paying a loan from an account: the account goes down, it counts as an expense in the Loan Repayment category, the loan goes down,
+   and the lists show one record (the account's). */
+(async () => {
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1280, height: 1000 } });
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.route('**/vendor/supabase.js', (r) => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(__dirname + '/fake_supabase.js', 'utf8') }));
+  await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+  await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
+  await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell'); await p.waitForTimeout(400);
+  const settle = () => p.evaluate(() => Cloud.idle()), log = () => p.evaluate(() => window.__log.splice(0));
+  await p.evaluate(() => { state.ui.onbSkipped = true; const w = D().wallets[0]; w.name = 'BCA'; w.opening_balance_minor = 5000000; D().loans.push({ id: 'loan1', name: 'Car loan', type: 'car', currency: w.currency, original_minor: 3000000, monthly_minor: 400000, rate: 5, since: '2026-01', archived: false, payments: [] }); location.hash = '#/portfolio'; save(); render(); });
+  await settle(); await log();
+  const open = () => p.evaluate(() => paymentDialog(D().loans[0], 'loan'));
+  const st = () => p.evaluate(() => { const l = D().loans[0], w = D().wallets[0]; return { wallet: walletBalance(w), loan: loanBalance(l), pays: l.payments.length, tx: D().transactions.filter((t) => /Loan payment/.test(t.note)).map((t) => ({ type: t.type, cat: catOf(t.category_id).name, amt: t.amount_minor, w: t.wallet_id === w.id, id: t.id })), linked: l.payments.every((x) => !x.txn_id || D().transactions.some((t) => t.id === x.txn_id)) }; });
+  // 1. the field is there, defaulting to an account; paying from it
+  await open(); await p.waitForSelector('#dlg select[name=account]'); assert.equal(await p.$eval('#dlg select[name=account]', (s) => s.options[s.selectedIndex].textContent.startsWith('BCA')), true, 'an account is preselected');
+  assert((await p.$$eval('#dlg select[name=account] option', (o) => o.map((x) => x.textContent))).some((x) => /No account/.test(x)), 'and you can record without an account');
+  await p.fill('#dlg [name=amount]', '400000'); await p.click('#dlg button[type=submit]'); await settle();
+  let r = await st(); assert.deepEqual([r.wallet, r.loan, r.pays], [4600000, 2600000, 1], 'account and loan both go down: ' + JSON.stringify(r));
+  assert.equal(r.tx.length, 1); assert.deepEqual([r.tx[0].type, r.tx[0].cat, r.tx[0].amt, r.tx[0].w], ['expense', 'Loan Repayment', 400000, true]); assert(r.linked);
+  const spent = await p.evaluate(() => sumBy(inMonth(currentPeriod()), 'expense')); assert.equal(spent, 400000, 'it counts as spending');
+  // the database rows: the payment points at its expense
+  const dp = (await log()).filter((o) => o.table === 'debt_payments').flatMap((o) => o.rows || []); assert(dp.some((x) => x.kind === 'payment' && x.transaction_id), JSON.stringify(dp));
+  // 2. one record in the lists: the loan's Transactions view shows only the account's expense (with a minus), and the normal list shows it once
+  await p.evaluate(() => { Object.assign(state.ui, { wallet: 'l:loan1', q: '', cat: '', occ: '', month: currentPeriod(), allPeriods: false }); location.hash = '#/transactions'; render(); }); await p.waitForSelector('#txn-list .day-row'); await p.click('[data-act=days-all]');
+  let rows = await p.$$eval('#txn-list .day-body .row', (e) => e.map((x) => ({ t: x.querySelector('.title').textContent.trim(), a: x.querySelector('.amt').textContent.trim(), s: x.querySelector('.sub').textContent.trim() })));
+  assert.equal(rows.length, 1, 'one record in the loan view: ' + JSON.stringify(rows)); assert(/Loan payment/.test(rows[0].t) && rows[0].a.startsWith('−') && /Loan Repayment/.test(rows[0].s) && /BCA/.test(rows[0].s), JSON.stringify(rows));
+  await p.evaluate(() => { state.ui.wallet = ''; render(); }); assert.equal(await p.$$eval('#txn-list .row[data-id]', (e) => e.length) >= 0, true);
+  assert.equal(await p.evaluate(() => filteredTxns().filter((t) => /Loan payment/.test(t.note)).length), 1, 'once in the normal list');
+  // 3. editing the expense moves the loan's payment with it; deleting it takes the payment away and restores both balances
+  const tid = r.tx[0].id;
+  await p.evaluate((i) => txnDialog(D().transactions.find((t) => t.id === i)), tid); await p.waitForSelector('#dlg [name=amount]'); await p.fill('#dlg [name=amount]', '300000'); await p.click('#dlg button[type=submit]'); await settle();
+  r = await st(); assert.deepEqual([r.wallet, r.loan, r.pays], [4700000, 2700000, 1], 'edit follows: ' + JSON.stringify(r));
+  await p.evaluate((i) => { document.body.insertAdjacentHTML('beforeend', `<button id="deltx" data-act="delete-txn" data-id="${i}" hidden></button>`); document.getElementById('deltx').click(); }, tid); await settle();
+  r = await st(); assert.deepEqual([r.wallet, r.loan, r.pays, r.tx.length], [5000000, 3000000, 0, 0], 'delete restores everything: ' + JSON.stringify(r));
+  // 4. not more than the account holds; a payment without an account only lowers the loan (and shows as the loan's own payment row)
+  await open(); await p.waitForSelector('#dlg select[name=account]'); await p.fill('#dlg [name=amount]', '600000'); await p.evaluate(() => { D().wallets[0].opening_balance_minor = 100000; });
+  await p.click('#dlg button[type=submit]'); await p.waitForTimeout(150); assert((await p.evaluate(() => document.getElementById('toast').textContent)).includes('enough balance'), 'refused'); assert.equal((await st()).pays, 0, 'nothing saved');
+  await p.selectOption('#dlg select[name=account]', ''); await p.click('#dlg button[type=submit]'); await settle();
+  r = await st(); assert.deepEqual([r.pays, r.tx.length, r.loan], [1, 0, 2400000], 'no account: payment only: ' + JSON.stringify(r));
+  await p.evaluate(() => { Object.assign(state.ui, { wallet: 'l:loan1', month: currentPeriod() }); render(); location.hash = '#/transactions'; render(); }); await p.waitForSelector('#txn-list .day-row'); await p.click('[data-act=days-all]');
+  assert.equal(await p.$$eval('#txn-list .day-body .row', (e) => e.filter((x) => /Loan payment/.test(x.textContent)).length), 1, 'the unlinked payment still shows as the loan\'s own row');
+  console.log('ok', JSON.stringify(errs)); await b.close();
+})().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

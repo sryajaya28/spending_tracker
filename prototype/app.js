@@ -393,7 +393,10 @@ const walletOf = (id) => D().wallets.find((w) => w.id === id);
 const inMonth = (k) => D().transactions.filter((t) => inPeriod(t.occurred_at, k) && t.occurred_at <= todayIso());   // money not yet received or spent is left out of every total
 /* a transaction's amount in the reporting currency (each wallet keeps its own currency) */
 const amt = (t) => convert(t.amount_minor, t.currency, cur());
-const sumBy = (list, type) => list.filter((t) => t.type === type).reduce((a, t) => a + amt(t), 0);
+/* the loss on selling an investment is recorded as an expense (Investment Loss) so it reduces the account, but it is not spending:
+   every spending total, the spending breakdown, the trend and the budgets leave it out */
+const isInvestLoss = (t) => { if (t.type !== 'expense' || !t.category_id) return false; const c = catOf(t.category_id); return !!c && c.name.trim().toLowerCase() === 'investment loss'; };
+const sumBy = (list, type) => list.filter((t) => t.type === type && !isInvestLoss(t)).reduce((a, t) => a + amt(t), 0);
 
 /* signed cash effect of a transaction on its wallet. A 'transfer' (e.g. buying/selling an asset) moves
    money in or out without being income or spending, so budgets and monthly totals ignore it. */
@@ -424,7 +427,7 @@ const catTree = (type) => D().categories.filter((c) => !c.parent_id && !c.archiv
 /* month spend per top-level category, each with its sub-category breakdown */
 function spendTree(k) {
   const tree = new Map();
-  inMonth(k).filter((t) => t.type === 'expense').forEach((t) => {
+  inMonth(k).filter((t) => t.type === 'expense' && !isInvestLoss(t)).forEach((t) => {
     const root = t.category_id ? rootOf(t.category_id) : null;
     if (!tree.has(root)) tree.set(root, { id: root, value: 0, direct: 0, subs: new Map() });
     const n = tree.get(root); n.value += amt(t);
@@ -441,7 +444,7 @@ const spendByCategory = spendTree;
 function budgetStatus(k) {
   const scopes = new Map();
   D().budgets.filter((b) => b.start_month.slice(0, 7) <= k).sort((a, b) => b.start_month.localeCompare(a.start_month)).forEach((b) => { if (!scopes.has(b.category_id)) scopes.set(b.category_id, b); });
-  const txns = inMonth(k).filter((t) => t.type === 'expense');
+  const txns = inMonth(k).filter((t) => t.type === 'expense' && !isInvestLoss(t));
   return [...scopes.values()].map((b) => {
     const spent = txns.filter((t) => b.category_id === null || (t.category_id && rootOf(t.category_id) === b.category_id)).reduce((a, t) => a + amt(t), 0);
     const pct = (spent * 100) / b.amount_minor;
@@ -1019,7 +1022,7 @@ function trendData() {
     return sel;
   };
   const inScope = (t) => (!sel ? true : !!t.category_id && (t.category_id === sel || (!c.parent_id && rootOf(t.category_id) === sel)));
-  const per = ps.map((k) => { const m = new Map(); inMonth(k).filter((t) => t.type === 'expense' && inScope(t)).forEach((t) => m.set(keyOf(t), (m.get(keyOf(t)) || 0) + amt(t))); return m; });
+  const per = ps.map((k) => { const m = new Map(); inMonth(k).filter((t) => t.type === 'expense' && !isInvestLoss(t) && inScope(t)).forEach((t) => m.set(keyOf(t), (m.get(keyOf(t)) || 0) + amt(t))); return m; });
   const totals = new Map(); per.forEach((m) => m.forEach((v, key) => totals.set(key, (totals.get(key) || 0) + v)));
   const ranked = [...totals].sort((a, b) => b[1] - a[1]).map(([key]) => key), keep = ranked.slice(0, 6), rest = ranked.slice(6);
   const info = (key, i) => {

@@ -23,6 +23,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     recordTrade(h, { side: 'buy', quantity: 1, source: src, amount: 150, date: todayIso() }); out.bal3 = walletBalance(w) - bal0;
     out.rows = D().transactions.filter((t) => t.type === 'transfer' && !t.transfer_id).map((t) => { const d = document.createElement('div'); d.innerHTML = txnRow(t); const row = d.firstElementChild; return { note: t.note, badges: row.querySelectorAll('.badge').length, sub: row.querySelector('.sub').textContent.trim(), amt: row.querySelector('.amt').textContent.replace(/ /g, ' ').trim(), icon: !!row.querySelector('.amt .xfer-ico svg') }; });
     out.spent = sumBy(inMonth(currentPeriod()), 'expense'); out.income = sumBy(inMonth(currentPeriod()), 'income');
+    D().budgets.push({ id: uid(), category_id: null, amount_minor: 100000, currency: 'IDR', start_month: currentPeriod() + '-01' }); out.lossBudget = budgetStatus(currentPeriod()).find((b) => b.category_id === null).spent; out.lossTree = spendTree(currentPeriod()).reduce((a, n) => a + n.value, 0); out.lossRowStillThere = D().transactions.filter((t) => / loss$/.test(t.note)).length;
     // removing the first sale removes its profit record too
     const tr = h.trades.find((x) => x.side === 'sell' && x.quantity === 5); removeTrade(h, tr); out.afterRemove = D().transactions.filter((t) => / profit$/.test(t.note)).length;
     return out;
@@ -30,7 +31,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.deepEqual(r.profit, [['transfer', 'in', 500, null, 'Sold 5 BTC'], ['income', '', 200, 'Capital gains', 'BTC profit']], JSON.stringify(r.profit)); assert.equal(r.bal1, 700, 'the account receives the whole sale price');
   assert.deepEqual(r.all, [['expense', 100, 'Investment Loss']]); assert.deepEqual(r.lossTransfer, [200], 'a loss: the cost comes back, the loss is separate'); assert.equal(r.bal2, 700 + 100, 'and the account still receives exactly the sale price'); assert.equal(r.bal3, 800 - 150);
   assert(r.rows.length >= 3 && r.rows.every((x) => x.badges === 0 && !/[+−]/.test(x.amt) && x.icon), JSON.stringify(r.rows)); assert(r.rows.some((x) => /^Sell Invest · /.test(x.sub)) && r.rows.some((x) => /^Buy Invest · /.test(x.sub)), JSON.stringify(r.rows));
-  assert.deepEqual([r.income, r.spent], [200, 100], 'only the profit is income and only the loss is spending'); assert.equal(r.afterRemove, 0, 'undoing the sale removes its profit record');
+  assert.deepEqual([r.income, r.spent], [200, 0], 'the profit is income; the loss is not spending'); assert.equal(r.lossBudget, 0, 'nor in the budgets'); assert.equal(r.lossTree, 0, 'nor in the spending breakdown'); assert.equal(r.lossRowStillThere, 1, 'the loss record itself is still listed'); assert.equal(r.afterRemove, 0, 'undoing the sale removes its profit record');
   // the Invest tab: Buy / Sell choice; the picked ticker stays in the search box
   await p.evaluate(() => { D().transactions = []; D().wallets[0].opening_balance_minor = 100000; render(); holdingDialog(null, D().investments[0].id, { invest: true }); }); await p.waitForSelector('#dlg input[name=side]', { state: 'attached' });
   assert.deepEqual(await p.$$eval('#dlg input[name=side]', (e) => e.map((x) => [x.value, x.checked])), [['buy', true], ['sell', false]], 'Buy is the default');

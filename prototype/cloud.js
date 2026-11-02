@@ -62,7 +62,7 @@ const Cloud = (() => {
     });
     d.lent.forEach((l) => {
       R.debts.push({ id: l.id, direction: 'lent', name: l.name, type: null, currency: l.currency, original_minor: l.original_minor, monthly_minor: 0, interest_rate: null, due_date: l.due || null, note: l.note || null, start_month: `${l.since}-01`, archived: !!l.archived });
-      l.payments.forEach((p) => R.debt_payments.push({ id: p.id, debt_id: l.id, paid_on: p.date, amount_minor: p.amount_minor }));
+      l.payments.forEach((p) => R.debt_payments.push({ id: p.id, debt_id: l.id, paid_on: p.date, amount_minor: p.amount_minor, transaction_id: p.txn_id && d.transactions.some((t) => t.id === p.txn_id) ? p.txn_id : null }));   // a repayment received into an account points at its transfer
     });
     // prices typed in by hand for assets no feed covers (one row per symbol)
     Object.entries(d.customAssets).forEach(([key, m]) => {

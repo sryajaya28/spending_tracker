@@ -99,7 +99,7 @@ const CATS = [
   ['Family & Kids', 'expense', '👨‍👩‍👧', '#FB7185'], ['Gifts & Donations', 'expense', '🎁', '#F43F5E'], ['Taxes', 'expense', '🏛️', '#78716C'],
   ['Fee', 'expense', '💸', '#94A3B8'], ['Other', 'expense', '⋯', '#94A3B8'],
   ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment income', 'income', '📈', '#0D9488'],
-  ['Rental income', 'income', '🏘️', '#65A30D'], ['Business income', 'income', '🏪', '#059669'], ['Refunds & cashback', 'income', '↩️', '#2DD4BF'], ['Gift received', 'income', '🎀', '#4ADE80'],
+  ['Rental income', 'income', '🏘️', '#65A30D'], ['Business income', 'income', '🏪', '#059669'], ['Refunds & cashback', 'income', '↩️', '#2DD4BF'], ['Gift received', 'income', '🎀', '#4ADE80'], ['Lent Repayment', 'income', '🤝', '#0EA5A4'],
   ['Other income', 'income', '➕', '#94A3B8'],
 ];
 // sample accounts per country are defined in sample.js
@@ -331,6 +331,9 @@ function seed(name, cur) {
     txns.push(t); p.txn_id = t.id;
   });
   const lent = [{ id: uid(), name: P.lent[0], currency: cur, original_minor: A(P.lent[1]), note: P.lent[3], due: isoDate(new Date(today.getFullYear(), today.getMonth() + 3, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 10)), amount_minor: A(P.lent[2]) }] }];
+  // a second repayment arrived in the first bank account: a single transfer-in there (category Lent Repayment), linked to the repayment
+  { const half = Math.round(A(P.lent[2]) / 2), d2 = isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 24)), t = { id: uid(), type: 'transfer', flow: 'in', amount_minor: half, currency: cur, occurred_at: d2, wallet_id: b1.id, note: `${lent[0].name} Repayment`, category_id: catId['Lent Repayment'], category_source: 'user', ai_confidence: null };
+    txns.push(t); lent[0].payments.push({ id: uid(), date: d2, amount_minor: half, txn_id: t.id }); }
   // recurring rules (shown in Settings > Recurring; sample mode never creates entries from them)
   const next = (day) => { const d = new Date(today.getFullYear(), today.getMonth(), day); if (isoDate(d) <= isoDate(today)) d.setMonth(d.getMonth() + 1); return isoDate(d); };
   const rule = (kind, freq, day, spec) => ({ id: uid(), kind, freq, start: isoDate(new Date(today.getFullYear(), today.getMonth() - 5, day)), next: next(day), end: '', active: true, spec });
@@ -535,6 +538,13 @@ const repaymentOf = (txnId) => { for (const l of D().loans) { const p = l.paymen
 function loanRepaymentCategory() {
   const d = D(); let c = d.categories.find((x) => !x.parent_id && x.type === 'expense' && x.name.trim().toLowerCase() === 'loan payment');
   if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Loan Payment'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: defaultCatId(n, sn), parent_id: c.id, name: sn, type, icon: sic, color, archived: false })); }
+  return c;
+}
+/* money lent that comes back into a savings account: a single "transfer in" on that account (not income), category Lent Repayment, linked to the repayment by payment.txn_id */
+const lentRepaymentOf = (txnId) => { for (const l of D().lent) { const p = l.payments.find((x) => x.txn_id === txnId); if (p) return { lent: l, payment: p }; } return null; };
+function lentRepaymentCategory() {
+  const d = D(); let c = d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent repayment');
+  if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Lent Repayment'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); }
   return c;
 }
 const loanBalance = (l, upto) => Math.max(0, l.original_minor + chargedOf(l, upto || todayIso()) - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
@@ -866,6 +876,14 @@ function loanPaymentDialog(l, pay) {
   <p class="hint">${__('Deleting removes this payment and the loan balance goes back up by its amount. Use Edit on the loan to set the balance you want afterwards.')}</p>
   <div class="actions"><button type="button" class="btn danger" data-act="delete-payment" data-kind="loan" data-id="${l.id}" data-pid="${pay.id}" data-close="1">${__('Delete payment')}</button></div>`);
 }
+/* a repayment of money lent: look at it, or delete it (the account loses the money, the amount owed to you goes back up) */
+function lentRepaymentDialog(l, pay) {
+  const fmt = new Date(pay.date + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }), t = pay.txn_id && D().transactions.find((x) => x.id === pay.txn_id);
+  open(`<h2>${__('Lent repayment')}</h2><p class="muted" style="margin-top:-10px">${esc(l.name)}</p>
+  <div class="hold-sum"><div class="hs-row"><span>${__('Amount')}</span><b class="num">${money(pay.amount_minor, l.currency)}</b></div><div class="hs-row"><span>${__('Date')}</span><b>${esc(fmt)}</b></div>${t ? `<div class="hs-row"><span>${__('Received into')}</span><b>${esc(walletOf(t.wallet_id)?.name || '')}</b></div>` : ''}<div class="hs-row"><span>${__('Still owed to you')}</span><b class="num">${money(loanBalance(l), l.currency)}</b></div></div>
+  <p class="hint">${__('Deleting removes this repayment and its transfer: the account loses the money and what you are owed goes back up.')}</p>
+  <div class="actions"><button type="button" class="btn danger" data-act="delete-payment" data-kind="lent" data-id="${l.id}" data-pid="${pay.id}" data-close="1">${__('Delete repayment')}</button></div>`);
+}
 function archivedLoansDialog() {
   const list = D().loans.filter((l) => l.archived);
   open(`<h2>${__('Archived loans')}</h2>
@@ -899,9 +917,9 @@ function paymentDialog(l, kind = 'loan') {
   <form data-form="payment" data-kind="${kind}" data-id="${l.id}" style="display:contents">
     <div class="two"><label class="field">${__('Amount ({cur})', { cur: esc(l.currency) })}<input name="amount" type="number" min="0" step="any" required value="${l.monthly_minor ? toMajor(l.monthly_minor, l.currency) : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
-    ${lent ? '' : (() => { const ws = D().wallets.filter((w) => !w.archived && w.currency === l.currency), opts = ws.map((w) => `<option value="${w.id}">${esc(w.name)}</option>`).join(''), pick = recallAcct('repay', opts) || (ws[0] ? ws[0].id : '');
-      return `<label class="field">${__('Paid from')}<select name="account" data-pay-from><option value="">${__('No account, just record the payment')}</option>${ws.map((w) => `<option value="${w.id}" ${w.id === pick ? 'selected' : ''}>${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('')}</select></label>`; })()}
-    <p class="hint">${lent ? __('Repayments lower what you are owed. They are not counted as income.') : __('Payments lower the loan balance and your debt in net worth. Paid from an account, the amount also leaves that account and counts as spending under Loan Payment.')}</p>
+    ${(() => { const ws = D().wallets.filter((w) => !w.archived && w.currency === l.currency), opts = ws.map((w) => `<option value="${w.id}">${esc(w.name)}</option>`).join(''), pick = recallAcct(lent ? 'lentrecv' : 'repay', opts) || (ws[0] ? ws[0].id : '');
+      return `<label class="field">${lent ? __('Received into') : __('Paid from')}<select name="account" data-pay-from><option value="">${lent ? __('No account, just record the repayment') : __('No account, just record the payment')}</option>${ws.map((w) => `<option value="${w.id}" ${w.id === pick ? 'selected' : ''}>${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('')}</select></label>`; })()}
+    <p class="hint">${lent ? __('Repayments lower what you are owed. Received into an account, the money is added to it as a transfer (not income).') : __('Payments lower the loan balance and your debt in net worth. Paid from an account, the amount also leaves that account and counts as spending under Loan Payment.')}</p>
     <div class="actions"><button class="btn" type="submit">${lent ? __('Save repayment') : __('Submit Payment')}</button></div></form>`);
 }
 
@@ -1127,6 +1145,10 @@ const transferTitle = (t) => String(t.note || '').split(' · ')[0];
 const transferNote = (t) => String(t.note || '').split(' · ').slice(1).join(' · ');
 function txnRow(t, loanView) {
   if (t.type === 'loan_payment') return `<div class="row" data-act="loan-payment" data-id="${t.loan_id}" data-pid="${String(t.id).replace('pay:', '')}" tabindex="0"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+  const lr = t.type === 'transfer' && !t.transfer_id && lentRepaymentOf(t.id);
+  if (lr) return `<div class="row" data-act="lent-repayment" data-id="${lr.lent.id}" data-pid="${lr.payment.id}" tabindex="0"><span class="tile" style="--c:#0EA5A4">🤝</span>
+    <div><div class="title">${esc(t.note)}</div><div class="sub">${esc(catOf(t.category_id)?.name || __('Lent Repayment'))} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
+    <div class="amt-col"><div class="amt num">${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
@@ -2257,6 +2279,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
   else if (act === 'loans-archived') archivedLoansDialog();
+  else if (act === 'lent-repayment') { const l = D().lent.find((x) => x.id === id), pay = l && l.payments.find((x) => x.id === el.dataset.pid); if (pay) lentRepaymentDialog(l, pay); }
   else if (act === 'loan-payment') { const l = D().loans.find((x) => x.id === id), pay = l && l.payments.find((x) => x.id === el.dataset.pid); if (pay) loanPaymentDialog(l, pay); }
   else if (act === 'unarchive-loan') { const l = find(D().loans); l.archived = false; save(); render(); toast(__('{name} is back', { name: l.name })); if (D().loans.some((x) => x.archived)) archivedLoansDialog(); else close(); }
   else if (act === 'edit-loan') loanDialog(find(D().loans));
@@ -2317,7 +2340,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'delete-txn') {
     const tx = find(D().transactions), coin = coinOf(tx);
     if (coin) { if (!removeTrade(coin, coin.trades.find((x) => x.id === tx.trade_id))) { toast(__("Can't delete: the {symbol} has already been spent", { symbol: assetInfo(coin.symbol).symbol })); return; } }
-    else { D().transactions = D().transactions.filter((t) => t.id !== id); D().loans.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); }   // a loan charge or a repayment made from this account goes with it
+    else { D().transactions = D().transactions.filter((t) => t.id !== id); D().loans.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); D().lent.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); }   // a loan charge or a repayment made from this account goes with it
     save(); close(); render(); toast('Transaction deleted');
   }
   else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
@@ -2607,13 +2630,17 @@ document.addEventListener('submit', async (e) => {
     if (!(amount > 0)) { toast('Enter an amount above zero'); return; }
     const owed = loanBalance(l); const applied = Math.min(amount, owed);
     if (applied <= 0) { toast('Nothing left to pay'); return; }
-    const pay = { id: uid(), date: v.date, amount_minor: applied }, acct = f.dataset.kind !== 'lent' && v.account ? walletOf(v.account) : null;
-    if (acct) {
+    const pay = { id: uid(), date: v.date, amount_minor: applied }, acct = v.account ? walletOf(v.account) : null;
+    if (acct && f.dataset.kind === 'lent') {
+      // the repayment arrives in that account: one transfer-in record there, "<name> Repayment", category Lent Repayment (nothing counts as income)
+      const t = { id: uid(), type: 'transfer', flow: 'in', amount_minor: applied, currency: l.currency, occurred_at: v.date, wallet_id: acct.id, note: `${l.name} ${__('Repayment')}`, category_id: lentRepaymentCategory().id, category_source: 'user', ai_confidence: null };
+      D().transactions.push(t); pay.txn_id = t.id; rememberAcct('lentrecv', acct.id); sortTxns();
+    } else if (acct) {
       // the money comes out of that account: not more than it holds (a credit card may go below zero; a future-dated payment is not checked yet)
       if (acct.type !== 'card' && v.date <= todayIso() && applied > walletBalance(acct)) { toast(__("{name} doesn't have enough balance ({amount} available)", { name: acct.name, amount: money(Math.max(0, walletBalance(acct)), acct.currency) })); return; }
       const t = { id: uid(), type: 'expense', amount_minor: applied, currency: l.currency, occurred_at: v.date, wallet_id: acct.id, note: l.name, category_id: loanRepaymentCategory().id, category_source: 'user', ai_confidence: null };
       D().transactions.push(t); pay.txn_id = t.id; rememberAcct('repay', acct.id); sortTxns();
-    } else if (f.dataset.kind !== 'lent') rememberAcct('repay', '');
+    } else rememberAcct(f.dataset.kind === 'lent' ? 'lentrecv' : 'repay', '');
     l.payments.push(pay);
     save(); close(); render(); toast(applied < amount ? __('Recorded {amount} (the remaining balance)', { amount: money(applied, l.currency) }) : 'Recorded'); return;
   }

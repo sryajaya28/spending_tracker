@@ -163,6 +163,8 @@ only worked after a detour. Keep each item short and say what to do instead.
   - Flag emoji are not drawn on Windows desktop browsers; they are fine for phones. If desktop Windows matters, ship SVG flags instead (CSP allows data: images).
   - After renaming something, grep for every spelling of the old name (lowercase comparisons too): a lowercase `'loan repayment'` lookup survived my rename and created a duplicate category on every repayment, which the database refused. A test that only checks the name of the chosen category cannot see this: assert there is exactly one.
   - Defaults created independently by two clients need deterministic ids, or the second one hits the unique-name constraint and its whole save is thrown away.
+  - NEVER write `open(p, 'w').write(open(p).read())` in a script: opening for write truncates the file before it is read. I emptied app.js that way (`node --check` passes on an empty file!). Check file size after every script edit, and rely on git to restore.
+  - When every test suddenly fails at the first step with no page error, check that the main script is not empty or half-loaded (`typeof state`).
   - Keep adding to this log; each future session should add at least one line, even if it is "no new mistakes".
 
 ## Checklist before you start

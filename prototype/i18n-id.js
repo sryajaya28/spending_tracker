@@ -20,6 +20,7 @@ DICT.id = {
  "Choose an icon": "Pilih ikon",
  "Add occasion budget": "Tambah anggaran acara",
  "Budget Added": "Anggaran Ditambahkan",
+ "Money moved: not income or spending": "Uang dipindahkan: bukan pemasukan atau pengeluaran",
  "No account, just record the repayment": "Tanpa rekening, catat pelunasannya saja",
  "Lent Repayment": "Pelunasan Pinjaman Diberikan",
  "Lent repayment": "Pelunasan pinjaman diberikan",

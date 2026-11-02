@@ -57,10 +57,21 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert((await p.innerText('#dlg')).replace(/\u00a0/g, ' ').includes('259.085'), 'the pop-up shows the payment'); assert.equal(await p.evaluate(() => loanBalance(D().loans[0])), 986745 - 259085);
   await p.click('#dlg [data-act=delete-payment]'); await settle();
   assert.deepEqual(await p.evaluate(() => [D().loans[0].payments.length, loanBalance(D().loans[0]), document.getElementById('dlg').open]), [0, 986745, false], 'deleted, balance back up, pop-up closed');
+  // 5c. a card that was paid off and is used again starts a fresh cycle: the new charges are the amount owed and it reads 0% paid
+  const cyc = await p.evaluate(() => { const d = (n) => { const x = new Date(); x.setDate(x.getDate() - n); return isoDate(x); }; const l = D().loans[0];
+    l.original_minor = 1000000; l.payments = [{ id: 'a', date: d(20), amount_minor: 400000 }, { id: 'b', date: d(10), amount_minor: 600000 }];   // paid off
+    const off = loanCycle(l); const out = { off: [off.paid, off.total, off.balance, loanBalance(l)] };
+    l.payments.push({ id: 'c', date: d(3), amount_minor: 300000, kind: 'charge', txn_id: null });   // used again
+    const again = loanCycle(l); out.again = [again.paid, again.total, again.balance, loanBalance(l)];
+    l.payments.push({ id: 'e', date: d(1), amount_minor: 100000 }); const part = loanCycle(l); out.part = [part.paid, part.total, part.balance, loanBalance(l)];
+    l.payments = [{ id: 'a', date: d(20), amount_minor: 400000 }]; const never = loanCycle(l); out.never = [never.paid, never.total, never.balance, loanBalance(l)];   // never paid off: as before
+    l.payments = [{ id: 'a', date: d(20), amount_minor: 400000 }, { id: 'b', date: d(10), amount_minor: 600000 }, { id: 'c', date: d(3), amount_minor: 300000, kind: 'charge', txn_id: null }]; state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); out.card = document.querySelector('.loan-meta span').textContent.replace(/\u00a0/g, ' '); return out; });
+  assert.deepEqual(cyc.off, [1000000, 1000000, 0, 0], 'paid off'); assert.deepEqual(cyc.again, [0, 300000, 300000, 300000], 'used again: new amount, nothing paid'); assert.deepEqual(cyc.part, [100000, 300000, 200000, 200000], 'part of the new cycle paid'); assert.deepEqual(cyc.never, [400000, 1000000, 600000, 600000], 'never paid off: unchanged');
+  assert(/^0% paid · Rp 0 of Rp 300\.000/.test(cyc.card), 'the card says 0% paid of the new amount: ' + cyc.card);
   // 6. an archived loan is listed under Archived on the Loan tab and Reopen brings it back with its payments
   await p.evaluate(() => { D().loans[0].archived = true; state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); });
   assert.equal(await p.evaluate(() => D().loans.filter((l) => !l.archived).length), 0); await p.click('[data-act=loans-archived]'); await p.waitForSelector('#dlg [data-act=unarchive-loan]'); assert((await p.innerText('#dlg')).includes('Car loan'));
-  await p.click('#dlg [data-act=unarchive-loan]'); await settle(); assert.deepEqual(await p.evaluate(() => [D().loans[0].archived, D().loans[0].payments.length, document.getElementById('dlg').open]), [false, 0, false], 'reopened (nothing lost), pop-up closed');
+  await p.click('#dlg [data-act=unarchive-loan]'); await settle(); assert.deepEqual(await p.evaluate(() => [D().loans[0].archived, D().loans[0].payments.length, document.getElementById('dlg').open]), [false, 3, false], 'reopened (nothing lost), pop-up closed');
   // 7. money lent: a repayment received into a savings account is a single transfer-in there (category Lent Repayment), not income
   await p.evaluate(() => { const w = D().wallets[0]; w.opening_balance_minor = 1000000; D().lent.push({ id: 'lent1', name: 'Istri', currency: w.currency, original_minor: 1200000, note: '', due: '', since: '2026-01', archived: false, payments: [] }); state.ui.pfTab = 'loan'; save(); render(); });
   await settle(); await log();
@@ -73,6 +84,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // it shows once in the transactions list, no sign, and a tap opens it with Delete
   await p.evaluate(() => { Object.assign(state.ui, { wallet: '', q: '', cat: '', occ: '', month: currentPeriod(), allPeriods: false }); location.hash = '#/transactions'; render(); }); await p.waitForSelector('#txn-list .day-row'); await p.click('[data-act=days-all]');
   const lrow = await p.$$eval('#txn-list .row[data-act=lent-repayment]', (e) => e.map((x) => ({ t: x.querySelector('.title').textContent.trim(), a: x.querySelector('.amt').textContent.trim(), s: x.querySelector('.sub').textContent.trim() }))); assert.equal(lrow.length, 1); assert(lrow[0].t === 'Istri Repayment' && !/^[+−]/.test(lrow[0].a) && /^Lent Repayment/.test(lrow[0].s), JSON.stringify(lrow));
+  // a day with only transfer rows shows the amount moved (muted, no sign) instead of Rp 0
+  const dayAmt = await p.$eval('#txn-list .day-row .amt', (e) => ({ t: e.textContent.replace(/\u00a0/g, ' ').trim(), muted: e.classList.contains('muted') })); assert.deepEqual(dayAmt, { t: 'Rp 500.000', muted: true }, JSON.stringify(dayAmt));
   await p.click('#txn-list .row[data-act=lent-repayment]'); await p.waitForSelector('#dlg [data-act=delete-payment]'); await p.click('#dlg [data-act=delete-payment]'); await settle();
   assert.deepEqual(await p.evaluate(() => [loanBalance(D().lent[0]), walletBalance(D().wallets[0]), D().lent[0].payments.length, D().transactions.some((t) => t.note === 'Istri Repayment')]), [1200000, 1000000, 0, false], 'delete reverses both');
   // without an account only the amount owed changes

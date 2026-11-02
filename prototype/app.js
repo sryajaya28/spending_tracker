@@ -547,6 +547,19 @@ function lentRepaymentCategory() {
   if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Lent Repayment'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); }
   return c;
 }
+/* the current cycle of a loan or card: whenever the running balance reaches zero (paid off), the next charges start a fresh cycle.
+   base = what was owed when this cycle began (the original amount, or 0 after a payoff); the card shows paid / (base + charged) of THIS cycle only,
+   so a paid-off card that is used again says "0% paid" of the new amount. */
+function loanCycle(l, upto) {
+  const day = upto || todayIso(), ev = l.payments.filter((p) => p.date <= day).sort((a, b) => a.date.localeCompare(b.date) || (a.kind === 'charge' ? -1 : 0) - (b.kind === 'charge' ? -1 : 0));
+  let run = l.original_minor, base = l.original_minor, paid = 0, charged = 0, closed = null;
+  ev.forEach((p) => {
+    if (p.kind === 'charge') { run += p.amount_minor; charged += p.amount_minor; }
+    else { run -= p.amount_minor; paid += p.amount_minor; if (run <= 0) { closed = { base, paid, charged }; run = 0; base = 0; paid = 0; charged = 0; } }   // paid off: the cycle ends here, a new one starts with the next charge
+  });
+  if (closed && !base && !paid && !charged) ({ base, paid, charged } = closed);   // paid off and not used again yet: still show that finished cycle (100% paid)
+  return { base, paid, charged, total: base + charged, balance: Math.max(0, base + charged - paid) };
+}
 const loanBalance = (l, upto) => Math.max(0, l.original_minor + chargedOf(l, upto || todayIso()) - paidOf(l, upto || todayIso()));   // payments dated later have not been made yet
 const loanUSD = (k) => activeLoans().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
@@ -748,7 +761,7 @@ const walletCards = () => {
 /* one card for both kinds: 'loan' = debt you owe, 'lent' = money others owe you */
 function loanCard(l, vc, kind = 'loan') {
   const lent = kind === 'lent', coll = lent ? D().lent : D().loans;
-  const bal = loanBalance(l), paid = paidOf(l), charged = chargedOf(l), total = l.original_minor + charged, pct = total ? Math.min(100, Math.round((paid / total) * 100)) : 0;
+  const bal = loanBalance(l), cyc = loanCycle(l), paid = cyc.paid, total = cyc.total, pct = total ? Math.min(100, Math.round((paid / total) * 100)) : 0;   // paid / total are for the current cycle (see loanCycle)
   const shown = (m) => money(convert(m, l.currency, vc), vc);
   const word = lent ? __('repayment') : __('payment');
   const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}`
@@ -1196,7 +1209,7 @@ function txnListHtml() {
     return `<div class="day-group ${open ? 'open' : ''}" data-day="${d}"><div class="row day-row" data-act="toggle-day" data-id="${d}" tabindex="0" role="button" aria-expanded="${open}"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
     <div><div class="title">${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long' }))}</div>
     <div class="sub">${countLabel(l.length)}</div></div>
-    <div class="amt num">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div><span class="day-chev" aria-hidden="true">›</span></div>
+    ${!loanView && l.length && l.every((t) => t.type === 'transfer') ? `<div class="amt num muted" title="${__('Money moved: not income or spending')}">${money(l.reduce((a, t) => a + amt(t), 0), cur())}</div>` : `<div class="amt num">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div>`}<span class="day-chev" aria-hidden="true">›</span></div>
     <div class="day-body">${l.map((t) => txnRow(t, loanView)).join('')}</div></div>`;
   };
   // when the list spans several periods (All periods, or an occasion across months) each period gets its own heading

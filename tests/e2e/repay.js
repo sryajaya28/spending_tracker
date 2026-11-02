@@ -42,5 +42,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   r = await st(); assert.deepEqual([r.pays, r.tx.length, r.loan], [1, 0, 2400000], 'no account: payment only: ' + JSON.stringify(r));
   await p.evaluate(() => { Object.assign(state.ui, { wallet: 'l:loan1', month: currentPeriod() }); render(); location.hash = '#/transactions'; render(); }); await p.waitForSelector('#txn-list .day-row'); await p.click('[data-act=days-all]');
   assert.equal(await p.$$eval('#txn-list .day-body .row', (e) => e.filter((x) => /Loan payment/.test(x.textContent)).length), 1, 'the unlinked payment still shows as the loan\'s own row');
+  // 5. Edit loan shows what is owed now (not the starting amount) and typing a new balance sets exactly that balance
+  await p.evaluate(() => { const l = D().loans[0]; l.payments = [{ id: uid(), date: todayIso(), amount_minor: 259085 }, { id: uid(), date: todayIso(), amount_minor: 73800, kind: 'charge', txn_id: null }]; l.original_minor = 623960; render(); });
+  const owed = await p.evaluate(() => loanBalance(D().loans[0])); assert.equal(owed, 623960 + 73800 - 259085);
+  await p.evaluate(() => loanDialog(D().loans[0])); await p.waitForSelector('#dlg [name=amount]');
+  assert.equal(await p.inputValue('#dlg [name=amount]'), String(owed), 'the box shows the current balance'); assert.equal((await p.innerText('#dlg label:has([name=amount])')).trim().startsWith('Amount owed now'), true);
+  await p.fill('#dlg [name=amount]', '500000'); await p.click('#dlg button[type=submit]'); await settle();
+  assert.deepEqual(await p.evaluate(() => { const l = D().loans[0]; return [loanBalance(l), l.payments.length, l.original_minor]; }), [500000, 2, 500000 - 73800 + 259085], 'balance is what was typed, payments and charges kept');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

@@ -848,9 +848,10 @@ function loanDialog(l) {
     <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Car loan')}"></label>
     <div class="two"><label class="field">${__('Type')}<select name="type">${Object.entries(LOAN_TYPES).map(([k, v]) => `<option value="${k}" ${k === (l?.type || 'car') ? 'selected' : ''}>${__(v)}</option>`).join('')}</select></label>
       <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
-    <div class="two"><label class="field">${l ? __('Original amount') : __('Amount owed now')}<input name="amount" type="number" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
+    <div class="two"><label class="field">${__('Amount owed now')}<input name="amount" type="number" min="${l ? 0 : 1}" step="any" required value="${l ? toMajor(loanBalance(l), l.currency) : ''}"></label>
       <label class="field">${__('Monthly payment')}<input name="monthly" type="number" min="0" step="any" value="${l ? toMajor(l.monthly_minor, l.currency) : ''}"></label></div>
     <label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" min="0" step="any" value="${l?.rate || ''}"></label>
+    ${l ? `<p class="hint">${__('Type what you still owe today. Stiver keeps your payments and charges and adjusts the starting amount ({orig}) behind the scenes.', { orig: money(l.original_minor, l.currency) })}</p>` : ''}
     <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-loan" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
 function lentDialog(l) {
@@ -2563,8 +2564,10 @@ document.addEventListener('submit', async (e) => {
   if (kind === 'loan') {
     const existing = f.dataset.id && D().loans.find((x) => x.id === f.dataset.id), c = existing ? existing.currency : v.currency;
     const amount = toMinor(parseFloat(v.amount), c), monthly = toMinor(parseFloat(v.monthly || 0), c);
-    if (!(amount > 0) || !v.name.trim()) { toast('Enter a name and an amount above zero'); return; }
-    const fields = { name: v.name.trim(), type: v.type, original_minor: amount, monthly_minor: monthly, rate: parseFloat(v.rate) || 0 };
+    if (!(existing ? amount >= 0 : amount > 0) || !v.name.trim()) { toast('Enter a name and an amount above zero'); return; }
+    // editing: the box is what is owed now; the starting amount is whatever makes charges and payments add up to it (at least 1)
+    const original = existing ? Math.max(1, amount - chargedOf(existing, todayIso()) + paidOf(existing, todayIso())) : amount;
+    const fields = { name: v.name.trim(), type: v.type, original_minor: original, monthly_minor: monthly, rate: parseFloat(v.rate) || 0 };
     if (existing) Object.assign(existing, fields);
     else D().loans.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
     state.ui.pfTab = 'loan'; save(); close(); render(); toast('Loan saved'); return;

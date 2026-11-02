@@ -20,6 +20,7 @@ DICT.id = {
  "Choose an icon": "Pilih ikon",
  "Add occasion budget": "Tambah anggaran acara",
  "Budget Added": "Anggaran Ditambahkan",
+ "Type what you still owe today. Stiver keeps your payments and charges and adjusts the starting amount ({orig}) behind the scenes.": "Isi sisa utangmu hari ini. Stiver menjaga pembayaran dan tagihanmu dan menyesuaikan jumlah awal ({orig}) di belakang layar.",
  "Submit Payment": "Kirim Pembayaran",
  "No account, just record the payment": "Tanpa rekening, catat pembayarannya saja",
  "Payments lower the loan balance and your debt in net worth. Paid from an account, the amount also leaves that account and counts as spending under Loan Repayment.": "Pembayaran menurunkan saldo pinjaman dan utangmu di kekayaan bersih. Jika dibayar dari rekening, jumlahnya juga keluar dari rekening itu dan dihitung sebagai pengeluaran dalam Pembayaran Pinjaman.",

@@ -98,8 +98,8 @@ const CATS = [
   ['Housing', 'expense', '🏠', '#A855F7'], ['Loan Payment', 'expense', '🏦', '#6366F1'], ['Pet', 'expense', '🐶', '#F59E0B'],
   ['Education', 'expense', '📚', '#06B6D4'], ['Insurance', 'expense', '🛡️', '#10B981'], ['Personal Care', 'expense', '💇', '#D946EF'],
   ['Family & Kids', 'expense', '👨‍👩‍👧', '#FB7185'], ['Gifts & Donations', 'expense', '🎁', '#F43F5E'], ['Taxes', 'expense', '🏛️', '#78716C'],
-  ['Fee', 'expense', '💸', '#94A3B8'], ['Investment Loss', 'expense', '📉', '#DC2626'], ['Other', 'expense', '⋯', '#94A3B8'],
-  ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment income', 'income', '📈', '#0D9488'],
+  ['Fee', 'expense', '💸', '#94A3B8'], ['Investment', 'expense', '📊', '#DC2626'], ['Other', 'expense', '⋯', '#94A3B8'],
+  ['Salary', 'income', '💼', '#22C55E'], ['Freelance', 'income', '💻', '#84CC16'], ['Bonus', 'income', '🎉', '#16A34A'], ['Investment', 'income', '📈', '#0D9488'],
   ['Rental income', 'income', '🏘️', '#65A30D'], ['Business income', 'income', '🏪', '#059669'], ['Refunds & cashback', 'income', '↩️', '#2DD4BF'], ['Gift received', 'income', '🎀', '#4ADE80'], ['Lent Repayment', 'income', '🤝', '#0EA5A4'],
   ['Other income', 'income', '➕', '#94A3B8'],
 ];
@@ -123,7 +123,8 @@ const SUBS = {
   'Family & Kids': [['Childcare', '👶'], ["Kids' activities", '⚽'], ['Baby supplies', '🍼'], ['Parents support', '👵']],
   'Gifts & Donations': [['Gifts', '🎁'], ['Charity', '🤲'], ['Religious giving', '🙏']],
   Taxes: [['Income tax', '📑'], ['Vehicle tax', '🚘'], ['Other taxes', '🧾']],
-  'Investment income': [['Dividends', '💵'], ['Interest', '🏦'], ['Capital gains', '📊']],
+  'Investment|income': [['Dividends', '💵'], ['Interest', '🏦'], ['Investment Profit', '📈']],   // a sub-category has its parent's type, so the expense and the income "Investment" each have their own
+  'Investment|expense': [['Investment Loss', '📉']],
 };
 /* every account gets the whole list on first load when it has no transactions and no budgets yet; accounts with data only get the ones below
    (so their own categories do not suddenly multiply). A category that already exists by name (archived ones too) is never added twice,
@@ -131,17 +132,21 @@ const SUBS = {
 const ESSENTIAL_CATS = ['Housing', 'Loan Payment', 'Pet'];
 /* default categories get a fixed id per user and name: two devices (or two loads) that both notice a default is missing create the SAME rows,
    so the second save is a harmless repeat instead of a "duplicate key" error that threw the whole save away */
-const defaultCatId = (name, sub) => detId('defcat', state.auth.uid || '', name, sub || '');
+const defaultCatId = (name, sub, type) => detId('defcat', state.auth.uid || '', name, sub || '', name === 'Investment' ? type || '' : '');   // only the two "Investment" parents share a name, so only they need the type
+const subsOf = (name, type) => SUBS[name + '|' + type] || SUBS[name] || [];
 function ensureDefaultCategories() {
   const d = D(), full = d.transactions.length === 0 && d.budgets.length === 0; let changed = false;
+  // a top-level "Investment Loss" (made by the first version) moves under the Investment category
+  const legacyLoss = d.categories.find((c) => !c.parent_id && c.type === 'expense' && c.name.trim().toLowerCase() === 'investment loss');
+  if (legacyLoss) { legacyLoss.parent_id = investmentParent('expense').id; changed = true; }
   // the default was first called "Loan Repayment": rename it (only when "Loan Payment" does not exist yet)
   const oldLoan = d.categories.find((c) => !c.parent_id && c.name.trim().toLowerCase() === 'loan repayment');
   if (oldLoan && !d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === 'loan payment')) { oldLoan.name = 'Loan Payment'; changed = true; }
   CATS.forEach(([n, type, icon, color]) => {
     if (!full && !ESSENTIAL_CATS.includes(n)) return;
-    if (d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === n.toLowerCase())) return;
-    const parent = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(parent); changed = true;
-    (SUBS[n] || []).forEach(([sn, sic]) => d.categories.push({ id: defaultCatId(n, sn), parent_id: parent.id, name: sn, type, icon: sic, color, archived: false }));
+    if (d.categories.some((c) => !c.parent_id && c.name.trim().toLowerCase() === n.toLowerCase() && (n !== 'Investment' || c.type === type))) return;
+    const parent = { id: defaultCatId(n, '', type), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(parent); changed = true;
+    subsOf(n, type).forEach(([sn, sic]) => d.categories.push({ id: defaultCatId(n, sn, type), parent_id: parent.id, name: sn, type, icon: sic, color, archived: false }));
   });
   return changed;
 }
@@ -225,7 +230,7 @@ function seed(name, cur) {
   const major = (v) => toMajor(A(v), cur);
   const catId = {};
   const categories = CATS.map(([n, type, ic, color]) => { const id = uid(); catId[n] = id; return { id, parent_id: null, name: n, type, icon: ic, color, archived: false }; });
-  CATS.forEach(([n, type, , color]) => (SUBS[n] || []).forEach(([sn, sic]) => {
+  CATS.forEach(([n, type, , color]) => subsOf(n, type).forEach(([sn, sic]) => {
     const id = uid(); catId[`${n}/${sn}`] = id;
     categories.push({ id, parent_id: catId[n], name: sn, type, icon: sic, color, archived: false });
   }));
@@ -318,7 +323,7 @@ function seed(name, cur) {
     // a sale: the cost of what was sold comes back as the investment transfer, the profit on top is its own income record (Capital gains) on the same account
     const costMinor = side === 'sell' ? toMinor(hh.open_price * qty * (RATES[cur] / RATES[hh.ccy || cur]), cur) : amount, profit = side === 'sell' && amount > costMinor && costMinor > 0 ? amount - costMinor : 0;
     txns.push({ id: uid(), trade_id: tid, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in', amount_minor: profit ? costMinor : amount, currency: cur, occurred_at: isoDate(date), note: `${word} ${qty} ${sym}`, category_source: 'user', ai_confidence: null });
-    if (profit) txns.push({ id: detId('pnl', tid), wallet_id: w.id, category_id: catId['Investment income/Capital gains'], type: 'income', amount_minor: profit, currency: cur, occurred_at: isoDate(date), note: `${sym} profit`, category_source: 'user', ai_confidence: null });
+    if (profit) txns.push({ id: detId('pnl', tid), wallet_id: w.id, category_id: catId['Investment/Investment Profit'], type: 'income', amount_minor: profit, currency: cur, occurred_at: isoDate(date), note: `${sym} profit`, category_source: 'user', ai_confidence: null });
     txns.push({ id: uid(), wallet_id: w.id, category_id: catId.Fee, type: 'expense', amount_minor: A(fee), currency: cur, occurred_at: isoDate(date), note: `Investment fee (${word} ${qty} ${sym})`, category_source: 'user', ai_confidence: null });
   });
   // loans: debts you owe. Balance = original - payments, so earlier months can be rebuilt.
@@ -692,34 +697,34 @@ document.addEventListener('focusin', (e) => { if (e.target.classList?.contains('
 document.addEventListener('focusout', (e) => { if (e.target.classList?.contains('icon-input')) { const row = iconPicksOf(e.target); if (row && !row.contains(e.relatedTarget)) row.classList.remove('open'); } });
 document.addEventListener('pointerdown', (e) => { if (e.target.closest?.('.icon-pick')) e.preventDefault(); });   // keep the focus (and the keyboard state) on the icon field
 
-function valueChart(months, usd, vc) {
-  const W = 560, H = 250, pl = 58, pr = 18, pt = 14, pb = 30;
+function valueChart(months, usd, vc, o = {}) {
+  const W = 560, H = 250, pl = 58, pr = 18, pt = 14, pb = 30, id = o.id || 'pf';   // o.neg: a series that can go below zero (profit & loss), o.id: a second chart on the same page
   const vals = usd.map((u) => u * RATES[vc]);
-  const lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.18 || hi * 0.1 || 1;
-  const min = Math.max(0, lo - pad), max = hi + pad;
+  const lo = o.neg ? Math.min(0, ...vals) : Math.min(...vals), hi = o.neg ? Math.max(0, ...vals) : Math.max(...vals), pad = (hi - lo) * 0.18 || Math.abs(hi) * 0.1 || 1;
+  const min = o.neg ? lo - pad : Math.max(0, lo - pad), max = hi + pad;
   const x = (i) => pl + ((W - pl - pr) * i) / (months.length - 1);
   const y = (v) => pt + (H - pt - pb) * (1 - (v - min) / (max - min));
   const cmp = (v) => new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(v);
   const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   const ticks = [0, 1, 2, 3].map((i) => min + ((max - min) * i) / 3);
-  return `<div class="chart-wrap" id="pf"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${__('Portfolio value by month')}">
-    <defs><linearGradient id="pfg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A44C6" stop-opacity=".25"/><stop offset="1" stop-color="#4A44C6" stop-opacity="0"/></linearGradient></defs>
+  return `<div class="chart-wrap" id="${id}"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${__('Portfolio value by month')}">
+    <defs><linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4A44C6" stop-opacity=".25"/><stop offset="1" stop-color="#4A44C6" stop-opacity="0"/></linearGradient></defs>
     ${ticks.map((t) => `<line x1="${pl}" x2="${W - pr}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--line)"/><text x="${pl - 8}" y="${y(t) + 4}" text-anchor="end" font-size="11" style="fill:var(--muted)">${cmp(t)}</text>`).join('')}
-    <path d="${line} L${x(vals.length - 1)},${H - pb} L${x(0)},${H - pb} Z" fill="url(#pfg)"/>
+    <path d="${line} L${x(vals.length - 1)},${H - pb} L${x(0)},${H - pb} Z" fill="url(#${id}g)"/>
     <path d="${line}" fill="none" stroke="#4A44C6" stroke-width="2.5" stroke-linejoin="round"/>
     ${vals.map((v, i) => { const step = Math.ceil(months.length / 6), last = months.length - 1, show = i === last || (i % step === 0 && last - i >= step / 2), lbl = months.length > 12 ? new Date(+months[i].slice(0, 4), +months[i].slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: '2-digit' }) : monthLabel(months[i], 'short'); return (months.length <= 14 || i === last ? `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#4A44C6"/>` : '') + (show ? `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="11" style="fill:var(--muted)">${lbl}</text>` : ''); }).join('')}
-    <line id="pf-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" style="stroke:var(--ink)" stroke-width="1.5" opacity="0"/></svg><div class="tip" id="pf-tip"></div></div>`;
+    <line id="${id}-cursor" x1="0" x2="0" y1="${pt}" y2="${H - pb}" style="stroke:var(--ink)" stroke-width="1.5" opacity="0"/></svg><div class="tip" id="${id}-tip"></div></div>`;
 }
-function bindValue(months, usd, vc) {
-  const wrap = $('#pf'); if (!wrap) return;
-  const svg = $('svg', wrap), tip = $('#pf-tip'), cursor = $('#pf-cursor'), W = 560, pl = 58, pr = 18;
+function bindValue(months, usd, vc, o = {}) {
+  const id = o.id || 'pf', wrap = $('#' + id); if (!wrap) return;
+  const svg = $('svg', wrap), tip = $('#' + id + '-tip'), cursor = $('#' + id + '-cursor'), W = 560, pl = 58, pr = 18;
   svg.addEventListener('pointermove', (e) => {
     const r = svg.getBoundingClientRect(), vx = ((e.clientX - r.left) / r.width) * W;
     const i = Math.max(0, Math.min(months.length - 1, Math.round(((vx - pl) / (W - pl - pr)) * (months.length - 1))));
     const cx = pl + ((W - pl - pr) * i) / (months.length - 1);
     cursor.setAttribute('x1', cx); cursor.setAttribute('x2', cx); cursor.setAttribute('opacity', 1);
-    const mom = i && usd[i - 1] > 0 ? ((usd[i] - usd[i - 1]) / usd[i - 1]) * 100 : null;
-    tip.textContent = `${new Date(+months[i].slice(0, 4), +months[i].slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' })}: ${money(usdToMinor(usd[i], vc), vc)} (${pctFmt(mom)} MoM)`;
+    const mom = i && usd[i - 1] > 0 ? ((usd[i] - usd[i - 1]) / usd[i - 1]) * 100 : null, mon = new Date(+months[i].slice(0, 4), +months[i].slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' });
+    tip.textContent = o.neg ? `${mon}: ${usd[i] >= 0 ? '+' : '−'}${money(usdToMinor(Math.abs(usd[i]), vc), vc)}` : `${mon}: ${money(usdToMinor(usd[i], vc), vc)} (${pctFmt(mom)} MoM)`;
     tip.style.left = `${(cx / W) * r.width}px`; tip.style.top = `${r.height * 0.3}px`; tip.style.opacity = 1;
   });
   svg.addEventListener('pointerleave', () => { tip.style.opacity = 0; cursor.setAttribute('opacity', 0); });
@@ -729,7 +734,7 @@ function holdingRow(h, vc, accTotal) {
   const info = assetInfo(h.symbol), k = lastMonths(6)[5], price = info.usd(k), value = heldNow(h) * price;
   // name and "quantity SYMBOL"; value and share on the right. The price and actions are in the detail (tap a row).
   return `<div class="row holding-row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
-    <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h), info.type === 'cash')} ${esc(info.symbol)}</div></div>
+    <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h), h)} ${esc(info.symbol)}</div></div>
     <div class="amt num">${money(usdToMinor(value, vc), vc)}<div class="sub">${rowTail(h, value, accTotal)}</div></div></div>`;
 }
 /* under the value: profit or loss against your cost when it is known, otherwise the share of the account */
@@ -799,8 +804,49 @@ function viewAsset(h) {
 const CCY_FLAG = { IDR: '🇮🇩', USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', SGD: '🇸🇬', AUD: '🇦🇺', JPY: '🇯🇵', HKD: '🇭🇰', CNY: '🇨🇳', INR: '🇮🇳', PHP: '🇵🇭' };
 const flagLabel = (c) => (CCY_FLAG[c] ? `${CCY_FLAG[c]}  ${c}` : c);
 const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>`;
+/* realized profit and loss from selling assets, one entry per sale (computed from the trades, so sales made before the separate profit/loss records existed are included;
+   assets whose cost is unknown are left out). Amounts are in the reporting currency. */
+function realizedPnl() {
+  const out = [];
+  D().holdings.filter((h) => activeAccounts().some((a) => a.id === h.account_id) && trackCost(h)).forEach((h) => {
+    const hc = holdingCost(h); if (!hc.known) return;
+    h.trades.filter((t) => t.side === 'sell' && t.date <= todayIso()).forEach((t) => { const pi = hc.per[t.id]; if (pi && Number.isFinite(pi.realized) && Math.abs(pi.realized) > 1e-9) out.push({ date: t.date, symbol: assetInfo(h.symbol).symbol, qty: t.quantity, h, usd: pi.realized / RATES[hc.ccy], pnl: usdToMinor(pi.realized / RATES[hc.ccy], cur()) }); });
+  });
+  return out.filter((e) => e.pnl !== 0).sort((a, b) => b.date.localeCompare(a.date));
+}
+/* one month opened in place: each day's total and the sales behind it */
+function pnlDays(list) {
+  const days = new Map(), fmt = (d) => new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
+  list.forEach((e) => { (days.get(e.date) || days.set(e.date, []).get(e.date)).push(e); });
+  return `<div class="pnl-days">${[...days.entries()].sort((a, b) => b[0].localeCompare(a[0])).map(([d, es]) => `<div class="pnl-day"><div class="pnl-dh"><b>${esc(fmt(d))}</b><b class="num">${pnlText(es.reduce((a, e) => a + e.pnl, 0))}</b></div>${es.map((e) => `<div class="pnl-ent"><span>${esc(e.symbol)} · ${qtyFmt(e.qty, e.h)} ${__('sold')}</span><span class="num">${pnlText(e.pnl)}</span></div>`).join('')}</div>`).join('')}</div>`;
+}
+const pnlText = (v) => (v === 0 ? `<span class="pl">${money(0, cur())}</span>` : `<span class="pl ${v > 0 ? 'up' : 'down'}">${v > 0 ? '+' : '−'}${money(Math.abs(v), cur())}</span>`);
+/* the Realized profit & loss section of the Investment tab: the same component as "Investment growth month over month" (range, chart, month rows, See more),
+   with the net profit or loss of each month on the right (green +, red −); tapping a month opens its page (viewPnlMonth) with the days */
+function pnlSection(rm, vc) {
+  const all = realizedPnl(), m = (usd) => `${usd >= 0 ? '+' : '−'}${money(usdToMinor(Math.abs(usd), vc), vc)}`;
+  const series = rm.map((k) => all.filter((e) => inPeriod(e.date, k)).reduce((a, e) => a + e.usd, 0));
+  const head = `<div class="card-head"><h2>${__('Realized P&L')}</h2>${pfRangeSelect()}</div>`;
+  state.chart2 = null;
+  if (!all.length) return `<section class="card" style="margin-top:20px">${head}<div class="empty sm">${__('No sales yet. Profit and loss appear here when you sell an asset.')}</div></section>`;
+  state.chart2 = { months: rm, series, vc };
+  const rows = rm.map((k, i) => `<div class="mrow tap-row" data-act="pnl-month" data-k="${k}" tabindex="0" role="link"><span class="mname">${esc(new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }))}</span><div class="mval"><b class="num pl ${usdToMinor(series[i], vc) === 0 ? '' : series[i] > 0 ? 'up' : 'down'}">${usdToMinor(series[i], vc) === 0 ? money(0, vc) : m(series[i])}</b></div></div>`).reverse();
+  const more = !!state.ui.pnlhistMore, rest = rows.length - 3;
+  const html = rows.map((r, i) => (i >= 3 ? r.replace('<div class="mrow tap-row"', '<div class="mrow tap-row more-item"') : r)).join('')
+    + (rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="pnlhist" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : '');
+  return `<section class="card" style="margin-top:20px">${head}${valueChart(rm, series, vc, { id: 'pnl', neg: true })}<div class="mlist ${more ? '' : 'collapsed'}">${html}</div></section>`;
+}
+/* one month of realized profit and loss on its own page, day by day */
+function viewPnlMonth(k) {
+  const list = realizedPnl().filter((e) => inPeriod(e.date, k)), net = list.reduce((a, e) => a + e.pnl, 0);
+  return `${topbar('Portfolio', __('Realized P&L'))}
+  <section class="card"><div class="card-head"><div><a class="back-link" href="#/portfolio">← ${__('Back to Portfolio')}</a><h2>${esc(periodHeading(k))}</h2></div></div>
+    <div class="big num" style="font-size:26px;margin:4px 0 12px">${pnlText(net)}</div>
+    ${list.length ? pnlDays(list) : '<div class="empty">' + __('No sales in this period.') + '</div>'}</section>`;
+}
 function viewPortfolio() {
   const hid = routeArg(), ah = hid && D().holdings.find((x) => x.id === hid); if (ah) return viewAsset(ah);
+  if (/^pnl-\d{4}-\d{2}$/.test(hid)) { state.chart = null; state.chart2 = null; return viewPnlMonth(hid.slice(4)); }
   const months = lastMonths(6), vc = pf(), base = cur(), tab = state.ui.pfTab || 'savings';
   const S = months.map(savingsUSD), I = months.map((k) => portfolioUSD(k)), L = months.map(loanUSD), LT = months.map(lentUSD);
   const N = months.map((_, i) => S[i] + I[i] + LT[i] - L[i]);
@@ -841,6 +887,7 @@ function viewPortfolio() {
       <div class="alloc-legend">${alloc.map(([t, v]) => `<div><span class="key"><i style="background:${TYPE_COLOR[t]}"></i>${esc(t)}</span><b class="num">${m(v)}</b><span class="muted">${I[5] ? Math.round((v / I[5]) * 100) : 0}%</span></div>`).join('')}</div>` : `<div class="empty sm">${activeAccounts().length ? __('Add assets to an account to see your allocation.') : __('No investment accounts yet. Tap + Account to add one, for example your exchange or brokerage.')}</div>`}
 </section>
       ${growth}
+      ${pnlSection(rm, vc)}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
         return `<section class="card"><div class="card-head acct-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
@@ -1541,7 +1588,8 @@ function render() {
   if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); state.ui.allPeriods = false; }   // a new start day (or switching demo/real data) re-selects the current period
   const r = VIEWS[route()] ? route() : 'overview';
   app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${bottomNav()}`;
-  if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);   // the asset page (#/portfolio/<id>) has no value chart
+  if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);
+  if (r === 'portfolio' && state.chart2 && $('#pnl')) bindValue(state.chart2.months, state.chart2.series, state.chart2.vc, { id: 'pnl', neg: true });   // the asset page (#/portfolio/<id>) has no value chart
   if (r === 'overview') {
     const months = lastMonths(6);
     bindFlow(months, months.map((m) => sumBy(inMonth(m), 'income')), months.map((m) => sumBy(inMonth(m), 'expense')));
@@ -1836,7 +1884,7 @@ function holdingSummary(h, info, vc) {
   const k = lastMonths(6)[5], price = info.usd(k), qty = heldNow(h), value = qty * price, accTotal = portfolioUSD(k, h.account_id);
   const row = (l, v) => `<div class="hs-row"><span>${l}</span><b class="num">${v}</b></div>`;
   return `<div class="hold-sum"><div class="hs-top"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span><div><b>${esc(info.symbol)}</b><small class="muted">${esc(typeLabel(info.type))} · ${esc(accountName(h.account_id))}</small></div></div>
-    ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty, info.type === 'cash')} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${costRows(h, vc, row)}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
+    ${row(info.cash ? __('Balance') : __('You hold'), `${qtyFmt(qty, h)} ${esc(info.symbol)}`)}${info.cash ? '' : row(__('Current price'), money(usdToMinor(price, vc), vc))}${row(__('Total value'), money(usdToMinor(value, vc), vc))}${costRows(h, vc, row)}${row(__('Share of account'), `${accTotal ? Math.round((value / accTotal) * 100) : 0}%`)}</div>`;
 }
 /* average price, cost, unrealized and realized profit (not for cash and stablecoins) */
 function costRows(h, vc, row) {
@@ -2045,15 +2093,20 @@ function ensureFeeCategory() {
   D().transactions.forEach((t) => { if (t.type === 'expense' && t.transfer_id && !t.category_id) { t.category_id = c.id; changed = true; } });
   return changed;
 }
-/* selling an asset at a profit or loss: the profit is income (category Investment income > Capital gains), the loss an expense (Investment Loss), both on the account that received the sale.
-   Created on demand with fixed ids (same rows on every device). */
+/* selling an asset at a profit or loss: the profit is income (Investment > Investment Profit), the loss an expense (Investment > Investment Loss), both on the receiving account.
+   There are two top-level "Investment" categories, one per type (a sub-category has its parent's type). Created on demand with fixed ids (same rows on every device). */
+function investmentParent(type) {
+  const d = D(); let par = d.categories.find((c) => !c.parent_id && c.type === type && c.name.trim().toLowerCase() === 'investment');
+  if (!par) { const [n, , icon, color] = CATS.find((x) => x[0] === 'Investment' && x[1] === type); par = { id: defaultCatId(n, '', type), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(par); }
+  return par;
+}
 function pnlCategory(profit) {
-  const d = D(), top = (n, type) => d.categories.find((c) => !c.parent_id && c.type === type && c.name.trim().toLowerCase() === n.toLowerCase());
-  const make = (n, type, parent) => { const base = CATS.find((x) => x[0] === (parent ? parent : n)), sub = parent ? (SUBS[parent] || []).find((x) => x[0] === n) : null; const c = { id: defaultCatId(parent || n, parent ? n : ''), parent_id: parent ? top(parent, type).id : null, name: n, type, icon: sub ? sub[1] : base[2], color: base[3], archived: false }; d.categories.push(c); return c; };
-  if (!profit) return top('Investment Loss', 'expense') || make('Investment Loss', 'expense');
-  if (!top('Investment income', 'income')) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Investment income'); d.categories.push({ id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }); }
-  const par = top('Investment income', 'income');
-  return d.categories.find((c) => c.parent_id === par.id && c.name.toLowerCase() === 'capital gains') || make('Capital gains', 'income', 'Investment income');
+  const d = D(), type = profit ? 'income' : 'expense', name = profit ? 'Investment Profit' : 'Investment Loss', par = investmentParent(type);
+  // a loss category made by the first version (top level) moves under Investment
+  const legacy = !profit && d.categories.find((c) => !c.parent_id && c.type === 'expense' && c.name.trim().toLowerCase() === 'investment loss'); if (legacy) legacy.parent_id = par.id;
+  let sc = d.categories.find((c) => c.parent_id === par.id && c.name.trim().toLowerCase() === name.toLowerCase());
+  if (!sc) { const sub = subsOf('Investment', type).find((x) => x[0] === name); sc = { id: defaultCatId('Investment', name, type), parent_id: par.id, name, type, icon: sub ? sub[1] : par.icon, color: par.color, archived: false }; d.categories.push(sc); }
+  return sc;
 }
 function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
   const id = uid(), sym = assetInfo(h.symbol).symbol, word = side === 'buy' ? __('Bought') : __('Sold');
@@ -2353,6 +2406,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
   else if (act === 'loans-archived') archivedLoansDialog();
+  else if (act === 'pnl-month') { state.ui.pfTab = 'investment'; location.hash = '#/portfolio/pnl-' + el.dataset.k; }
   else if (act === 'lent-repayment') { const l = D().lent.find((x) => x.id === id), pay = l && l.payments.find((x) => x.id === el.dataset.pid); if (pay) lentRepaymentDialog(l, pay); }
   else if (act === 'loan-payment') { const l = D().loans.find((x) => x.id === id), pay = l && l.payments.find((x) => x.id === el.dataset.pid); if (pay) loanPaymentDialog(l, pay); }
   else if (act === 'unarchive-loan') { const l = find(D().loans); l.archived = false; save(); render(); toast(__('{name} is back', { name: l.name })); if (D().loans.some((x) => x.archived)) archivedLoansDialog(); else close(); }
@@ -2396,7 +2450,7 @@ document.addEventListener('click', (e) => {
   }
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
-  else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
+  else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'goto') location.hash = '#/' + el.dataset.route;
   else if (act === 'demo-on') setDemo(true);
   else if (act === 'onb-skip') skipOnboarding();

@@ -425,3 +425,8 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - 2026-11-01: IV-12: fiat cash balance in investment accounts.
 - 2026-11-01: Added UI-11 (app-styled dropdown lists) and the `dropdown` test to the coverage map.
 - 2026-11-01: OV-01 no longer expects the "N accounts" label on the hero card.
+
+### Realized P&L (Portfolio > Investment)
+- Investment tab shows a "Realized P&L" section (same layout as Investment growth): chart, month rows with only net P&L (green +, red −, plain Rp 0), "See more (n)".
+- Tap a month row: opens a page with the month's realized P&L by day (symbol · qty sold); back link returns to Portfolio.
+- Cash (IDR) quantities use dots (85.000.000). Automated: `tests/e2e/invest.js`.

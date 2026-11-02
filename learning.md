@@ -179,3 +179,4 @@ only worked after a detour. Keep each item short and say what to do instead.
 5. Update docs (`context.md`, `regression_scenario.md`, README, `NEXT_STEPS.md`) and `i18n-id.js`.
 6. Look at the screenshot; commit; push (`&&` chain); if a migration is involved, wait for the owner to apply it.
 7. **Before you finish the session: append your learnings to the Session log above** and commit it.
+- 2026-11-02: Never rewrite app.js with a script that reads and writes the same open file (truncated it to 0 bytes); always `wc -c` after scripted edits. The owner changed the P&L UI direction several times; confirm the final shape before building. Section titles: use "Realized P&L".

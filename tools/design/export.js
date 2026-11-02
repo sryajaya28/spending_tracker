@@ -39,6 +39,7 @@ const SCREENS = [
   ['budgets', 'page', PAGE('#/budgets', `state.ui.month = currentPeriod();`)],
   ['portfolio-savings', 'page', PAGE('#/portfolio', `state.ui.pfTab = 'savings';`)],
   ['portfolio-investment', 'page', PAGE('#/portfolio', `state.ui.pfTab = 'investment';`)],
+  ['portfolio-pnl-month', 'page', PAGE('#/portfolio/pnl-' + new Date().toISOString().slice(0, 7), `state.ui.pfTab = 'investment';`)],
   ['portfolio-lent', 'page', PAGE('#/portfolio', `state.ui.pfTab = 'lent';`)],
   ['portfolio-loan', 'page', PAGE('#/portfolio', `state.ui.pfTab = 'loan';`)],
   ['asset-history', 'page', `location.hash = '#/portfolio/' + D().holdings.find((h) => h.symbol === 'NVDA').id; render(); window.scrollTo(0, 0);`],

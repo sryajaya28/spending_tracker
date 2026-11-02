@@ -950,3 +950,15 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 
 [data-own-price][hidden] { display: none !important; }   /* the two-column layout would otherwise show it */
 .field input[readonly] { opacity: .75; }
+
+/* Investment tab: realized profit and loss, month rows open a day-by-day pop-up */
+.mrow.tap-row { cursor: pointer; }
+.pnl-day { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.pnl-day:last-child { border-bottom: 0; }
+.pnl-dh { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.pnl-ent { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0 3px 12px; font-size: 14px; color: var(--muted); }
+.pnl-days { padding: 0 0 6px; margin: -2px 0 6px; border-bottom: 1px solid var(--line); }
+.pnl-days .pnl-day { border-bottom: 1px dashed var(--line); }
+.pnl-days .pnl-day:last-child { border-bottom: 0; }
+.pnl-chev { display: inline-block; margin-left: 4px; font-size: 16px; line-height: 1; transition: transform .15s; }
+.mrow.open .pnl-chev { transform: rotate(90deg); }

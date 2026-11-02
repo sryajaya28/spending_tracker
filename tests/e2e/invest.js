@@ -28,10 +28,31 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     const tr = h.trades.find((x) => x.side === 'sell' && x.quantity === 5); removeTrade(h, tr); out.afterRemove = D().transactions.filter((t) => / profit$/.test(t.note)).length;
     return out;
   });
-  assert.deepEqual(r.profit, [['transfer', 'in', 500, null, 'Sold 5 BTC'], ['income', '', 200, 'Capital gains', 'BTC profit']], JSON.stringify(r.profit)); assert.equal(r.bal1, 700, 'the account receives the whole sale price');
+  assert.deepEqual(r.profit, [['transfer', 'in', 500, null, 'Sold 5 BTC'], ['income', '', 200, 'Investment Profit', 'BTC profit']], JSON.stringify(r.profit)); assert.equal(r.bal1, 700, 'the account receives the whole sale price');
   assert.deepEqual(r.all, [['expense', 100, 'Investment Loss']]); assert.deepEqual(r.lossTransfer, [200], 'a loss: the cost comes back, the loss is separate'); assert.equal(r.bal2, 700 + 100, 'and the account still receives exactly the sale price'); assert.equal(r.bal3, 800 - 150);
   assert(r.rows.length >= 3 && r.rows.every((x) => x.badges === 0 && !/[+−]/.test(x.amt) && x.icon), JSON.stringify(r.rows)); assert(r.rows.some((x) => /^Sell Invest · /.test(x.sub)) && r.rows.some((x) => /^Buy Invest · /.test(x.sub)), JSON.stringify(r.rows));
+  // both are sub-categories of an "Investment" category of their own type
+  assert.deepEqual(await p.evaluate(() => { const par = (c) => catOf(c.parent_id); const l = D().categories.find((c) => c.name === 'Investment Loss'), g = D().categories.find((c) => c.name === 'Investment Profit'); return [par(l).name, par(l).type, par(l).parent_id, par(g).name, par(g).type, par(g).parent_id]; }), ['Investment', 'expense', null, 'Investment', 'income', null], 'sub-categories of Investment');
+  // the category made by the first version (top level) is moved under Investment
+  assert.deepEqual(await p.evaluate(() => { const d = D(); const l = d.categories.find((c) => c.name === 'Investment Loss'); l.parent_id = null; ensureDefaultCategories(); const par = catOf(l.parent_id); return [par && par.name, d.categories.filter((c) => c.name === 'Investment Loss').length]; }), ['Investment', 1], 'legacy top-level loss moved');
   assert.deepEqual([r.income, r.spent], [200, 0], 'the profit is income; the loss is not spending'); assert.equal(r.lossBudget, 0, 'nor in the budgets'); assert.equal(r.lossTree, 0, 'nor in the spending breakdown'); assert.equal(r.lossRowStillThere, 1, 'the loss record itself is still listed'); assert.equal(r.afterRemove, 0, 'undoing the sale removes its profit record');
+  // Portfolio > Investment: realized profit & loss per month; tapping a month opens it in place, day by day (computed from the sales: -100 and +50 here)
+  await p.evaluate(() => { const h = D().holdings.find((x) => x.id === 'h1'); recordTrade(h, { side: 'sell', quantity: 1, source: { kind: 'wallet', wallet: D().wallets[0] }, amount: 150, date: todayIso() }); });   // cost 100, sold for 150: +50, the same day as the loss
+  const pn = await p.evaluate(() => { const rp = realizedPnl(); return { n: rp.length, net: rp.reduce((a, e) => a + e.pnl, 0), vals: rp.map((e) => e.pnl).sort((a, b) => a - b), cur: cur() }; });
+  assert.equal(pn.n, 2); assert.equal(pn.vals[0], -100); assert(pn.vals[1] > 0 && pn.net === pn.vals[0] + pn.vals[1], JSON.stringify(pn));
+  await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); await p.waitForSelector('[data-act=pnl-month]');
+  // the section is the same component as the growth card: chart, month rows (net P&L only, green or red), See more; no chevron
+  assert.equal(await p.$$eval('#pnl svg', (e) => e.length), 1, 'chart'); assert.equal(await p.$$eval('#pf svg', (e) => e.length), 1, 'the growth chart is still there');
+  const rowsInfo = await p.$$eval('[data-act=pnl-month]', (e) => e.map((r) => ({ name: r.querySelector('.mname').textContent.trim(), val: r.querySelector('.mval').textContent.replace(/\u00a0/g, ' ').trim(), cls: r.querySelector('.mval b').className, extra: r.querySelector('.mval').children.length })));
+  assert(rowsInfo.length >= 3 && rowsInfo.every((r) => r.extra === 1 && !/›|⌄/.test(r.val)), JSON.stringify(rowsInfo));
+  const cur0 = rowsInfo[0]; assert(cur0.val.startsWith('−Rp ' + Math.abs(pn.net)) && /down/.test(cur0.cls), 'this month: net loss in red: ' + JSON.stringify(cur0)); assert(rowsInfo.slice(1).every((r) => r.val === 'Rp 0'), 'months without sales read Rp 0');
+  // tapping a month opens its own page with the days (not a pop-up)
+  await p.click('[data-act=pnl-month]'); await p.waitForSelector('.pnl-day'); assert.equal(await p.evaluate(() => /^#\/portfolio\/pnl-\d{4}-\d{2}$/.test(location.hash)), true, 'a page of its own'); assert.equal(await p.$$eval('#dlg[open]', (e) => e.length), 0, 'no pop-up');
+  const dt = (await p.innerText('.main')).replace(/\u00a0/g, ' ');
+  assert(/BTC · 1 sold/.test(dt) && /BTC · 2 sold/.test(dt) && dt.includes('+Rp ' + pn.vals[1]) && dt.includes('−Rp 100') && dt.includes('−Rp ' + Math.abs(pn.net)) && dt.includes('Back to Portfolio'), dt); assert.equal(await p.$$eval('.pnl-day', (e) => e.length), 1, 'grouped by day');
+  await p.click('.back-link'); await p.waitForSelector('[data-act=pnl-month]'); assert.equal(await p.evaluate(() => location.hash), '#/portfolio');
+  // IDR amounts of cash use dots: 85.000.000 IDR, never 85,000,000
+  assert.equal(await p.evaluate(() => { D().customAssets['CASH:IDR'] = { symbol: 'IDR', name: 'Cash (IDR)', type: 'cash', cash: 'IDR' }; const h = { symbol: 'CASH:IDR', quantity: 85000000, trades: [], since: '2026-01', id: 'cx', account_id: D().investments[0].id }; D().holdings.push(h); const t = holdingRow(h, 'IDR', 1).replace(/<[^>]+>/g, ' '); D().holdings = D().holdings.filter((x) => x.id !== 'cx'); return /85\.000\.000 IDR/.test(t) && !/85,000,000/.test(t); }), true, 'cash quantity with dots');
   // the Invest tab: Buy / Sell choice; the picked ticker stays in the search box
   await p.evaluate(() => { D().transactions = []; D().wallets[0].opening_balance_minor = 100000; render(); holdingDialog(null, D().investments[0].id, { invest: true }); }); await p.waitForSelector('#dlg input[name=side]', { state: 'attached' });
   assert.deepEqual(await p.$$eval('#dlg input[name=side]', (e) => e.map((x) => [x.value, x.checked])), [['buy', true], ['sell', false]], 'Buy is the default');

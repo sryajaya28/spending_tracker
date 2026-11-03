@@ -1,0 +1,15 @@
+# One extended-regex pattern per line. guard-prod.sh blocks a Bash command that matches any line.
+# Production here: https://stiver.io (and www) and Supabase ref ukoxkwxmkwtlihbutryc. Staging hosts are not matched.
+--prod\b
+(--env|--environment|-e)[ =]+production\b
+--profile[ =]+production\b
+NODE_ENV=production
+terraform +apply
+kubectl .*prod
+vercel +.*--prod
+supabase .*--project-ref +ukoxkwxmkwtlihbutryc
+ukoxkwxmkwtlihbutryc
+(//|[ ="'])(www\.)?stiver\.io\b
+git +push +.*(--force|-f\b)
+git +push +origin +main
+rm +-rf +/( |$)

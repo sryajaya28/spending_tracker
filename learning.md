@@ -180,3 +180,4 @@ only worked after a detour. Keep each item short and say what to do instead.
 6. Look at the screenshot; commit; push (`&&` chain); if a migration is involved, wait for the owner to apply it.
 7. **Before you finish the session: append your learnings to the Session log above** and commit it.
 - 2026-11-02: Never rewrite app.js with a script that reads and writes the same open file (truncated it to 0 bytes); always `wc -c` after scripted edits. The owner changed the P&L UI direction several times; confirm the final shape before building. Section titles: use "Realized P&L".
+- 2026-11-03: Node's built-in `fetch` does not use the sandbox proxy (use curl or the browser for network calls from scripts). A `//` comment inserted mid-line in a scripted edit swallowed the rest of the line again; put comments on their own line. For hosted smoke tests wait for the save queue AND the network to settle before reloading, or a still-pending save looks like data loss.

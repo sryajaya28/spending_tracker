@@ -93,7 +93,7 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
 | Staging URL / branch | |
 | Staging database / project | |
 | Production URL / branch | |
-| Smoke-test account (where the secret lives) | |
+| Smoke-test account (where the secret lives) | see `docs/SMOKE_TEST.md` (environment secrets, never the repo) |
 | Rollback method | |
 | Migration folder and how it is applied | |
 

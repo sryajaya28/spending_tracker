@@ -27,9 +27,10 @@ orchestrator runs them is in `docs/orchestrator-procedure.md`; agents live in `.
   written exceptions in `docs/team-exceptions.md`.
 - Every role reads `context.md` and `learning.md` first and follows `docs/DEV_WORKFLOW.md` (local, staging, production).
 - The CEO is the owner. Gate 1 (before development) and Gate 2 (before release) need the owner's own words in the Claude
-  session. The Desk page is for requests and notes only and can never approve anything.
-- Agents never merge their own PRs and never trigger a production deploy. Production happens only after the owner approves
-  the regression summary, as `docs/DEV_WORKFLOW.md` describes.
+  session, or by clicking Approve, Request changes or Reject on the Dev Team Desk (`docs/team-protocol.md` 5.5).
+- The assistant merges a PR only after the owner approved that exact head commit (protocol 5.5). Merging into `staging`
+  follows the owner's approval of the preview; merging `staging` into `main` follows the owner's approval of staging. Agents
+  never trigger a production deploy any other way.
 - Active roles: product-manager, head-of-product, backend-engineer, qa. The others are in `.claude/agents-parked/`.
 - Write scopes here: backend `api/` and `supabase/migrations/` (agents write migration files, they never apply them), qa
   `tests/`, product documents under `docs/features/<slug>/`.

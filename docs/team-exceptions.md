@@ -20,9 +20,9 @@ Limits:
 - The only production writes allowed are the two records the smoke script creates (marked `SMOKE`) and deletes again.
 - If the guard blocks a production command, stop and ask the owner. Do not edit the guard, the markers or this file.
 
-## Open points for the owner (not exceptions yet)
+## Decisions and open points
 
-- Who merges into `staging` and `main`. The existing workflow lets the assistant merge after approval; the team protocol
-  says agents never merge their own PRs. Until the owner decides, the stricter rule applies: the owner merges.
+- Merging is decided: the assistant merges, but only after the owner approves that exact PR head commit on the Desk or in
+  chat (`docs/team-protocol.md` 5.5).
 - No automatic production deploy from `main`. Needs a Vercel setting changed by the owner, then a protected release
   workflow. Not part of this change.

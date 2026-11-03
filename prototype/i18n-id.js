@@ -374,6 +374,8 @@ DICT.id = {
  "Can't remove this: it would leave a negative holding (part of it was sold or spent since)": "Tidak bisa dihapus: akan membuat kepemilikan menjadi negatif (sebagian sudah dijual atau dipakai)",
  "Cancel": "Batal",
  "Vehicle loan": "Kredit kendaraan",
+ "Installments remaining (optional)": "Sisa cicilan (opsional)",
+ "{n} payments left": "sisa {n} pembayaran",
  "Bank Loan": "Pinjaman bank",
  "Paylater": "Paylater",
  "Card": "Kartu",

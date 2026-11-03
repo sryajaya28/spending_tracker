@@ -783,7 +783,7 @@ function loanCard(l, vc, kind = 'loan') {
   const shown = (m) => money(convert(m, l.currency, vc), vc);
   const word = lent ? __('repayment') : __('payment');
   const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}`
-    : `${l.monthly_minor ? __('Monthly {amount}', { amount: shown(l.monthly_minor) }) : ''}${l.rate ? ` · ${l.rate}% APR` : ''}`;
+    : `${l.monthly_minor ? __('Monthly {amount}', { amount: shown(l.monthly_minor) }) : ''}${l.monthly_minor && bal > 0 ? ` · ${__('{n} payments left', { n: Math.ceil(bal / l.monthly_minor) })}` : ''}${l.rate ? ` · ${l.rate}% APR` : ''}`;
   return `<section class="card"><div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn secondary" data-act="history-${kind}" data-id="${l.id}">${__('Details')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
@@ -938,16 +938,32 @@ function viewPortfolio() {
 }
 
 function loanDialog(l) {
-  open(`<h2>${l ? __('Edit debt') : __('Add debt')}</h2><form data-form="loan" data-id="${l?.id || ''}" style="display:contents">
+  open(`<h2>${l ? __('Edit debt') : __('Add debt')}</h2><form data-form="loan" data-id="${l?.id || ''}" data-edited="${l ? 'monthly,amount' : ''}" style="display:contents">
     <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Vehicle loan')}"></label>
     <div class="two"><label class="field">${__('Type')}<select name="type">${Object.entries(LOAN_TYPES).map(([k, v]) => `<option value="${k}" ${k === (l?.type || 'car') ? 'selected' : ''}>${__(v)}</option>`).join('')}</select></label>
       <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
     <div class="two"><label class="field">${__('Amount owed now')}<input name="amount" type="number" inputmode="decimal" min="${l ? 0 : 1}" step="any" required value="${l ? toMajor(loanBalance(l), l.currency) : ''}"></label>
       <label class="field">${__('Monthly payment')}<input name="monthly" type="number" inputmode="decimal" min="0" step="any" value="${l ? toMajor(l.monthly_minor, l.currency) : ''}"></label></div>
+    <label class="field">${__('Installments remaining (optional)')}<input name="left" type="number" inputmode="numeric" min="0" step="1" value="${l && l.monthly_minor > 0 && loanBalance(l) > 0 ? Math.ceil(loanBalance(l) / l.monthly_minor) : ''}"></label>
     <label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" inputmode="decimal" min="0" step="any" value="${l?.rate || ''}"></label>
     ${l ? `<p class="hint">${__('Type what you still owe today. Stiver keeps your payments and charges and adjusts the starting amount ({orig}) behind the scenes.', { orig: money(l.original_minor, l.currency) })}</p>` : ''}
     <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-loan" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
+/* amount owed, monthly payment and installments remaining depend on each other: fill in two and the third follows.
+   The two boxes typed in last are the ones you meant; the other one is worked out (and is replaced again when you change the others) */
+function syncDebtForm(form, changed) {
+  const names = ['amount', 'monthly', 'left'], val = (n) => { const v = parseFloat(form[n].value); return v > 0 ? v : 0; };
+  let edited = (form.dataset.edited || '').split(',').filter(Boolean).filter((n) => n !== changed);
+  if (form[changed].value === '') { form.dataset.edited = edited.join(','); return; }
+  edited.push(changed); edited = edited.slice(-2); form.dataset.edited = edited.join(',');
+  if (edited.length < 2) return;
+  const target = names.find((n) => !edited.includes(n)), c = form.currency.value, exp = expOf(c);
+  const owed = val('amount'), monthly = val('monthly'), left = Math.round(val('left'));
+  if (target === 'left') form.left.value = owed > 0 && monthly > 0 ? Math.max(1, Math.ceil(toMinor(owed, c) / toMinor(monthly, c))) : '';
+  else if (target === 'monthly') form.monthly.value = owed > 0 && left > 0 ? String(+(Math.ceil(toMinor(owed, c) / left) / 10 ** exp).toFixed(exp)) : '';
+  else form.amount.value = monthly > 0 && left > 0 ? String(+(monthly * left).toFixed(exp)) : '';
+}
+document.addEventListener('input', (e) => { const t = e.target; if (t.form && t.form.dataset.form === 'loan' && ['amount', 'monthly', 'left'].includes(t.name)) syncDebtForm(t.form, t.name); });
 /* archived loans: listed here, Reopen puts one back with all its payments */
 /* a payment recorded without an account: look at it, or delete it (the loan goes back up by that amount) */
 function loanPaymentDialog(l, pay) {

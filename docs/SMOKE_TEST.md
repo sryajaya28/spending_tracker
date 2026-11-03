@@ -57,3 +57,15 @@ Steps: 14/14 (list any failure with the step name and message)
 Manual additions run: <none | list>
 Action: none | fixed in <commit> and re-run PASSED | rolled back
 ```
+
+## Deeper real-database check (regression, only when the owner asks)
+
+`tests/staging/regression.js` is not part of the smoke test. It checks, against a real hosted copy with the smoke account, the data that
+the fake test database cannot prove: debts (Bank Loan, Paylater, flat interest) and investment sales paid into the account's own cash
+(profit/loss and fee records without a wallet, tied to holding events). Run `create`, inspect the database if needed, then `cleanup`:
+
+```bash
+SMOKE_EMAIL=... SMOKE_PASSWORD=... node tests/staging/regression.js https://staging.stiver.io create
+SMOKE_EMAIL=... SMOKE_PASSWORD=... node tests/staging/regression.js https://staging.stiver.io cleanup
+```
+Staging only; never run it on production.

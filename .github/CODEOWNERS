@@ -1,0 +1,10 @@
+# CEO review is required on these paths (docs/team-protocol.md 5.1 and Flow E).
+# Enable "Require review from Code Owners" in branch protection for main.
+/docs/features/*/ceo-decision-*.md   @sryajaya28
+/docs/ceo-identity.txt               @sryajaya28
+/docs/ceo-allowed-signers            @sryajaya28
+/docs/engineering-standards/prod-markers.txt @sryajaya28
+/.github/CODEOWNERS                  @sryajaya28
+/.github/workflows/                  @sryajaya28
+/.claude/                            @sryajaya28
+/scripts/                            @sryajaya28

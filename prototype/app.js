@@ -933,7 +933,7 @@ function viewPortfolio() {
         <div><span class="key"><i style="background:#1fa971"></i>${__('Lent to others')}</span><b class="num">${m(LT[5])}</b><span class="muted">${share(LT[5])}%</span></div></div>
       <div class="alloc-legend alloc-debt"><div><span class="key"><i style="background:#E5484D"></i>${__('Less: Debts')}</span><b class="num">−${m(L[5])}</b><span class="muted"></span></div></div></section>
   </div>
-  <div class="tabs" role="tablist" style="margin:20px 0">${tabBtn('savings', 'Savings')}${tabBtn('investment', 'Investment')}${tabBtn('lent', 'Lent')}${tabBtn('loan', 'Debt')}</div>
+  <div class="tabs" role="tablist" style="margin:20px 0">${tabBtn('savings', 'Savings')}${tabBtn('loan', 'Debt')}${tabBtn('investment', 'Investment')}${tabBtn('lent', 'Lent')}</div>
   ${body}`;
 }
 

@@ -783,7 +783,7 @@ function loanCard(l, vc, kind = 'loan') {
   const shown = (m) => money(convert(m, l.currency, vc), vc);
   const word = lent ? __('repayment') : __('payment');
   const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}`
-    : `${l.monthly_minor ? __('Monthly {amount}', { amount: shown(l.monthly_minor) }) : ''}${l.monthly_minor && bal > 0 ? (debtN(bal, l.monthly_minor, l.rate) === null ? '' : ` · ${__('{n} payments left', { n: debtN(bal, l.monthly_minor, l.rate) })}`) : ''}${l.rate ? ` · ${l.rate}% APR` : ''}`;
+    : `${l.monthly_minor ? __('Monthly {amount}', { amount: shown(l.monthly_minor) }) : ''}${l.monthly_minor && bal > 0 ? (debtN(bal, l.monthly_minor, l.rate, l.flat) === null ? '' : ` · ${__('{n} payments left', { n: debtN(bal, l.monthly_minor, l.rate, l.flat) })}`) : ''}${l.rate ? ` · ${l.rate}% ${l.flat ? __('flat') : 'APR'}` : ''}`;
   return `<section class="card"><div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn secondary" data-act="history-${kind}" data-id="${l.id}">${__('Details')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
@@ -944,8 +944,9 @@ function loanDialog(l) {
       <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
     <div class="two"><label class="field">${__('Amount owed now')}<input name="amount" type="number" inputmode="decimal" min="${l ? 0 : 1}" step="any" required value="${l ? toMajor(loanBalance(l), l.currency) : ''}"></label>
       <label class="field">${__('Monthly payment')}<input name="monthly" type="number" inputmode="decimal" min="0" step="any" value="${l ? toMajor(l.monthly_minor, l.currency) : ''}"></label></div>
-    <label class="field">${__('Installments remaining (optional)')}<input name="left" type="number" inputmode="numeric" min="0" step="1" value="${l && l.monthly_minor > 0 && loanBalance(l) > 0 ? debtN(loanBalance(l), l.monthly_minor, l.rate) ?? '' : ''}"></label>
-    <label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" inputmode="decimal" min="0" step="any" value="${l?.rate || ''}"></label>
+    <label class="field">${__('Installments remaining (optional)')}<input name="left" type="number" inputmode="numeric" min="0" step="1" value="${l && l.monthly_minor > 0 && loanBalance(l) > 0 ? debtN(loanBalance(l), l.monthly_minor, l.rate, l.flat) ?? '' : ''}"></label>
+    <div class="two"><label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" inputmode="decimal" min="0" step="any" value="${l?.rate || ''}"></label>
+      <label class="field">${__('Interest type')}<select name="flat"><option value="0" ${l && !l.flat ? 'selected' : ''}>${__('Declining balance')}</option><option value="1" ${(l ? l.flat : true) ? 'selected' : ''}>${__('Flat rate')}</option></select></label></div>
     ${l ? `<p class="hint">${__('Type what you still owe today. Stiver keeps your payments and charges and adjusts the starting amount ({orig}) behind the scenes.', { orig: money(l.original_minor, l.currency) })}</p>` : ''}
     <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-loan" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
@@ -953,14 +954,15 @@ function loanDialog(l) {
    With an interest rate (per year) the usual loan formula is used (the interest is charged on what is still owed each month);
    without one it is plain division. The two boxes typed in last are the ones you meant; the other one is worked out */
 const debtRate = (ratePct) => (ratePct > 0 ? ratePct / 1200 : 0);
-function debtN(owed, pay, ratePct) {   // payments left; null when the payment does not even cover the interest
+function debtN(owed, pay, ratePct, flat) {   // payments left; null when the payment does not even cover the interest
   if (!(owed > 0 && pay > 0)) return null; const r = debtRate(ratePct);
   if (!r) return Math.max(1, Math.ceil(owed / pay - 1e-9));
+  if (flat) { const room = pay - owed * r; return room > 1e-9 ? Math.max(1, Math.ceil(owed / room - 1e-9)) : null; }   // flat: interest = owed x rate x months, so pay x n = owed + owed x r x n
   if (pay <= owed * r + 1e-9) return null;
   return Math.max(1, Math.ceil(-Math.log(1 - (owed * r) / pay) / Math.log(1 + r) - 1e-9));
 }
-const debtPay = (owed, n, ratePct) => { const r = debtRate(ratePct); return r ? (owed * r) / (1 - Math.pow(1 + r, -n)) : owed / n; };
-const debtOwed = (pay, n, ratePct) => { const r = debtRate(ratePct); return r ? (pay * (1 - Math.pow(1 + r, -n))) / r : pay * n; };
+const debtPay = (owed, n, ratePct, flat) => { const r = debtRate(ratePct); return !r ? owed / n : flat ? owed / n + owed * r : (owed * r) / (1 - Math.pow(1 + r, -n)); };
+const debtOwed = (pay, n, ratePct, flat) => { const r = debtRate(ratePct); return !r ? pay * n : flat ? (pay * n) / (1 + r * n) : (pay * (1 - Math.pow(1 + r, -n))) / r; };
 function syncDebtForm(form, changed) {
   const names = ['amount', 'monthly', 'left'], val = (n) => { const v = parseFloat(form[n].value); return v > 0 ? v : 0; };
   let edited = (form.dataset.edited || '').split(',').filter(Boolean);
@@ -970,13 +972,16 @@ function syncDebtForm(form, changed) {
     edited.push(changed); edited = edited.slice(-2); form.dataset.edited = edited.join(',');
   }
   if (edited.length < 2) return;
-  const target = names.find((n) => !edited.includes(n)), c = form.currency.value, exp = expOf(c), unit = 10 ** exp, rate = parseFloat(form.rate.value) || 0;
+  const target = names.find((n) => !edited.includes(n)), c = form.currency.value, exp = expOf(c), unit = 10 ** exp, rate = parseFloat(form.rate.value) || 0, flat = form.flat.value === '1';
   const owed = val('amount'), monthly = val('monthly'), left = Math.round(val('left')), up = (x) => String(+(Math.ceil(x * unit - 1e-6) / unit).toFixed(exp));
-  if (target === 'left') { const n = debtN(owed, monthly, rate); form.left.value = n === null ? '' : n; }
-  else if (target === 'monthly') form.monthly.value = owed > 0 && left > 0 ? up(debtPay(owed, left, rate)) : '';
-  else form.amount.value = monthly > 0 && left > 0 ? String(+debtOwed(monthly, left, rate).toFixed(exp)) : '';
+  if (target === 'left') { const n = debtN(owed, monthly, rate, flat); form.left.value = n === null ? '' : n; }
+  else if (target === 'monthly') form.monthly.value = owed > 0 && left > 0 ? up(debtPay(owed, left, rate, flat)) : '';
+  else form.amount.value = monthly > 0 && left > 0 ? String(+debtOwed(monthly, left, rate, flat).toFixed(exp)) : '';
 }
-document.addEventListener('input', (e) => { const t = e.target; if (t.form && t.form.dataset.form === 'loan') { if (['amount', 'monthly', 'left'].includes(t.name)) syncDebtForm(t.form, t.name); else if (t.name === 'rate') syncDebtForm(t.form, null); } });
+document.addEventListener('input', (e) => { const t = e.target; if (t.form && t.form.dataset.form === 'loan') { if (['amount', 'monthly', 'left'].includes(t.name)) syncDebtForm(t.form, t.name); else if (t.name === 'rate') syncDebtForm(t.form, null); }
+  if (t.form && t.form.dataset.form === 'loan' && t.name === 'flat') { t.form.dataset.flatTouched = '1'; syncDebtForm(t.form, null); }
+  // a new vehicle loan or paylater is flat by default (the usual way they are priced); the choice is left alone once you pick one yourself
+  if (t.form && t.form.dataset.form === 'loan' && t.name === 'type' && !t.form.dataset.id && !t.form.dataset.flatTouched) { t.form.flat.value = ['car', 'paylater'].includes(t.value) ? '1' : '0'; syncDebtForm(t.form, null); } });
 /* archived loans: listed here, Reopen puts one back with all its payments */
 /* a payment recorded without an account: look at it, or delete it (the loan goes back up by that amount) */
 function loanPaymentDialog(l, pay) {
@@ -2814,7 +2819,7 @@ document.addEventListener('submit', async (e) => {
     if (!(existing ? amount >= 0 : amount > 0) || !v.name.trim()) { toast('Enter a name and an amount above zero'); return; }
     // editing: the box is what is owed now; the starting amount is whatever makes charges and payments add up to it (at least 1)
     const original = existing ? Math.max(1, amount - chargedOf(existing, todayIso()) + paidOf(existing, todayIso())) : amount;
-    const fields = { name: v.name.trim(), type: v.type, original_minor: original, monthly_minor: monthly, rate: parseFloat(v.rate) || 0 };
+    const fields = { name: v.name.trim(), type: v.type, original_minor: original, monthly_minor: monthly, rate: parseFloat(v.rate) || 0, flat: v.flat === '1' };
     if (existing) Object.assign(existing, fields);
     else D().loans.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
     state.ui.pfTab = 'loan'; save(); close(); render(); toast('Debt saved'); return;

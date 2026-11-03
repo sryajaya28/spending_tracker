@@ -20,9 +20,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('#dlg [name=left]', ''); assert.deepEqual(await v(), ['1000', '100', '']);
   // with an interest rate the usual loan formula is used: 1000 at 12% a year over 12 months is 88.85 a month; and back again
   await p.evaluate(() => { document.querySelector('#dlg [name=currency]').value = 'USD'; });
+  assert.equal(await p.inputValue('#dlg [name=flat]'), '1', 'a new vehicle loan is flat by default'); await p.selectOption('#dlg [name=flat]', '0');
   await p.fill('#dlg [name=rate]', '12'); await p.fill('#dlg [name=amount]', '1000'); await p.fill('#dlg [name=left]', '12'); assert.deepEqual(await v(), ['1000', '88.85', '12'], 'monthly with interest');
   await p.fill('#dlg [name=monthly]', '88.85'); await p.fill('#dlg [name=amount]', '1000'); assert.equal((await v())[2], '12', 'installments with interest');
   await p.fill('#dlg [name=monthly]', '5'); assert.equal((await v())[2], '', 'a payment that does not cover the interest has no end');
+  // flat rate: interest on the original amount, 1000 at 12% a year over 12 months = 1000/12 + 10 = 93.34 a month; and back again
+  await p.selectOption('#dlg [name=flat]', '1');
+  await p.fill('#dlg [name=left]', '12'); await p.fill('#dlg [name=amount]', '1000'); assert.equal((await v())[1], '93.34');
+  await p.fill('#dlg [name=monthly]', '93.34'); await p.fill('#dlg [name=amount]', '1000'); assert.equal((await v())[2], '12', 'flat installments');
+  await p.selectOption('#dlg [name=flat]', '0');
   await p.fill('#dlg [name=rate]', ''); await p.fill('#dlg [name=monthly]', '100'); assert.equal((await v())[2], '10');
   // zero-decimal currency: the monthly payment is rounded up to a whole unit
   await p.evaluate(() => { document.querySelector('#dlg [name=currency]').value = 'IDR'; });

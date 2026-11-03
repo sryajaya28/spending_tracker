@@ -444,3 +444,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Debt type list shows Vehicle loan (was Car loan); Indonesian "Kredit kendaraan".
 - Debt form: type owed 1000 + monthly 300 -> installments 4; then type installments 10 -> owed 3000; then owed 1000 -> monthly 100. Clearing a box leaves the others. Editing an existing debt: change installments -> monthly changes, balance stays. The debt card shows "n payments left". (tests/e2e/debtcalc.js)
 - Debt form with interest: 1000 at 12%/year over 12 months = 88.85 a month (and back); payment below the interest = no installments shown; no rate = plain division (tests/e2e/debtcalc.js).
+- Debt interest type: new Vehicle loan / Paylater start as Flat rate; flat 1000 at 12%/year over 12 months = 93.34 a month; switching the type recalculates; saved and synced (tests/e2e/debtcalc.js).

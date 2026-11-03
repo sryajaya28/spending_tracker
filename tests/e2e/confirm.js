@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   // links go back to the canonical address from the old vercel.app host, and stay local elsewhere
-  const urls = await p.evaluate(() => [Cloud.appUrl('spendingtracker-three.vercel.app'), Cloud.appUrl('spendingtracker-suryajaya378-4429s-projects.vercel.app'), Cloud.appUrl('localhost'), Cloud.appUrl('stiver.io')]);
+  const urls = await p.evaluate(() => { window.STIVER.SITE_URL = 'https://stiver.io'; return [Cloud.appUrl('spendingtracker-three.vercel.app'), Cloud.appUrl('spendingtracker-suryajaya378-4429s-projects.vercel.app'), Cloud.appUrl('localhost'), Cloud.appUrl('stiver.io')]; });
   assert.deepStrictEqual(urls, ['https://stiver.io/', 'https://stiver.io/', 'http://127.0.0.1:5180/', 'http://127.0.0.1:5180/'], JSON.stringify(urls));
   assert.equal(await p.evaluate(() => Cloud.redirect()), 'http://127.0.0.1:5180/');
   // sign up on desktop while the email is not confirmed yet

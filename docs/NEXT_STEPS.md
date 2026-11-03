@@ -4,6 +4,20 @@ The app is live and used by real accounts. The original plan was to port the pro
 been needed so far (see `context.md`, "Decisions"). Next.js stays optional for when `prototype/app.js` (about 1,700
 lines in one file) becomes hard to maintain: components, TypeScript, server-side routes in one codebase.
 
+## Pending before the local → staging → production workflow can start (see `docs/DEV_WORKFLOW.md`)
+1. **Staging database: DONE for the schema** (project `cujmgyacxbcmltxfjkxo`, all 23 migrations applied and compared with production). Auth settings DONE (email confirmation off, so test accounts sign up without an inbox; checked by creating and deleting a throwaway account). Original note: a second Supabase project (free plan allows two active ones; the paused "sryajaya28's Project" could be restored or deleted),
+   all 23 migrations applied, Auth URL/redirect settings, Google OAuth redirect for the staging host, a test email path (Resend or auto-confirm).
+2. **Staging site: DONE** (branch `staging`, `staging.stiver.io`, Vercel Authentication switched off for previews; production domain unaffected). Original note: a `staging` branch with its own hosted URL (for example `staging.stiver.io`, branch domain on Vercel; previews already build per branch).
+3. **Per-environment config:** `prototype/config.js` has the production Supabase URL/key and `vercel.json` CSP pins that host; staging needs its own.
+   Also `FINNHUB_API_KEY` exists only for the production target, so previews/staging have no price feed until it is added.
+4. **Network access for the assistant: DONE (2026-11-03).** Original note: the cloud sandbox cannot reach `stiver.io`, Supabase or the Vercel hosts (connections are refused), so it cannot run
+   regression or smoke tests against staging/production. Add the hosts under Allowed domains in the environment settings (or use a broader level).
+5. **Smoke-test and staging test accounts: DONE 2026-11-03** (accounts created on both databases, `tests/smoke/smoke.js` and `docs/SMOKE_TEST.md` written; passes 14/14 on staging and production). Still to do: the owner stores the two passwords as environment secrets `SMOKE_STAGING_PASSWORD` / `SMOKE_PROD_PASSWORD`. Original note: (never the owner's real account) with credentials kept as environment secrets, plus a written smoke-test checklist.
+6. **How the owner reviews "local": DECIDED 2026-11-03: a preview link per feature branch** (built by Vercel, wired to the staging database, labelled "Staging · test data"). Original note: the assistant's local app is not reachable from the phone. Decide between a branch preview link, screenshots/recordings, or
+   Remote Control to the owner's computer.
+7. **Housekeeping (2026-11-03): `docs/FEATURE_TESTS.md` and the `CLAUDE.md` workflow rule written; branch protection on `main` DONE, shared repo `sryajaya28/dev-workflow` DONE; still open: the first release through the workflow (it carries the per-environment config and the smoke-test files to `main`).** Original note: `docs/FEATURE_TESTS.md` (the list the owner adds to), GitHub branch protection on `main` (no direct pushes), `CLAUDE.md` pointing to the workflow
+   (its current rule "pushing to `main` deploys to production" changes), and a decision on where the shared workflow file lives for the other projects.
+
 ## Open items, by priority
 1. **Finnhub licence:** free plan is personal-use only. Needed before a public launch.
 2. **Google verification:** Search Console TXT record is added; wait for Google to finish the branding check, then

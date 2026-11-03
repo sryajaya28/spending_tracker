@@ -22,8 +22,11 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
 
 1. Every piece of work starts on its own branch (`feature/<short-name>`), never directly on `staging` or `main`.
 2. The assistant builds it and **tests the feature** (see Feature testing below) before showing it.
-3. The assistant shows the result in a way the owner can review: screenshots or a short recording, the exact steps to try it,
-   and (when available) a live preview link or a local run. It lists what changed, what was *not* verified, and any decision it needs.
+3. The assistant shows the result in a way the owner can review: a **preview link of the branch** (every branch push builds its
+   own hosted copy; the assistant gets the link from the host and sends it), a few screenshots, and the exact steps to try it.
+   Preview links, the staging site and local runs all use the **staging database**; only the live app uses the production one,
+   so nothing tried before release can touch real data. Hosted non-production copies show a small "Staging · test data" label.
+   The assistant lists what changed, what was *not* verified, and any decision it needs.
 4. The owner reviews and leaves comments. The assistant fixes them on the same branch and shows the result again.
    Repeat until the owner approves.
 5. **Only after approval** is the branch merged into `staging`. Until then nothing is deployed to staging or production,

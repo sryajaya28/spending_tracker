@@ -12,8 +12,8 @@ lines in one file) becomes hard to maintain: components, TypeScript, server-side
    Also `FINNHUB_API_KEY` exists only for the production target, so previews/staging have no price feed until it is added.
 4. **Network access for the assistant: DONE (2026-11-03).** Original note: the cloud sandbox cannot reach `stiver.io`, Supabase or the Vercel hosts (connections are refused), so it cannot run
    regression or smoke tests against staging/production. Add the hosts under Allowed domains in the environment settings (or use a broader level).
-5. **Smoke-test and staging test accounts** (never the owner's real account) with credentials kept as environment secrets, plus a written smoke-test checklist.
-6. **How the owner reviews "local":** the assistant's local app is not reachable from the phone. Decide between a branch preview link, screenshots/recordings, or
+5. **Smoke-test and staging test accounts (next)** (never the owner's real account) with credentials kept as environment secrets, plus a written smoke-test checklist.
+6. **How the owner reviews "local": DECIDED 2026-11-03: a preview link per feature branch** (built by Vercel, wired to the staging database, labelled "Staging · test data"). Original note: the assistant's local app is not reachable from the phone. Decide between a branch preview link, screenshots/recordings, or
    Remote Control to the owner's computer.
 7. **Housekeeping:** `docs/FEATURE_TESTS.md` (the list the owner adds to), GitHub branch protection on `main` (no direct pushes), `CLAUDE.md` pointing to the workflow
    (its current rule "pushing to `main` deploys to production" changes), and a decision on where the shared workflow file lives for the other projects.

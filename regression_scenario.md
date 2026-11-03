@@ -447,3 +447,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Debt interest type: new Vehicle loan / Paylater start as Flat rate; flat 1000 at 12%/year over 12 months = 93.34 a month; switching the type recalculates; saved and synced (tests/e2e/debtcalc.js).
 - Portfolio tab order: Savings, Debt, Investment, Lent.
 - Preview/staging copies: show the "Staging · test data" label and use the staging database; stiver.io shows no label and uses production. A new production address must be listed in config.js PRODUCTION_HOSTS.
+- Landing page: the demo video plays and matches the current app (Debt tab, Realized P&L); re-record with record_demo_tour.js + encode_demo.sh after big UI changes.

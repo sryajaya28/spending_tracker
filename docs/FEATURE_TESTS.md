@@ -22,6 +22,7 @@ How to fill an entry:
 | FT-001 | Branch previews use the staging database and show the "Staging · test data" label | Open the preview link of a branch; sign up with a made-up email | Label visible; account exists in the staging database only; stiver.io shows no label and uses production | smoke test + manual (preview) | pass on staging (2026-11-03); branch-preview link not opened by the assistant (host not allowed) |
 | FT-002 | Phone number pad on amount boxes | On an iPhone open Add transaction, Add debt, Sell | Number pad (not the full keyboard) opens for amount, fee, quantity, price | manual (device) | todo |
 | FT-003 | Debt types Bank Loan and Paylater save and sync | Add a debt of each type, reload | Both stay, with the right label | `tests/staging/regression.js` | pass (2026-11-03, staging, real database) |
+| FT-004 | Landing-page demo video shows the latest build (Debt tab, Realized P&L) | Sign out, open the landing page, play the video; check the caption in English and Indonesian | Video plays on phone and desktop, shows the Debt tab and Realized P&L; caption matches | `tests/e2e/idcrawl.js` (caption text) + manual (play on a phone) | frames checked by the assistant (2026-11-03); waiting for the owner's review of the preview link |
 
 ## Done (kept for reference)
 

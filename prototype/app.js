@@ -1553,7 +1553,7 @@ function viewLanding() {
       ${installBtn('land-install')}${IS_STANDALONE ? `<button type="button" class="legend-btn land-transfer" data-act="transfer-dialog">${__('Signed in on your browser? Transfer from browser')}</button>` : ''}</div>
     </div>
   </section>
-  <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, browse your days, check budgets and your portfolio, and move money between accounts.')}</p>
+  <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, browse your days, check budgets, debts and investments, and move money between accounts.')}</p>
     <div class="demo-frame"><video controls playsinline preload="metadata" poster="media/demo-poster.jpg" aria-label="${__('Stiver demo video')}"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div></section>
   <section class="land-sec"><h2>${__('Everything you need, nothing you don’t')}</h2>
     <div class="feats">

@@ -44,8 +44,8 @@ const OUT = __dirname + '/video';
   await go('#dlg button[type=submit]'); await pause(2000);
   // 3. activity: one row per day, tap a day for its transactions
   await go('.sidebar a[href="#/transactions"]'); await pause(1600);
-  await go('#txn-list .day-row'); await pause(2000);
-  await go('.back-link'); await pause(900);
+  await go('#txn-list .day-row'); await pause(2200);   // a day opens in place; tap it again to close
+  await go('#txn-list .day-row'); await pause(900);
   // 4. budgets
   await go('.sidebar a[href="#/budgets"]'); await pause(2200);
   await p.mouse.wheel(0, 380); await pause(1500);
@@ -53,8 +53,18 @@ const OUT = __dirname + '/video';
   await go('.sidebar a[href="#/portfolio"]'); await pause(2000);
   await p.mouse.wheel(0, 700); await pause(1500);
   await go('select[data-bind=pfRange]', { beforeClick: 300 }); await p.waitForSelector('.cs-pop'); await pause(700); await go('.cs-opt:has-text("1 year")'); await pause(1700);
-  await p.evaluate(() => window.scrollTo(0, 0)); await go('[data-act=pf-tab][data-tab=investment]'); await pause(1800);
-  await go('[data-act=pf-tab][data-tab=savings]'); await pause(1200);
+  // debts: what you owe, the payments left, then investments with the realized profit and loss by month and by day
+  await p.evaluate(() => window.scrollTo(0, 0)); await go('[data-act=pf-tab][data-tab=loan]'); await pause(2200);
+  await p.mouse.wheel(0, 420); await pause(1700); await p.evaluate(() => window.scrollTo(0, 0)); await pause(400);
+  await go('[data-act=pf-tab][data-tab=investment]'); await pause(1800);
+  await p.evaluate(() => document.querySelector('#pnl') && document.querySelector('#pnl').scrollIntoView({ block: 'center' })); await pause(1600);
+  const pnlRow = await p.$('[data-act=pnl-month]:has(.pl.up), [data-act=pnl-month]:has(.pl.down)');
+  if (pnlRow) {
+    await go('[data-act=pnl-month]:has(.pl.up), [data-act=pnl-month]:has(.pl.down)'); await pause(1800);
+    const day = await p.$('.day-group .day-row'); if (day) { await go('.day-group .day-row'); await pause(2000); }
+    await go('.back-link'); await pause(1200);
+  }
+  await p.evaluate(() => window.scrollTo(0, 0)); await go('[data-act=pf-tab][data-tab=savings]'); await pause(1200);
   // 6. move money between accounts, with a fee
   await go('[data-act=transfer]'); await p.waitForSelector('form[data-form=transfer]'); await pause(900);
   await p.type('input[name=amount]', '1500000', { delay: 120 }); await pause(500);

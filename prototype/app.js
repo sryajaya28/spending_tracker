@@ -584,7 +584,7 @@ const loanUSD = (k) => activeLoans().reduce((a, l) => (!liveIn(l.since, k) ? a :
 const activeLent = () => D().lent.filter((l) => !l.archived);
 const lentUSD = (k) => activeLent().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
 const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', commodity: 'Commodity', cash: 'Cash', manual: 'Other' }[t] || t);
-const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Car loan', card: 'Credit card', personal: 'Personal loan', other: 'Other' };
+const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Car loan', bank: 'Bank Loan', card: 'Credit card', paylater: 'Paylater', personal: 'Personal loan', other: 'Other' };
 
 /* mock of the AI tagging described in the plan: history match first, null when unsure */
 function aiTag(note, type) {

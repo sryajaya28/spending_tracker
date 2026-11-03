@@ -440,3 +440,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Sell: Receive into lists only the investment account's cash / stablecoins (formatted "Account (SYMBOL) · amount"), never a bank account; no fee box; withdrawing Cash to a bank still works. Tests: invest, fees, avgprice, cashacct.
 - Sell: the Fee box shows; the fee does NOT reduce the receiving cash/stablecoin (full amount received lands) and appears as a Fee expense (account = investment account); undoing the sale restores it (tests/e2e/fees.js).
 - Debt (was Loan): the Portfolio tab, buttons, group names and the payment category all say Debt / Debt Payment; Indonesian says Utang. Amount, fee, quantity and price boxes open the number pad on a phone (inputmode decimal).
+- Add debt: the Type list has Mortgage, Car loan, Bank Loan, Credit card, Paylater, Personal loan, Other; a Bank Loan / Paylater debt saves and syncs.

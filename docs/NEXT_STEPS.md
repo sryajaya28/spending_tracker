@@ -5,9 +5,9 @@ been needed so far (see `context.md`, "Decisions"). Next.js stays optional for w
 lines in one file) becomes hard to maintain: components, TypeScript, server-side routes in one codebase.
 
 ## Pending before the local → staging → production workflow can start (see `docs/DEV_WORKFLOW.md`)
-1. **Staging database: DONE for the schema** (project `cujmgyacxbcmltxfjkxo`, all 23 migrations applied and compared with production). Still to do: its Auth settings (below). Original note: a second Supabase project (free plan allows two active ones; the paused "sryajaya28's Project" could be restored or deleted),
+1. **Staging database: DONE for the schema** (project `cujmgyacxbcmltxfjkxo`, all 23 migrations applied and compared with production). Auth settings DONE (email confirmation off, so test accounts sign up without an inbox; checked by creating and deleting a throwaway account). Original note: a second Supabase project (free plan allows two active ones; the paused "sryajaya28's Project" could be restored or deleted),
    all 23 migrations applied, Auth URL/redirect settings, Google OAuth redirect for the staging host, a test email path (Resend or auto-confirm).
-2. **Staging site:** a `staging` branch with its own hosted URL (for example `staging.stiver.io`, branch domain on Vercel; previews already build per branch).
+2. **Staging site: DONE** (branch `staging`, `staging.stiver.io`, Vercel Authentication switched off for previews; production domain unaffected). Original note: a `staging` branch with its own hosted URL (for example `staging.stiver.io`, branch domain on Vercel; previews already build per branch).
 3. **Per-environment config:** `prototype/config.js` has the production Supabase URL/key and `vercel.json` CSP pins that host; staging needs its own.
    Also `FINNHUB_API_KEY` exists only for the production target, so previews/staging have no price feed until it is added.
 4. **Network access for the assistant: DONE (2026-11-03).** Original note: the cloud sandbox cannot reach `stiver.io`, Supabase or the Vercel hosts (connections are refused), so it cannot run

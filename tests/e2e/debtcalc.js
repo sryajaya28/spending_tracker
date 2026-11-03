@@ -18,6 +18,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('#dlg [name=amount]', '1000'); assert.deepEqual(await v(), ['1000', '100', '10'], 'monthly = owed / installments');
   // clearing a box does not wipe the others
   await p.fill('#dlg [name=left]', ''); assert.deepEqual(await v(), ['1000', '100', '']);
+  // with an interest rate the usual loan formula is used: 1000 at 12% a year over 12 months is 88.85 a month; and back again
+  await p.evaluate(() => { document.querySelector('#dlg [name=currency]').value = 'USD'; });
+  await p.fill('#dlg [name=rate]', '12'); await p.fill('#dlg [name=amount]', '1000'); await p.fill('#dlg [name=left]', '12'); assert.deepEqual(await v(), ['1000', '88.85', '12'], 'monthly with interest');
+  await p.fill('#dlg [name=monthly]', '88.85'); await p.fill('#dlg [name=amount]', '1000'); assert.equal((await v())[2], '12', 'installments with interest');
+  await p.fill('#dlg [name=monthly]', '5'); assert.equal((await v())[2], '', 'a payment that does not cover the interest has no end');
+  await p.fill('#dlg [name=rate]', ''); await p.fill('#dlg [name=monthly]', '100'); assert.equal((await v())[2], '10');
   // zero-decimal currency: the monthly payment is rounded up to a whole unit
   await p.evaluate(() => { document.querySelector('#dlg [name=currency]').value = 'IDR'; });
   await p.fill('#dlg [name=amount]', '1000000'); await p.fill('#dlg [name=left]', '3'); assert.equal((await v())[1], '333334');

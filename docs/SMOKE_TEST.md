@@ -15,6 +15,13 @@ Both accounts are called "SMOKE TEST (do not delete)" and carry `smoke_test: tru
 The test adds two records marked `SMOKE <timestamp>` and deletes them again, so the accounts stay empty.
 To find them in the database: `select email from auth.users where raw_user_meta_data->>'smoke_test' = 'true';`
 
+## Where the passwords live
+
+As plain **environment variables of the cloud environment** (Claude app: environment name in the title bar, Edit, Environment variables):
+`SMOKE_PROD_PASSWORD` and `SMOKE_STAGING_PASSWORD`. Only a session started in that **cloud** environment sees them (a session on the owner's
+own computer does not). To rotate one: change the variable, start a new session, and set the account's password from it (sign in with the old
+password and update it through the auth API, or reset it in the database) without printing it.
+
 ## Automated (about 1 minute)
 
 ```bash

@@ -9,4 +9,10 @@
 3. Never commit secrets. `context.md` and the README say where secrets live, never what they are.
 4. **Keep `regression_scenario.md` current:** when a feature is added or changed, add or edit the matching manual test
    scenarios (and the automated-coverage map) in the same commit.
-5. Run `bash tests/e2e/run_all.sh` before pushing UI or data-layer changes. After UI changes also regenerate the Figma design files: `node tools/design/export.js` (see `design/README.md`). Pushing to `main` deploys to production.
+5. Run `bash tests/e2e/run_all.sh` before pushing UI or data-layer changes. After UI changes also regenerate the Figma design files: `node tools/design/export.js` (see `design/README.md`). Pushing to `main` deploys to production, so **do not push to `main` or `staging` yourself unless rule 6 says the owner approved**.
+6. **Follow `docs/DEV_WORKFLOW.md` (local -> staging -> production):**
+   - Work on a feature branch and push only that branch; send the owner its **preview link** (Vercel builds every branch; previews and staging use the staging database), screenshots and the steps to try it. Wait for explicit approval.
+   - Test every feature (`docs/FEATURE_TESTS.md`; the owner may add entries). Only after approval merge the branch into `staging`.
+   - Run regression on staging **only when the owner asks**, then write the summary and **stop until the owner approves** it. Never release on your own.
+   - To release: apply migrations first (staging database before production), merge `staging` into `main`, then run the production smoke test (`docs/SMOKE_TEST.md`, `tests/smoke/smoke.js`, credentials in the environment secrets `SMOKE_PROD_PASSWORD` / `SMOKE_STAGING_PASSWORD`). If anything fails, fix it at once and release the fix (roll back first if data is affected), then smoke test again.
+   - A new production address must be added to `PRODUCTION_HOSTS` in `prototype/config.js`, or it will use the staging database.

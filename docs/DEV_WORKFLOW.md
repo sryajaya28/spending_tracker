@@ -1,5 +1,8 @@
 # Delivery workflow: local → staging → production
 
+> The shared source of truth is the repository **`sryajaya28/dev-workflow`** (private), used by all projects. This copy is kept so a session
+> without access to that repository still has the rules; when the workflow changes, change it there first, then copy it here.
+
 A project-independent working agreement between the owner and the assistant. Copy this file to any repository (or keep it in one
 shared place such as `~/.claude/CLAUDE.md` or a `dev-workflow` repo) and fill in the **Project setup** table at the bottom.
 
@@ -82,22 +85,19 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
   and the fix goes through the normal flow afterwards.
 - Keep a short **release notes** entry per release (date, features, migrations, regression/smoke result).
 
-## Project setup (fill in per repository)
+## Project setup (Stiver)
 
 | Item | Value |
 |---|---|
-| Local run command | |
-| Test command (automated suite) | |
+| Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
+| Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
 | Feature test list | `docs/FEATURE_TESTS.md` |
-| Regression scenarios | |
-| Staging URL / branch | |
-| Staging database / project | |
-| Production URL / branch | |
-| Smoke-test account (where the secret lives) | see `docs/SMOKE_TEST.md` (environment secrets, never the repo) |
-| Rollback method | |
-| Migration folder and how it is applied | |
-
-### This repository (Stiver) — current state
-
-Production is `https://stiver.io` (branch `main`, Vercel auto-deploys every push). Staging and the smoke-test account do not exist yet;
-see the "What is pending" list the assistant gave the owner, now recorded in `docs/NEXT_STEPS.md`.
+| Regression scenarios | `regression_scenario.md` (manual) + the automated suite |
+| Review link | the Vercel preview of the feature branch (`spendingtracker-git-<branch>-suryajaya378-4429s-projects.vercel.app`; the assistant copies the exact link from Vercel) |
+| Staging URL / branch | `https://staging.stiver.io` / `staging` (Vercel domain tied to the branch) |
+| Staging database / project | Supabase `spending_tracker_staging`, ref `cujmgyacxbcmltxfjkxo` (email auto-confirm on) |
+| Production URL / branch | `https://stiver.io` / `main` (protected: changes arrive by pull request only) |
+| Smoke-test account (where the secret lives) | `docs/SMOKE_TEST.md`; environment secrets `SMOKE_PROD_PASSWORD`, `SMOKE_STAGING_PASSWORD` |
+| Rollback method | Vercel "Instant Rollback" to the previous production deployment (a database migration is not rolled back; migrations must be backwards compatible) |
+| Migration folder and how it is applied | `supabase/migrations/`; applied to staging first, then production, with the Supabase `apply_migration` tool; never edit an applied migration |
+| Production addresses (must be in `PRODUCTION_HOSTS`, `prototype/config.js`) | `stiver.io`, `www.stiver.io`, the old `*.vercel.app` aliases |

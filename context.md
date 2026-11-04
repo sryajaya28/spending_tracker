@@ -72,6 +72,7 @@ infrastructure names, see section 8).
   `holdings.provider_symbol` as `yh:<yahoo symbol>|<multiplier>|<type>` (commodity uses asset_type `manual`; the app restores type `commodity`), so no
   migration. It can break or be blocked from Vercel's IPs; a typed-in price still works. The sandbox cannot reach Yahoo, so it was only tested with stubs.
 - **Recurring:** a **Repeat** choice (does not repeat / every week / every month) on new expenses, income, transfers, investment buys and **debt payments** (Record payment on a debt).
+  A repeating debt payment can also be set in **Edit debt / Add debt** ("Repeat payment": Does not repeat hides the payment fields and removes the rule; Every month / Every week show Monthly/Weekly payment, Next payment, Paid from and "Installments remaining (Monthly/Weekly)").
   A repeating debt payment is a normal `txn` rule with `spec.debt` = the debt id (+ `wallet_id` of the paying account, or '' for none; no migration): when due, `debtPaymentDue` adds the debt's payment (and the Debt Payment expense when an account was chosen), ids derived from rule + date.
    A rule is saved (`recurring_rules`); due entries are created **when the app opens or the tab returns to the front**
   (no server job), dated on their due day, with ids derived from rule+date so two devices never double-add. Settings > Recurring

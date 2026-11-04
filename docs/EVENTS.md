@@ -93,7 +93,7 @@ Fired in `prototype/app.js` right before `save(); close(); render();`, only on t
 | `add_budget` / `update_budget` | `scope` (`overall`, `category`) | budget created / edited |
 | `delete_budget` | none | budget deleted |
 | `add_occasion` / `update_occasion` | `has_budget`, `has_dates` | special occasion |
-| `add_debt` / `update_debt` | `has_interest` | loan or card |
+| `add_debt` / `update_debt` | `has_interest`, `is_recurring` (the form has a Repeat payment set) | loan or card |
 | `add_lent` / `update_lent` | `has_due_date` | money lent |
 
 Not yet named (only visible as `button_clicked` + `form_submitted`): account edit/archive/delete, loan or lent archive/delete,

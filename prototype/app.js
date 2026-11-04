@@ -943,14 +943,30 @@ function viewPortfolio() {
   ${body}`;
 }
 
+/* the repeating payment of a debt (a recurring rule with spec.debt), paused or not */
+const debtRuleAny = (l) => (D().recurring || []).find((r) => r.spec && r.spec.debt === l.id);
+/* accounts a debt payment can be paid from: same currency as the debt; the first entry is "no account" */
+function debtAccountOptions(currency, selected) {
+  const ws = D().wallets.filter((w) => !w.archived && w.currency === currency);
+  return `<option value="">${__('No account, just record the payment')}</option>${ws.map((w) => `<option value="${w.id}" ${w.id === selected ? 'selected' : ''}>${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('')}`;
+}
 function loanDialog(l) {
+  const rule = l ? debtRuleAny(l) : null, freq = rule ? rule.freq : '', wk = freq === 'weekly', today = isoDate(new Date());
+  const payMinor = rule ? rule.spec.amount_minor : l ? l.monthly_minor : 0, ccy = l ? l.currency : cur();
+  const wsAll = D().wallets.filter((w) => !w.archived && w.currency === ccy), pickAcct = rule ? rule.spec.wallet_id : (recallAcct('repay', wsAll.map((w) => `<option value="${w.id}"></option>`).join('')) || (wsAll[0] ? wsAll[0].id : ''));
+  const leftN = l && payMinor > 0 && loanBalance(l) > 0 ? debtN(loanBalance(l), payMinor, wk ? ((l.rate || 0) * 12) / 52 : l.rate, l.flat) : null;
   open(`<h2>${l ? __('Edit debt') : __('Add debt')}</h2><form data-form="loan" data-id="${l?.id || ''}" data-edited="${l ? 'monthly,amount' : ''}" style="display:contents">
     <label class="field">${__('Name')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Vehicle loan')}"></label>
     <div class="two"><label class="field">${__('Type')}<select name="type">${Object.entries(LOAN_TYPES).map(([k, v]) => `<option value="${k}" ${k === (l?.type || 'car') ? 'selected' : ''}>${__(v)}</option>`).join('')}</select></label>
       <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
-    <div class="two"><label class="field">${__('Amount owed now')}<input name="amount" type="number" inputmode="decimal" min="${l ? 0 : 1}" step="any" required value="${l ? toMajor(loanBalance(l), l.currency) : ''}"></label>
-      <label class="field">${__('Monthly payment')}<input name="monthly" type="number" inputmode="decimal" min="0" step="any" value="${l ? toMajor(l.monthly_minor, l.currency) : ''}"></label></div>
-    <label class="field">${__('Installments remaining (optional)')}<input name="left" type="number" inputmode="numeric" min="0" step="1" value="${l && l.monthly_minor > 0 && loanBalance(l) > 0 ? debtN(loanBalance(l), l.monthly_minor, l.rate, l.flat) ?? '' : ''}"></label>
+    <label class="field">${__('Amount owed now')}<input name="amount" type="number" inputmode="decimal" min="${l ? 0 : 1}" step="any" required value="${l ? toMajor(loanBalance(l), l.currency) : ''}"></label>
+    <label class="field">${__('Repeat payment')}<select name="repeat">${REPEATS.map(([v, lb]) => `<option value="${v}" ${v === freq ? 'selected' : ''}>${__(lb)}</option>`).join('')}</select></label>
+    <div data-rec style="display:${freq ? 'contents' : 'none'}">
+      <div class="two"><label class="field"><span data-lbl-pay>${wk ? __('Weekly payment') : __('Monthly payment')}</span><input name="monthly" type="number" inputmode="decimal" min="0" step="any" value="${l && payMinor ? toMajor(payMinor, l.currency) : ''}"></label>
+        <label class="field">${__('Next payment')}<input name="next" type="date" min="${today}" value="${rule ? rule.next : nthDate(today, 'monthly', 1)}"></label></div>
+      <label class="field">${__('Paid from')}<select name="account">${debtAccountOptions(ccy, pickAcct)}</select></label>
+      <label class="field"><span data-lbl-left>${wk ? __('Installments remaining (Weekly)') : __('Installments remaining (Monthly)')}</span><input name="left" type="number" inputmode="numeric" min="0" step="1" value="${leftN ?? ''}"></label>
+    </div>
     <div class="two"><label class="field">${__('Interest rate (% per year, optional)')}<input name="rate" type="number" inputmode="decimal" min="0" step="any" value="${l?.rate || ''}"></label>
       <label class="field">${__('Interest type')}<select name="flat"><option value="0" ${l && !l.flat ? 'selected' : ''}>${__('Declining balance')}</option><option value="1" ${(l ? l.flat : true) ? 'selected' : ''}>${__('Flat rate')}</option></select></label></div>
     ${l ? `<p class="hint">${__('Type what you still owe today. Stiver keeps your payments and charges and adjusts the starting amount ({orig}) behind the scenes.', { orig: money(l.original_minor, l.currency) })}</p>` : ''}
@@ -978,6 +994,16 @@ function debtPlan(l) {
 }
 const debtLeft = (l, plan) => (plan && loanBalance(l) > 0 ? debtN(loanBalance(l), plan.amount, plan.freq === 'weekly' ? ((l.rate || 0) * 12) / 52 : l.rate, l.flat) : null);
 const debtOwed = (pay, n, ratePct, flat) => { const r = debtRate(ratePct); return !r ? pay * n : flat ? (pay * n) / (1 + r * n) : (pay * (1 - Math.pow(1 + r, -n))) / r; };
+/* the Repeat payment choice shows or hides the payment fields and renames them (Monthly / Weekly); a new debt's accounts follow its currency */
+function debtFormChanged(form, name) {
+  if (name === 'currency') { const sel = form.account; if (sel) sel.innerHTML = debtAccountOptions(form.currency.value, sel.value); return; }
+  const rep = form.repeat.value, wk = rep === 'weekly';
+  $('[data-rec]', form).style.display = rep ? 'contents' : 'none';
+  $('[data-lbl-pay]', form).textContent = wk ? __('Weekly payment') : __('Monthly payment');
+  $('[data-lbl-left]', form).textContent = wk ? __('Installments remaining (Weekly)') : __('Installments remaining (Monthly)');
+  if (rep && !form.dataset.nextTouched) form.next.value = nthDate(isoDate(new Date()), rep, 1);
+  syncDebtForm(form, null);
+}
 function syncDebtForm(form, changed) {
   const names = ['amount', 'monthly', 'left'], val = (n) => { const v = parseFloat(form[n].value); return v > 0 ? v : 0; };
   let edited = (form.dataset.edited || '').split(',').filter(Boolean);
@@ -987,13 +1013,13 @@ function syncDebtForm(form, changed) {
     edited.push(changed); edited = edited.slice(-2); form.dataset.edited = edited.join(',');
   }
   if (edited.length < 2) return;
-  const target = names.find((n) => !edited.includes(n)), c = form.currency.value, exp = expOf(c), unit = 10 ** exp, rate = parseFloat(form.rate.value) || 0, flat = form.flat.value === '1';
+  const target = names.find((n) => !edited.includes(n)), c = form.currency.value, exp = expOf(c), unit = 10 ** exp, rate = (parseFloat(form.rate.value) || 0) * (form.repeat.value === 'weekly' ? 12 / 52 : 1), flat = form.flat.value === '1';
   const owed = val('amount'), monthly = val('monthly'), left = Math.round(val('left')), up = (x) => String(+(Math.ceil(x * unit - 1e-6) / unit).toFixed(exp));
   if (target === 'left') { const n = debtN(owed, monthly, rate, flat); form.left.value = n === null ? '' : n; }
   else if (target === 'monthly') form.monthly.value = owed > 0 && left > 0 ? up(debtPay(owed, left, rate, flat)) : '';
   else form.amount.value = monthly > 0 && left > 0 ? String(+debtOwed(monthly, left, rate, flat).toFixed(exp)) : '';
 }
-document.addEventListener('input', (e) => { const t = e.target; if (t.form && t.form.dataset.form === 'loan') { if (['amount', 'monthly', 'left'].includes(t.name)) syncDebtForm(t.form, t.name); else if (t.name === 'rate') syncDebtForm(t.form, null); }
+document.addEventListener('input', (e) => { const t = e.target; if (t.form && t.form.dataset.form === 'loan' && t.name === 'next') t.form.dataset.nextTouched = '1'; if (t.form && t.form.dataset.form === 'loan') { if (['amount', 'monthly', 'left'].includes(t.name)) syncDebtForm(t.form, t.name); else if (t.name === 'rate') syncDebtForm(t.form, null); }
   if (t.form && t.form.dataset.form === 'loan' && t.name === 'flat') { t.form.dataset.flatTouched = '1'; syncDebtForm(t.form, null); }
   // a new vehicle loan or paylater is flat by default (the usual way they are priced); the choice is left alone once you pick one yourself
   if (t.form && t.form.dataset.form === 'loan' && t.name === 'type' && !t.form.dataset.id && !t.form.dataset.flatTouched) { t.form.flat.value = ['car', 'paylater'].includes(t.value) ? '1' : '0'; syncDebtForm(t.form, null); } });
@@ -2745,6 +2771,7 @@ document.addEventListener('input', (e) => {
 document.addEventListener('change', (e) => {
   const t = e.target;
   if (t.matches('input[name=shots]')) { addSupportShots(t.files).then(() => { t.value = ''; }); return; }
+  if (t.form?.dataset.form === 'loan' && ['repeat', 'currency'].includes(t.name)) { debtFormChanged(t.form, t.name); return; }
   if (t.matches('[data-trend]')) { if (t.dataset.trend === 'n') { state.ui.trendN = +t.value; state.ui.trendCat = state.ui.trendCat || ''; } else state.ui.trendCat = t.value; $('#trend-chart').innerHTML = trendChart(); }
   else if (t.matches('[data-bind="month"]')) { if (t.value === 'all') state.ui.allPeriods = true; else { state.ui.allPeriods = false; state.ui.month = t.value; } render(); }   // "all": Transactions only, the period itself is kept for the other pages
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
@@ -3005,14 +3032,29 @@ document.addEventListener('submit', async (e) => {
   }
   if (kind === 'loan') {
     const existing = f.dataset.id && D().loans.find((x) => x.id === f.dataset.id), c = existing ? existing.currency : v.currency;
-    const amount = toMinor(parseFloat(v.amount), c), monthly = toMinor(parseFloat(v.monthly || 0), c);
+    const amount = toMinor(parseFloat(v.amount), c), monthly = toMinor(parseFloat(v.monthly || 0), c), rep = v.repeat || '', rule = existing ? debtRuleAny(existing) : null;
     if (!(existing ? amount >= 0 : amount > 0) || !v.name.trim()) { toast('Enter a name and an amount above zero'); return; }
+    let acct = null;
+    if (rep) {
+      if (!(monthly > 0)) { toast(rep === 'weekly' ? 'Enter a weekly payment above zero' : 'Enter a monthly payment above zero'); return; }
+      if (!v.next || v.next < todayIso()) { toast(__('Pick a date from today on')); return; }
+      acct = v.account ? walletOf(v.account) : null; if (v.account && (!acct || acct.currency !== c)) { toast('Pick an account'); return; }
+    }
     // editing: the box is what is owed now; the starting amount is whatever makes charges and payments add up to it (at least 1)
     const original = existing ? Math.max(1, amount - chargedOf(existing, todayIso()) + paidOf(existing, todayIso())) : amount;
-    const fields = { name: v.name.trim(), type: v.type, original_minor: original, monthly_minor: monthly, rate: parseFloat(v.rate) || 0, flat: v.flat === '1' };
+    // a weekly payment is not a "monthly payment": that old plan is left as it was (the recurring rule is what the card shows), also when a weekly rule is removed; otherwise the box (hidden or not) is the monthly payment
+    const fields = { name: v.name.trim(), type: v.type, original_minor: original, monthly_minor: rep === 'weekly' || (!rep && rule && rule.freq === 'weekly') ? (existing ? existing.monthly_minor : 0) : monthly, rate: parseFloat(v.rate) || 0, flat: v.flat === '1' };
+    let loan = existing;
     if (existing) Object.assign(existing, fields);
-    else D().loans.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
-    Analytics.track(existing ? 'update_debt' : 'add_debt', { has_interest: (parseFloat(v.rate) || 0) > 0 });
+    else { loan = { id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields }; D().loans.push(loan); }
+    // the repeating payment: create or update the recurring rule (listed under Settings > Recurring); Does not repeat removes it (payments already made stay)
+    if (rep) {
+      const spec = { type: 'expense', debt: loan.id, wallet_id: acct ? acct.id : '', amount_minor: monthly, currency: c, note: loan.name, category_id: loanRepaymentCategory().id };
+      if (rule) { const moved = v.next !== rule.next || rule.freq !== rep; Object.assign(rule.spec, spec); rule.freq = rep; if (moved) { rule.start = v.next; rule.next = v.next; } }
+      else (D().recurring = D().recurring || []).push({ id: uid(), kind: 'txn', freq: rep, start: v.next, next: v.next, end: '', active: true, spec });
+      if (acct) rememberAcct('repay', acct.id);
+    } else if (rule) D().recurring = D().recurring.filter((r) => r !== rule);
+    Analytics.track(existing ? 'update_debt' : 'add_debt', { has_interest: (parseFloat(v.rate) || 0) > 0, is_recurring: !!rep });
     state.ui.pfTab = 'loan'; save(); close(); render(); toast('Debt saved'); return;
   }
   if (kind === 'lent') {

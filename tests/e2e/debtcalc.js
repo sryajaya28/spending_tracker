@@ -7,7 +7,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
-  await p.evaluate(() => { state.ui.onbSkipped = true; loanDialog(null); }); await p.waitForSelector('#dlg [name=left]');
+  await p.evaluate(() => { state.ui.onbSkipped = true; loanDialog(null); }); await p.waitForSelector('#dlg [name=left]', { state: 'attached' });
+  // the payment fields only show once a repeat is chosen
+  assert.equal(await p.isVisible('#dlg [name=monthly]'), false, 'hidden while Does not repeat'); await p.selectOption('#dlg select[name=repeat]', 'monthly'); await p.waitForSelector('#dlg [name=left]');
   const v = () => p.evaluate(() => ['amount', 'monthly', 'left'].map((n) => document.querySelector('#dlg [name=' + n + ']').value));
   // amount + monthly -> installments
   await p.evaluate(() => { document.querySelector('#dlg [name=currency]').value = 'USD'; });

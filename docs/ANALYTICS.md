@@ -27,6 +27,8 @@ Silent by design: localhost, the sample-data demo (except `demo_on` / `demo_off`
 
 ## Event catalog
 
+The full reference (every `action` value, form kind, property and the backend status) is `docs/EVENTS.md`; update it with this table.
+
 Every event also carries `page`, `lang`, `theme`, `viewport` (mobile/desktop), `env` (production/staging), `app`.
 Person properties: `currency`, `language`, `theme`. The person id is the account id (no email).
 
@@ -62,3 +64,5 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 PostHog Cloud EU, project id 334082, token `POSTHOG_KEY` in `prototype/config.js` (public). Browser traffic goes through
 `/ingest` (Vercel rewrite to `eu.i.posthog.com`). SDK vendored in `prototype/vendor/posthog.js`. Privacy rules are in the
 header of `analytics.js` and in `prototype/privacy.html`; do not weaken them.
+
+Click actions added with the sign-up agreement: `agree_terms` (tick box) and `toggle_password` (show / hide), both through `button_clicked`.

@@ -350,7 +350,7 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 | AN-03 | Turn sample data on, browse, turn it off | Only `demo_on` and `demo_off` are sent; nothing in between. |
 | AN-04 | Sign out | A new anonymous id is used afterwards (no events tied to the old account). |
 | AN-05 | Browser with Do Not Track on, or local run (localhost) | Nothing is sent. |
-| AN-06 | Network tab on the hosted site | Requests go to `/ingest/...` on the app's own address (no direct call to posthog.com); the page shows no CSP error. |
+| AN-06 | Network tab on the hosted site | Requests go to `/ingest/...` on the app's own address (no direct call to posthog.com); the page shows no CSP error; **`POST /ingest/e/` answers 2xx, not 404** (also checked by the smoke test); the events show up in PostHog within a minute. |
 
 | AN-07 | Click buttons (Add expense, tabs, Edit, Close), open and close pop-ups, change a filter, the currency and the language | PostHog shows `button_clicked` (`action`, `page`, `in_dialog`), `dialog_opened` (`form`), `form_submitted`, `filter_changed`, `setting_changed`, each with `page`, `lang`, `theme`, `viewport`, `env`; no event holds text typed by you, an amount, a name or a record id; all event names, property keys and action values are snake_case (e.g. `add_txn`). |
 | AN-08 | Add an expense, an income, a transfer, a category, a sub-category, an account, a budget, an occasion, a debt, a lent entry, an asset; edit and delete a transaction | PostHog shows `expense_recorded`, `income_recorded`, `transfer_recorded`, `add_category`, `add_sub_category`, `add_account`, `add_budget`, `add_occasion`, `add_debt`, `add_lent`, `add_asset`, `update_transaction`, `delete_transaction` with only flag/code properties (no names, notes or amounts). |
@@ -477,3 +477,8 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Two Cash balances can never be chosen together. A Cash transfer has no Repeat choice.
 - Old cash deposits/withdrawals ("Bought ... IDR · Buy Invest") show as transfers after the next load.
 - Analytics for transfers: `cash_deposited` / `cash_withdrawn` (Cash pop-up), `transfer_recorded` / `transfer_edited` (flag `involves_investment_cash`), `delete_transfer`; no amounts or account names are sent (tests/e2e/analytics.js).
+
+### Sign-up agreement and show/hide password
+- Create account page: the agreement box is unticked; "Continue with Google" and "Create account" are greyed out and do nothing. Tick it: both work; untick: disabled again; what you typed stays. The two links open the Privacy Policy and Terms in a new tab. (tests/e2e/consent.js)
+- Sign-in page: "Continue with Google" works as before, with the note about the policy and terms underneath.
+- Sign-in, sign-up and reset-password boxes: the eye button shows and hides the password and keeps what was typed.

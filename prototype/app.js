@@ -75,6 +75,8 @@ const lastMonths = (n) => { const c = currentPeriod(), t = new Date(+c.slice(0, 
 /* ---------- icons ---------- */
 const ICON = {
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  'eye-off': '<path d="M3 3l18 18"/><path d="M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 7.6C3.9 9.3 2 12 2 12s3.6 6 10 6c1.5 0 2.8-.3 4-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   transfer: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',   /* circular arrows */
   chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/><path d="M9 10h6M9 13.5h4"/>',
   home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -1577,15 +1579,22 @@ function viewAuth() {
   const a = state.auth, v = a.view, logo = `<button type="button" class="logo logo-btn" data-act="auth-view" data-view="landing" aria-label="${__('Back to home')}"><img src="icon.svg" alt="">Stiver</button>`;
   const emailField = `<label class="field">${__('Email')}<input name="email" type="email" required autocomplete="email" placeholder="${__('you@example.com')}" value="${esc(a.email)}"></label>`;
   const google = `<button type="button" class="btn secondary lg google" data-act="auth-google">${GOOGLE_LOGO} ${__('Continue with Google')}</button><div class="or"><span>${__('or')}</span></div>`;
+  // a password box with a show / hide button
+  const pwField = (label, attrs) => `<label class="field">${label}<span class="pw-wrap"><input name="password" type="password" ${attrs}><button type="button" class="pw-toggle" data-act="toggle-password" aria-pressed="false" aria-label="${__('Show password')}">${icon('eye')}</button></span></label>`;
+  const legalLink = (href, text) => `<a href="${href}" target="_blank" rel="noopener">${__(text)}</a>`;
+  // signing up (with Google or by email) needs a ticked agreement; signing in with Google on the sign-in page may also create an account, so that page says what continuing means
+  const consent = `<label class="consent"><input type="checkbox" name="agree" data-act="agree-terms" ${a.agree ? 'checked' : ''}><span>${__('I agree to the {privacy} and the {terms}', { privacy: legalLink('privacy.html', 'Privacy Policy'), terms: legalLink('terms.html', 'Terms of Service') })}</span></label>`;
+  const googleSignup = google.replace('class="btn secondary lg google"', `class="btn secondary lg google"${a.agree ? '' : ' disabled'}`);
+  const googleNote = `<p class="muted consent-note">${__('By continuing you agree to the {privacy} and the {terms}.', { privacy: legalLink('privacy.html', 'Privacy Policy'), terms: legalLink('terms.html', 'Terms of Service') })}</p>`;
   let body;
   if (v === 'signup') body = `<form class="card" data-form="signup">${logo}
     <div><h2 style="font-size:24px">${__('Create your account')}</h2><p class="muted">${__('Your data is private to you and saved to your account.')}</p></div>
-    ${google}${authMsg(a)}
+    ${consent}${googleSignup}${authMsg(a)}
     <label class="field">${__('Name')}<input name="name" required placeholder="${__('Ari Nolan')}" autocomplete="name"></label>
     ${emailField}
-    <label class="field">${__('Password')}<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"></label>
+    ${pwField(__('Password'), `required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"`)}
     <label class="field">${__('Reporting currency')}<select name="currency">${Object.keys(RATES).map((c) => `<option data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>
-    ${captchaBox()}<button class="btn lg" type="submit">${__('Create account')}</button>
+    ${captchaBox()}<button class="btn lg" type="submit" ${a.agree ? '' : 'disabled'}>${__('Create account')}</button>
     <p class="muted" style="text-align:center">${__("We'll email you a link to confirm your address. Already have an account?")} ${authLink('signin', 'Sign in')}</p></form>`;
   else if (v === 'forgot') body = `<form class="card" data-form="forgot">${logo}
     <div><h2 style="font-size:24px">${__('Reset your password')}</h2><p class="muted">${__('Enter your email and we\'ll send you a reset link.')}</p></div>
@@ -1593,7 +1602,7 @@ function viewAuth() {
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></form>`;
   else if (v === 'recovery') body = `<form class="card" data-form="recovery">${logo}
     <div><h2 style="font-size:24px">${__('Choose a new password')}</h2></div>${authMsg(a)}
-    <label class="field">${__('New password')}<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"></label>
+    ${pwField(__('New password'), `required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"`)}
     <button class="btn lg" type="submit">${__('Save password')}</button></form>`;
   else if (v === 'sent') body = `<div class="card">${logo}
     <div><h2 style="font-size:24px">${__('Check your email')}</h2><p class="muted">${__('We sent a link to {email}. Open it to confirm your address, then sign in. If you already have an account, just sign in.', { email: '<b>' + esc(a.email) + '</b>' })}</p></div>
@@ -1602,8 +1611,8 @@ function viewAuth() {
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></div>`;
   else body = `<form class="card" data-form="signin">${logo}
     <div><h2 style="font-size:24px">${__('Welcome back')}</h2><p class="muted">${__('Sign in to see your spending, budgets and net worth.')}</p></div>
-    ${google}${authMsg(a)}${emailField}
-    <label class="field">${__('Password')}<input name="password" type="password" required autocomplete="current-password"></label>
+    ${google}${googleNote}${authMsg(a)}${emailField}
+    ${pwField(__('Password'), 'required autocomplete="current-password"')}
     ${captchaBox()}<button class="btn lg" type="submit">${__('Sign in')}</button>
     <p class="muted" style="text-align:center">${authLink('forgot', 'Forgot password?')}</p>
     <p class="muted" style="text-align:center">${__('New here?')} ${authLink('signup', 'Create an account')}</p>
@@ -2662,6 +2671,9 @@ document.addEventListener('click', (e) => {
   else if (act === 'trend-go') { state.ui.month = el.dataset.k; state.ui.allPeriods = false; state.ui.cat = el.dataset.cat || ''; state.ui.occ = ''; state.ui.q = ''; state.ui.wallet = ''; close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; }
   else if (act === 'guide-tab') { state.ui.guide = el.dataset.k; $('#install-guide').innerHTML = installGuide(state.ui.guide); }
   else if (act === 'transfer-dialog') handoffDialog();
+  else if (act === 'agree-terms') { state.auth.agree = !!el.checked; document.querySelectorAll('.onboard .btn.google, .onboard [data-form=signup] button[type=submit]').forEach((b) => { b.disabled = !state.auth.agree; }); }
+  else if (act === 'toggle-password') { const inp = el.parentElement.querySelector('input'), show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; el.setAttribute('aria-pressed', String(show)); el.setAttribute('aria-label', show ? __('Hide password') : __('Show password')); el.innerHTML = icon(show ? 'eye-off' : 'eye'); }
+  else if (act === 'auth-google' && state.auth.view === 'signup' && !state.auth.agree) { /* the agreement is not ticked yet */ }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
@@ -3125,6 +3137,7 @@ async function checkConfirmed(manual) {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkConfirmed(false); if (state.data && !state.real) recurringNow(); } });
 async function submitAuth(kind, v, f) {
   const a = state.auth, btn = $('button[type=submit]', f);
+  if (kind === 'signup' && !a.agree) { toast(__('Please agree to the Privacy Policy and the Terms of Service first.')); return; }   // nothing is cleared: the form stays as typed
   if (btn) btn.disabled = true;
   Object.assign(a, { error: '', notice: '' }); if (v.email) a.email = v.email.trim();
   if (CAPTCHA_KEY && kind !== 'recovery' && !captchaToken) { a.error = 'Please complete the verification first.'; render(); return; }

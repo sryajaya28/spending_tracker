@@ -1,0 +1,1 @@
+2026-11-04: **Household access test plan (QA).** Added FT-008 and `regression_scenario.md` section 16 (HH-01..HH-34) written from PRD `docs/prd/household.md` checks 1-32, plus planned tests in the coverage map; docs only, branch `qa/household`.

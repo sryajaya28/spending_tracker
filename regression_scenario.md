@@ -368,6 +368,47 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 
 - Loan / paylater account filter (Transactions > account = a debt account): every spending row shows `−` (charges made with it and payments made on it), the day total is the sum of them with a minus (`−Rp 362.725` for charges 29.900 + 73.800 and a payment 259.025), and the same rows show the same signs with no account filter (`loanpay`, `repay`).
 
+## 16. Household access (multi-user) (PRD `docs/prd/household.md`, checks 1-32)
+
+Written from the PRD's acceptance checks, not from the implementation. Needs two real staging accounts: an owner and an invitee (a `+alias` inbox; the owner must OK sending test emails). **E** = automated (stubbed/local), **DB** = real staging database test (`tests/staging/household.js`), **M** = manual two-account check. Every screen also in dark mode and at 390 px, and in Indonesian.
+
+| ID | PRD | Scenario | Expected |
+|---|---|---|---|
+| HH-01 | 1 | Owner: Settings > Household, valid email, Editor, Send invite **(E, M)** | Row "Pending" with role and date; one email sent |
+| HH-02 | 2 | Invite an email that already has an account, also with different letter case (`Smoke.Staging@...`) **(E, DB)** | Exactly "This email can't be invited. If they already use Stiver, they need to use a different email address."; no row, no email; same text for every existing-account case (no hint which) |
+| HH-03 | 3 | Invite a pending email again **(E, M)** | "Already invited" + Resend; Resend sends a fresh email; the OLD link now shows the expired message |
+| HH-04 | 4 | Type `abc`, `a@b`, `A@B.COM ` (spaces/caps) **(E)** | Invalid: Send disabled with inline message; valid with spaces/caps accepted and compared case-insensitively |
+| HH-05 | 5 | Household with 5 (members + pending + owner) **(E, DB)** | Invite disabled "Household is full (5)"; the database also rejects a 6th through a direct call; revoking one re-enables |
+| HH-06 | 6 | Open the invite dialog **(E)** | Shows "They will see all your data, including notes and the names of other members." (ID translated) |
+| HH-07 | 7 | Sign in as Editor and as Viewer, open Settings **(E, M)** | Household card has no Invite / role / Remove controls (only Leave); currency and period day not editable |
+| HH-08 | 8 | Read the invite email (EN owner, then ID owner) **(M)** | Names inviter and role, one "Accept invitation" button, in the owner's language |
+| HH-09 | 9 | Open the link with a plain GET/curl (scanner) 3 times, then open in browser **(M, DB)** | Nothing consumed; Join page still shows. After password submit the link is consumed; opening again shows "This invitation was already used or has expired. Ask <owner> to send a new one." |
+| HH-10 | 10 | Open an expired link (set expiry in the past) and a revoked link **(DB, M)** | Same message; no account/session created; no detail leaked |
+| HH-11 | 11 | Join page **(E, M)** | "<owner> invited you to join their household as Editor/Viewer"; display name, password (min 8, show/hide), Terms/Privacy tick; button disabled until valid and ticked; 7-char password rejected; very long owner/display name truncates |
+| HH-12 | 12 | Valid submit **(M)** | Signed in; sees the owner's accounts and transactions (not an empty ledger); listed in the member list for the owner; no sample/seed data created for the invitee |
+| HH-13 | 13 | Sign out, sign in with email + password **(M)** | Lands in household with same data |
+| HH-14 | 14 | Forgot password, set a new one, sign in **(M)** | Works and lands in the household |
+| HH-15 | 15 | Open the link while signed in as another person (same browser; then another device) **(M)** | "You're signed in as <name>. Sign out to join <owner>'s household."; nothing changes until Sign out is tapped; then the join continues; other person's data not touched |
+| HH-16 | 16 | Invited email uses Create account first, confirms, signs in **(M, DB)** | Lands in the household, never in a separate empty ledger; no seeded sample data; pending invite becomes accepted |
+| HH-17 | 17, 30 | Viewer: walk every screen; deep link to add; direct REST/RPC insert, update, delete on every money table **(E, DB)** | No Add/Edit/Delete anywhere; deep link shows a read-only message; every direct write rejected by RLS (no row changed) |
+| HH-18 | 18 | Editor: add/edit/delete transaction, transfer, savings, debt, lent, investment, budget, category, occasion, recurring rule **(E, M)** | All work; owner sees them; rows carry `user_id` = owner |
+| HH-19 | 19 | Owner changes a signed-in person's role (Editor to Viewer and back) while their app is open **(M)** | Within 30 s or on return to the app: controls change and "Your access changed" shows; a save attempted in between is rejected with the same notice, not lost silently |
+| HH-20 | 20 | Remove a signed-in member; also a member leaving **(M, DB)** | Next use/sign-in: "You no longer have access to <owner>'s household." with Sign out as the only action; data requests return nothing at once; past entries keep their name; signing in again shows the same page, not an empty ledger |
+| HH-21 | 21 | Revoke a pending invite **(E, M)** | Disappears from the list; its link shows the expired message |
+| HH-22 | 22 | 2+ people: Transactions list and Overview recent list **(E, M)** | Each row shows who submitted it (name/initial); long names ellipsized |
+| HH-23 | 23 | Open a transaction detail, then edit it as another person **(E, M)** | "Added by <name>, <date time>"; after edit "Edited by <name>, <time>" |
+| HH-24 | 24 | Savings, debt, lent, investment, budgets **(E, M)** | "Added by <name>"; changing an amount/balance shows "Edited by <name>, <time>" |
+| HH-25 | 25 | Solo owner, and after the last member is removed **(E)** | No labels or avatars anywhere (rows, details, cards) |
+| HH-26 | 26 | Remove a member who added entries **(DB, M)** | Entries keep the member's name |
+| HH-27 | 27 | Delete a transaction and an account **(E)** | Confirmation names the item ("Delete account 'BCA'?") before deleting; Cancel keeps it; every delete path (swipe, menu, edit dialog) confirms |
+| HH-28 | 28 | A adds a transaction while B has the app open **(M, E)** | B sees it within 30 s or on returning to the app; no refresh while B has unsaved typing (typed text kept) |
+| HH-29 | 29 | B changes a record after A loaded it; A saves a change to the same record **(DB, M)** | A sees "Updated by <B>. Please check and redo your change"; B's change not overwritten; A's other unrelated records still save; also for delete-after-edit |
+| HH-30 | 30 | Non-owner invites / changes role / removes through the app and by direct RPC; 11 invites in an hour as owner **(DB)** | Rejected; the 11th shows the rate-limit message |
+| HH-31 | 31 | Normal sign-up whose user metadata claims a household/owner **(DB)** | Confirmed account gets no access to any household (own empty ledger only) |
+| HH-32 | 32 | Slice 2: Activity page as owner, editor and viewer **(E, M)** | Adds, edits, deletes, balance changes with person, item, time, newest first; filter by person and type; 180 days; Viewer can read; no private data in analytics |
+| HH-33 | 5 (Edge) | Existing solo user data, regression after the migrations **(E, DB)** | The whole suite and the staging regression pass unchanged; owner behaviour identical; `created_by` backfilled |
+| HH-34 | Analytics | Invite sent/resent/revoked/accepted, role changed, removed, left, Activity opened **(E)** | Event names as in PRD section 7; no email, name, id, amount or note in any payload; every new button has `data-act`, forms `data-form` |
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |
@@ -410,6 +451,7 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 | `dropdown` | app-styled dropdown lists: open, choose, Esc, outside tap, keyboard, groups, inside dialogs |
 | `analytics` | PostHog events, privacy scrubbing, demo mode silence, sign-out reset, `/ingest` path |
 | `ios`, `confirm`, `csp`, `landshot`, `langsave`, `darkshots`, `idcrawl` | phone rendering, email confirmation flow, CSP, landing, language and dark mode |
+| `household` (planned, QA), `householdroles`, `householdjoin`, `tests/staging/household.js` | household access HH-01..HH-34: invite and join UI, Viewer/Editor controls, labels, delete confirmations, analytics (local, stubbed); real-database RLS/rate-limit/invite checks on staging |
 | `tests/test_yahoo.py` | Yahoo price/search parsing and unit conversion (stubbed) |
 
 ## Not covered by automation (always check manually)
@@ -419,6 +461,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-04: Section 16 HH-01..HH-34 (household access, from PRD `docs/prd/household.md`) and planned tests in the coverage map.
 - 2026-11-04: RC-14..RC-17 (Edit debt: Repeat payment block).
 - 2026-11-04: RC-09..RC-12 (repeating debt payments; simple debt cards without percentages).
 - 2026-11-04: Loan/paylater account filter signs and day total (spending is always minus).

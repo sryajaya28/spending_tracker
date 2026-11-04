@@ -27,8 +27,8 @@ Every request that changes a screen, flow or text starts with a design in the pr
 rule in `dev-workflow`; the shared repo wins if they differ). Figma file for Stiver: "Stiver design",
 https://www.figma.com/design/GmKRa3rj8x7WJjANv4ciWS
 
-1. Design the change in the app's real look (reuse components and tokens), including the states that matter (empty, error, dark mode,
-   desktop and phone) and a flow with arrows when several screens are involved.
+1. Design the change in the app's real look (reuse components and tokens), including the states that matter (empty, error), **always the
+   dark-mode and phone-width versions of every screen** (plus desktop where it exists) and a flow with arrows when several screens are involved.
 2. Give the feature its own Figma section `Feature - <short-name>` (same short name as the branch) with a note: the request in the
    owner's words, decisions/open questions, and status (`design` / `approved` / `implemented` / `released`).
 3. Send the owner the link, screenshots and open questions, then stop until the owner approves **the design** in plain words
@@ -40,19 +40,21 @@ https://www.figma.com/design/GmKRa3rj8x7WJjANv4ciWS
 
 Changes that touch no screen, flow or text (typo, calculation bug, backend only) need no design; say "no design change" and why.
 
-## 1. Local first
+## 1. Build and test (then straight to staging)
 
-1. Every piece of work starts on its own branch (`feature/<short-name>`), never directly on `staging` or `main`.
-2. The assistant builds it and **tests the feature** (see Feature testing below) before showing it.
-3. The assistant shows the result in a way the owner can review: a **preview link of the branch** (every branch push builds its
-   own hosted copy; the assistant gets the link from the host and sends it), a few screenshots, and the exact steps to try it.
-   Preview links, the staging site and local runs all use the **staging database**; only the live app uses the production one,
-   so nothing tried before release can touch real data. Hosted non-production copies show a small "Staging · test data" label.
-   The assistant lists what changed, what was *not* verified, and any decision it needs.
-4. The owner reviews and leaves comments. The assistant fixes them on the same branch and shows the result again.
-   Repeat until the owner approves.
-5. **Only after approval** is the branch merged into `staging`. Until then nothing is deployed to staging or production,
-   and no database change is applied anywhere except local/throwaway databases.
+1. Every piece of work starts on its own branch (`feature/<short-name>`), never directly on `staging` or `main`, and begins only after the
+   design is approved (section 0) or the owner has said "skip figma".
+2. The assistant builds it and **tests the feature** (see Feature testing below).
+3. **With an approved design** the branch goes straight to `staging` once the feature tests and the automated suite pass; no separate
+   local or preview review. The assistant sends the **staging link**, screenshots and steps, and the owner signs off on staging (a
+   branch preview link only if the owner asks). **Without an approved design** ("skip figma" or none needed): send a preview link,
+   screenshots and steps and wait for approval before merging. Previews, staging and local runs use the **staging database**; only the
+   live app uses the production one. The assistant lists what changed, what was *not* verified, any difference from the approved design,
+   and any decision it needs.
+4. The owner reviews on staging and comments; the assistant fixes on the same branch, merges again and shows the result. If the comments
+   change the design, update Figma first.
+5. Nothing goes to production without the regression summary approval (section 3). A migration is applied to production only in the
+   release (section 4), never earlier.
 
 ## 2. Feature testing (every feature, before the owner sees it)
 

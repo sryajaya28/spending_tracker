@@ -284,7 +284,7 @@ language (EN/ID) → dark mode → docs and this file.
 
 ## 16. Open items and next ideas
 
-- **Household access (multi-user), in progress:** PRD `docs/prd/household.md` (branch `docs/household-prd`). QA test cases are in `regression_scenario.md` section 16 (HH-01..HH-36) and `docs/FEATURE_TESTS.md` FT-008; automated tests are planned, not written yet.
+- **Household access (multi-user), in progress:** PRD `docs/prd/household.md` (branch `docs/household-prd`). QA test cases are in `regression_scenario.md` section 16 (HH-01..HH-44) and `docs/FEATURE_TESTS.md` FT-008; automated tests are planned, not written yet.
 
 See `docs/NEXT_STEPS.md` for the prioritized list. Owner-only tasks: finish Google branding re-verification and upload
 the logo; choose the contact email; create the Turnstile widget; Supabase password minimum + 2FA everywhere; decide on

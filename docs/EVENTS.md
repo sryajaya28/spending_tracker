@@ -85,7 +85,7 @@ Fired in `prototype/app.js` right before `save(); close(); render();`, only on t
 | `transfer_recorded` | `has_fee`, `is_recurring` | a transfer between accounts |
 | `trade_recorded` | `side` (`buy`, `sell`) | an asset was bought or sold |
 | `add_asset` | `funded` (paid from an account or coin) | an asset was added to a portfolio |
-| `debt_payment_recorded` | `kind` (`loan`, `lent`) | a loan payment or lent repayment |
+| `debt_payment_recorded` | `kind` (`loan`, `lent`), `is_recurring` (a repeating payment was set up; loans only) | a loan payment or lent repayment |
 | `add_category` / `add_sub_category` | `type` (`expense`, `income`), `source` (`settings`, `quick_add`) | category created |
 | `restore_category` | `type` (`expense`, `income`), `level` (`category`, `sub_category`) | an archived category restored |
 | `update_category` | `type`, `source` | category edited |

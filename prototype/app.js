@@ -361,6 +361,7 @@ function seed(name, cur) {
     rule('txn', 'monthly', 12, { type: 'expense', amount_minor: A(P.subs[0][1]), currency: cur, wallet_id: b1.id, note: P.subs[0][0], category_id: catId['Entertainment/Streaming'] }),
     rule('txn', 'monthly', 5, { type: 'expense', amount_minor: A(P.subs[1][1]), currency: cur, wallet_id: b1.id, note: P.subs[1][0], category_id: catId.Subscription }),
     rule('transfer', 'monthly', 2, { from: b1.id, to: e1.id, amount_minor: A(P.topup[0]), received_minor: A(P.topup[0]), fee_minor: 0, note: 'top up' }),
+    rule('txn', 'monthly', 5, { type: 'expense', debt: loans[1].id, wallet_id: b1.id, amount_minor: A(L.car[1]), currency: cur, note: loans[1].name, category_id: catId['Debt Payment'] }),
     rule('invest', 'monthly', 10, { account: invA.id, symbol: first[0], quantity: rqty, fund: 'w:' + b1.id, fundamount: String(Math.round(rqty * rprice)) }),
   ];
   // balances: derive each opening balance so today's balance is the target (future-dated rows do not count)
@@ -784,13 +785,18 @@ function loanCard(l, vc, kind = 'loan') {
   const bal = loanBalance(l), cyc = loanCycle(l), paid = cyc.paid, total = cyc.total, pct = total ? Math.min(100, Math.round((paid / total) * 100)) : 0;   // paid / total are for the current cycle (see loanCycle)
   const shown = (m) => money(convert(m, l.currency, vc), vc);
   const word = lent ? __('repayment') : __('payment');
-  const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}`
-    : `${l.monthly_minor ? __('Monthly {amount}', { amount: shown(l.monthly_minor) }) : ''}${l.monthly_minor && bal > 0 ? (debtN(bal, l.monthly_minor, l.rate, l.flat) === null ? '' : ` · ${__('{n} payments left', { n: debtN(bal, l.monthly_minor, l.rate, l.flat) })}`) : ''}${l.rate ? ` · ${l.rate}% ${l.flat ? __('flat') : 'APR'}` : ''}`;
-  return `<section class="card"><div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>
+  const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}` : '';
+  // a debt card is kept simple: the recurring payment (or the monthly payment set on the debt) and how long until it is paid off
+  const plan = lent ? null : debtPlan(l), left = lent ? null : debtLeft(l, plan), wk = plan && plan.freq === 'weekly';
+  const planText = plan ? `<b>${shown(plan.amount)}</b> ${wk ? __('every week') : __('every month')}` : '';
+  const leftText = left ? (wk ? (left === 1 ? __('1 week left') : __('{n} weeks left', { n: left })) : (left === 1 ? __('1 month left') : __('{n} months left', { n: left }))) : '';
+  const debtMeta = l.rate ? `${l.rate}% ${l.flat ? __('flat') : 'APR'}` : '';
+  return `<section class="card${leftText ? ' has-tab' : ''}">${leftText ? `<span class="loan-tab">${leftText}</span>` : ''}<div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn secondary" data-act="history-${kind}" data-id="${l.id}">${__('Details')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
-    <div class="bar"><i style="width:${pct}%;${lent ? 'background:#1fa971' : ''}"></i></div>
-    <div class="loan-meta"><span>${__(lent ? '{pct}% repaid · {paid} of {total}' : '{pct}% paid · {paid} of {total}', { pct, paid: shown(paid), total: shown(total) })}</span><span>${meta}</span></div>
+    ${lent ? `<div class="bar"><i style="width:${pct}%;background:#1fa971"></i></div>
+    <div class="loan-meta"><span>${__('{pct}% repaid · {paid} of {total}', { pct, paid: shown(paid), total: shown(total) })}</span><span>${meta}</span></div>`
+      : (planText || debtMeta) ? `<div class="loan-meta"><span>${[planText, debtMeta].filter(Boolean).join(' · ')}</span></div>` : ''}
     ${bal === 0 ? `<p class="hint" style="margin-top:10px">${lent ? __('Fully repaid. You can archive this.') : __('Paid off. You can archive this.')}</p>` : ''}
 </section>`;
 }
@@ -916,9 +922,7 @@ function viewPortfolio() {
         <small class="muted">${__('{n} open · {amount} still owed to you', { n: activeLent().length, amount: m(owed) })}</small></div><button class="btn" data-act="add-lent">${__('+ Lent')}</button></div></section>
       <div class="stack" style="margin-top:20px">${[...activeLent()].sort(byValue((l) => toUSD(loanBalance(l), l.currency))).map((l) => loanCard(l, vc, 'lent')).join('') || ('<div class="card empty">' + __('Nothing lent out. Add money you lent to a friend or family member to track repayments.') + '</div>')}</div>${growth}`;
   } else {
-    const monthly = activeLoans().reduce((a, l) => a + toUSD(l.monthly_minor, l.currency), 0);
-    body = `<section class="card"><div class="card-head"><div><h2>${__('Debts you owe')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(L[5])}</div>
-        <small class="muted">${monthly ? __('{amount} due each month', { amount: m(monthly) }) : __('No monthly payments set')}</small></div><div class="tools">${D().loans.some((l) => l.archived) ? `<button class="chip" data-act="loans-archived">${__('Archived')}</button>` : ''}<button class="btn" data-act="add-loan">${__('+ Debt')}</button></div></div></section>
+    body = `<section class="card"><div class="card-head"><div><h2>${__('Debts you owe')}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(L[5])}</div></div><div class="tools">${D().loans.some((l) => l.archived) ? `<button class="chip" data-act="loans-archived">${__('Archived')}</button>` : ''}<button class="btn" data-act="add-loan">${__('+ Debt')}</button></div></div></section>
       <div class="stack" style="margin-top:20px">${[...activeLoans()].sort(byValue((l) => toUSD(loanBalance(l), l.currency))).map((l) => loanCard(l, vc)).join('') || ('<div class="card empty">' + __('No debts. Add a mortgage, car loan or credit card balance to include it in your net worth.') + '</div>')}</div>${growth}`;
   }
 
@@ -964,6 +968,15 @@ function debtN(owed, pay, ratePct, flat) {   // payments left; null when the pay
   return Math.max(1, Math.ceil(-Math.log(1 - (owed * r) / pay) / Math.log(1 + r) - 1e-9));
 }
 const debtPay = (owed, n, ratePct, flat) => { const r = debtRate(ratePct); return !r ? owed / n : flat ? owed / n + owed * r : (owed * r) / (1 - Math.pow(1 + r, -n)); };
+/* the recurring payment of a debt: an active repeating payment made from Record payment (a recurring rule with spec.debt), else the "Monthly payment" typed on the debt.
+   Returns { amount (minor units, loan currency), freq } or null. Weekly payments work out the payoff with a weekly rate. */
+const debtRule = (l) => (D().recurring || []).find((r) => r.spec && r.spec.debt === l.id && r.active !== false);
+function debtPlan(l) {
+  const r = debtRule(l);
+  if (r) return { amount: r.spec.amount_minor, freq: r.freq };
+  return l.monthly_minor > 0 ? { amount: l.monthly_minor, freq: 'monthly' } : null;
+}
+const debtLeft = (l, plan) => (plan && loanBalance(l) > 0 ? debtN(loanBalance(l), plan.amount, plan.freq === 'weekly' ? ((l.rate || 0) * 12) / 52 : l.rate, l.flat) : null);
 const debtOwed = (pay, n, ratePct, flat) => { const r = debtRate(ratePct); return !r ? pay * n : flat ? (pay * n) / (1 + r * n) : (pay * (1 - Math.pow(1 + r, -n))) / r; };
 function syncDebtForm(form, changed) {
   const names = ['amount', 'monthly', 'left'], val = (n) => { const v = parseFloat(form[n].value); return v > 0 ? v : 0; };
@@ -1036,7 +1049,8 @@ function paymentDialog(l, kind = 'loan') {
       <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
     ${(() => { const ws = D().wallets.filter((w) => !w.archived && w.currency === l.currency), opts = ws.map((w) => `<option value="${w.id}">${esc(w.name)}</option>`).join(''), pick = recallAcct(lent ? 'lentrecv' : 'repay', opts) || (ws[0] ? ws[0].id : '');
       return `<label class="field">${lent ? __('Received into') : __('Paid from')}<select name="account" data-pay-from><option value="">${lent ? __('No account, just record the repayment') : __('No account, just record the payment')}</option>${ws.map((w) => `<option value="${w.id}" ${w.id === pick ? 'selected' : ''}>${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('')}</select></label>`; })()}
-    <p class="hint">${lent ? __('Repayments lower what you are owed. Received into an account, the money is added to it as a transfer (not income).') : __('Payments lower the debt balance and your debt in net worth. Paid from an account, the amount also leaves that account and counts as spending under Debt Payment.')}</p>
+    ${lent ? '' : repeatField()}
+    <p class="hint">${lent ? __('Repayments lower what you are owed. Received into an account, the money is added to it as a transfer (not income).') : __('Payments lower the debt balance and your debt in net worth. Paid from an account, the amount also leaves that account and counts as spending under Debt Payment.') + ' ' + __('A repeating payment is listed under Recurring in Settings and is made automatically on its date.')}</p>
     <div class="actions"><button class="btn" type="submit">${lent ? __('Save repayment') : __('Submit Payment')}</button></div></form>`);
 }
 
@@ -2453,8 +2467,23 @@ function addRule(kind, freq, start, spec) {
   (D().recurring = D().recurring || []).push(r);
   return r;
 }
+/* a repeating debt payment falls due: the loan's payment (and, when an account was chosen, the Debt Payment expense on it). Nothing when the debt is paid off or archived. */
+function debtPaymentDue(r, date) {
+  const sp = r.spec, l = D().loans.find((x) => x.id === sp.debt); if (!l || l.archived) return;
+  const acct = sp.wallet_id ? walletOf(sp.wallet_id) : null; if (sp.wallet_id && !acct) return;
+  const pid = detId(r.id, date, 'p'); if (l.payments.some((p) => p.id === pid)) return;
+  const applied = Math.min(sp.amount_minor, loanBalance(l, date)); if (!(applied > 0)) return;
+  const pay = { id: pid, date, amount_minor: applied };
+  if (acct) {
+    const id = detId(r.id, date, 't');
+    if (!D().transactions.some((t) => t.id === id)) D().transactions.push({ id, type: 'expense', amount_minor: applied, currency: l.currency, occurred_at: date, wallet_id: acct.id, note: l.name, category_id: loanRepaymentCategory().id, category_source: 'user', ai_confidence: null });
+    pay.txn_id = id;
+  }
+  l.payments.push(pay);
+}
 function generateRecurring(r, date) {
   const sp = r.spec, T = D().transactions, add = (row) => { if (!T.some((t) => t.id === row.id)) T.push(row); };
+  if (r.kind === 'txn' && sp.debt) { debtPaymentDue(r, date); return; }
   if (r.kind === 'txn') {
     if (String(sp.wallet_id).startsWith('h:')) {   // USDT/USDC in an investment account
       const h = D().holdings.find((x) => x.id === sp.wallet_id.slice(2)); if (!h || T.some((t) => t.id === detId(r.id, date, 't'))) return;
@@ -2486,7 +2515,7 @@ function generateRecurring(r, date) {
    (spec.first_tx) or, for rules made before that link existed, by the same note and type among entries not linked to another rule. */
 const plainAccount = (w) => !!w && !String(w).startsWith('h:') && !String(w).startsWith('l:');
 function firstEntryOf(r) {
-  const sp = r.spec, T = D().transactions, today = isoDate(new Date()); if (r.kind !== 'txn' || !plainAccount(sp.wallet_id)) return null;
+  const sp = r.spec, T = D().transactions, today = isoDate(new Date()); if (r.kind !== 'txn' || sp.debt || !plainAccount(sp.wallet_id)) return null;
   const linked = sp.first_tx && T.find((t) => t.id === sp.first_tx); if (linked) return linked.occurred_at > today ? linked : null;
   const taken = new Set((D().recurring || []).map((x) => x.spec && x.spec.first_tx).filter(Boolean));
   return T.filter((t) => t.occurred_at > today && t.type === sp.type && (t.note || '') === (sp.note || '') && !t.transfer_id && !t.trade_id && !t.loan_id && !taken.has(t.id)).sort((a, b) => a.occurred_at.localeCompare(b.occurred_at))[0] || null;
@@ -2500,7 +2529,7 @@ function syncFirstEntry(r, e) {
 function linkFirstEntries() {
   const d = state.data, today = isoDate(new Date()); let changed = false;
   (d.recurring || []).forEach((r) => {
-    const sp = r.spec; if (r.active === false || r.kind !== 'txn' || !sp || r.next <= today || (sp.first_tx && d.transactions.some((t) => t.id === sp.first_tx))) return;
+    const sp = r.spec; if (r.active === false || r.kind !== 'txn' || !sp || sp.debt || r.next <= today || (sp.first_tx && d.transactions.some((t) => t.id === sp.first_tx))) return;
     const e = firstEntryOf(r); if (e) { syncFirstEntry(r, e); changed = true; }
   });
   if (changed) sortTxns(d);
@@ -2523,6 +2552,7 @@ function runRecurring() {
 function recurringNow() { const n = runRecurring(); if (!n && relinked) render(); if (n) { render(); toast(__(n === 1 ? '{n} recurring entry added' : '{n} recurring entries added', { n })); } }
 const ruleTitle = (r) => {
   const sp = r.spec;
+  if (r.kind === 'txn' && sp.debt) { const l = D().loans.find((x) => x.id === sp.debt), w = sp.wallet_id ? walletOf(sp.wallet_id) : null; return { icon: '🏦', name: l ? l.name : __('Debt payment'), amount: `−${money(sp.amount_minor, sp.currency)}`, where: w ? w.name : __('No account') }; }
   if (r.kind === 'txn') { const c = catOf(sp.category_id), w = walletOf(sp.wallet_id) || (String(sp.wallet_id).startsWith('l:') ? { name: (D().loans.find((x) => 'l:' + x.id === sp.wallet_id) || {}).name || '' } : null) || (String(sp.wallet_id).startsWith('h:') ? { name: accountName((D().holdings.find((x) => x.id === sp.wallet_id.slice(2)) || {}).account_id) } : null); return { icon: sp.type === 'income' ? '💵' : '🧾', name: sp.note || (c && c.name) || (sp.type === 'income' ? __('Income') : __('Expense')), amount: `${sp.type === 'income' ? '+' : '−'}${String(sp.wallet_id).startsWith('h:') ? coinAmount(D().holdings.find((x) => x.id === sp.wallet_id.slice(2)), sp.amount_minor) : money(sp.amount_minor, sp.currency)}`, where: w ? w.name : '' }; }
   if (r.kind === 'transfer') { const A = walletOf(sp.from), B = walletOf(sp.to); return { icon: '🔁', name: `${A ? A.name : '?'} → ${B ? B.name : '?'}`, amount: money(sp.amount_minor, A ? A.currency : cur()), where: sp.note || '' }; }
   const info = assetInfo(sp.symbol), src = parseSource(sp.fund);
@@ -2546,12 +2576,14 @@ function syncRuleUnit(form) {
 function ruleDialog(r) {
   const t = ruleTitle(r), a = ruleAmount(r), sp = r.spec, ws = D().wallets.filter((w) => !w.archived);
   const walletSel = (name, sel) => `<select name="${name}">${ws.map((w) => `<option value="${w.id}" ${w.id === sel ? 'selected' : ''}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</select>`;
-  const acct = r.kind === 'txn' ? `<label class="field">${__('Account')}<select name="wallet">${acctOptions(sp.type, sp.wallet_id, true)}</select></label>`
+  const debtL = sp.debt ? D().loans.find((x) => x.id === sp.debt) : null;
+  const acct = sp.debt ? `<label class="field">${__('Paid from')}<select name="wallet"><option value="">${__('No account, just record the payment')}</option>${ws.filter((w) => !debtL || w.currency === debtL.currency).map((w) => `<option value="${w.id}" ${w.id === sp.wallet_id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</select></label>`
+    : r.kind === 'txn' ? `<label class="field">${__('Account')}<select name="wallet">${acctOptions(sp.type, sp.wallet_id, true)}</select></label>`
     : r.kind === 'transfer' ? `<div class="two"><label class="field">${__('From')}${walletSel('from', sp.from)}</label><label class="field">${__('To')}${walletSel('to', sp.to)}</label></div>`
     : `<label class="field">${__('Pay with')}<select name="fund">${sourceOptions('buy', null, sp.fund)}</select></label>`;
-  const cat = r.kind === 'txn' ? `<label class="field">${__('Category')}<select name="category" data-search data-empty="${__('Category not found')}">${catOptions(sp.type, sp.category_id || '', false)}</select></label>` : '';
+  const cat = r.kind === 'txn' && !sp.debt ? `<label class="field">${__('Category')}<select name="category" data-search data-empty="${__('Category not found')}">${catOptions(sp.type, sp.category_id || '', false)}</select></label>` : '';
   open(`<h2>${esc(t.name)}</h2><p class="muted" style="margin-top:-10px">${__('Changes apply from the next payment. Entries already made stay as they are.')}</p>
-  <form data-form="recedit" data-id="${r.id}" data-kind="${r.kind}" style="display:contents">${acct}${cat}<div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(a.unit) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${a.step}" required value="${a.value}"></label>
+  <form data-form="recedit" data-id="${r.id}" data-kind="${r.kind}"${sp.debt ? ' data-debt="1"' : ''} style="display:contents">${acct}${cat}<div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(a.unit) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${a.step}" required value="${a.value}"></label>
     <label class="field">${__('Next payment')}<input name="next" type="date" required min="${isoDate(new Date())}" value="${r.next}"></label></div>
   <div class="two rec-actions"><button type="button" class="btn secondary" data-act="rec-toggle" data-id="${r.id}">${r.active === false ? __('Resume') : __('Pause')}</button><button type="button" class="btn danger" data-act="rec-del" data-id="${r.id}">${__('Delete')}</button></div>
   <div class="actions"><button class="btn" type="submit">${__('Save')}</button></div></form>`);
@@ -2747,7 +2779,7 @@ document.addEventListener('change', (e) => {
   else if (t.form?.dataset.form === 'cashx' && t.name === 'account') { delete t.form.received.dataset.touched; syncCashForm(t.form); }
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
-  else if (t.form?.dataset.form === 'recedit' && ['wallet', 'from', 'fund'].includes(t.name)) syncRuleUnit(t.form);
+  else if (t.form?.dataset.form === 'recedit' && !t.form.dataset.debt && ['wallet', 'from', 'fund'].includes(t.name)) syncRuleUnit(t.form);
   else if (t.name === 'txkind') {
     const here = t.form?.dataset.form;   // 'holding' is the Invest dialog
     if (t.value === 'invest' && here !== 'holding') holdingDialog(null, null, { invest: true });
@@ -3010,8 +3042,10 @@ document.addEventListener('submit', async (e) => {
       D().transactions.push(t); pay.txn_id = t.id; rememberAcct('repay', acct.id); sortTxns();
     } else rememberAcct(f.dataset.kind === 'lent' ? 'lentrecv' : 'repay', '');
     l.payments.push(pay);
-    Analytics.track('debt_payment_recorded', { kind: f.dataset.kind });
-    save(); close(); render(); toast(applied < amount ? __('Recorded {amount} (the remaining balance)', { amount: money(applied, l.currency) }) : 'Recorded'); return;
+    // a repeating payment: a recurring rule (shown in Settings > Recurring). The payment being recorded now is the first one; the next is one period later.
+    const rule = v.repeat && f.dataset.kind !== 'lent' ? addRule('txn', v.repeat, v.date, { type: 'expense', debt: l.id, wallet_id: acct ? acct.id : '', amount_minor: amount, currency: l.currency, note: l.name, category_id: loanRepaymentCategory().id }) : null;
+    Analytics.track('debt_payment_recorded', { kind: f.dataset.kind, is_recurring: !!rule });
+    save(); close(); render(); toast(rule ? __('Recorded. Added to Recurring in Settings.') : applied < amount ? __('Recorded {amount} (the remaining balance)', { amount: money(applied, l.currency) }) : 'Recorded'); return;
   }
   if (kind === 'account') {
     const name = v.name.trim(); if (!name) return;
@@ -3035,7 +3069,11 @@ document.addEventListener('submit', async (e) => {
     const r = D().recurring.find((x) => x.id === f.dataset.id), sp = r.spec, amount = parseFloat(v.amount);
     if (!(amount > 0)) { toast('Enter an amount above zero'); return; }
     if (v.next < isoDate(new Date())) { toast(__('Pick a date from today on')); return; }
-    if (r.kind === 'txn') {
+    if (r.kind === 'txn' && sp.debt) {
+      const dl = D().loans.find((x) => x.id === sp.debt), dw = v.wallet ? walletOf(v.wallet) : null;
+      if (!dl || (v.wallet && (!dw || dw.currency !== dl.currency))) { toast('Pick an account'); return; }
+      sp.wallet_id = v.wallet; sp.amount_minor = toMinor(amount, dl.currency);
+    } else if (r.kind === 'txn') {
       sp.wallet_id = v.wallet; sp.category_id = v.category || null;
       if (v.wallet.startsWith('h:')) { sp.quantity = amount; sp.currency = 'USD'; sp.amount_minor = Math.max(1, Math.round(amount * 100)); }
       else if (v.wallet.startsWith('l:')) { const l = D().loans.find((x) => 'l:' + x.id === v.wallet); if (!l || sp.type !== 'expense') { toast('Pick an account'); return; } delete sp.quantity; sp.currency = l.currency; sp.amount_minor = toMinor(amount, l.currency); }
@@ -3049,7 +3087,7 @@ document.addEventListener('submit', async (e) => {
     if (v.next !== r.next) { r.start = v.next; r.next = v.next; }   // later payments keep the new day of the month / week
     // a first payment that is still upcoming (entered by hand when the rule was created) follows the edit; one that already happened is left alone
     const first = firstEntryOf(r);
-    if (first) { syncFirstEntry(r, first); sortTxns(); } else delete sp.first_made;
+    if (first) { syncFirstEntry(r, first); sortTxns(); } else if (!sp.debt) delete sp.first_made;
     save(); close(); render(); toast(__('Recurring updated. Entries already made are unchanged.')); return;
   }
   if (kind === 'handoff') { const ok = await claimHandoff(v.code); if (ok) close(); return; }

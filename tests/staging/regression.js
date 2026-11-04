@@ -55,17 +55,40 @@ let bad = 0; const check = (name, cond, extra) => { console.log((cond ? 'PASS  '
     check('the cash asset is still recognised after a reload', s.cashAsset === true, s);
     check('realized P&L lists both sales', JSON.stringify(s.pnl.slice().sort((a, c) => a - c).map((x) => Math.round(x))) === JSON.stringify([-10000000, 10000000]), s.pnl);
     check('the loss counts as spending, budgets leave it out', s.spent >= 10025000, s.spent);
+    // 3. investment Cash balance as one end of a transfer: deposit with a fee, withdraw with a fee, then edit the deposit
+    await p.evaluate(() => {
+      const w = { id: uid(), name: 'SMOKE bank', type: 'bank', currency: 'IDR', opening_balance_minor: 100000000, archived: false, since: '2026-01' }; D().wallets.push(w);
+      const acc = D().investments.find((a) => a.name === 'SMOKE broker'), cash = D().holdings.find((h) => h.account_id === acc.id && h.symbol === 'CASH:IDR');
+      const today = todayIso(); window.__sx = { w: w.id, c: cash.id };
+      const dep = saveTransfer({ from: 'w:' + w.id, to: 'h:' + cash.id, amount: 5000000, received: 5000000, fee: 2500, date: today, note: '' });
+      const wd = saveTransfer({ from: 'h:' + cash.id, to: 'w:' + w.id, amount: 1000000, received: 1000000, fee: 1500, date: today, note: '' });
+      window.__sxErr = dep.error || wd.error || ''; save();
+    });
+    await settle();
+    const gidX = await p.evaluate(() => D().transactions.find((t) => t.type === 'transfer' && t.flow === 'out' && t.transfer_id && t.trade_id && t.wallet_id === window.__sx.w).transfer_id);
+    const ed = await p.evaluate((g) => { const r = xferRead(g); const e = saveTransfer({ from: r.from, to: r.to, amount: 6000000, received: 6000000, fee: 3000, date: r.date, note: '', editGid: g }); save(); return e.error || ''; }, gidX);
+    await settle(); await reload();
+    const cx = await p.evaluate(() => { const w = D().wallets.find((x) => x.name === 'SMOKE bank'), acc = D().investments.find((a) => a.name === 'SMOKE broker'), cash = D().holdings.find((h) => h.account_id === acc.id && h.symbol === 'CASH:IDR');
+      const legs = D().transactions.filter((t) => t.transfer_id).map((t) => ({ type: t.type, flow: t.flow || '', wallet: !!t.wallet_id, minor: t.amount_minor, tied: !!t.trade_id, cat: catOf(t.category_id)?.name || null }));
+      return { bank: walletBalance(w), cash: cash.quantity, legs, titles: D().transactions.filter((t) => t.transfer_id && t.type === 'transfer').map((t) => transferTitle(t)), sxErr: window.__sxErr || '' }; });
+    console.log(JSON.stringify(cx));
+    check('deposit and withdrawal with fees saved without error, and the edit too', cx.sxErr === '' && ed === '', { sxErr: cx.sxErr, ed });
+    check('after the edit and a reload: the bank paid 6,000,000 + fee 3,000 and received 1,000,000 - the withdrawal', cx.bank === 100000000 - 6000000 - 3000 + 1000000, cx.bank);
+    check('after the edit and a reload: the Cash balance has 60,000,000 + 6,000,000 - 1,000,000 - 1,500 fee', cx.cash === 60000000 + 6000000 - 1000000 - 1500, cx.cash);
+    check('transfer rows: out leg tied to the Cash event, in leg tied, bank fee in Fee, Cash fee without a wallet', cx.legs.some((l) => l.type === 'transfer' && l.flow === 'out' && l.wallet && l.tied && l.minor === 6000000) && cx.legs.some((l) => l.type === 'transfer' && l.flow === 'in' && l.wallet && l.tied && l.minor === 1000000) && cx.legs.some((l) => l.type === 'expense' && l.wallet && l.minor === 3000 && l.cat === 'Fee') && cx.legs.some((l) => l.type === 'expense' && !l.wallet && l.minor === 1500 && l.cat === 'Fee'), cx.legs);
     await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio/pnl-all'; render(); }); await p.waitForTimeout(700);
     check('Realized P&L page opens with All time', /SMOKE|BTC|Rp/.test(await p.innerText('.main')) && !/\bNaN\b|undefined/.test(await p.innerText('.main')), null);
   } else {
     await p.evaluate(() => {
+      const sw = D().wallets.find((w) => w.name === 'SMOKE bank');
+      if (sw) { [...new Set(D().transactions.filter((t) => t.transfer_id && t.wallet_id === sw.id).map((t) => t.transfer_id))].forEach((g) => removeTransferGroup(g)); D().transactions = D().transactions.filter((t) => t.wallet_id !== sw.id); D().wallets = D().wallets.filter((w) => w.id !== sw.id); }
       const acc = D().investments.find((a) => a.name === 'SMOKE broker');
       if (acc) { const btc = D().holdings.find((h) => h.account_id === acc.id && h.symbol === 'BTC'); if (btc) btc.trades.filter((t) => t.side === 'sell').forEach((t) => removeTrade(btc, t)); D().holdings = D().holdings.filter((h) => h.account_id !== acc.id); D().investments = D().investments.filter((a) => a.id !== acc.id); }
       D().loans = D().loans.filter((l) => !/^SMOKE/.test(l.name)); save();
     });
     await settle(); await reload();
-    const left = await p.evaluate(() => ({ loans: D().loans.filter((l) => /^SMOKE/.test(l.name)).length, acc: D().investments.filter((a) => a.name === 'SMOKE broker').length, rec: D().transactions.filter((t) => /BTC (loss|profit)|Investment fee/.test(t.note)).length }));
-    check('everything the regression created is gone after a reload', left.loans === 0 && left.acc === 0 && left.rec === 0, left);
+    const left = await p.evaluate(() => ({ loans: D().loans.filter((l) => /^SMOKE/.test(l.name)).length, acc: D().investments.filter((a) => a.name === 'SMOKE broker').length, rec: D().transactions.filter((t) => /BTC (loss|profit)|Investment fee/.test(t.note)).length, wal: D().wallets.filter((w) => w.name === 'SMOKE bank').length, xfer: D().transactions.filter((t) => t.transfer_id).length }));
+    check('everything the regression created is gone after a reload', left.loans === 0 && left.acc === 0 && left.rec === 0 && left.wal === 0 && left.xfer === 0, left);
   }
   check('no script errors', errs.length === 0, errs.slice(0, 3));
   await b.close(); console.log(bad ? `\nREGRESSION ${phase} FAILED (${bad})` : `\nREGRESSION ${phase} PASSED`); process.exit(bad ? 1 : 0);

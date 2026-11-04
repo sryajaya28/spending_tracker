@@ -352,7 +352,7 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 | AN-05 | Browser with Do Not Track on, or local run (localhost) | Nothing is sent. |
 | AN-06 | Network tab on the hosted site | Requests go to `/ingest/...` on the app's own address (no direct call to posthog.com); the page shows no CSP error. |
 
-| AN-07 | Click buttons (Add expense, tabs, Edit, Close), open and close pop-ups, change a filter, the currency and the language | PostHog shows `button_clicked` (`action`, `page`, `in_dialog`), `dialog_opened` (`form`), `form_submitted`, `filter_changed`, `setting_changed`, each with `page`, `lang`, `theme`, `viewport`, `env`; no event holds text typed by you, an amount, a name or a record id. |
+| AN-07 | Click buttons (Add expense, tabs, Edit, Close), open and close pop-ups, change a filter, the currency and the language | PostHog shows `button_clicked` (`action`, `page`, `in_dialog`), `dialog_opened` (`form`), `form_submitted`, `filter_changed`, `setting_changed`, each with `page`, `lang`, `theme`, `viewport`, `env`; no event holds text typed by you, an amount, a name or a record id; all event names, property keys and action values are snake_case (e.g. `add_txn`). |
 
 Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`). The real PostHog dashboard is checked manually.
 

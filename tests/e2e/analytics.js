@@ -40,11 +40,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.waitForTimeout(200);
   const all2 = await p.evaluate(() => window.__phEvents);
   const clicks = all2.filter((e) => e.event === 'button_clicked');
-  assert(clicks.some((e) => e.properties.action === 'add-txn' && e.properties.type === 'income' && e.properties.page === 'overview'), 'add-txn click with type and page');
+  assert(clicks.some((e) => e.properties.action === 'add_txn' && e.properties.type === 'income' && e.properties.page === 'overview'), 'add-txn click with type and page');
   assert(clicks.some((e) => e.properties.action === 'close' && e.properties.in_dialog === true), 'close click inside a pop-up');
   assert(all2.some((e) => e.event === 'dialog_opened' && e.properties.form === 'txn'), 'dialog_opened txn');
   const flt = all2.find((e) => e.event === 'filter_changed'); assert(flt && flt.properties.filter === 'cat' && flt.properties.active === true && Object.keys(flt.properties).every((k) => k.startsWith('$') || ['filter', 'active', 'page', 'lang', 'theme', 'viewport', 'env', 'app', 'distinct_id', 'token'].includes(k)), 'filter_changed has the category flag only: ' + JSON.stringify(flt));
   assert(all2.every((e) => e.properties.page && e.properties.viewport && e.properties.lang), 'every event carries page, viewport and lang');
+  const snakeRe = /^[a-z][a-z0-9_]*$/;
+  all2.filter((e) => !e.event.startsWith('$')).forEach((e) => { assert(snakeRe.test(e.event), 'event name not snake_case: ' + e.event); Object.keys(e.properties).filter((k) => !k.startsWith('$')).forEach((k) => assert(snakeRe.test(k), 'property not snake_case: ' + k)); });
+  assert(!clicks.some((e) => /-/.test(e.properties.action)), 'action values use underscores');
   const ok = new Set(['action', 'element', 'in_dialog', 'view', 'tab', 'side', 'type', 'kind', 'route', 'preset', 'page', 'lang', 'theme', 'viewport', 'env', 'app', 'distinct_id', 'token']);
   clicks.forEach((e) => Object.keys(e.properties).filter((k) => !k.startsWith('$')).forEach((k) => assert(ok.has(k), 'unexpected click property ' + k)));
   const mine = all2.map((e) => Object.entries(e.properties).filter(([k]) => !k.startsWith('$') && !['distinct_id', 'token'].includes(k)));

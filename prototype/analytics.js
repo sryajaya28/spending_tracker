@@ -13,6 +13,9 @@
   let identified = false, lastPage = null;
   const route = () => location.hash.split('?')[0].split('/')[1] || 'overview';
   const pageName = () => (identified ? route() : 'landing');
+  /* every event name and property key is snake_case (PostHog's own $-prefixed names are left alone); code-name values such as add-txn become add_txn */
+  const snake = (s) => String(s).replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/[-\s]+/g, '_').toLowerCase();
+  const snakeVal = (v) => (typeof v === 'string' ? v.replace(/-/g, '_') : v);
   const scrub = (v) => (typeof v === 'string' ? v.split(/[?#]/)[0] : v);
   if (on) {
     try {
@@ -40,7 +43,8 @@
     enabled: on,
     track(name, props, force) {
       if (!on || (!force && demoOn())) return;
-      try { ph.capture(name, props || {}); } catch (e) { /* ignore */ }
+      const out = {}; Object.keys(props || {}).forEach((k) => { out[k.startsWith('$') ? k : snake(k)] = snakeVal(props[k]); });
+      try { ph.capture(name.startsWith('$') ? name : snake(name), out); } catch (e) { /* ignore */ }
     },
     /* one page view per page name (the first part of the address: "transactions", never a date or an id) */
     page() {

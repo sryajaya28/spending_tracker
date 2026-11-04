@@ -1180,9 +1180,9 @@ function setupState() {
 /* "Skip for now" on the first-run screen is remembered on this device (per account) */
 const onbKey = () => 'stiver.onb.skip.' + (state.auth.uid || '');
 function onbSkipped() { if (state.ui.onbSkipped === undefined) { try { state.ui.onbSkipped = localStorage.getItem(onbKey()) === '1'; } catch { state.ui.onbSkipped = false; } } return state.ui.onbSkipped; }
-function skipOnboarding() { state.ui.onbSkipped = true; try { localStorage.setItem(onbKey(), '1'); } catch { /* storage unavailable: skipped for this visit */ } render(); }
+function skipOnboarding() { Analytics.track('onboarding_skipped'); state.ui.onbSkipped = true; try { localStorage.setItem(onbKey(), '1'); } catch { /* storage unavailable: skipped for this visit */ } render(); }
 /* the celebration after the last step: shown once, then the normal Overview (a tap or a few seconds) */
-function endCongrats() { if (state.ui.congrats) { state.ui.congrats = false; if (route() === 'overview') render(); } }
+function endCongrats() { if (state.ui.congrats) { Analytics.track('onboarding_completed'); state.ui.congrats = false; if (route() === 'overview') render(); } }
 function congratsView() {
   const colors = ['#4A44C6', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#0EA5E9', '#22C55E'];
   const bits = Array.from({ length: 30 }, (_, n) => `<i style="--x:${(n * 37) % 100}%;--c:${colors[n % colors.length]};--d:${2.4 + (n % 5) * 0.35}s;--w:${(n % 7) * 0.12}s;--r:${(n * 47) % 180}deg"></i>`).join('');
@@ -2526,7 +2526,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'goto') location.hash = '#/' + el.dataset.route;
-  else if (act === 'demo-on') setDemo(true);
+  else if (act === 'demo-on') { Analytics.track('demo_on', {}, true); setDemo(true); }
   else if (act === 'onb-skip') skipOnboarding();
   else if (act === 'congrats-add') { endCongrats(); txnDialog(null, 'expense'); }   // on to the normal Overview, with the Add transaction pop-up open
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
@@ -2559,7 +2559,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
-  else if (act === 'demo-off') setDemo(false);
+  else if (act === 'demo-off') { Analytics.track('demo_off', {}, true); setDemo(false); }
   else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); if (e.key === 'Escape' && state.ui.walletMenu) { state.ui.walletMenu = null; render(); } });
@@ -2747,6 +2747,7 @@ document.addEventListener('submit', async (e) => {
     sortTxns();
     state.ui.month = periodKeyOf(row.occurred_at) <= currentPeriod() ? periodKeyOf(row.occurred_at) : state.ui.month;
     if (!existing) rememberAcct(type, v.wallet);
+    Analytics.track('transaction_saved', { type, edit: !!existing });
     save(); close(); render(); toast(msg);
   }
   if (kind === 'transfer') {
@@ -2764,6 +2765,7 @@ document.addEventListener('submit', async (e) => {
     if (v.repeat) addRule('transfer', v.repeat, v.date, { from: A.id, to: B.id, amount_minor: amount, received_minor: received, fee_minor: fee, note: v.note.trim() });
     sortTxns();
     state.ui.month = periodKeyOf(v.date) <= currentPeriod() ? periodKeyOf(v.date) : state.ui.month;
+    Analytics.track('transfer_saved', { has_fee: fee > 0 });
     save(); close(); render(); toast(__('Moved {amount} from {from} to {to}', { amount: money(amount, A.currency), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.currency) }) : '')); return;
   }
   if (kind === 'occasion') {
@@ -2786,6 +2788,7 @@ document.addEventListener('submit', async (e) => {
       if (same) Object.assign(same, { amount_minor: minor, currency: cur() });
       else D().budgets.push({ id: uid(), category_id: cat, amount_minor: minor, currency: cur(), start_month: start });
     }
+    Analytics.track('budget_saved', { scope: v.category ? 'category' : 'overall', edit: !!f.dataset.id });
     save(); close(); render(); toast('Budget saved');
   }
   if (kind === 'cat') {
@@ -2811,6 +2814,7 @@ document.addEventListener('submit', async (e) => {
   }
   if (kind === 'wallet') {
     D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), since: monthKey(new Date()), archived: false });
+    Analytics.track('account_added', { type: v.type });
     save(); close(); render(); toast(__('Account added in {cur}', { cur: v.currency }));
   }
   if (kind === 'loan') {
@@ -2906,6 +2910,7 @@ document.addEventListener('submit', async (e) => {
     const fee = v.fee ? (src.kind === 'wallet' ? toMinor(parseFloat(v.fee), src.wallet.currency) : side === 'sell' && !info.cash ? parseFloat(v.fee) : 0) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
     const short = payShortfall(src, side, amount + (side === 'buy' ? fee : 0)); if (short) { toast(short); return; }   // a buy needs the fee on top of the amount
     recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price), fee });
+    Analytics.track('investment_trade', { side });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty, h)} ${info.symbol}`); return;
   }
   if (kind === 'holding' && f.dataset.sell) {
@@ -2967,6 +2972,7 @@ let lastKey = pageKey();
 const forgetScroll = (key) => { delete scrollPos[key]; };   // used when a button opens a page with a new filter: that view starts at the top
 window.addEventListener('hashchange', () => {
   scrollPos[lastKey] = lockY !== null ? lockY : window.scrollY; lastKey = pageKey();
+  Analytics.page();
   render(); window.scrollTo(0, scrollPos[lastKey] || 0);
 });
 window.addEventListener('beforeunload', (e) => { if (Cloud.pending > 0) { e.preventDefault(); e.returnValue = ''; } });
@@ -3007,7 +3013,11 @@ async function submitAuth(kind, v, f) {
     } else if (kind === 'signup') {
       const { data, error } = await Cloud.signUp(a.email, v.password, v.name.trim(), v.currency, captchaToken || undefined);
       if (error) a.error = friendlyAuthError(error);
-      else if (!data.session) { a.view = 'sent'; startPolling(a.email, v.password); }   // email confirmation is on: wait for the link
+      else {
+        Analytics.track('signed_up', { confirmed: !!data.session });
+        // email confirmation is on: wait for the link
+        if (!data.session) { a.view = 'sent'; startPolling(a.email, v.password); }
+      }
     } else if (kind === 'forgot') {
       const { error } = await Cloud.reset(a.email, captchaToken || undefined);
       if (error) a.error = error.message; else a.notice = 'If that email has an account, a reset link is on its way.';
@@ -3031,10 +3041,11 @@ function resetSessionView() {
 async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
-  if (!session) { state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
+  if (!session) { Analytics.reset(); Analytics.page(); state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
   stopPolling(); a.email = session.user.email || a.email;
+  Analytics.identify(session.user.id); Analytics.page();
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
-  if (event === 'SIGNED_IN') resetSessionView(); else resetPeriodView();   // a real login opens Overview at the top; reopening the app with a saved session keeps the page you were on
+  if (event === 'SIGNED_IN') { resetSessionView(); Analytics.track('signed_in'); } else resetPeriodView();   // a real login opens Overview at the top; reopening the app with a saved session keeps the page you were on
   Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
   render(); loadUserData();
 }

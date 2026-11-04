@@ -40,6 +40,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(dom.some((e) => e.event === 'add_category' && e.properties.type === 'expense'), 'add_category');
   assert(dom.some((e) => e.event === 'add_sub_category' && e.properties.type === 'expense'), 'add_sub_category');
   assert(!JSON.stringify(dom).includes('Zzz'), 'category names are not sent');
+  await p.evaluate((i) => catDialog(D().categories.find((c) => c.id === i)), par); await p.waitForSelector('[data-act=archive-cat]'); await p.click('[data-act=archive-cat]'); await p.waitForTimeout(250);
+  await p.evaluate(() => archivedCatsDialog()); await p.waitForSelector('#dlg [data-act=restore-cat]'); await p.click('#dlg [data-act=restore-cat]'); await p.waitForTimeout(250); await p.evaluate(() => document.querySelector('#dlg [data-act=close]')?.click());
+  const rs = (await p.evaluate(() => window.__phEvents)).find((e) => e.event === 'restore_category'); assert(rs && rs.properties.type === 'expense' && rs.properties.level === 'category', 'restore_category'); assert(!JSON.stringify(rs).includes('Zzz'), 'the restored category name is not sent');
   // generic interaction events: button clicks, pop-ups, forms, filters, settings, links
   await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForTimeout(300);
   await p.click('.hero-actions [data-act=add-txn][data-type=income]'); await p.waitForSelector('#dlg[open]'); await p.waitForTimeout(150);

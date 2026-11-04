@@ -1415,7 +1415,7 @@ function categoriesCard() {
       <div class="cat-list ${more ? '' : 'collapsed'}">${roots.map((c, n) => (n >= 5 ? row(c).replace('<div class="brow cat-row">', '<div class="brow cat-row more-item">') : row(c))).join('')}
       ${rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="cat-${type}" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : ''}</div></div>`;
   };
-  return `<section class="card"><div class="card-head"><h2>${__('Categories')}</h2><button class="btn" data-act="add-cat">${__('+ Category')}</button></div>
+  return `<section class="card"><div class="card-head"><h2>${__('Categories')}</h2><div class="tools">${D().categories.some((c) => c.archived) ? `<button class="chip" data-act="archived-cats">${__('Archived')}</button>` : ''}<button class="btn" data-act="add-cat">${__('+ Category')}</button></div></div>
     ${section('expense', __('Expense'), '#E5484D')}${section('income', __('Income'), '#1fa971')}</section>`;
 }
 function viewSettings() {
@@ -1948,6 +1948,20 @@ function archivedOccasionsDialog() {
   const list = occasionStatus().filter((o) => o.archived).sort((a, b) => (b.end || b.start || '').localeCompare(a.end || a.start || '') || a.name.localeCompare(b.name));
   open(`<h2>${__('Archived special occasions')}</h2>
   <div class="list up-list">${list.map(occasionSettingsRow).join('') || ('<div class="empty">' + __('No archived special occasions.') + '</div>')}</div>
+  <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
+}
+/* archived categories: a category archived with its sub-categories comes back with them; a sub-category archived on its own comes back on its own */
+function archivedCatsDialog() {
+  const list = D().categories.filter((c) => c.archived && (!c.parent_id || !catOf(c.parent_id)?.archived))
+    .sort((a, b) => (a.type === b.type ? 0 : a.type === 'expense' ? -1 : 1) || a.name.localeCompare(b.name));
+  const row = (c) => {
+    const p = c.parent_id ? catOf(c.parent_id) : null, kids = D().categories.filter((k) => k.parent_id === c.id && k.archived).length;
+    const sub = [c.type === 'expense' ? __('Expense') : __('Income'), p ? __('in {name}', { name: esc(p.name) }) : '', kids ? __(kids === 1 ? '{n} sub-category' : '{n} sub-categories', { n: kids }) : ''].filter(Boolean).join(' · ');
+    return `<div class="brow cat-row">${tile(c, !!p)}<div class="cat-main"><b class="cat-name">${esc(c.name)}</b><small class="muted">${sub}</small></div>
+      <div class="tools"><button class="btn secondary" data-act="restore-cat" data-id="${c.id}">${__('Restore')}</button></div></div>`;
+  };
+  open(`<h2>${__('Archived categories')}</h2>
+  <div class="list up-list">${list.map(row).join('') || ('<div class="empty">' + __('No archived categories.') + '</div>')}</div>
   <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
 const SWATCHES = ['#4A44C6', '#8B8FF0', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#EF4444', '#0EA5E9', '#22C55E', '#94A3B8'];
@@ -2632,6 +2646,13 @@ document.addEventListener('click', (e) => {
   else if (act === 'breakdown') breakdownDialog(id);
   else if (act === 'add-cat') catDialog(null, el.dataset.parent);
   else if (act === 'edit-cat') catDialog(catOf(id));
+  else if (act === 'archived-cats') archivedCatsDialog();
+  else if (act === 'restore-cat') {
+    const c = catOf(id); if (!c) return;
+    c.archived = false; if (!c.parent_id) D().categories.filter((k) => k.parent_id === c.id).forEach((k) => { k.archived = false; });
+    Analytics.track('restore_category', { type: c.type, level: c.parent_id ? 'sub_category' : 'category' });
+    save(); render(); archivedCatsDialog(); toast(__('Category restored'));
+  }
   else if (act === 'archive-cat') {
     [id, ...childrenOf(id).map((c) => c.id)].forEach((cid) => { catOf(cid).archived = true; });
     save(); close(); render(); toast('Category archived. Past transactions keep it.');

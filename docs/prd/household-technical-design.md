@@ -66,7 +66,7 @@ Per-table whitelist (`transactions`, `wallets`, `categories`, `budgets`, `debts`
 1. `household_tables`: tables, columns (`created_by`, `updated_by`, `rev`), functions, `household_state`, backfill `created_by = user_id` (no triggers yet).
 2. `household_rls`: replaces all policies (loop over `pg_policies`), defaults to `household_owner()`. **Ships with a down script** and its tests run against the **old client's request shapes** too.
 3. `household_triggers`: created_by/updated_by/rev triggers, statement-level `household_state` bump.
-4. `household_functions`: updated views/functions, `handle_new_user`, `accept_household_invite`, `my_pending_invite`, member RPCs, expiry job.
+4. `household_functions`: updated views/functions, `handle_new_user` (sets `household_status`), member RPCs (membership itself is created only by the `join-household` Edge Function), expiry job.
 5. (Slice 2) `household_activity`.
 Each migration is applied to staging, SQL tests run, then production at release by Developer 2.
 

@@ -7,3 +7,4 @@ The Product Manager appends one line per owner decision: date | decision | owner
 - 2026-11-04 | Departed or removed members get a "Delete my login" button next to Sign out (Option 1) | "1. Option 1" | Developer 1, Designer, QA
 - 2026-11-04 | Test invite emails to +aliases of the owner's inbox, max ~6, cleaned up afterwards | "2. Yes" | QA, Developer 1
 - 2026-11-04 | PRD check 16 replaced: signing up with an email that has a pending invite shows "Check your invite email" and creates no account (security, pre-account takeover) | "Yes" | Developer 1, Designer, QA
+- 2026-11-04 | Editor can edit/delete only own transactions, owner any; scope transactions only; pre-household rows = owner's; read-only UI + DB enforced | "1. Option A 2. Option A 3. Yes 4. Yes" | Developer 1, Designer, QA, Developer 2

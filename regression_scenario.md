@@ -352,6 +352,9 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 | AN-05 | Browser with Do Not Track on, or local run (localhost) | Nothing is sent. |
 | AN-06 | Network tab on the hosted site | Requests go to `/ingest/...` on the app's own address (no direct call to posthog.com); the page shows no CSP error. |
 
+| AN-07 | Click buttons (Add expense, tabs, Edit, Close), open and close pop-ups, change a filter, the currency and the language | PostHog shows `button_clicked` (`action`, `page`, `in_dialog`), `dialog_opened` (`form`), `form_submitted`, `filter_changed`, `setting_changed`, each with `page`, `lang`, `theme`, `viewport`, `env`; no event holds text typed by you, an amount, a name or a record id; all event names, property keys and action values are snake_case (e.g. `add_txn`). |
+| AN-08 | Add an expense, an income, a transfer, a category, a sub-category, an account, a budget, an occasion, a debt, a lent entry, an asset; edit and delete a transaction | PostHog shows `expense_recorded`, `income_recorded`, `transfer_recorded`, `add_category`, `add_sub_category`, `add_account`, `add_budget`, `add_occasion`, `add_debt`, `add_lent`, `add_asset`, `update_transaction`, `delete_transaction` with only flag/code properties (no names, notes or amounts). |
+
 Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`). The real PostHog dashboard is checked manually.
 
 ## Automated coverage map
@@ -403,6 +406,9 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-04: Section 15 intro: new features must ship with tracking (`docs/ANALYTICS.md`).
+- 2026-11-04: AN-08 (named business events: expense_recorded, add_category, ...).
+- 2026-11-04: AN-07 (generic click, dialog, form, filter and setting events).
 - 2026-11-04: Added section 15 (usage analytics, AN-01..06) and the `analytics` test.
 - 2026-11-01: First version, covering all features up to the Commodities asset type.
 - 2026-11-01: IV-08 now covers the price-refresh disclaimer on the Investment tab.

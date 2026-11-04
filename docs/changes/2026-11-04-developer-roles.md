@@ -1,1 +1,0 @@
-2026-11-04: **Agent roles recorded everywhere (owner).** Developer 2 = integrator, Developer 1 = feature branches only. CLAUDE.md rules 5, 6, 6b and 6c no longer tell every agent to merge into `staging`; docs/AGENTS.md, docs/DEV_WORKFLOW.md (section 1 and setup table) and context.md section 12 name both roles. Branch `docs/developer-roles`.

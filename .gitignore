@@ -22,3 +22,6 @@ supabase/.temp/
 # local test output
 tests/e2e/out/
 tests/e2e/*_ops.json
+
+# screenshots the e2e tests rewrite on every run
+tests/e2e/*.png

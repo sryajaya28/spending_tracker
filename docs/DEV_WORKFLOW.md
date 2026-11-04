@@ -18,7 +18,7 @@ Nothing moves to the next stage without the owner's explicit approval. "Approved
 | 3. Production | the live app | real users | assistant smoke-tests right after release |
 
 ```
-feature branch ──(owner approves)──▶ staging ──(owner asks for regression, then approves summary)──▶ production ──▶ smoke test
+Figma design ──(owner approves)──▶ feature branch ──(owner approves)──▶ staging ──(owner asks for regression, then approves summary)──▶ production ──▶ smoke test ──▶ Figma/feature folder final sync
 ```
 
 ## 0. Design first (Figma)
@@ -26,6 +26,8 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
 Every request that changes a screen, flow or text starts with a design in the project's Figma file, before any code (copy of the shared
 rule in `dev-workflow`; the shared repo wins if they differ). Figma file for Stiver: "Stiver",
 https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW
+
+**Figma is the only home of the design**: no design files, exports or feature folders are kept in the repository, and `tools/design/export.js` is deleted.
 
 1. Design the change in the app's real look (reuse components and tokens), including the states that matter (empty, error), **always the
    dark-mode and phone-width versions of every screen** (plus desktop where it exists) and a flow with arrows when several screens are involved.
@@ -64,7 +66,7 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
 - For each feature the assistant writes or updates automated tests, runs them, and reports pass/fail honestly,
   including the things it could not check (real devices, real third-party services, the live site).
 - A feature is "ready for review" only when its entries pass, the existing automated suite still passes, and the docs
-  (project context file, regression scenarios, user-facing text/translations) are updated in the same change.
+  (project context file, regression scenarios, user-facing text/translations and, unless the owner skipped it, the feature folder in Figma) are updated in the same change.
 
 ## 3. Staging and regression testing
 
@@ -94,6 +96,7 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
 4. If something is broken: **fix it immediately** and release the fix, then smoke test again. If the fix is not quick or the
    problem affects data, roll back first (platform "instant rollback"), then fix. Report what happened either way.
 5. The assistant never edits or deletes production data without asking, and looks at the data before any destructive step.
+6. Once the smoke test has passed, set the feature's status to `released` in its Figma folder. For a request where the owner said "skip figma", this is when the Figma file is brought up to date (section 0, point 6).
 
 ## Working with more than one agent
 
@@ -111,7 +114,7 @@ Several assistants (or sessions) can work on one project if they do not edit the
 ## Standing rules
 
 - Secrets never go into the repository. Test-account credentials live in the hosting/CI secret store.
-- Every change updates the project's context file, regression scenarios, README and translations in the same commit.
+- Every change updates the project's context file, regression scenarios, README and translations in the same commit, and keeps the Figma file in step with the code (section 0).
 - Commit messages say *why*; one logical change per commit; no force-pushes to shared branches.
 - Be honest about what was verified: say "tested in the test browser only" when that is the case; never present mocked or
   made-up results as real ones.
@@ -127,6 +130,8 @@ Several assistants (or sessions) can work on one project if they do not edit the
 | Agents | **Developer 2** = integrator (merges to `staging`, releases); **Developer 1** = feature branches only (named by the owner; see `docs/AGENTS.md`) |
 | Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
 | Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
+| Figma file (design source of truth) | https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW/Stiver |
+| Feature folders | Figma section `Feature - <short-name>` (in the file above) |
 | Feature test list | `docs/FEATURE_TESTS.md` |
 | Regression scenarios | `regression_scenario.md` (manual) + the automated suite |
 | Review link | the Vercel preview of the feature branch (`spendingtracker-git-<branch>-suryajaya378-4429s-projects.vercel.app`; the assistant copies the exact link from Vercel) |

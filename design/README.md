@@ -1,7 +1,7 @@
 # Stiver design files
 
 Figma-importable design of every screen, dialog and component of the app, plus the design tokens. This folder is
-**generated from the running app** by `tools/design/export.js`, so it always matches what is shipped. It is the starting
+**generated from the running app** by `tools/design/export.js` (now deleted; this is a frozen snapshot of 2026-11-04). It is the starting
 point for a Figma design system: import it, turn the components into Figma components, and the tokens into variables.
 
 ## What is here
@@ -11,7 +11,7 @@ point for a Figma design system: import it, turn the components into Figma compo
 | `tokens/stiver.tokens.json` | Design tokens in the W3C design-token format: colours (light and dark themes with the same names, category and asset colours), font family and weights, type scale, radius, spacing, sizes, shadows. |
 | `components/<group>/` | One file per component, light and `-dark` versions: **buttons**, **text** (type scale, badges), **banners**, **graphs**, **popups** (dialog, toast, tooltip), **form-fields**, **date-picker**, **dropdown**, **filters**, **navigation**, **cards**, **rows**. |
 | `screens/mobile-light/`, `screens/mobile-dark/` | Every page (full height, 390 px wide) and every dialog (the dialog card itself). |
-| `screens/desktop-light/` | The main pages at 1280 px wide. |
+| `screens/desktop-light/`, `screens/desktop-dark/` | The main pages at 1280 px wide (light and dark). |
 
 Each design comes as **`.svg`** (import this into Figma: real text layers and vector shapes) and **`.png`** (a quick
 preview; for dialogs the PNG shows the dialog on its page).
@@ -46,16 +46,4 @@ calendar icon inside date fields, select arrows) are drawn as simple text glyphs
 
 ## Keeping it in sync
 
-After a UI change, regenerate and commit this folder (the dev server must be running):
-
-```bash
-python3 tools/dev_server.py 5180 &
-```
-
-```bash
-node tools/design/export.js
-```
-
-`node tools/design/export.js overview` regenerates only the files whose name contains "overview". To add a screen or
-component, add a line to `SCREENS` or `COMPONENTS` in `tools/design/export.js`. The exporter uses the app with the e2e fake
-backend and the built-in sample data (nothing touches real data) and `tools/design/vendor/dom-to-svg.js` (MIT).
+Not any more. This folder is a **frozen snapshot** (2026-11-04). The exporter `tools/design/export.js` was deleted on the owner's decision and the design is maintained **only in Figma** (https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW/Stiver, see `docs/DEV_WORKFLOW.md` section 0). Do not regenerate or edit these files.

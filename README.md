@@ -70,8 +70,8 @@ scenarios live in `regression_scenario.md`: add or edit the relevant ones whenev
 ## Design files (Figma)
 
 `design/` holds a Figma-importable copy of the UI: every screen and dialog, the components by group, and the design tokens.
-It is generated from the app by `node tools/design/export.js` (dev server running); regenerate and commit it after UI changes.
-See `design/README.md` for how to import it into Figma and build the design system.
+It is a frozen snapshot: the exporter (`tools/design/export.js`) was deleted and the design is now maintained only in Figma
+(https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW/Stiver), see `docs/DEV_WORKFLOW.md` section 0.
 
 The iPhone launch images (`prototype/splash/`) are made from the splash by `node tools/design/startup_images.js`; rerun it when the logo or splash colours change.
 

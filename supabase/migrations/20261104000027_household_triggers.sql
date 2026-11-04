@@ -1,3 +1,7 @@
+-- Error contract: the guards in this file raise 42501 with a message starting 'household_guard:<kind>:<n>' (or 'household_guard:recurring_date'); an
+-- RLS violation is also 42501 but has no such prefix. The client maps by the prefix to the guard texts and maps any other 42501 to
+-- "only the person who added it or the owner can change this". Rollback of the household rollout is the 26 down script only; 25 and 27 stay.
+-- Lock cost: the backfill in step 0 takes a strong lock per table and rewrites its rows in one transaction (fine at today's size; batch above ~1M rows).
 -- Household access, migration 3: who-made-it stamps, the stale-edit check, recurring-entry attribution, the poll counter
 -- and the delete guards (design sections 6, 7, 4a). Owners and solo users: stamps only, no new rejections.
 
@@ -14,12 +18,13 @@ begin
 end $$;
 
 -- 1. stamps: the client cannot choose who made a row ---------------------------------------------------------------------
+-- rev is NOT touched on insert (the column default is 1): in INSERT ... ON CONFLICT DO UPDATE the EXCLUDED row is the row after this trigger,
+-- so resetting rev here would turn every upsert that carries the client's rev into a false conflict (S1)
 create or replace function public.household_stamp_insert() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   new.created_by := coalesce(auth.uid(), new.user_id);
   new.updated_by := new.created_by;
-  new.rev := 1;
   return new;
 end $$;
 
@@ -32,17 +37,17 @@ declare r record;
 begin
   new.created_by := coalesce(auth.uid(), new.user_id);
   new.updated_by := new.created_by;
-  new.rev := 1;
+  -- Only for a row that does not exist yet: the INSERT half of an upsert of an existing row (a re-save, or a retry after the rule was
+  -- already advanced) must not be judged against the rule's next_date (S2). No kind check: a transfer rule also generates an expense
+  -- fee row and coin rules go through other paths, and amounts are not checked either (S4, accepted residual risk in the design).
   if new.recurring_rule_id is not null
+     and not exists (select 1 from public.transactions x where x.id = new.id)
      and coalesce((select s.has_members from public.household_state s where s.owner_id = new.user_id), false) then
     select * into r from public.recurring_rules ru where ru.id = new.recurring_rule_id and ru.user_id = new.user_id and ru.active;
     if found then
-      -- structural kind check only (never amounts or currencies: transfer legs, invest and debt rows differ per kind)
-      if (r.kind = 'txn' and new.type not in ('income', 'expense')) or (r.kind = 'transfer' and new.type <> 'transfer') then
-        raise exception 'household_guard:recurring_kind' using errcode = '42501';
-      end if;
-      -- bound: a due, not-yet-made occurrence (the rule's next_date is advanced in the same save, after these rows)
-      if new.occurred_at < r.next_date or new.occurred_at > current_date then
+      -- bound: a due, not-yet-made occurrence. current_date is the database's UTC day while the app runs on the user's local day
+      -- (UTC+7 in Indonesia), so one day of slack is allowed (S3).
+      if new.occurred_at < r.next_date or new.occurred_at > current_date + 1 then
         raise exception 'household_guard:recurring_date' using errcode = '42501';
       end if;
       new.created_by := coalesce(r.created_by, new.created_by);

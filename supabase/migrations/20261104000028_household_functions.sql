@@ -103,8 +103,8 @@ begin
   perform public.household_touch(auth.uid());
 end $$;
 
--- shared by remove_member (owner) and leave_household (member): the name stays on past entries, the person keeps a login with no
--- ledger (status former_member) and their sessions end
+-- shared by remove_member (owner) and leave_household (member): the name stays on past entries and the person keeps a login with no
+-- ledger. Access ends because the status 'former_member' makes household_owner() NULL (their sessions are not deleted)
 create or replace function public.household_detach(p_owner uuid, p_member uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
@@ -151,11 +151,14 @@ begin
      or exists (select 1 from public.household_members m join auth.users u on u.id = m.member_id where lower(u.email) = v_email) then
     return jsonb_build_object('result', 'cannot_invite');
   end if;
-  if exists (select 1 from public.household_invites i where i.owner_id = p_owner and i.email = v_email and i.status = 'pending') then
+  -- expired-but-unswept invites must not block or count (M2): mark this owner's stale rows expired first (the login clean-up runs in the sweeper)
+  update public.household_invites set status = 'expired', token_hash = null
+   where owner_id = p_owner and status = 'pending' and expires_at <= now();
+  if exists (select 1 from public.household_invites i where i.owner_id = p_owner and i.email = v_email and i.status = 'pending' and i.expires_at > now()) then
     return jsonb_build_object('result', 'already_invited');
   end if;
   if (select count(*) from public.household_members where owner_id = p_owner)
-   + (select count(*) from public.household_invites where owner_id = p_owner and status = 'pending') >= 4 then
+   + (select count(*) from public.household_invites where owner_id = p_owner and status = 'pending' and expires_at > now()) >= 4 then
     return jsonb_build_object('result', 'full');
   end if;
   insert into public.household_invites (owner_id, email, role, invited_by, token_hash, expires_at)
@@ -186,7 +189,9 @@ language sql stable security definer set search_path = '' as $$
      and not exists (select 1 from public.investment_accounts where user_id = p_user)
      and not exists (select 1 from public.occasions where user_id = p_user)
      and not exists (select 1 from public.recurring_rules where user_id = p_user)
-     and not exists (select 1 from public.household_invites i where i.invited_user_id = p_user and i.status = 'pending')
+     and not exists (select 1 from public.manual_prices where user_id = p_user)
+     and not exists (select 1 from public.support_reports where user_id = p_user)
+     and not exists (select 1 from public.household_invites i where i.invited_user_id = p_user and i.status = 'pending' and i.expires_at > now())
 $$;
 
 -- revoke: clears the token; returns the invited user id and whether that login may be deleted (the Edge Function deletes it)
@@ -229,6 +234,8 @@ begin
     when u.id is null then 'missing_user'
     when lower(u.email) is distinct from i.email then 'email_changed'
     when coalesce(u.email_change, '') <> '' then 'pending_email_change'
+    when coalesce(u.phone, '') <> '' then 'phone'
+    when coalesce(u.phone_change, '') <> '' then 'phone_change'
     when exists (select 1 from auth.identities x where x.user_id = p_user and x.provider <> 'email') then 'extra_identity'
     when exists (select 1 from auth.mfa_factors f where f.user_id = p_user) then 'mfa_factor'
     when (select pr.household_status from public.profiles pr where pr.id = p_user) is distinct from 'invited' then 'not_invited'
@@ -257,12 +264,19 @@ language sql stable security definer set search_path = '' as $$
      and not exists (select 1 from public.investment_accounts where user_id = p_user)
      and not exists (select 1 from public.occasions where user_id = p_user)
      and not exists (select 1 from public.recurring_rules where user_id = p_user)
+     and not exists (select 1 from public.manual_prices where user_id = p_user)
+     and not exists (select 1 from public.support_reports where user_id = p_user)
 $$;
 
--- 5. an owner deletes their account: the members become former members first (they then see the no-access page) ---------------
+-- 5. a login is deleted: an owner's members become former members first (they then see the no-access page); a deleted member leaves their name ---
 create or replace function public.household_owner_deleting() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
+  -- a member whose login is deleted keeps their name on past entries (M4)
+  insert into public.household_former_members (owner_id, member_id, display_name)
+  select m.owner_id, m.member_id, p.display_name from public.household_members m join public.profiles p on p.id = m.member_id
+   where m.member_id = old.id
+  on conflict (owner_id, member_id) do nothing;
   insert into public.household_former_members (owner_id, member_id, display_name)
   select m.owner_id, m.member_id, p.display_name from public.household_members m join public.profiles p on p.id = m.member_id
    where m.owner_id = old.id
@@ -271,6 +285,10 @@ begin
   return old;
 end $$;
 create trigger household_owner_deleting before delete on auth.users for each row execute function public.household_owner_deleting();
+
+-- Scheduling: household_expire_invites() is run by a scheduled Edge Function (`invite-sweep`, daily, deletes the logins it returns through
+-- the admin API); until it exists stale invites are also swept lazily by create_invite. household_people() returns full display names:
+-- the client shows first names only (PRD decision).
 
 -- 6. privileges ------------------------------------------------------------------------------------------------------------------
 revoke execute on function public.household_profile(), public.household_people(), public.household_touch(uuid), public.set_member_role(uuid, text),

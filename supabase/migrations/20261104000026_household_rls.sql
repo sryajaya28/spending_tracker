@@ -3,6 +3,10 @@
 -- initplan (never per row). Members work on the owner's rows through the same policies. Down script:
 -- supabase/migrations_down/20261104000026_household_rls.down.sql
 
+-- Cost note: household_owner() is a security definer function; as `(select household_owner())` it is evaluated once per query (initplan). As a column
+-- default it runs once per inserted row: for an owner it is one profiles primary-key lookup. Service-role inserts must send user_id.
+-- support_reports is deliberately person-scoped (a support request belongs to the person who sent it) and is not changed here.
+
 -- 1. every policy on the 12 data tables is replaced (found by loop, not by name: recurring_rules has four of its own) -----
 do $$
 declare t text; pol record;
@@ -59,6 +63,13 @@ create policy holding_events_delete on public.holding_events for delete to authe
                              where t.holding_event_id = holding_events.id and t.user_id = holding_events.user_id
                                and t.created_by is distinct from (select auth.uid()))));
 
+-- an Editor cannot attach a new debt payment record to the owner's (or anyone else's) transaction
+drop policy debt_payments_insert on public.debt_payments;
+create policy debt_payments_insert on public.debt_payments for insert to authenticated
+  with check (user_id = (select public.household_owner()) and (select public.is_writer())
+         and ((select public.household_owner()) = (select auth.uid()) or transaction_id is null
+              or exists (select 1 from public.transactions t
+                         where t.id = debt_payments.transaction_id and t.user_id = debt_payments.user_id and t.created_by = (select auth.uid()))));
 drop policy debt_payments_update on public.debt_payments;
 drop policy debt_payments_delete on public.debt_payments;
 create policy debt_payments_update on public.debt_payments for update to authenticated

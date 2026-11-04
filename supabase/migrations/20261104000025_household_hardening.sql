@@ -29,3 +29,26 @@ create trigger household_members_guard before insert on public.household_members
 -- 3. why recurring_rule_id has no foreign key (M4)
 comment on column public.transactions.recurring_rule_id is
   'Set by the client on rows a repeating rule generates; used by the BEFORE INSERT trigger to attribute the row to the rule creator. Deliberately NO foreign key: ON DELETE SET NULL would let an Editor who deletes a rule alter other people''s transactions (an RLS bypass). A dangling id is harmless; the trigger tolerates a missing rule.';
+
+-- 4. household_status transitions (defence in depth, Opus 10): an owner cannot stop being an owner while members exist, and only an
+--    'invited' profile can become 'member'
+create or replace function public.household_status_guard() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  if new.household_status is distinct from old.household_status then
+    if old.household_status = 'owner' and exists (select 1 from public.household_members m where m.owner_id = old.id) then
+      raise exception 'an owner with members cannot change status' using errcode = '23514';
+    end if;
+    if new.household_status = 'member' and old.household_status <> 'invited' then
+      raise exception 'only an invited profile can become a member' using errcode = '23514';
+    end if;
+  end if;
+  return new;
+end $$;
+revoke execute on function public.household_status_guard() from public, anon, authenticated;
+create trigger household_status_guard before update of household_status on public.profiles
+  for each row execute function public.household_status_guard();
+
+-- 5. indexes the delete guards use (Opus 13)
+create index if not exists holdings_account_idx on public.holdings (account_id);
+create index if not exists holding_events_holding_idx on public.holding_events (holding_id);

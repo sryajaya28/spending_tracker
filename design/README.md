@@ -11,7 +11,7 @@ point for a Figma design system: import it, turn the components into Figma compo
 | `tokens/stiver.tokens.json` | Design tokens in the W3C design-token format: colours (light and dark themes with the same names, category and asset colours), font family and weights, type scale, radius, spacing, sizes, shadows. |
 | `components/<group>/` | One file per component, light and `-dark` versions: **buttons**, **text** (type scale, badges), **banners**, **graphs**, **popups** (dialog, toast, tooltip), **form-fields**, **date-picker**, **dropdown**, **filters**, **navigation**, **cards**, **rows**. |
 | `screens/mobile-light/`, `screens/mobile-dark/` | Every page (full height, 390 px wide) and every dialog (the dialog card itself). |
-| `screens/desktop-light/` | The main pages at 1280 px wide. |
+| `screens/desktop-light/`, `screens/desktop-dark/` | The main pages at 1280 px wide (light and dark). |
 
 Each design comes as **`.svg`** (import this into Figma: real text layers and vector shapes) and **`.png`** (a quick
 preview; for dialogs the PNG shows the dialog on its page).
@@ -56,6 +56,6 @@ python3 tools/dev_server.py 5180 &
 node tools/design/export.js
 ```
 
-`node tools/design/export.js overview` regenerates only the files whose name contains "overview". To add a screen or
+`node tools/design/export.js overview` regenerates only the files whose name contains "overview". `DESIGN_MODE=desktop-dark node tools/design/export.js` regenerates only one screen set (`mobile-light`, `mobile-dark`, `desktop-light`, `desktop-dark`) and skips the components. To add a screen or
 component, add a line to `SCREENS` or `COMPONENTS` in `tools/design/export.js`. The exporter uses the app with the e2e fake
 backend and the built-in sample data (nothing touches real data) and `tools/design/vendor/dom-to-svg.js` (MIT).

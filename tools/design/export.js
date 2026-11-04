@@ -210,7 +210,7 @@ function tokens() {
 }
 
 (async () => {
-  for (const d of ['screens/mobile-light', 'screens/mobile-dark', 'screens/desktop-light', 'components', 'tokens']) fs.mkdirSync(path.join(OUT, d), { recursive: true });
+  for (const d of ['screens/mobile-light', 'screens/mobile-dark', 'screens/desktop-light', 'screens/desktop-dark', 'components', 'tokens']) fs.mkdirSync(path.join(OUT, d), { recursive: true });
   fs.writeFileSync(path.join(OUT, 'tokens/stiver.tokens.json'), JSON.stringify(tokens(), null, 2) + '\n');
   const browser = await chromium.launch();
   const open = async (width, height, theme, ua) => {
@@ -234,11 +234,11 @@ function tokens() {
     const svg = await p.evaluate(async (full) => { const doc = full ? domToSvg.documentToSVG(document) : domToSvg.elementToSVG(document.querySelector('dialog[open]')); await domToSvg.inlineResources(doc.documentElement); return new XMLSerializer().serializeToString(doc); }, fullPage);
     fs.writeFileSync(file + '.svg', svg);
   };
-  const modes = [['mobile-light', 390, 844, 'light'], ['mobile-dark', 390, 844, 'dark'], ['desktop-light', 1280, 860, 'light']];
+  const modes = [['mobile-light', 390, 844, 'light'], ['mobile-dark', 390, 844, 'dark'], ['desktop-light', 1280, 860, 'light'], ['desktop-dark', 1280, 860, 'dark']].filter(([m]) => !process.env.DESIGN_MODE || m === process.env.DESIGN_MODE);
   for (const [mode, w, h, theme] of modes) {
     for (const [name, kind, setup, after] of SCREENS) {
       if (only && !name.includes(only)) continue;
-      if (mode === 'desktop-light' && !DESKTOP_PAGES.has(name)) continue;
+      if (mode.startsWith('desktop') && !DESKTOP_PAGES.has(name)) continue;
       const { ctx, p } = await open(w, h, theme);
       try {
         if (kind !== 'auth') await signIn(p);
@@ -249,7 +249,7 @@ function tokens() {
       await ctx.close();
     }
   }
-  for (const c of COMPONENTS) {
+  for (const c of (process.env.DESIGN_MODE ? [] : COMPONENTS)) {
     const id = c.group + '/' + c.name; if (only && !id.includes(only)) continue;
     fs.mkdirSync(path.join(OUT, 'components', c.group), { recursive: true });
     for (const theme of ['light', 'dark']) {

@@ -21,6 +21,11 @@ Nothing moves to the next stage without the owner's explicit approval. "Approved
 feature branch ──(owner approves)──▶ staging ──(owner asks for regression, then approves summary)──▶ production ──▶ smoke test
 ```
 
+## 0. Design first (UI changes)
+
+For any change the user can see, the assistant **creates the design in Figma first**, sends the owner the Figma link and a screenshot,
+and **does not build until the owner approves the design**. Design feedback is applied in Figma, then the build follows the approved design.
+
 ## 1. Local first
 
 1. Every piece of work starts on its own branch (`feature/<short-name>`), never directly on `staging` or `main`.

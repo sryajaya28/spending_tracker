@@ -2,7 +2,7 @@
 
 Full workflow with diagram and message formats: `docs/WORKFLOW.md`. Developer 1 builds; Developer 2 reviews, integrates and maintains the workflow.
 
-Owner (human): sets the brief, approves **three gates** (PRD, design, release). Everything between the gates is agent to agent.
+Owner (human): talks **only to the PM**; sets the brief, approves **three gates** (PRD, design, release) through the PM. Everything between the gates is agent to agent. The PM is the owner's gateway: decisions, Figma links, staging/production updates and approval requests all reach the owner as one digest from the PM (`docs/roles/pm.md`).
 
 ```
 Owner brief -> PM: PRD + acceptance checks          [gate 1: owner approves PRD]

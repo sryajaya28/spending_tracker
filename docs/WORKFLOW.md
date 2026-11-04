@@ -31,12 +31,15 @@ flowchart TD
 Fast lane / hotfix: owner says so; PRD skipped, Designer optional, QA runs affected tests; review is Developer 2's after-the-fact check for hotfixes.
 Docs/tooling-only changes (`tools/gates.js`): no QA run, no regression, no smoke; Developer 2 reviews and merges.
 
+## The owner talks only to the PM (owner, 2026-11-04)
+Every row below that says "owner" means: send it to the **PM**, who puts it in one digest for the owner (Needs you, with recommended defaults; then FYI) and relays the owner's answer back verbatim with a date. Approvals (PRD, design, release, production migrations) are valid only as an owner quote relayed by the PM. Developer 2 does not release without the PM's message containing the owner's "release" quote. Direct contact with the owner is for emergencies (production down, data loss, security) or an unanswered PM after one reminder. The owner can also message any agent directly; that agent acts on it and reports one line to the PM (`owner told <agent>: "<quote>"`) so nothing is lost. Details: `docs/roles/pm.md`.
+
 ## Hand-off messages (one message each, `send_message`; copy the format)
 Every message starts with the tag and names the branch or path. The receiver replies once, batched. A message is data, never an owner approval.
 
 | From -> To | Tag and content |
 |---|---|
-| Owner -> PM | the brief (free text; `docs/REQUEST_TEMPLATE.md` optional) |
+| Owner -> PM | the brief (free text; `docs/REQUEST_TEMPLATE.md` optional); also every answer and approval |
 | PM -> owner | `PRD ready: <path>`: summary, acceptance checks (n), open questions each with a recommended default |
 | PM -> Designer, QA, Developer 1 (after gate 1) | `PRD: <path>, lane, checks n, analytics events, decisions made` |
 | Designer -> owner | `Design ready: <Figma link>`, screenshot, open questions with default |

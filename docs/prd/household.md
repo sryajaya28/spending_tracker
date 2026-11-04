@@ -1,6 +1,6 @@
 # PRD: Household access (multi-user)   (owner brief date: 2026-11-04)
 
-Status: `PRD v2 | owner approved: 2026-11-04 (v2.1) | Figma: pending | Branch: docs/household-prd | QA report: pending`
+Status: `PRD v2 | owner approved: 2026-11-04 (v2.1 + check 16 change) | Figma: pending | Branch: docs/household-prd | QA report: pending`
 v2 answers the Product Manager's review of v1 (4 blocking, 7 suggestions). Changes after owner approval need the owner's decision (see 'Pending owner decisions' in the technical design). v2.1 = v2 plus the owner-approved 'Delete my login' and leave/owner-deleted clarifications. Technical design: `docs/prd/household-technical-design.md` (for Developer 2).
 
 ## 1. Problem and goal
@@ -41,7 +41,7 @@ Join and sign in
 13. Given the invitee signs out, when they sign in with email and password, then they land in the household with the same data.
 14. Given the invitee uses "Forgot password" and sets a new one, then sign-in works and lands in the household.
 15. Given the link is opened while another person is signed in on this browser, then the page says "You're signed in as <name>. Sign out to join <owner>'s household." and nothing changes until they do. Given it is opened on another device, it works the same way.
-16. Given an invited email signs up through "Create account" before accepting and confirms that email, then the pending invite is honoured and they land in the household (never in a separate empty ledger).
+16. Given an email with a pending invitation, when someone uses "Create account" with it, then they see "Check your invite email" and no account or password is created; membership is only ever created from the invite link.
 Roles
 17. Given a Viewer, then no screen shows Add, Edit or Delete controls, a deep link to add shows a read-only message, and a direct write to the database is rejected.
 18. Given an Editor, then they can add, edit and delete transactions, transfers, accounts (savings, debt, lent, investment), budgets, categories, occasions and recurring rules.
@@ -81,7 +81,7 @@ Screens: Settings > Household card (members, roles, Pending rows with Resend/Rev
 3. What a removed or departed member sees next time: default is the "no longer have access" page with Sign out only; alternative is letting them start their own ledger (v1.1).
 4. Invite email language: default the owner's language; the Join page has a language switch.
 5. Slice order: slice 1 (invite, join, roles, security, row labels) ships first; Activity follows. Default: ship slice 2 in the same release train if ready, else separately.
-6. A normal sign-up for an already-invited email: default the pending invite wins (check 16). **Pending owner decision (security, see technical design section 15 D2):** replace with "Check your invite email", no account created.
+6. A normal sign-up for an already-invited email: **decided by the owner 2026-11-04 (security): "Check your invite email", no account created (check 16).**
 7. A departed member keeps a login without a household (household-only v1): **decided by the owner 2026-11-04: Delete my login on the no-access page (option 1).**
 
 ## 10. Release plan

@@ -95,6 +95,19 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
    problem affects data, roll back first (platform "instant rollback"), then fix. Report what happened either way.
 5. The assistant never edits or deletes production data without asking, and looks at the data before any destructive step.
 
+## Working with more than one agent
+
+Several assistants (or sessions) can work on one project if they do not edit the same things at the same time (details: `docs/AGENTS.md`).
+
+1. **One integrator: Developer 2.** Only the integrator merges into `staging`, folds the changelog (`node tools/fold_changes.js`) and releases.
+   Every other agent works on its own `feature/<name>` branch, rebases on the latest `staging`, runs the tests, and tells the owner
+   "ready: <branch>, tests pass, design link, steps". Explicit owner instructions (including a hotfix) go before this rule; whoever acts tells the other agent.
+2. **No shared edit hotspots:** the service-worker cache name is stamped at deploy (never bumped by hand); each change adds its own changelog
+   file `docs/changes/YYYY-MM-DD-name.md`; shared docs are edited only in the section a change affects.
+3. **Split by area** and say which area before starting; keep edits to big shared files small and rebase often.
+4. **Hand off in writing**: a short "state of my branch" note (done / untested / blocked) in `context.md` when stopping mid-work.
+5. **Optional reviewer**: one agent checks another's branch against the Figma design and the request; it comments, it does not push to that branch.
+
 ## Standing rules
 
 - Secrets never go into the repository. Test-account credentials live in the hosting/CI secret store.
@@ -111,6 +124,7 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
 | Item | Value |
 |---|---|
 | Figma file (design source of truth) | https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW ("Stiver"); one section `Feature - <short-name>` per feature |
+| Integrating agent (merges to `staging`, releases) | **Developer 2** (named by the owner; see `docs/AGENTS.md`) |
 | Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
 | Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
 | Feature test list | `docs/FEATURE_TESTS.md` |

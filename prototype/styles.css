@@ -965,3 +965,13 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .holding-row .amt.amt-mid { align-self: center; padding-top: 0; }
 [data-fee-box][hidden] { display: none !important; }   /* the fee box only exists for a bank account */
 .field[hidden] { display: none !important; }   /* a field hidden on purpose (the received amount when both ends share a currency, the repeat choice for a Cash balance) must really be hidden: .field's display beats the hidden attribute */
+/* sign-up agreement and the show / hide password button */
+.consent { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--muted); line-height: 1.4; cursor: pointer; }
+.consent input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--brand); }
+.consent a, .consent-note a { color: var(--brand); text-decoration: underline; }
+.consent-note { font-size: 12px; text-align: center; margin: -4px 0 0; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { padding-right: 46px; }
+.pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; display: grid; place-items: center; background: none; border: 0; color: var(--muted); cursor: pointer; border-radius: 10px; }
+.pw-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

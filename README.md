@@ -11,7 +11,7 @@ See `context.md` for the full project context (architecture, services, decisions
 - **Landing page and accounts:** one-page landing with a demo video; sign up with email (confirmation link) or Google.
 - **USDT/USDC:** receive income into, or pay expenses from, a stablecoin in your investment account.
 - **Indonesian stocks and commodities:** IDX tickers (BBCA, BBRI...) plus gold, silver and oil, priced live from Yahoo Finance (unofficial source).
-- **Recurring:** repeat an expense, income, transfer or investment buy every week or month (added when you open the app).
+- **Recurring:** repeat an expense, income, transfer, investment buy or debt payment (Record payment or Edit debt) every week or month (added when you open the app); debt cards show the recurring payment and the months or weeks left.
 - **Transactions:** a daily summary (one row per day); click a day for its detailed transactions. Expenses and income with categories and sub-categories, multi-currency wallets, AI-style auto-tagging
   that stays uncategorized when unsure, and categories you can add right from the transaction form.
 - **Budgets:** overall and per-category monthly budgets (ok / warning / exceeded) and **special occasions** (a one-off
@@ -70,8 +70,8 @@ scenarios live in `regression_scenario.md`: add or edit the relevant ones whenev
 ## Design files (Figma)
 
 `design/` holds a Figma-importable copy of the UI: every screen and dialog, the components by group, and the design tokens.
-It is generated from the app by `node tools/design/export.js` (dev server running); regenerate and commit it after UI changes.
-See `design/README.md` for how to import it into Figma and build the design system.
+It is a frozen snapshot: the exporter (`tools/design/export.js`) was deleted and the design is now maintained only in Figma
+(https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW/Stiver), see `docs/DEV_WORKFLOW.md` section 0.
 
 The iPhone launch images (`prototype/splash/`) are made from the splash by `node tools/design/startup_images.js`; rerun it when the logo or splash colours change.
 

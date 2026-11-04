@@ -119,8 +119,17 @@ Automated: `transfer`.
 | RC-06 | Open the app on two devices | Entries are not doubled (ids derive from rule + date). |
 | RC-07 | Recurring in USDT/USDC | Created from the coin; skipped if the coin balance is too low. |
 | RC-08 | Entries appear only when the app is opened or refocused | Documented limitation (no server job). |
+| RC-09 | Portfolio > Debt > a debt > + Payment: Repeat = Every month, Paid from an account | The payment is recorded now (balance down once, one Debt Payment expense); **Settings > Recurring** lists the debt (bank icon, name, `−amount`, account, Every month, next date); the next payment is one month later. |
+| RC-10 | Same with "No account, just record the payment" and Every week | Settings shows the rule with "No account"; when it falls due only the debt's payment is added (no expense). Manage lets you change the account (or none) and the amount; pause/resume/delete work as for any rule. |
+| RC-11 | A repeating debt payment falls due after the debt is paid off or archived | Nothing is added. Running twice on the same day never pays twice. |
+| RC-13 | Portfolio > Debt > Edit on a debt, phone width (390 px) | The Interest rate and Interest type boxes are level at the bottom even though the Interest rate label takes two lines; other two-column rows (Type/Currency, Amount owed/Monthly payment) look unchanged. (`debtrec`) |
+| RC-14 | Portfolio > Debt > Edit: Repeat payment = Does not repeat | The Monthly/Weekly payment, Next payment, Paid from and Installments remaining fields are hidden; saving removes the debt's recurring rule (Settings > Recurring loses it; payments already made stay). A debt that had a monthly payment typed earlier (no rule) opens as Does not repeat and keeps that payment. (`debtedit`) |
+| RC-15 | Edit debt: Repeat payment = Every month | Fields: "Monthly payment" (prefilled), Next payment (default one month from today, from today on only), Paid from (accounts in the debt's currency, or No account) and "Installments remaining (Monthly)" (no "(optional)"); amount owed, payment and installments still work out each other. Save creates/updates the rule listed under Settings > Recurring and the card shows the payment and months left. (`debtedit`, `debtcalc`) |
+| RC-16 | Edit debt: switch to Every week | The labels become "Weekly payment" and "Installments remaining (Weekly)"; installments count weeks (weekly rate when there is interest); next payment defaults to one week from today; the card shows "every week" and "N weeks left"; the old monthly payment is left alone. (`debtedit`) |
+| RC-17 | Edit debt: a repeat with no amount, or a past Next payment | Refused with a message, the pop-up stays open, nothing changes. Add debt has the same Repeat payment block (default Does not repeat). (`debtedit`) |
+| RC-12 | Debt card (Portfolio > Debt) | **No percentage and no progress bar.** The card shows the recurring payment amount with "every month"/"every week" and "N months/weeks left" (from the balance, the amount and the interest rate); with no recurring payment it falls back to the monthly payment typed on the debt, else shows nothing; a paused rule is ignored; a paid-off debt shows no time left. Money lent keeps its "% repaid" bar. |
 
-Automated: `recurring`.
+Automated: `recurring`, `debtrec` (RC-09 to RC-13), `debtedit` (RC-14 to RC-17), `debtcalc`, `repay`.
 
 ## 7. USDT / USDC as an account (income and expenses)
 
@@ -370,6 +379,8 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 | `daily` | collapsible days: expand one, expand all, hide all, search opens matches, edit inside; upcoming hidden from the list and shown in the See upcoming pop-up; same-day entries latest first (also after reload) |
 | `fees` | Fee category, investment fee on buy/sell, fee rows |
 | `invest` | buy/sell rows, profit/loss records, Buy/Sell switch, ticker in the box |
+| `debtedit` | Edit/Add debt: Repeat payment block (hidden fields, Monthly/Weekly labels, rule create/edit/remove, validation) |
+| `debtrec` | repeating debt payments (Record payment > Repeat, Settings > Recurring, automatic payments, weekly/monthly months-left text, no percentage on debt cards) |
 | `repay` | loan payment from an account: expense, Debt Payment, one record, edit/delete sync |
 | `balancecheck` | expense cannot exceed the account balance (and the exceptions) |
 | `onboarding` | first-run Overview, default categories (new vs existing account), category from Add budget, setup strip |
@@ -408,6 +419,8 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-04: RC-14..RC-17 (Edit debt: Repeat payment block).
+- 2026-11-04: RC-09..RC-12 (repeating debt payments; simple debt cards without percentages).
 - 2026-11-04: Loan/paylater account filter signs and day total (spending is always minus).
 - 2026-11-04: Section 15 intro: new features must ship with tracking (`docs/ANALYTICS.md`).
 - 2026-11-04: AN-08 (named business events: expense_recorded, add_category, ...).

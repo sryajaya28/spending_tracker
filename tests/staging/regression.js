@@ -22,7 +22,8 @@ let bad = 0; const check = (name, cond, extra) => { console.log((cond ? 'PASS  '
   if (phase === 'create') {
     // 1. debts through the form: a Bank Loan (flat interest, installments worked out) and a Paylater
     for (const d of [['SMOKE Bank Loan', 'bank', '12000000', '12', '12'], ['SMOKE Paylater', 'paylater', '3000000', '6', '0']]) {
-      await p.evaluate(() => { state.ui.onbSkipped = true; loanDialog(null); }); await p.waitForSelector('#dlg [name=left]');
+      await p.evaluate(() => { state.ui.onbSkipped = true; loanDialog(null); }); await p.waitForSelector('#dlg [name=repeat]');
+      await p.selectOption('#dlg select[name=repeat]', 'monthly'); await p.selectOption('#dlg select[name=account]', ''); await p.waitForSelector('#dlg [name=left]');
       await p.fill('#dlg [name=name]', d[0]); await p.selectOption('#dlg [name=type]', d[1]); if (d[1] === 'bank') await p.selectOption('#dlg [name=flat]', '1'); await p.fill('#dlg [name=amount]', d[2]); await p.fill('#dlg [name=left]', d[3]); await p.fill('#dlg [name=rate]', d[4]);
       await p.click('#dlg button[type=submit]'); await settle();
     }
@@ -78,17 +79,35 @@ let bad = 0; const check = (name, cond, extra) => { console.log((cond ? 'PASS  '
     check('transfer rows: out leg tied to the Cash event, in leg tied, bank fee in Fee, Cash fee without a wallet', cx.legs.some((l) => l.type === 'transfer' && l.flow === 'out' && l.wallet && l.tied && l.minor === 6000000) && cx.legs.some((l) => l.type === 'transfer' && l.flow === 'in' && l.wallet && l.tied && l.minor === 1000000) && cx.legs.some((l) => l.type === 'expense' && l.wallet && l.minor === 3000 && l.cat === 'Fee') && cx.legs.some((l) => l.type === 'expense' && !l.wallet && l.minor === 1500 && l.cat === 'Fee'), cx.legs);
     await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio/pnl-all'; render(); }); await p.waitForTimeout(700);
     check('Realized P&L page opens with All time', /SMOKE|BTC|Rp/.test(await p.innerText('.main')) && !/\bNaN\b|undefined/.test(await p.innerText('.main')), null);
+    // 4. repeating debt payment (Edit debt > Repeat payment): saved in recurring_rules, paid by itself when due, once
+    const rules0 = await p.evaluate(() => (D().recurring || []).filter((r) => r.spec && r.spec.debt && D().loans.find((l) => l.id === r.spec.debt && /^SMOKE/.test(l.name))).length);
+    check('the two debts made through the form each have a monthly repeating payment after the reload', rules0 === 2, rules0);
+    await p.evaluate(() => { state.ui.pfTab = 'loan'; loanDialog(D().loans.find((l) => l.name === 'SMOKE Paylater')); }); await p.waitForSelector('#dlg select[name=repeat]');
+    check('the form opens with the saved repeat (Every month)', (await p.inputValue('#dlg select[name=repeat]')) === 'monthly', null);
+    await p.selectOption('#dlg select[name=repeat]', 'weekly'); await p.fill('#dlg [name=monthly]', '500000'); await p.selectOption('#dlg select[name=account]', '');
+    check('weekly shows "Weekly payment" and "Installments remaining (Weekly)"', /Weekly payment/.test(await p.innerText('#dlg [data-lbl-pay]')) && /Installments remaining \(Weekly\)/.test(await p.innerText('#dlg [data-lbl-left]')), null);
+    await p.click('#dlg button[type=submit]'); await settle(); await reload();
+    const rr = await p.evaluate(() => { const l = D().loans.find((x) => x.name === 'SMOKE Paylater'), r = (D().recurring || []).find((x) => x.spec && x.spec.debt === l.id); return r ? { freq: r.freq, amount: r.spec.amount_minor, wallet: r.spec.wallet_id, active: r.active, n: (D().recurring || []).filter((x) => x.spec && x.spec.debt === l.id).length } : null; });
+    check('the weekly repeating payment (500,000, no account) survived the reload; still one rule for the debt', !!rr && rr.freq === 'weekly' && rr.amount === 500000 && rr.wallet === '' && rr.active !== false && rr.n === 1, rr);
+    const before = await p.evaluate(() => { const l = D().loans.find((x) => x.name === 'SMOKE Paylater'), r = D().recurring.find((x) => x.spec && x.spec.debt === l.id), d = new Date(); d.setDate(d.getDate() - 3); r.start = r.next = isoDate(d); return { bal: loanBalance(l), n: l.payments.length }; });
+    const made = await p.evaluate(() => runRecurring()); await settle(); await reload();
+    const after = await p.evaluate(() => { runRecurring(); const l = D().loans.find((x) => x.name === 'SMOKE Paylater'); return { bal: loanBalance(l), n: l.payments.length }; }); await settle();
+    check('the due repeating payment was made once (balance down by 500,000) and survived the reload', made >= 1 && after.n === before.n + 1 && after.bal === before.bal - 500000, { before, after, made });
+    await p.evaluate(() => { state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); }); await p.waitForTimeout(500);
+    const ptxt = (await p.innerText('.main')).replace(/\u00a0/g, ' ').replace(/\s+/g, ' ');
+    check('the debt card shows the weekly payment and the weeks left, and no percentage', /Rp 500\.000 every week/.test(ptxt) && /weeks? left/.test(ptxt) && !/% paid/.test(ptxt), ptxt.slice(0, 260));
   } else {
     await p.evaluate(() => {
       const sw = D().wallets.find((w) => w.name === 'SMOKE bank');
       if (sw) { [...new Set(D().transactions.filter((t) => t.transfer_id && t.wallet_id === sw.id).map((t) => t.transfer_id))].forEach((g) => removeTransferGroup(g)); D().transactions = D().transactions.filter((t) => t.wallet_id !== sw.id); D().wallets = D().wallets.filter((w) => w.id !== sw.id); }
       const acc = D().investments.find((a) => a.name === 'SMOKE broker');
       if (acc) { const btc = D().holdings.find((h) => h.account_id === acc.id && h.symbol === 'BTC'); if (btc) btc.trades.filter((t) => t.side === 'sell').forEach((t) => removeTrade(btc, t)); D().holdings = D().holdings.filter((h) => h.account_id !== acc.id); D().investments = D().investments.filter((a) => a.id !== acc.id); }
+      const smokeLoans = new Set(D().loans.filter((l) => /^SMOKE/.test(l.name)).map((l) => l.id)); D().recurring = (D().recurring || []).filter((r) => !(r.spec && smokeLoans.has(r.spec.debt)));
       D().loans = D().loans.filter((l) => !/^SMOKE/.test(l.name)); save();
     });
     await settle(); await reload();
-    const left = await p.evaluate(() => ({ loans: D().loans.filter((l) => /^SMOKE/.test(l.name)).length, acc: D().investments.filter((a) => a.name === 'SMOKE broker').length, rec: D().transactions.filter((t) => /BTC (loss|profit)|Investment fee/.test(t.note)).length, wal: D().wallets.filter((w) => w.name === 'SMOKE bank').length, xfer: D().transactions.filter((t) => t.transfer_id).length }));
-    check('everything the regression created is gone after a reload', left.loans === 0 && left.acc === 0 && left.rec === 0 && left.wal === 0 && left.xfer === 0, left);
+    const left = await p.evaluate(() => ({ loans: D().loans.filter((l) => /^SMOKE/.test(l.name)).length, acc: D().investments.filter((a) => a.name === 'SMOKE broker').length, rec: D().transactions.filter((t) => /BTC (loss|profit)|Investment fee/.test(t.note)).length, wal: D().wallets.filter((w) => w.name === 'SMOKE bank').length, xfer: D().transactions.filter((t) => t.transfer_id).length, rules: (D().recurring || []).filter((r) => r.spec && r.spec.debt && !D().loans.some((l) => l.id === r.spec.debt)).length }));
+    check('everything the regression created is gone after a reload', left.loans === 0 && left.acc === 0 && left.rec === 0 && left.wal === 0 && left.xfer === 0 && left.rules === 0, left);
   }
   check('no script errors', errs.length === 0, errs.slice(0, 3));
   await b.close(); console.log(bad ? `\nREGRESSION ${phase} FAILED (${bad})` : `\nREGRESSION ${phase} PASSED`); process.exit(bad ? 1 : 0);

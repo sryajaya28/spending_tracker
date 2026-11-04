@@ -7,7 +7,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
-  await p.evaluate(() => { state.ui.onbSkipped = true; loanDialog(null); }); await p.waitForSelector('#dlg [name=left]');
+  await p.evaluate(() => { state.ui.onbSkipped = true; loanDialog(null); }); await p.waitForSelector('#dlg [name=left]', { state: 'attached' });
+  // the payment fields only show once a repeat is chosen
+  assert.equal(await p.isVisible('#dlg [name=monthly]'), false, 'hidden while Does not repeat'); await p.selectOption('#dlg select[name=repeat]', 'monthly'); await p.waitForSelector('#dlg [name=left]');
   const v = () => p.evaluate(() => ['amount', 'monthly', 'left'].map((n) => document.querySelector('#dlg [name=' + n + ']').value));
   // amount + monthly -> installments
   await p.evaluate(() => { document.querySelector('#dlg [name=currency]').value = 'USD'; });
@@ -38,7 +40,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('#dlg button[type=submit]'); await p.waitForTimeout(150);
   assert.deepEqual(await p.evaluate(() => { const l = D().loans.find((x) => x.name === 'Test debt'); return [l.original_minor, l.monthly_minor]; }), [1000000, 250000]);
   await p.evaluate(() => { state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); });
-  assert(/4 payments left/.test(await p.innerText('.main')), 'the card says how many payments are left');
+  assert(/4 months left/.test(await p.innerText('.main')) && !/% paid/.test(await p.innerText('.main')), 'the card says how many months are left and has no percentage');
   // editing an existing debt: installments are filled in, and changing them changes the monthly payment (the balance stays)
   await p.evaluate(() => loanDialog(D().loans.find((x) => x.name === 'Test debt'))); await p.waitForSelector('#dlg [name=left]');
   assert.deepEqual(await v(), ['1000000', '250000', '4']); await p.fill('#dlg [name=left]', '5'); assert.deepEqual(await v(), ['1000000', '200000', '5']);

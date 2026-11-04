@@ -13,12 +13,12 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000d1', 'invited@test.dev'),
   ('00000000-0000-0000-0000-0000000000e1', 'former@test.dev');
 
-update public.profiles set household_status = 'member'        where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000c1');
-update public.profiles set household_status = 'invited'       where id = '00000000-0000-0000-0000-0000000000d1';
+update public.profiles set household_status = 'invited' where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-0000000000d1');
 update public.profiles set household_status = 'former_member' where id = '00000000-0000-0000-0000-0000000000e1';
 insert into public.household_members (owner_id, member_id, role) values
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b1', 'editor'),
   ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000c1', 'viewer');
+update public.profiles set household_status = 'member' where id in ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-0000000000c1');
 insert into auth.sessions (id, user_id) values
   ('00000000-0000-0000-0000-00000000f0a1', '00000000-0000-0000-0000-0000000000a1'),
   ('00000000-0000-0000-0000-00000000f0b1', '00000000-0000-0000-0000-0000000000b1'),

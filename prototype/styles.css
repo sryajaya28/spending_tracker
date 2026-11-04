@@ -214,6 +214,11 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 .tabs { display: inline-flex; background: var(--surface); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
 .tab { border: 0; background: none; border-radius: 999px; padding: 10px 22px; font-weight: 600; color: var(--muted); }
 .tab.on { background: var(--navy); color: #fff; }
+/* the time left until a debt is paid off: a solid tab on the card's top-right corner (same radius as the card) */
+.card.has-tab { position: relative; }
+.loan-tab { position: absolute; top: 0; right: 0; background: var(--brand); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; padding: 8px 14px; border-radius: 0 var(--radius) 0 16px; white-space: nowrap; }
+:root[data-theme="dark"] .loan-tab { background: #5650bd; }
+.card.has-tab .card-head h2 { padding-right: 100px; }
 .loan-meta { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; color: var(--muted); font-size: 13px; }
 .pay-row { display: grid; grid-template-columns: 1fr auto 28px; gap: 10px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .pay-row:last-child { border-bottom: 0; }

@@ -50,7 +50,7 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `delete_transfer` | none | a transfer deleted |
 | `cash_deposited` / `cash_withdrawn` | `has_fee`, `is_cross_currency` | Deposit / Withdraw on an investment Cash balance (Portfolio pop-up) |
 | `trade_recorded` | `side` | buy/sell of an asset |
-| `debt_payment_recorded` | `kind` (loan/lent) | loan payment / lent repayment |
+| `debt_payment_recorded` | `kind` (loan/lent), `is_recurring` | loan payment / lent repayment (`is_recurring` when it was set to repeat) |
 | `add_category` / `add_sub_category` / `update_category` | `type`, `source` (settings/quick_add) | categories |
 | `restore_category` | `type`, `level` (category/sub_category) | an archived category brought back (Settings > Categories > Archived) |
 | `add_account` | `type` | new account |

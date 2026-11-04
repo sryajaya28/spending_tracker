@@ -556,7 +556,6 @@ DICT.id = {
  "No debts. Add a mortgage, car loan or credit card balance to include it in your net worth.": "Tidak ada utang. Tambahkan KPR, kredit kendaraan, atau saldo kartu kredit agar masuk ke kekayaan bersih Anda.",
  "No matches. Try another name or ticker.": "Tidak ada hasil. Coba nama atau kode lain.",
  "No monthly budget": "Belum ada anggaran bulanan",
- "No monthly payments set": "Belum ada cicilan bulanan",
  "No occasion budgets yet. Add one like \"Bali Trip\" or \"Birthday Dinner\".": "Belum ada anggaran acara. Tambahkan, misalnya \"Liburan ke Bali\" atau \"Makan Malam Ulang Tahun\".",
  "No overall budget yet. Add one to cap total monthly spending.": "Belum ada anggaran keseluruhan. Tambahkan untuk membatasi total pengeluaran bulanan.",
  "No spending this month": "Belum ada pengeluaran bulan ini",
@@ -791,7 +790,6 @@ DICT.id = {
  "vs last month": "dibanding bulan lalu",
  "account": "akun",
  "accounts": "akun",
- "{amount} due each month": "{amount} jatuh tempo tiap bulan",
  "{amount} left": "sisa {amount}",
  "{amount} over": "lebih {amount}",
  "{amount} this month": "{amount} bulan ini",
@@ -811,5 +809,14 @@ DICT.id = {
  "{pct}% used": "{pct}% terpakai",
  "— None (AI may suggest) —": "— Tanpa kategori (AI dapat menyarankan) —",
  "🎉 Special occasion (optional)": "🎉 Acara khusus (opsional)",
- "🧪 You're viewing {sample}. Your own data is safe, and changes made here aren't saved.": "🧪 Anda sedang melihat {sample}. Data Anda aman, dan perubahan di sini tidak disimpan."
+ "🧪 You're viewing {sample}. Your own data is safe, and changes made here aren't saved.": "🧪 Anda sedang melihat {sample}. Data Anda aman, dan perubahan di sini tidak disimpan.",
+ "every month": "setiap bulan",
+ "every week": "setiap minggu",
+ "1 month left": "sisa 1 bulan",
+ "{n} months left": "sisa {n} bulan",
+ "1 week left": "sisa 1 minggu",
+ "{n} weeks left": "sisa {n} minggu",
+ "A repeating payment is listed under Recurring in Settings and is made automatically on its date.": "Pembayaran berulang tercantum di Pengaturan > Berulang dan dilakukan otomatis pada tanggalnya.",
+ "Recorded. Added to Recurring in Settings.": "Tercatat. Ditambahkan ke Berulang di Pengaturan.",
+ "No account": "Tanpa akun"
 };

@@ -64,6 +64,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   clicks.forEach((e) => Object.keys(e.properties).filter((k) => !k.startsWith('$')).forEach((k) => assert(ok.has(k), 'unexpected click property ' + k)));
   const mine = all2.map((e) => Object.entries(e.properties).filter(([k]) => !k.startsWith('$') && !['distinct_id', 'token'].includes(k)));
   assert(!JSON.stringify(mine).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/), 'no record ids in any of our own event properties');
+  // a repeating debt payment is tracked with is_recurring (flags only)
+  const lid = await p.evaluate(() => { const l = { id: uid(), name: 'Zzz Debt', type: 'card', currency: 'IDR', original_minor: 500000, monthly_minor: 0, rate: 0, since: monthKey(new Date()), archived: false, payments: [] }; D().loans.push(l); return l.id; });
+  await p.evaluate((i) => paymentDialog(D().loans.find((x) => x.id === i)), lid); await p.waitForSelector('#dlg select[name=repeat]', { state: 'attached' }); await p.fill('#dlg [name=amount]', '10000'); await p.selectOption('#dlg select[name=account]', ''); await p.selectOption('#dlg select[name=repeat]', 'monthly'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  const dp = (await p.evaluate(() => window.__phEvents)).find((e) => e.event === 'debt_payment_recorded'); assert(dp && dp.properties.kind === 'loan' && dp.properties.is_recurring === true, 'debt_payment_recorded with is_recurring: ' + JSON.stringify(dp && dp.properties));
+  assert(!JSON.stringify(await p.evaluate(() => window.__phEvents)).includes('Zzz Debt'), 'the debt name is not sent');
   // the hosting rewrite must match the exact paths the SDK posts to, including the trailing slash (a miss = Vercel 404 = every event lost)
   const rewrites = JSON.parse(fs.readFileSync(__dirname + '/../../vercel.json', 'utf8')).rewrites.filter((r) => r.destination.includes('eu.i.posthog.com'));
   assert(rewrites.length > 0, 'a rewrite to eu.i.posthog.com exists');

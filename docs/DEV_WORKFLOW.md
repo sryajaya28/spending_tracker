@@ -24,7 +24,7 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
 ## 0. Design first (Figma)
 
 Every request that changes a screen, flow or text starts with a design in the project's Figma file, before any code (copy of the shared
-rule in `dev-workflow`; the shared repo wins if they differ). Figma file for Stiver: "Stiver design",
+rule in `dev-workflow`; the shared repo wins if they differ). Figma file for Stiver: "Stiver",
 https://www.figma.com/design/GmKRa3rj8x7WJjANv4ciWS
 
 1. Design the change in the app's real look (reuse components and tokens), including the states that matter (empty, error, dark mode,
@@ -108,7 +108,7 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
 
 | Item | Value |
 |---|---|
-| Figma file (design source of truth) | https://www.figma.com/design/GmKRa3rj8x7WJjANv4ciWS ("Stiver design"); one section `Feature - <short-name>` per feature |
+| Figma file (design source of truth) | https://www.figma.com/design/GmKRa3rj8x7WJjANv4ciWS ("Stiver"); one section `Feature - <short-name>` per feature |
 | Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
 | Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
 | Feature test list | `docs/FEATURE_TESTS.md` |

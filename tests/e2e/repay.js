@@ -66,9 +66,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     const again = loanCycle(l); out.again = [again.paid, again.total, again.balance, loanBalance(l)];
     l.payments.push({ id: 'e', date: d(1), amount_minor: 100000 }); const part = loanCycle(l); out.part = [part.paid, part.total, part.balance, loanBalance(l)];
     l.payments = [{ id: 'a', date: d(20), amount_minor: 400000 }]; const never = loanCycle(l); out.never = [never.paid, never.total, never.balance, loanBalance(l)];   // never paid off: as before
-    l.payments = [{ id: 'a', date: d(20), amount_minor: 400000 }, { id: 'b', date: d(10), amount_minor: 600000 }, { id: 'c', date: d(3), amount_minor: 300000, kind: 'charge', txn_id: null }]; state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); out.card = document.querySelector('.loan-meta span').textContent.replace(/\u00a0/g, ' '); return out; });
+    l.payments = [{ id: 'a', date: d(20), amount_minor: 400000 }, { id: 'b', date: d(10), amount_minor: 600000 }, { id: 'c', date: d(3), amount_minor: 300000, kind: 'charge', txn_id: null }]; state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); out.card = document.querySelector('#app .stack .card').textContent.replace(/\u00a0/g, ' '); return out; });
   assert.deepEqual(cyc.off, [1000000, 1000000, 0, 0], 'paid off'); assert.deepEqual(cyc.again, [0, 300000, 300000, 300000], 'used again: new amount, nothing paid'); assert.deepEqual(cyc.part, [100000, 300000, 200000, 200000], 'part of the new cycle paid'); assert.deepEqual(cyc.never, [400000, 1000000, 600000, 600000], 'never paid off: unchanged');
-  assert(/^0% paid · Rp 0 of Rp 300\.000/.test(cyc.card), 'the card says 0% paid of the new amount: ' + cyc.card);
+  assert(!/% paid/.test(cyc.card) && /Rp 300\.000/.test(cyc.card), 'the debt card has no percentage and shows the new balance: ' + cyc.card);
   // 6. an archived loan is listed under Archived on the Loan tab and Reopen brings it back with its payments
   await p.evaluate(() => { D().loans[0].archived = true; state.ui.pfTab = 'loan'; location.hash = '#/portfolio'; render(); });
   assert.equal(await p.evaluate(() => D().loans.filter((l) => !l.archived).length), 0); await p.click('[data-act=loans-archived]'); await p.waitForSelector('#dlg [data-act=unarchive-loan]'); assert((await p.innerText('#dlg')).includes('Car loan'));

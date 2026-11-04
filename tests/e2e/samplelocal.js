@@ -41,7 +41,7 @@ const EXPECT = {
     assert(sc.fee && sc.transferFee >= 6 && sc.investFee === 2 && sc.buy && sc.sell && sc.legs, cur + ' fees and trades ' + JSON.stringify(sc));
     assert(sc.months >= 12, cur + ' history ' + sc.months); assert.equal(sc.kinds, 'archived,ended,ended,ongoing,undated,upcoming', cur + ' occasion kinds ' + sc.kinds); assert(sc.noBudget === 2 && sc.spansTwo && sc.spentPast && sc.pastN === 3, cur + ' occasions ' + JSON.stringify(sc));
     assert.equal(r.uncategorized, 0, cur + ' every transaction is categorized'); assert(r.minBal >= 0, cur + ' no negative account'); assert(r.total > 0 && r.curr && r.cashOk, cur + ' ' + JSON.stringify([r.total, r.curr, r.cashOk]));
-    assert.equal(r.noCost.length, 0, cur + ' sample holdings carry an average price: ' + r.noCost); assert(r.loans === 3 && r.recurring === 5 && r.budgets === 7, cur);
+    assert.equal(r.noCost.length, 0, cur + ' sample holdings carry an average price: ' + r.noCost); assert(r.loans === 3 && r.recurring === 6 && r.budgets === 7, cur);
     // the pages render with this data
     for (const h of ['#/overview', '#/portfolio', '#/transactions', '#/budgets']) { await p.evaluate((x) => { location.hash = x; }, h); await p.waitForTimeout(120); }
     await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); await p.waitForTimeout(150);

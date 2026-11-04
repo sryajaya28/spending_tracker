@@ -70,6 +70,19 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/portfolio'; }); await p.waitForTimeout(300);
   await p.evaluate(() => Analytics.track('should_not_send')); assert.equal((await evs()).length, before, 'nothing is recorded while the demo is on');
   await p.evaluate(() => setDemo(false));
+  // transfers and investment Cash balances: named events with flags only
+  await p.evaluate(() => { state.ui.onbSkipped = true; const w = D().wallets[0]; w.opening_balance_minor = 900000000; D().customAssets['CASH:' + w.currency] = { symbol: w.currency, name: 'Cash', type: 'cash', cash: w.currency }; const a = { id: uid(), name: 'Zzz Broker', archived: false }; D().investments.push(a); D().holdings.push({ id: 'zc1', account_id: a.id, symbol: 'CASH:' + w.currency, quantity: 0, since: '2026-01', trades: [] }); D().wallets.push({ id: uid(), name: 'Zzz Bank', type: 'bank', currency: w.currency, opening_balance_minor: 0, archived: false, since: '2026-01' }); save(); render(); });
+  await p.evaluate(() => cashDialog(D().holdings.find((h) => h.id === 'zc1'), 'buy')); await p.waitForSelector('form[data-form=cashx]'); await p.fill('#dlg [name=amount]', '777777'); await p.fill('#dlg [name=fee]', '1234'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  await p.evaluate(() => cashDialog(D().holdings.find((h) => h.id === 'zc1'), 'sell')); await p.waitForSelector('form[data-form=cashx]'); await p.fill('#dlg [name=amount]', '100000'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  await p.evaluate(() => transferDialog({ from: 'w:' + D().wallets[0].id, to: 'w:' + D().wallets[1].id })); await p.waitForSelector('form[data-form=transfer]'); await p.fill('#dlg [name=amount]', '55555'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  const gx = await p.evaluate(() => D().transactions.find((t) => t.transfer_id && /Zzz Bank/.test(t.note)).transfer_id); await p.evaluate((g) => transferDialog(null, g), gx); await p.waitForSelector('[data-act=delete-transfer]'); await p.fill('#dlg [name=amount]', '66666'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  await p.evaluate((g) => transferDialog(null, g), gx); await p.waitForSelector('[data-act=delete-transfer]'); await p.click('[data-act=delete-transfer]'); await p.waitForTimeout(300);
+  const tr = await p.evaluate(() => window.__phEvents);
+  assert(tr.some((e) => e.event === 'cash_deposited' && e.properties.has_fee === true && e.properties.is_cross_currency === false), 'cash_deposited with has_fee');
+  assert(tr.some((e) => e.event === 'cash_withdrawn' && e.properties.has_fee === false), 'cash_withdrawn');
+  assert(tr.some((e) => e.event === 'transfer_recorded' && e.properties.involves_investment_cash === false), 'transfer_recorded'); assert(tr.some((e) => e.event === 'transfer_edited'), 'transfer_edited'); assert(tr.some((e) => e.event === 'delete_transfer'), 'delete_transfer');
+  assert(tr.some((e) => e.event === 'dialog_opened' && e.properties.form === 'cashx'), 'the Cash pop-up is tracked as a dialog');
+  assert(!JSON.stringify(tr).match(/777777|1234\b|55555|66666|Zzz Broker|Zzz Bank/), 'no amounts or names from transfers leaked');
   // sign-out resets the person
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-act=signout]');
   await p.click('[data-act=signout]'); await p.waitForSelector('.land'); await p.waitForTimeout(400);

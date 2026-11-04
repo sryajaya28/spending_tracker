@@ -469,3 +469,11 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Portfolio tab order: Savings, Debt, Investment, Lent.
 - Preview/staging copies: show the "Staging · test data" label and use the staging database; stiver.io shows no label and uses production. A new production address must be listed in config.js PRODUCTION_HOSTS.
 - Landing page: the demo video plays and matches the current app (Debt tab, Realized P&L); re-record with record_demo_tour.js + encode_demo.sh after big UI changes.
+
+### Investment Cash as a transfer end
+- Portfolio > Investment > a Cash balance > Deposit: the **previous pop-up** opens (Deposit/Withdraw switch, account, amount, fee, date; no quantity box). The fee is taken from the bank account on top. After saving the list shows "Transfer to <account> (Cash)"; the bank is down by amount + fee and the Cash balance is up by the amount. (tests/e2e/cashxfer.js)
+- Withdraw: the Cash balance is **From**; the fee comes out of the Cash balance (a Fee expense under the investment account's name); the list shows "Transfer from <account> (Cash)".
+- Tap the transfer row: an editable form (amount, fee, date, note, From/To) with Delete; Save changes balances; a refused edit (not enough balance, or the Cash was already spent) changes nothing.
+- Two Cash balances can never be chosen together. A Cash transfer has no Repeat choice.
+- Old cash deposits/withdrawals ("Bought ... IDR · Buy Invest") show as transfers after the next load.
+- Analytics for transfers: `cash_deposited` / `cash_withdrawn` (Cash pop-up), `transfer_recorded` / `transfer_edited` (flag `involves_investment_cash`), `delete_transfer`; no amounts or account names are sent (tests/e2e/analytics.js).

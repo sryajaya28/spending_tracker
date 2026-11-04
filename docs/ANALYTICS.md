@@ -46,7 +46,9 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `demo_on` / `demo_off` | none | sample data switched |
 | `expense_recorded` / `income_recorded` | `type`, `payment_source` (account/stablecoin/debt), `has_category`, `has_occasion`, `is_recurring` | a transaction is added |
 | `update_transaction` / `delete_transaction` | same / `type` | edit / delete |
-| `transfer_recorded` | `has_fee`, `is_recurring` | transfer between accounts |
+| `transfer_recorded` / `transfer_edited` | `has_fee`, `is_recurring`, `involves_investment_cash` | transfer between accounts (or with an investment Cash balance), added / edited |
+| `delete_transfer` | none | a transfer deleted |
+| `cash_deposited` / `cash_withdrawn` | `has_fee`, `is_cross_currency` | Deposit / Withdraw on an investment Cash balance (Portfolio pop-up) |
 | `trade_recorded` | `side` | buy/sell of an asset |
 | `debt_payment_recorded` | `kind` (loan/lent) | loan payment / lent repayment |
 | `add_category` / `add_sub_category` / `update_category` | `type`, `source` (settings/quick_add) | categories |

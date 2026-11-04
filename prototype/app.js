@@ -1255,7 +1255,8 @@ function viewOverview() {
 
 /* a transfer leg is stored as "Transfer to Gopay · top up" (the note after the dot is what the user typed): lists show only the first part */
 /* a transfer between your own accounts is listed once, as the sender's record; the receiving leg only shows when that account is the one being filtered */
-const hiddenLeg = (t, wallet = state.ui.wallet) => t.type === 'transfer' && !!t.transfer_id && t.flow === 'in' && wallet !== t.wallet_id;
+// the 'in' leg of a transfer between two accounts is hidden (the 'out' leg stands for the transfer); a withdrawal from an investment Cash balance has only an 'in' leg, which is shown
+const hiddenLeg = (t, wallet = state.ui.wallet) => t.type === 'transfer' && !!t.transfer_id && t.flow === 'in' && wallet !== t.wallet_id && D().transactions.some((o) => o.transfer_id === t.transfer_id && o.type === 'transfer' && o.flow === 'out');
 const transferTitle = (t) => String(t.note || '').split(' · ')[0];
 const transferNote = (t) => String(t.note || '').split(' · ').slice(1).join(' · ');
 function txnRow(t, loanView) {
@@ -1693,47 +1694,108 @@ const kindSeg = (active) => `<div class="seg seg4">${[['expense', 'Expense'], ['
    Stored as linked transactions sharing a transfer_id: an 'out' leg on the source wallet, an 'in' leg on the
    destination (in its own currency) and an optional fee as a normal expense on the source wallet. Transfers
    are not income or spending; the fee is spending. */
-function transferDialog(preset) {
-  const ws = D().wallets.filter((w) => !w.archived);
-  if (ws.length < 2) { toast('Add a second account first to transfer between accounts'); return; }
-  const from = preset?.from || ws[0], to = ws.find((w) => w.id !== from.id);
-  const opt = (w, sel) => `<option value="${w.id}" ${w.id === sel ? 'selected' : ''}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`;
-  open(`<h2>${__('Transfer between accounts')}</h2><form data-form="transfer" style="display:contents">
-    ${kindSeg('transfer')}
-    <div class="two"><label class="field">${__('From')}<select name="from">${ws.map((w) => opt(w, from.id)).join('')}</select></label>
-      <label class="field">${__('To')}<select name="to">${ws.map((w) => opt(w, to.id)).join('')}</select></label></div>
-    <div class="two"><label class="field"><span data-send-label>${__('Amount sent')}</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required></label>
-      <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label></div>
-    <label class="field" data-recv hidden><span data-recv-label>${__('Amount received')}</span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
-    <label class="field"><span data-fee-label>${__('Transfer fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
-    <label class="field">${__('Note (optional)')}<input name="note" maxlength="140" placeholder="${__('e.g. Top up e-wallet')}"></label>
-    ${repeatField()}
-    <p class="hint">${__('A transfer is not income or spending. If you enter a fee it is taken from the source account on top of the amount and counts as spending.')}</p>
-    <div class="actions"><button class="btn" type="submit">${__('Transfer')}</button></div></form>`);
-  syncTransfer($('#dlg form'));
+/* an end of a transfer is a bank / e-wallet account ("w:<id>") or an investment account's Cash balance ("h:<id>") */
+const cashName = (h) => `${accountName(h.account_id)} (${__('Cash')})`;
+const cashCcy = (h) => assetInfo(h.symbol).cash;
+const cashHoldings = () => D().holdings.filter((h) => assetInfo(h.symbol).type === 'cash' && activeAccounts().some((a) => a.id === h.account_id));
+function xferEnd(v) {
+  if (!v) return null; const id = v.slice(2);
+  if (v[0] === 'w') { const w = walletOf(id); return w ? { kind: 'w', w, id: v, name: w.name, ccy: w.currency, bal: walletBalance(w) } : null; }
+  const h = D().holdings.find((x) => x.id === id); return h ? { kind: 'h', h, id: v, name: cashName(h), ccy: cashCcy(h), bal: toMinor(heldNow(h), cashCcy(h)) } : null;
 }
-/* keep labels in the right currency; when the two wallets differ, show and prefill the received amount */
+/* the two ends of a saved transfer, read back from its legs: { from, to, sent, received, fee, date, note } (amounts in major units) */
+function xferRead(gid) {
+  const legs = D().transactions.filter((t) => t.transfer_id === gid), out = legs.find((t) => t.type === 'transfer' && t.flow === 'out'), inn = legs.find((t) => t.type === 'transfer' && t.flow === 'in'), feeRow = legs.find((t) => t.type === 'expense');
+  if (!legs.length) return null;
+  const holdingOf = (l) => (l && l.trade_id ? D().holdings.find((h) => h.trades.some((x) => x.id === l.trade_id)) : null), evOf = (l, h) => h.trades.find((x) => x.id === l.trade_id);
+  let from, to, sent, received;
+  if (out && inn) { from = 'w:' + out.wallet_id; to = 'w:' + inn.wallet_id; sent = toMajor(out.amount_minor, out.currency); received = toMajor(inn.amount_minor, inn.currency); }
+  else if (out) { const h = holdingOf(out); from = 'w:' + out.wallet_id; to = h ? 'h:' + h.id : ''; sent = toMajor(out.amount_minor, out.currency); received = h ? evOf(out, h).quantity : sent; }
+  else if (inn) { const h = holdingOf(inn); from = h ? 'h:' + h.id : ''; to = 'w:' + inn.wallet_id; received = toMajor(inn.amount_minor, inn.currency); sent = h ? evOf(inn, h).quantity : received; }
+  else return null;
+  const lead = out || inn;
+  return { gid, from, to, sent, received, fee: feeRow ? toMajor(feeRow.amount_minor, feeRow.currency) : 0, date: lead.occurred_at, note: transferNote(lead), legs };
+}
+function transferDialog(preset, editGid) {
+  const ws = D().wallets.filter((w) => !w.archived), cashes = cashHoldings();
+  if (ws.length + cashes.length < 2) { toast('Add a second account first to transfer between accounts'); return; }
+  const cur0 = editGid ? xferRead(editGid) : null;
+  const ends = [...ws.map((w) => 'w:' + w.id), ...cashes.map((h) => 'h:' + h.id)];
+  const from = (cur0 && cur0.from) || preset?.from || ends[0], to = (cur0 && cur0.to) || preset?.to || ends.find((e) => e !== from);
+  const opt = (v, sel) => { const e = xferEnd(v); return `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(e.name)} (${esc(e.ccy)}) · ${money(e.bal, e.ccy)}</option>`; };
+  const group = (sel) => `<optgroup label="${__('Accounts')}">${ws.map((w) => opt('w:' + w.id, sel)).join('')}</optgroup>${cashes.length ? `<optgroup label="${__('Investment cash')}">${cashes.map((h) => opt('h:' + h.id, sel)).join('')}</optgroup>` : ''}`;
+  open(`<h2>${editGid ? __('Edit transfer') : __('Transfer between accounts')}</h2><form data-form="transfer" data-gid="${editGid || ''}" style="display:contents">
+    ${editGid ? '' : kindSeg('transfer')}
+    <label class="field">${__('From')}<select name="from">${group(from)}</select></label>
+    <label class="field">${__('To')}<select name="to">${group(to)}</select></label>
+    <div class="two"><label class="field"><span data-send-label>${__('Amount sent')}</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required value="${cur0 ? cur0.sent : ''}"></label>
+      <label class="field">${__('Date')}<input name="date" type="date" required value="${cur0 ? cur0.date : isoDate(new Date())}"></label></div>
+    <label class="field" data-recv hidden><span data-recv-label>${__('Amount received')}</span><input name="received" type="number" inputmode="decimal" min="0" step="any" value="${cur0 ? cur0.received : ''}"></label>
+    <label class="field"><span data-fee-label>${__('Transfer fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0" value="${cur0 && cur0.fee ? cur0.fee : ''}"></label>
+    <label class="field">${__('Note (optional)')}<input name="note" maxlength="140" placeholder="${__('e.g. Top up e-wallet')}" value="${esc(cur0 ? cur0.note : '')}"></label>
+    ${editGid ? '' : repeatField()}
+    <p class="hint">${__('A transfer is not income or spending. If you enter a fee it is taken from the source account on top of the amount and counts as spending.')}</p>
+    <div class="actions">${editGid ? `<button type="button" class="btn danger" data-act="delete-transfer" data-id="${editGid}">${__('Delete')}</button>` : ''}<button class="btn" type="submit">${editGid ? __('Save') : __('Transfer')}</button></div></form>`);
+  const f = $('#dlg form'); if (cur0 && cur0.sent !== cur0.received) f.received.dataset.touched = '1';
+  syncTransfer(f);
+}
+/* keep labels in the right currency; when the two ends differ in currency, show and prefill the received amount */
 function syncTransfer(form) {
-  const A = walletOf(form.from.value), B = walletOf(form.to.value), cross = A.currency !== B.currency;
-  $('[data-send-label]', form).textContent = __('Amount sent ({cur})', { cur: A.currency });
-  $('[data-fee-label]', form).textContent = __('Transfer fee, optional ({cur})', { cur: A.currency });
+  const A = xferEnd(form.from.value), B = xferEnd(form.to.value); if (!A || !B) return;
+  const cross = A.ccy !== B.ccy;
+  $('[data-send-label]', form).textContent = __('Amount sent ({cur})', { cur: A.ccy });
+  $('[data-fee-label]', form).textContent = __('Transfer fee, optional ({cur})', { cur: A.ccy });
   $('[data-recv]', form).hidden = !cross;
+  if (form.repeat) { const lab = form.repeat.closest('label'); lab.hidden = A.kind === 'h' || B.kind === 'h'; if (lab.hidden) form.repeat.value = ''; }
   if (cross) {
-    $('[data-recv-label]', form).textContent = __('Amount received ({cur}) · estimated, edit if different', { cur: B.currency });
+    $('[data-recv-label]', form).textContent = __('Amount received ({cur}) · estimated, edit if different', { cur: B.ccy });
     const a = parseFloat(form.amount.value);
-    if (!form.received.dataset.touched) form.received.value = a > 0 ? toMajor(convert(toMinor(a, A.currency), A.currency, B.currency), B.currency).toFixed(expOf(B.currency)) : '';
+    if (!form.received.dataset.touched) form.received.value = a > 0 ? toMajor(convert(toMinor(a, A.ccy), A.ccy, B.ccy), B.ccy).toFixed(expOf(B.ccy)) : '';
   }
 }
-function transferDetail(gid) {
-  const legs = D().transactions.filter((t) => t.transfer_id === gid), out = legs.find((t) => t.flow === 'out'), inn = legs.find((t) => t.flow === 'in'), fee = legs.find((t) => t.type === 'expense');
-  const row = (k, v) => `<div class="form-row"><div>${__(k)}</div><b class="num">${v}</b></div>`;
-  open(`<h2>${__('Transfer')}</h2>
-    ${row('From', esc(walletOf(out?.wallet_id)?.name || '—'))}${row('To', esc(walletOf(inn?.wallet_id)?.name || '—'))}
-    ${out ? row('Sent', money(out.amount_minor, out.currency)) : ''}${inn ? row('Received', money(inn.amount_minor, inn.currency)) : ''}${fee ? row('Fee', money(fee.amount_minor, fee.currency)) : ''}
-    ${(out && transferNote(out)) ? row('Note', esc(transferNote(out))) : ''}
-    ${row('Date', esc(new Date((out || inn || fee).occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' })))}
-    <p class="hint">${__('Deleting removes the transfer and its fee, and both account balances go back to what they were.')}</p>
-    <div class="actions"><button type="button" class="btn danger" data-act="delete-transfer" data-id="${gid}">${__('Delete transfer')}</button><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
+/* write a transfer between two ends (amounts in minor units of each end's currency). editGid: replace that transfer. Returns { error } or { ok: true }; changes nothing on an error. */
+function saveTransfer({ from, to, amount, received, fee, date, note, editGid, repeat }) {
+  let snap = null;
+  if (editGid) { snap = JSON.stringify({ t: D().transactions, h: D().holdings }); if (!removeTransferGroup(editGid)) return { error: __("Can't change: the cash has already been spent") }; }   // put the old transfer back first (restores the Cash balance), so the checks see the right numbers
+  const fail = (msg) => { if (snap) { const o = JSON.parse(snap); D().transactions = o.t; D().holdings = o.h; } return { error: msg }; };
+  const A = xferEnd(from), B = xferEnd(to);
+  if (A.kind === 'w' && A.w.type !== 'card' && amount + fee > A.bal) return fail(__("{name} doesn't have enough balance", { name: A.name }));
+  if (A.kind === 'h' && toMinor(heldNow(A.h), A.ccy) < amount + fee) return fail(__("{name} doesn't have enough balance", { name: A.name }));
+  const gid = editGid || uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: date, transfer_id: gid }, extra = note ? ` · ${note}` : '';
+  const noteTo = __('Transfer to {name}', { name: B.name }) + extra, noteFrom = __('Transfer from {name}', { name: A.name }) + extra;
+  const cashEvent = (h, side, quantity, wallet, walletMinor, wcur) => { const tid = uid(); h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity)); h.trades.push({ id: tid, date, side, quantity, amount_minor: walletMinor, currency: wcur, wallet_id: wallet.id }); if (side === 'buy' && date.slice(0, 7) < h.since) h.since = date.slice(0, 7); return tid; };
+  if (A.kind === 'w' && B.kind === 'w') {
+    D().transactions.push({ id: uid(), wallet_id: A.w.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.ccy, note: noteTo, ...base });
+    D().transactions.push({ id: uid(), wallet_id: B.w.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.ccy, note: noteFrom, ...base });
+  } else if (A.kind === 'w') {   // a deposit into an investment Cash balance: the account's leg is tied to the cash event
+    const tid = cashEvent(B.h, 'buy', toMajor(received, B.ccy), A.w, amount, A.ccy);
+    D().transactions.push({ id: uid(), wallet_id: A.w.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.ccy, note: noteTo, trade_id: tid, ...base });
+  } else {   // a withdrawal from an investment Cash balance into an account
+    const tid = cashEvent(A.h, 'sell', toMajor(amount, A.ccy), B.w, received, B.ccy);
+    D().transactions.push({ id: uid(), wallet_id: B.w.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.ccy, note: noteFrom, trade_id: tid, ...base });
+  }
+  if (fee > 0) {
+    const feeNote = __('Transfer fee ({from} → {to})', { from: A.name, to: B.name });
+    if (A.kind === 'w') D().transactions.push({ id: uid(), wallet_id: A.w.id, type: 'expense', amount_minor: fee, currency: A.ccy, note: feeNote, ...base, category_id: feeCategory().id });
+    else {   // the fee of a withdrawal comes out of the Cash balance itself: its own event, and an expense in Fee with no account
+      const ftid = uid(); A.h.quantity = r12(A.h.quantity - toMajor(fee, A.ccy)); A.h.trades.push({ id: ftid, date, side: 'sell', kind: 'expense', quantity: toMajor(fee, A.ccy), amount_minor: fee, currency: A.ccy, wallet_id: null });
+      D().transactions.push({ id: detId('fee', ftid), wallet_id: null, trade_id: ftid, type: 'expense', amount_minor: fee, currency: A.ccy, note: feeNote, ...base, category_id: feeCategory().id });
+    }
+  }
+  if (repeat && A.kind === 'w' && B.kind === 'w') addRule('transfer', repeat, date, { from: A.w.id, to: B.w.id, amount_minor: amount, received_minor: received, fee_minor: fee, note });
+  sortTxns();
+  state.ui.month = periodKeyOf(date) <= currentPeriod() ? periodKeyOf(date) : state.ui.month;
+  return { ok: true };
+}
+/* take a saved transfer apart: restore the Cash balance it moved and remove its legs and fee; false when that cash was already spent */
+function removeTransferGroup(gid) {
+  const legs = D().transactions.filter((t) => t.transfer_id === gid), undo = new Map();
+  legs.forEach((l) => { if (!l.trade_id) return; const h = D().holdings.find((x) => x.trades.some((y) => y.id === l.trade_id)); if (!h) return; const tr = h.trades.find((y) => y.id === l.trade_id); undo.set(tr.id, { h, tr }); });
+  const after = new Map(); undo.forEach(({ h, tr }) => after.set(h, (after.has(h) ? after.get(h) : h.quantity) - tradeSign(tr) * tr.quantity));
+  for (const [, q] of after) if (q < -1e-9) return false;
+  undo.forEach(({ h, tr }) => { h.quantity = r12(Math.max(0, h.quantity - tradeSign(tr) * tr.quantity)); h.trades = h.trades.filter((y) => y.id !== tr.id); });
+  D().transactions = D().transactions.filter((t) => t.transfer_id !== gid);
+  return true;
 }
 /* USDT/USDC in an investment account can receive income and pay expenses directly: the coins move as a trade
    linked to an income/expense transaction (no wallet; 1 coin = 1 USD, amounts stored in USD cents). */
@@ -2177,6 +2239,14 @@ function addSaleFee(s, fee, date, note, mirror) {
   D().transactions.push({ id: detId('fee', mirror), wallet_id: null, trade_id: mirror, category_id: feeCategory().id, type: 'expense', amount_minor: minor, currency: ccy, occurred_at: date, note, category_source: 'user', ai_confidence: null });
 }
 /* sales made before this existed: add the missing record for each */
+/* deposits into and withdrawals from an investment Cash balance made before they were transfers: give each its transfer id and wording */
+function convertCashTrades() {
+  let n = 0;
+  D().holdings.filter((h) => assetInfo(h.symbol).type === 'cash').forEach((h) => h.trades.forEach((tr) => {
+    D().transactions.forEach((t) => { if (t.trade_id === tr.id && t.type === 'transfer' && !t.transfer_id) { t.transfer_id = detId('cashx', tr.id); t.note = t.flow === 'out' ? __('Transfer to {name}', { name: cashName(h) }) : __('Transfer from {name}', { name: cashName(h) }); n++; } });
+  }));
+  return n > 0;
+}
 function backfillSaleRecords() {
   let n = 0; D().holdings.forEach((h) => { h.trades.forEach((tr) => { if (tr.side === 'sell' && tr.via && tr.date <= todayIso() && addSaleRecord(h, tr.id)) n++; }); });
   if (n) sortTxns();
@@ -2199,8 +2269,10 @@ function recordTrade(h, { side, quantity, source, amount, date, price, fee }) {
     // selling: only the cost of what was sold goes back as a transfer in; the profit or loss on top is its own record (below) on the same account
     let moved = amount, pnl = 0;
     if (side === 'sell' && trackCost(h)) { const hc = holdingCost(h), pi = hc.per[id]; if (hc.known && pi && Number.isFinite(pi.realized)) { pnl = toMinor((pi.realized * RATES[w.currency]) / RATES[h.ccy], w.currency); if (amount - pnl <= 0) pnl = 0; moved = amount - pnl; } }
+    // a deposit into or withdrawal from an investment Cash balance is a transfer (it is shown and edited as one)
+    const cashX = assetInfo(h.symbol).type === 'cash';
     D().transactions.push({ id: uid(), trade_id: id, wallet_id: w.id, category_id: null, type: 'transfer', flow: side === 'buy' ? 'out' : 'in',
-      amount_minor: moved, currency: w.currency, occurred_at: date, note: `${word} ${qtyFmt(quantity)} ${sym}`, category_source: 'user', ai_confidence: null });
+      amount_minor: moved, currency: w.currency, occurred_at: date, note: cashX ? `${side === 'buy' ? __('Transfer to {name}', { name: cashName(h) }) : __('Transfer from {name}', { name: cashName(h) })}` : `${word} ${qtyFmt(quantity)} ${sym}`, category_source: 'user', ai_confidence: null, ...(cashX ? { transfer_id: detId('cashx', id) } : {}) });
     if (pnl !== 0) D().transactions.push({ id: detId('pnl', id), wallet_id: w.id, category_id: pnlCategory(pnl > 0).id, type: pnl > 0 ? 'income' : 'expense', amount_minor: Math.abs(pnl), currency: w.currency, occurred_at: date, note: `${sym} ${pnl > 0 ? __('profit') : __('loss')}`, category_source: 'user', ai_confidence: null });
     addFeeRecord(w, fee, date, `${__('Investment fee')} (${word} ${qtyFmt(quantity)} ${sym})`);   // what the broker charged, from the same account
     sortTxns();
@@ -2245,6 +2317,37 @@ function costDialog(h) {
   <form data-form="cost" data-id="${h.id}" style="display:contents"><div class="two"><label class="field">${__('Average price')}<input name="avgprice" type="number" inputmode="decimal" min="0" step="any" required value="${h.open_price != null ? h.open_price : ''}"></label>
     <label class="field">${__('Price currency')}${h.ccy ? `<input value="${h.ccy}" disabled>` : `<select name="pccy">${ccyOptions(defaultPriceCcy(info, cur()))}</select>`}</label></div>
   <div class="actions"><button class="btn" type="submit">${__('Save')}</button></div></form>`);
+}
+/* Deposit / Withdraw on an investment Cash balance (Portfolio): amount, optional fee, no quantity; saved as a transfer with a bank / e-wallet account */
+function cashDialog(h, side) {
+  const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), dep = side === 'buy', hc = cashCcy(h);
+  if (!ws.length) { toast('Add an account first'); return; }
+  const last = recallAcct(dep ? 'cashin' : 'cashout', ws.map((w) => `value="${w.id}"`).join('')), first = ws.find((w) => w.id === last) || ws.find((w) => w.currency === hc) || ws[0];
+  open(`<h2>${dep ? __('Deposit {symbol}', { symbol: esc(info.symbol) }) : __('Withdraw {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h), h), symbol: esc(info.symbol) })}</p>
+  <form data-form="cashx" data-id="${h.id}" style="display:contents">
+    <div class="seg"><label><input type="radio" name="side" value="buy" ${dep ? 'checked' : ''}>${__('Deposit')}</label><label><input type="radio" name="side" value="sell" ${dep ? '' : 'checked'}>${__('Withdraw')}</label></div>
+    <label class="field"><span>${dep ? __('Pay with') : __('Receive into')}</span><select name="account">${ws.map((w) => `<option value="${w.id}" ${w.id === first.id ? 'selected' : ''}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</select></label>
+    <div class="two"><label class="field"><span data-cx-amt></span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required placeholder="${__('amount')}"></label>
+      <label class="field"><span data-cx-fee></span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label></div>
+    <label class="field" data-cx-recv hidden><span data-cx-recv-label></span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
+    <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>
+    <p class="hint" data-cx-hint></p>
+    <div class="actions"><button class="btn" type="submit">${__('Save')}</button></div></form>`);
+  syncCashForm($('#dlg form'));
+}
+/* labels follow the side and the chosen account; the received amount only appears when the account and the Cash balance use different currencies */
+function syncCashForm(form) {
+  const h = D().holdings.find((x) => x.id === form.dataset.id), w = walletOf(form.account.value); if (!h || !w) return;
+  const dep = form.side.value === 'buy', hc = cashCcy(h), src = dep ? w.currency : hc, dst = dep ? hc : w.currency, cross = src !== dst;
+  $('[data-cx-amt]', form).textContent = dep ? __('Amount paid ({unit})', { unit: src }) : __('Amount ({cur})', { cur: src });
+  $('[data-cx-fee]', form).textContent = __('Fee, optional ({cur})', { cur: src });
+  $('[data-cx-recv]', form).hidden = !cross;
+  if (cross) {
+    $('[data-cx-recv-label]', form).textContent = __('Amount received ({cur}) · estimated, edit if different', { cur: dst });
+    const a = parseFloat(form.amount.value);
+    if (!form.received.dataset.touched) form.received.value = a > 0 ? toMajor(convert(toMinor(a, src), src, dst), dst).toFixed(expOf(dst)) : '';
+  }
+  $('[data-cx-hint]', form).textContent = dep ? __('The money leaves that account. A fee is taken from it on top and counts as spending; the deposit itself is not spending or income.') : __('The money goes into that account. A fee comes out of the Cash balance and counts as spending; the withdrawal itself is not spending or income.');
 }
 function tradeDialog(h, side) {
   const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), first = ws.find((w) => w.currency === cur()) || ws[0];
@@ -2457,9 +2560,9 @@ document.addEventListener('click', (e) => {
   else if (act === 'days-all' || act === 'days-none') { $$('#txn-list .day-group').forEach((g) => { const on = act === 'days-all'; g.classList.toggle('open', on); $('.day-row', g).setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(g.dataset.day); else state.ui.openDays.delete(g.dataset.day); }); }
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
-  else if (act === 'view-transfer') transferDetail(id);
-  else if (act === 'delete-transfer') { D().transactions = D().transactions.filter((t) => t.transfer_id !== id); save(); close(); render(); toast('Transfer deleted'); }
-  else if (act === 'edit-txn') { const tx = find(D().transactions); if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
+  else if (act === 'view-transfer') transferDialog(null, id);
+  else if (act === 'delete-transfer') { if (!removeTransferGroup(id)) { toast(__("Can't delete: the cash has already been spent")); return; } Analytics.track('delete_transfer'); save(); close(); render(); toast('Transfer deleted'); }
+  else if (act === 'edit-txn') { const tx = find(D().transactions); if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
   else if (act === 'rec-del') { close(); D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
@@ -2509,7 +2612,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-holding') { holdingDialog(null, el.dataset.account, el.dataset.type === 'cash' ? { pickType: 'cash' } : {}); }
   else if (act === 'edit-holding') holdingDialog(find(D().holdings));
   else if (act === 'view-history') { close(); location.hash = '#/portfolio/' + id; }
-  else if (act === 'trade') tradeDialog(find(D().holdings), el.dataset.side);
+  else if (act === 'trade') { const th = find(D().holdings); if (assetInfo(th.symbol).type === 'cash') cashDialog(th, el.dataset.side); else tradeDialog(th, el.dataset.side); }
   else if (act === 'set-cost') costDialog(find(D().holdings));
   else if (act === 'delete-trade') {
     const h = find(D().holdings), tr = h.trades.find((x) => x.id === el.dataset.tid);
@@ -2569,6 +2672,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.
 
 document.addEventListener('input', (e) => {
   const t = e.target, f = t.form;
+  if (f?.dataset.form === 'cashx') { if (t.name === 'received') t.dataset.touched = '1'; else if (t.name === 'amount') syncCashForm(f); return; }
   if (f?.dataset.form !== 'transfer') return;
   if (t.name === 'received') t.dataset.touched = '1';   // the user set it: stop auto-filling
   else if (t.name === 'amount') syncTransfer(f);
@@ -2606,6 +2710,8 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-demo]')) setDemo(t.checked);
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
+  else if (t.form?.dataset.form === 'cashx' && t.name === 'side') cashDialog(D().holdings.find((x) => x.id === t.form.dataset.id), t.value);
+  else if (t.form?.dataset.form === 'cashx' && t.name === 'account') { delete t.form.received.dataset.touched; syncCashForm(t.form); }
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
   else if (t.form?.dataset.form === 'recedit' && ['wallet', 'from', 'fund'].includes(t.name)) syncRuleUnit(t.form);
@@ -2616,8 +2722,9 @@ document.addEventListener('change', (e) => {
     else if (t.value === 'expense' || t.value === 'income') txnDialog(null, t.value);
   }
   else if (t.form?.dataset.form === 'transfer' && (t.name === 'from' || t.name === 'to')) {
-    const f = t.form;   // never the same wallet on both sides
-    if (f.from.value === f.to.value) { const other = D().wallets.find((w) => !w.archived && w.id !== t.value); (t.name === 'from' ? f.to : f.from).value = other.id; }
+    const f = t.form;   // never the same account on both sides, and never two investment Cash balances
+    const both = () => xferEnd(f.from.value)?.kind === 'h' && xferEnd(f.to.value)?.kind === 'h';
+    if (f.from.value === f.to.value || both()) { const other = D().wallets.find((w) => !w.archived && 'w:' + w.id !== t.value); const o = (t.name === 'from' ? f.to : f.from); if (other) o.value = 'w:' + other.id; }
     delete f.received.dataset.touched; syncTransfer(f);
   }
   else if (t.name === 'date' && t.form?.dataset.form === 'txn' && t.form.occasion && !t.form.occasion.value) {
@@ -2754,22 +2861,31 @@ document.addEventListener('submit', async (e) => {
     save(); close(); render(); toast(msg);
   }
   if (kind === 'transfer') {
-    const A = walletOf(v.from), B = walletOf(v.to);
+    const A = xferEnd(v.from), B = xferEnd(v.to), editGid = f.dataset.gid;
     if (!A || !B || A.id === B.id) { toast('Pick two different accounts'); return; }
-    const cross = A.currency !== B.currency, amount = toMinor(parseFloat(v.amount), A.currency), fee = v.fee ? toMinor(parseFloat(v.fee), A.currency) : 0;
-    const received = cross ? toMinor(parseFloat(v.received), B.currency) : amount;
+    if (A.kind === 'h' && B.kind === 'h') { toast('Pick a bank or e-wallet account on one side'); return; }
+    const cross = A.ccy !== B.ccy, amount = toMinor(parseFloat(v.amount), A.ccy), fee = v.fee ? toMinor(parseFloat(v.fee), A.ccy) : 0;
+    const received = cross ? toMinor(parseFloat(v.received), B.ccy) : amount;
     if (!(amount > 0) || !(received > 0)) { toast(cross && !(received > 0) ? 'Enter the amount received' : 'Enter an amount above zero'); return; }
     if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
-    if (A.type !== 'card' && amount + fee > walletBalance(A)) { toast(__("{name} doesn't have enough balance", { name: A.name })); return; }
-    const gid = uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: v.date, transfer_id: gid }, extra = v.note.trim() ? ` · ${v.note.trim()}` : '';
-    D().transactions.push({ id: uid(), wallet_id: A.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.currency, note: __('Transfer to {name}', { name: B.name }) + extra, ...base });
-    D().transactions.push({ id: uid(), wallet_id: B.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.currency, note: __('Transfer from {name}', { name: A.name }) + extra, ...base });
-    if (fee > 0) D().transactions.push({ id: uid(), wallet_id: A.id, type: 'expense', amount_minor: fee, currency: A.currency, note: __('Transfer fee ({from} → {to})', { from: A.name, to: B.name }), ...base, category_id: feeCategory().id });
-    if (v.repeat) addRule('transfer', v.repeat, v.date, { from: A.id, to: B.id, amount_minor: amount, received_minor: received, fee_minor: fee, note: v.note.trim() });
-    sortTxns();
-    state.ui.month = periodKeyOf(v.date) <= currentPeriod() ? periodKeyOf(v.date) : state.ui.month;
-    Analytics.track('transfer_recorded', { has_fee: fee > 0, is_recurring: !!v.repeat });
-    save(); close(); render(); toast(__('Moved {amount} from {from} to {to}', { amount: money(amount, A.currency), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.currency) }) : '')); return;
+    const r = saveTransfer({ from: v.from, to: v.to, amount, received, fee, date: v.date, note: v.note.trim(), editGid, repeat: v.repeat });
+    if (r.error) { toast(r.error); return; }
+    Analytics.track(editGid ? 'transfer_edited' : 'transfer_recorded', { has_fee: fee > 0, is_recurring: !!v.repeat, involves_investment_cash: A.kind === 'h' || B.kind === 'h' });
+    save(); close(); render(); toast(editGid ? 'Saved' : __('Moved {amount} from {from} to {to}', { amount: money(amount, A.ccy), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.ccy) }) : '')); return;
+  }
+  if (kind === 'cashx') {   // a deposit into / withdrawal from an investment Cash balance (the Portfolio dialog): a transfer with an account
+    const h = D().holdings.find((x) => x.id === f.dataset.id), w = walletOf(v.account), dep = v.side === 'buy';
+    if (!h || !w) { toast('Pick an account'); return; }
+    const hc = cashCcy(h), srcCcy = dep ? w.currency : hc, dstCcy = dep ? hc : w.currency, cross = srcCcy !== dstCcy;
+    const amount = toMinor(parseFloat(v.amount), srcCcy), fee = v.fee ? toMinor(parseFloat(v.fee), srcCcy) : 0;
+    const received = cross ? toMinor(parseFloat(v.received), dstCcy) : amount;
+    if (!(amount > 0) || !(received > 0)) { toast(cross && !(received > 0) ? 'Enter the amount received' : 'Enter an amount above zero'); return; }
+    if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    const r = saveTransfer({ from: dep ? 'w:' + w.id : 'h:' + h.id, to: dep ? 'h:' + h.id : 'w:' + w.id, amount, received, fee, date: v.date, note: '' });
+    if (r.error) { toast(r.error); return; }
+    state.ui.pfTab = 'investment'; rememberAcct(dep ? 'cashin' : 'cashout', v.account);
+    Analytics.track(dep ? 'cash_deposited' : 'cash_withdrawn', { has_fee: fee > 0, is_cross_currency: cross });
+    save(); close(); render(); toast(`${dep ? __('Deposited') : __('Withdrew')} ${money(dep ? received : amount, hc)}`); return;
   }
   if (kind === 'occasion') {
     const picked = !f.dataset.id && v.pick && v.pick !== '__new' ? occasionOf(v.pick) : null, existing = (f.dataset.id && occasionOf(f.dataset.id)) || picked, c = existing ? existing.currency : v.currency;
@@ -3067,7 +3183,7 @@ async function loadUserData() {
     if (mine !== loadSeq) return;   // a newer load took over
     state.real = null; state.data = loaded;
     state.data.livePrices = loadPrices();
-    const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(), addedSales = backfillSaleRecords(); if (addedCats || addedFee || addedSales) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
+    const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(), addedSales = backfillSaleRecords(), addedCash = convertCashTrades(); if (addedCats || addedFee || addedSales || addedCash) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
     if (api.finnhub || api.yahoo) refreshPrices(true);
     Analytics.person(state.data.profile);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);

@@ -28,7 +28,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // 2. deposit more with the Deposit button
   await p.evaluate(() => { state.ui.pfTab = 'investment'; location.hash = '#/portfolio'; render(); }); await p.waitForSelector('.holding-row'); await p.click('.holding-row'); await p.waitForSelector('#dlg .hold-sum');
   const dt = await p.innerText('#dlg'); assert(dt.includes('Deposit') && dt.includes('Withdraw') && dt.includes('Balance') && !dt.includes('Current price'), dt.slice(0, 200));
-  await p.click('#dlg [data-act=trade][data-side=buy]'); await p.waitForSelector('form[data-form=trade]'); await p.fill('input[name=quantity]', '5000000'); await p.fill('input[name=amount]', '5000000'); await p.click('#dlg button[type=submit]'); await settle();
+  await p.click('#dlg [data-act=trade][data-side=buy]'); await p.waitForSelector('form[data-form=cashx]'); assert.equal(await p.$$eval('input[name=quantity]', (e) => e.length), 0, 'no quantity box on a deposit'); assert(await p.isVisible('input[name=fee]'), 'a fee box'); await p.selectOption('select[name=account]', await p.evaluate(() => D().wallets[0].id)); await p.fill('input[name=amount]', '5000000'); await p.click('#dlg button[type=submit]'); await settle();
   assert.equal(await cashQ(), 25000000); assert.equal(await bank(), 75000000);
   // 3. buy an asset with the cash balance (cash is offered as a payment source for that account only)
   await p.evaluate((id) => holdingDialog(null, id, { invest: true }), acc);
@@ -42,14 +42,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.waitForSelector('.back-link'); assert(/#\/portfolio\/.+/.test(await p.evaluate(() => location.hash)));
   let hp = await p.innerText('.main'); assert(hp.includes('Back to Portfolio') && hp.includes('History') && hp.includes('Deposited') && hp.includes('Deposit') && hp.includes('Withdraw'), hp.slice(0, 300));
   const nTr = await p.$$eval('.pay-row', (r) => r.length); assert(nTr >= 2, 'all trades listed: ' + nTr);
-  await p.click('.main [data-act=trade][data-side=buy]'); await p.waitForSelector('form[data-form=trade]'); await p.click('#dlg [data-act=close]');
+  await p.click('.main [data-act=trade][data-side=buy]'); await p.waitForSelector('form[data-form=cashx]'); await p.click('#dlg [data-act=close]');
   await p.click('.back-link'); await p.waitForSelector('.holding-row');
   // 4. withdraw part of it back to the bank
-  await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'CASH:IDR'); tradeDialog(h, 'sell'); });
-  await p.fill('input[name=quantity]', '4000000'); await p.fill('input[name=amount]', '4000000'); await p.click('#dlg button[type=submit]'); await settle();
+  await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'CASH:IDR'); document.querySelector('.main').insertAdjacentHTML('beforeend', `<button id=wd data-act=trade data-side=sell data-id=${h.id} hidden></button>`); document.getElementById('wd').click(); });
+  await p.waitForSelector('form[data-form=cashx]'); await p.selectOption('select[name=account]', await p.evaluate(() => D().wallets[0].id)); assert.equal(await p.$eval('input[name=side][value=sell]', (e) => e.checked), true, 'Withdraw is selected'); await p.fill('input[name=amount]', '4000000'); await p.click('#dlg button[type=submit]'); await settle();
   assert.equal(await cashQ(), 15000000); assert.equal(await bank(), 79000000);
   // not enough cash is refused
-  await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'CASH:IDR'); tradeDialog(h, 'sell'); }); await p.fill('input[name=quantity]', '99000000'); await p.fill('input[name=amount]', '99000000'); await p.click('#dlg button[type=submit]'); assert.equal(await cashQ(), 15000000, 'overdraw refused'); await p.click('[data-act=close]');
+  await p.evaluate(() => { const h = D().holdings.find((x) => x.symbol === 'CASH:IDR'); document.querySelector('.main').insertAdjacentHTML('beforeend', `<button id=wd2 data-act=trade data-side=sell data-id=${h.id} hidden></button>`); document.getElementById('wd2').click(); }); await p.waitForSelector('form[data-form=cashx]'); await p.selectOption('select[name=account]', await p.evaluate(() => D().wallets[0].id)); await p.fill('input[name=amount]', '99000000'); await p.click('#dlg button[type=submit]'); assert.equal(await cashQ(), 15000000, 'overdraw refused'); await p.click('[data-act=close]');
   // saved and loaded back
   const l = await log(); const rows = l.filter((o) => o.table === 'holdings').flatMap((o) => o.rows); assert(rows.some((r) => r.symbol === 'CASH:IDR' && r.provider_symbol === 'cash:IDR' && r.asset_type === 'manual' && r.name === 'Cash (IDR)'), JSON.stringify(rows.slice(0, 2)));
   const back = await p.evaluate(async () => { const d = await Cloud.load(); const h = d.holdings.find((x) => x.symbol === 'CASH:IDR'); return { q: h.quantity, a: d.customAssets['CASH:IDR'] }; });

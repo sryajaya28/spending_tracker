@@ -71,6 +71,7 @@ const SCREENS = [
   ['dialog-account', 'dialog', `walletDialog();`],
   ['dialog-category', 'dialog', `catDialog();`],
   ['dialog-debt-edit', 'dialog', `loanDialog(D().loans[0]);`],
+  ['dialog-debt-edit-repeat', 'dialog', `loanDialog(D().loans[1]);`],
   ['dialog-loan-payment', 'dialog', `paymentDialog(D().loans[0], 'loan');`],
   ['transactions-upcoming', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); ${UPCOMING}`)],
   ['dialog-upcoming', 'dialog', `${UPCOMING} Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); upcomingDialog();`],

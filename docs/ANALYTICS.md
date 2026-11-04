@@ -56,7 +56,7 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `add_account` | `type` | new account |
 | `add_budget` / `update_budget` / `delete_budget` | `scope` (overall/category) | budgets |
 | `add_occasion` / `update_occasion` | `has_budget`, `has_dates` | special occasions |
-| `add_debt` / `update_debt` | `has_interest` | loans |
+| `add_debt` / `update_debt` | `has_interest`, `is_recurring` (a repeating payment is set) | loans |
 | `add_lent` / `update_lent` | `has_due_date` | money lent |
 | `add_asset` | `funded` | investment asset added |
 

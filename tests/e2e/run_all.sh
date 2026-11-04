@@ -16,7 +16,7 @@ cd tests/e2e
 mkdir -p out out/dark
 export NODE_PATH="${NODE_PATH:-$(npm root -g)}"
 tests=("$@")
-[ ${#tests[@]} -eq 0 ] && tests=(sample run occnobudget fees ovbud loginstart inrphp onboarding balancecheck repay debtrec invest debtcalc curdd cats quickcat transfer budgetbar wallet arch occtx daily donut pfrange recurring coin noscroll period idx cashacct cashxfer avgprice handoff trend scrollpos datepick loanpay support recedit modalscroll lastacct samplelocal dropdown ovocc ios confirm csp analytics consent archcat landshot langsave darkshots)
+[ ${#tests[@]} -eq 0 ] && tests=(sample run occnobudget fees ovbud loginstart inrphp onboarding balancecheck repay debtrec debtedit invest debtcalc curdd cats quickcat transfer budgetbar wallet arch occtx daily donut pfrange recurring coin noscroll period idx cashacct cashxfer avgprice handoff trend scrollpos datepick loanpay support recedit modalscroll lastacct samplelocal dropdown ovocc ios confirm csp analytics consent archcat landshot langsave darkshots)
 fail=0
 [ ${#tests[@]} -gt 3 ] && { python3 "$ROOT/tests/test_yahoo.py" 2>&1 | grep -q '^ok' && echo "PASS  yahoo (python)" || { echo "FAIL  yahoo (python)"; fail=1; }; }
 # the browser tests are independent (each starts its own browser against the same static server), so run JOBS of them at a time

@@ -67,6 +67,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await rule(), null, 'no repeat, no rule');
   await p.evaluate((i) => { const l = D().loans.find((x) => x.id === i); l.monthly_minor = 100000; l.payments.push({ id: uid(), date: isoDate(new Date()), amount_minor: loanBalance(l) }); }, ids.loan);
   t = await card(); assert(!/left/.test(t) && /Paid off/.test(t), 'paid off: ' + t);
+  // 9b. Edit debt: the two-column rows line up at the bottom even when a label wraps (Interest rate (% per year, optional) next to Interest type)
+  await p.evaluate((i) => loanDialog(D().loans.find((x) => x.id === i)), ids.loan); await p.waitForSelector('#dlg [name=rate]');
+  const al = await p.evaluate(() => { const r = (n) => document.querySelector('#dlg [name=' + n + ']').getBoundingClientRect(), a = r('rate'), b = r('flat'), la = document.querySelector('#dlg [name=rate]').parentElement.querySelector('input').previousSibling; return { dBottom: Math.round(a.bottom - b.bottom), dTop: Math.round(a.top - b.top), wraps: document.querySelector('#dlg [name=rate]').closest('label').getBoundingClientRect().height > document.querySelector('#dlg [name=flat]').closest('label').getBoundingClientRect().height - 1 }; });
+  assert.equal(al.dBottom, 0, 'Interest rate and Interest type boxes share the same bottom: ' + JSON.stringify(al)); await p.click('#dlg .dlg-x');
   // 10. the lent card keeps its own look (percent repaid)
   await p.evaluate(() => { D().lent.push({ id: uid(), name: 'Friend', currency: 'IDR', original_minor: 100000, due: '', note: '', since: monthKey(new Date()), archived: false, payments: [{ id: uid(), date: isoDate(new Date()), amount_minor: 50000 }] }); state.ui.pfTab = 'lent'; location.hash = '#/portfolio'; render(); });
   assert(/50% repaid/.test(await p.innerText('.main')), 'lent card unchanged');

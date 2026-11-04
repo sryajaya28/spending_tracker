@@ -122,6 +122,7 @@ Automated: `transfer`.
 | RC-09 | Portfolio > Debt > a debt > + Payment: Repeat = Every month, Paid from an account | The payment is recorded now (balance down once, one Debt Payment expense); **Settings > Recurring** lists the debt (bank icon, name, `−amount`, account, Every month, next date); the next payment is one month later. |
 | RC-10 | Same with "No account, just record the payment" and Every week | Settings shows the rule with "No account"; when it falls due only the debt's payment is added (no expense). Manage lets you change the account (or none) and the amount; pause/resume/delete work as for any rule. |
 | RC-11 | A repeating debt payment falls due after the debt is paid off or archived | Nothing is added. Running twice on the same day never pays twice. |
+| RC-13 | Portfolio > Debt > Edit on a debt, phone width (390 px) | The Interest rate and Interest type boxes are level at the bottom even though the Interest rate label takes two lines; other two-column rows (Type/Currency, Amount owed/Monthly payment) look unchanged. (`debtrec`) |
 | RC-12 | Debt card (Portfolio > Debt) | **No percentage and no progress bar.** The card shows the recurring payment amount with "every month"/"every week" and "N months/weeks left" (from the balance, the amount and the interest rate); with no recurring payment it falls back to the monthly payment typed on the debt, else shows nothing; a paused rule is ignored; a paid-off debt shows no time left. Money lent keeps its "% repaid" bar. |
 
 Automated: `recurring`, `debtrec` (RC-09 to RC-12), `debtcalc`, `repay`.

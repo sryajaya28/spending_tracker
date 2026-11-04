@@ -1,4 +1,5 @@
 {
+  "buildCommand": "node tools/stamp_sw.js",
   "outputDirectory": "prototype",
   "functions": {
     "api/index.py": {

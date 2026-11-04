@@ -1,6 +1,6 @@
 -- pgTAP tests for household migration 1b (hardening). Run with: supabase test db
 begin;
-select plan(10);
+select plan(9);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000a2', 'owner2@test.dev'),

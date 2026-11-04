@@ -45,7 +45,7 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
 1. Every piece of work starts on its own branch (`feature/<short-name>`), never directly on `staging` or `main`, and begins only after the
    design is approved (section 0) or the owner has said "skip figma".
 2. The assistant builds it and **tests the feature** (see Feature testing below).
-3. **With an approved design** the branch goes straight to `staging` once the feature tests and the automated suite pass; no separate
+3. **With an approved design** the branch goes straight to `staging` (merged by the integrator when several agents work, see "Working with more than one agent") once the feature tests and the automated suite pass; no separate
    local or preview review. The assistant sends the **staging link**, screenshots and steps, and the owner signs off on staging (a
    branch preview link only if the owner asks). **Without an approved design** ("skip figma" or none needed): send a preview link,
    screenshots and steps and wait for approval before merging. Previews, staging and local runs use the **staging database**; only the
@@ -124,7 +124,7 @@ Several assistants (or sessions) can work on one project if they do not edit the
 | Item | Value |
 |---|---|
 | Figma file (design source of truth) | https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW ("Stiver"); one section `Feature - <short-name>` per feature |
-| Integrating agent (merges to `staging`, releases) | **Developer 2** (named by the owner; see `docs/AGENTS.md`) |
+| Agents | **Developer 2** = integrator (merges to `staging`, releases); **Developer 1** = feature branches only (named by the owner; see `docs/AGENTS.md`) |
 | Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
 | Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
 | Feature test list | `docs/FEATURE_TESTS.md` |

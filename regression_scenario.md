@@ -393,7 +393,9 @@ Written from the PRD's acceptance checks, not from the implementation. Needs two
 | HH-17 | 17, 30 | Viewer: walk every screen; deep link to add; direct REST/RPC insert, update, delete on every money table **(E, DB)** | No Add/Edit/Delete anywhere; deep link shows a read-only message; every direct write rejected by RLS (no row changed) |
 | HH-18 | 18 | Editor: add/edit/delete transaction, transfer, savings, debt, lent, investment, budget, category, occasion, recurring rule **(E, M)** | All work; owner sees them; rows carry `user_id` = owner |
 | HH-19 | 19 | Owner changes a signed-in person's role (Editor to Viewer and back) while their app is open **(M)** | Within 30 s or on return to the app: controls change and "Your access changed" shows; a save attempted in between is rejected with the same notice, not lost silently |
-| HH-20 | 20 | Remove a signed-in member; also a member leaving **(M, DB)** | Next use/sign-in: "You no longer have access to <owner>'s household." with Sign out as the only action; data requests return nothing at once; past entries keep their name; signing in again shows the same page, not an empty ledger |
+| HH-20 | 20 (v2.1) | Remove a signed-in member; also a member leaving; owner deleted/removed **(M, DB)** | Next use/sign-in (and within the 30 s refresh): "You no longer have access to <owner>'s household." with **Sign out** and **Delete my login** as the only actions; data requests return nothing at once; past entries keep their name; signing in again shows the same page, not an empty ledger. If the owner is deleted, members see the same page and pending invites show the expired message |
+| HH-35 | 20 (v2.1) | On the no-access page tap Delete my login **(E, M, DB)** | A confirmation names what is deleted (login, not household data); Cancel keeps everything; confirming deletes the login, signs out, and the same email can sign in no more; household data and the person's past entries (with their name) remain; nothing private in analytics |
+| HH-36 | 5 (Edge, v2.1) | Invite a departed member's email before and after they tapped Delete my login **(DB, M)** | Before: the check-2 "can't be invited" message; after Delete my login: invite works and the person can join again as a new member. Leave by Editor/Viewer works from the Household card; the owner has no Leave |
 | HH-21 | 21 | Revoke a pending invite **(E, M)** | Disappears from the list; its link shows the expired message |
 | HH-22 | 22 | 2+ people: Transactions list and Overview recent list **(E, M)** | Each row shows who submitted it (name/initial); long names ellipsized |
 | HH-23 | 23 | Open a transaction detail, then edit it as another person **(E, M)** | "Added by <name>, <date time>"; after edit "Edited by <name>, <time>" |
@@ -451,7 +453,7 @@ Written from the PRD's acceptance checks, not from the implementation. Needs two
 | `dropdown` | app-styled dropdown lists: open, choose, Esc, outside tap, keyboard, groups, inside dialogs |
 | `analytics` | PostHog events, privacy scrubbing, demo mode silence, sign-out reset, `/ingest` path |
 | `ios`, `confirm`, `csp`, `landshot`, `langsave`, `darkshots`, `idcrawl` | phone rendering, email confirmation flow, CSP, landing, language and dark mode |
-| `household` (planned, QA), `householdroles`, `householdjoin`, `tests/staging/household.js` | household access HH-01..HH-34: invite and join UI, Viewer/Editor controls, labels, delete confirmations, analytics (local, stubbed); real-database RLS/rate-limit/invite checks on staging |
+| `household` (planned, QA), `householdroles`, `householdjoin`, `tests/staging/household.js` | household access HH-01..HH-36: invite and join UI, Viewer/Editor controls, labels, delete confirmations, analytics (local, stubbed); real-database RLS/rate-limit/invite checks on staging |
 | `tests/test_yahoo.py` | Yahoo price/search parsing and unit conversion (stubbed) |
 
 ## Not covered by automation (always check manually)
@@ -461,7 +463,8 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
-- 2026-11-04: Section 16 HH-01..HH-34 (household access, from PRD `docs/prd/household.md`) and planned tests in the coverage map.
+- 2026-11-04: HH-20 updated for PRD v2.1 (Delete my login), added HH-35, HH-36.
+- 2026-11-04: Section 16 HH-01..HH-36 (household access, from PRD `docs/prd/household.md`) and planned tests in the coverage map.
 - 2026-11-04: RC-14..RC-17 (Edit debt: Repeat payment block).
 - 2026-11-04: RC-09..RC-12 (repeating debt payments; simple debt cards without percentages).
 - 2026-11-04: Loan/paylater account filter signs and day total (spending is always minus).

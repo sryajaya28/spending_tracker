@@ -18,18 +18,50 @@ Nothing moves to the next stage without the owner's explicit approval. "Approved
 | 3. Production | the live app | real users | assistant smoke-tests right after release |
 
 ```
-feature branch ──(owner approves)──▶ staging ──(owner asks for regression, then approves summary)──▶ production ──▶ smoke test
+Figma design ──(owner approves)──▶ feature branch ──(owner approves)──▶ staging ──(owner asks for regression, then approves summary)──▶ production ──▶ smoke test ──▶ Figma/feature folder final sync
 ```
+
+Every request starts with the design (section 0). The owner can skip it for a request by saying so ("skip figma"); the design is
+then brought up to date after the release instead.
+
+## 0. Design first (Figma)
+
+Every request starts with a design update in the project's Figma file, before any code is written. **Figma is the only home of the
+design**: no design files, exports or feature folders are kept in the repository.
+
+1. **Design the change in Figma** (the file is listed in the Project setup table). Show the new or changed screens in the app's real
+   design language (reuse the existing components and tokens), include the states that matter (empty, error, dark mode, desktop and
+   phone where the app has both), and draw a **flow with arrows** when the change spans several screens.
+2. **Give the feature its own folder in Figma**: a dedicated section (or page, where the plan allows) named `Feature - <short-name>`
+   (the same short name as the branch). Next to the screens it holds a short note: the request in the owner's words, decisions and
+   open questions, and the status (`design` / `approved` / `implemented` / `released`).
+3. **Review it with the owner**: send the Figma link, a few screenshots and the questions or choices that need a decision. Then stop.
+   The owner comments, the assistant updates the design and shows it again, until the owner approves **the design** in plain words.
+   Design approval is not approval to merge to `staging`; that is still section 1.
+4. **Then develop** (section 1) against the approved design. If the work has to deviate from it, tell the owner and update the design first.
+5. **When the feature is implemented**, update its Figma folder to match what was really built (replace the proposal with the
+   as-built screens, refresh the flow, set the status to `implemented`, note any difference from the design) and show the owner the
+   as-built design together with the preview link. Where a feature changes an existing screen, also update that screen in the
+   main screen sections so the file always shows the app as it is. After the release set the status to `released`.
+6. **Skipping the design step:** if the owner says "skip figma" (for a request or for the whole session), the assistant goes straight
+   to development and does not wait for a design review. The Figma file is **still updated at the end**: once the change has been
+   released to production and the smoke test has passed, the assistant adds the feature folder in Figma, updates the affected screens
+   and flows, sets the status to `released`, and tells the owner it is done. The request is not finished before that.
+7. **If Figma cannot be reached** (tool limit, plan limit, blocked network), say so at once and let the owner choose: wait, continue
+   without it, or design on paper. Never silently skip the design step or claim Figma is updated when it is not.
+
+Small fixes that change no screen, flow or text (a typo, a bug in a calculation, a backend-only change) do not need a design; the
+assistant says "no design change" and why, and the owner can still ask for one.
 
 ## 1. Local first
 
-1. Every piece of work starts on its own branch (`feature/<short-name>`), never directly on `staging` or `main`.
+1. Every piece of work starts on its own branch (`feature/<short-name>`, the same short name as its Figma feature folder), never directly on `staging` or `main`, and begins only after the design is approved (section 0) or the owner has said "skip figma".
 2. The assistant builds it and **tests the feature** (see Feature testing below) before showing it.
 3. The assistant shows the result in a way the owner can review: a **preview link of the branch** (every branch push builds its
    own hosted copy; the assistant gets the link from the host and sends it), a few screenshots, and the exact steps to try it.
    Preview links, the staging site and local runs all use the **staging database**; only the live app uses the production one,
    so nothing tried before release can touch real data. Hosted non-production copies show a small "Staging · test data" label.
-   The assistant lists what changed, what was *not* verified, and any decision it needs.
+   The assistant lists what changed, what was *not* verified, any difference from the approved design, and any decision it needs.
 4. The owner reviews and leaves comments. The assistant fixes them on the same branch and shows the result again.
    Repeat until the owner approves.
 5. **Only after approval** is the branch merged into `staging`. Until then nothing is deployed to staging or production,
@@ -43,7 +75,7 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
 - For each feature the assistant writes or updates automated tests, runs them, and reports pass/fail honestly,
   including the things it could not check (real devices, real third-party services, the live site).
 - A feature is "ready for review" only when its entries pass, the existing automated suite still passes, and the docs
-  (project context file, regression scenarios, user-facing text/translations) are updated in the same change.
+  (project context file, regression scenarios, user-facing text/translations and, unless the owner skipped it, the feature folder in Figma) are updated in the same change.
 
 ## 3. Staging and regression testing
 
@@ -73,11 +105,12 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
 4. If something is broken: **fix it immediately** and release the fix, then smoke test again. If the fix is not quick or the
    problem affects data, roll back first (platform "instant rollback"), then fix. Report what happened either way.
 5. The assistant never edits or deletes production data without asking, and looks at the data before any destructive step.
+6. Once the smoke test has passed, set the feature's status to `released` in its Figma folder. For a request where the owner said "skip figma", this is when the Figma file is brought up to date (section 0, point 6).
 
 ## Standing rules
 
 - Secrets never go into the repository. Test-account credentials live in the hosting/CI secret store.
-- Every change updates the project's context file, regression scenarios, README and translations in the same commit.
+- Every change updates the project's context file, regression scenarios, README and translations in the same commit, and keeps the Figma file in step with the code (section 0).
 - Commit messages say *why*; one logical change per commit; no force-pushes to shared branches.
 - Be honest about what was verified: say "tested in the test browser only" when that is the case; never present mocked or
   made-up results as real ones.
@@ -91,6 +124,8 @@ feature branch ──(owner approves)──▶ staging ──(owner asks for reg
 |---|---|
 | Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
 | Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
+| Figma file (design source of truth) | https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW/Stiver |
+| Feature folders | Figma section `Feature - <short-name>` (in the file above) |
 | Feature test list | `docs/FEATURE_TESTS.md` |
 | Regression scenarios | `regression_scenario.md` (manual) + the automated suite |
 | Review link | the Vercel preview of the feature branch (`spendingtracker-git-<branch>-suryajaya378-4429s-projects.vercel.app`; the assistant copies the exact link from Vercel) |

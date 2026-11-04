@@ -8,7 +8,7 @@ on 2026-10-31. It contains **no secrets**: it says where each secret lives, neve
 1. **Before doing anything** on this project (code, database, config, docs, answering a question about the project),
    read this file **and `learning.md`** (past mistakes and how to avoid them; add to it whenever you make a mistake or are corrected, and append your learnings to its Session log at the end of every coding session). If it disagrees with the code, trust the code, then fix this file.
 2. **After doing anything**, update this file in the same commit: edit the sections that changed (features, data model,
-   services, open items, decisions) and add a dated line at the top of `docs/CHANGELOG.md`.
+   services, open items, decisions) and add a change file in `docs/changes/` (folded into `docs/CHANGELOG.md` by the integrating agent).
 3. **After a UI change, regenerate the design files** (`node tools/design/export.js`, see `design/README.md`) and commit them.
 4. **Also update `README.md`** whenever the change affects what it describes (features, how to run, how it is built,
    deploying, release checklist), and `docs/NEXT_STEPS.md` when priorities or known gaps change.

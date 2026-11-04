@@ -18,8 +18,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.selectOption('select[name=repeat]', 'weekly'); await p.click('#dlg button[type=submit]'); await settle();
   let l = await log(); const rule = l.find((o) => o.table === 'recurring_rules'); assert(rule, 'rule saved'); assert.equal(rule.rows[0].frequency, 'weekly'); assert.equal(rule.rows[0].spec.amount_minor, 50000);
   // the first entry, plus the three catch-up entries created straight away on the next open
-  const before = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').length); assert.equal(before, 1);
-  const n = await p.evaluate(() => runRecurring()); assert.equal(n, 3, 'three weeks caught up');
+  const before = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').length); assert(before >= 1 && before <= 4, 'first entry saved: ' + before);
+  // the app may already have caught up on its own (a scheduled run, more likely on a loaded machine): either way four entries, none twice
+  const n = await p.evaluate(() => runRecurring()); assert.equal(n, 4 - before, 'the missing weeks caught up');
   assert.equal(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').length), 4);
   assert.equal(await p.evaluate(() => runRecurring()), 0, 'nothing more due, no duplicates');
   const ids = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id)); assert.equal(new Set(ids).size, 4);

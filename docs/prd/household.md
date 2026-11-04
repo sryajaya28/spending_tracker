@@ -1,6 +1,6 @@
 # PRD: Household access (multi-user)   (owner brief date: 2026-11-04)
 
-Status: `PRD v2 | owner approved: 2026-11-04 (v2.1 + check 16 change) | Figma: pending | Branch: docs/household-prd | QA report: pending`
+Status: `PRD v2 | owner approved: 2026-11-04 (v2.1 + check 16 change + Editor own-transactions rule) | Figma: pending | Branch: docs/household-prd | QA report: pending`
 v2 answers the Product Manager's review of v1 (4 blocking, 7 suggestions). Changes after owner approval need the owner's decision (see 'Pending owner decisions' in the technical design). v2.1 = v2 plus the owner-approved 'Delete my login' and leave/owner-deleted clarifications. Technical design: `docs/prd/household-technical-design.md` (for Developer 2).
 
 ## 1. Problem and goal
@@ -18,7 +18,7 @@ Owner decisions: invitee is signed in straight after creating the password; Edit
 - As an **owner** I can invite a family member as Editor or Viewer so that they can see or help manage our money.
 - As an **owner** I can change a person's role, remove them, or cancel a pending invite so that I stay in control.
 - As an **invitee** I can accept from the email, create a password and land in the household so that I can start right away, and sign in later with email and password.
-- As an **editor** I can add and change transactions and accounts (savings, debt, lent, investment) so that I can help keep the books.
+- As an **editor** I can add transactions, change or delete **the ones I added**, and add and change accounts (savings, debt, lent, investment) so that I can help keep the books without altering what someone else entered.
 - As a **viewer** I can see everything but change nothing so that I can stay informed safely.
 - As **any member** I can see who submitted each transaction and who added or changed each account so that we know who did what with the money.
 
@@ -44,7 +44,7 @@ Join and sign in
 16. Given an email with a pending invitation, when someone uses "Create account" with it, then they see "Check your invite email" and no account or password is created; membership is only ever created from the invite link.
 Roles
 17. Given a Viewer, then no screen shows Add, Edit or Delete controls, a deep link to add shows a read-only message, and a direct write to the database is rejected.
-18. Given an Editor, then they can add, edit and delete transactions, transfers, accounts (savings, debt, lent, investment), budgets, categories, occasions and recurring rules.
+18. Given an Editor, then they can add transactions and transfers, edit and delete **only the transactions and transfers they created** (see checks 33 to 37), and add, edit and delete accounts (savings, debt, lent, investment), budgets, categories, occasions and recurring rules.
 19. Given the owner changes a signed-in person's role, then within 30 seconds or when they return to the app it takes effect and they see "Your access changed".
 20. Given a person is removed or leaves, when they next use or sign in to the app, then they see "You no longer have access to <owner>'s household." with **Sign out** and **Delete my login** as the only actions; their past entries keep their name. Editors and Viewers can leave from the Household card (the owner cannot); if the owner is removed or deletes their account, members see the same page and any pending invite shows the expired message.
 21. Given the owner revokes a pending invite, then it disappears from the list and its link shows the expired message.
@@ -60,6 +60,11 @@ Safety and freshness
 29. Given person B changed a record after person A loaded it, when A saves a change to that same record, then A sees "Updated by <B>. Please check and redo your change" and B's change is not overwritten.
 30. Given someone who is not the owner, when they try to invite, change a role or remove a member (through the app or directly), then it is rejected; more than 10 invites in an hour is limited with a message.
 31. Given a normal sign-up that claims to belong to a household in its details, then it gets no access.
+33. Given a transaction added by another person, when an Editor opens it, then it is read-only, shows "Added by <first name>", and has no Edit or Delete controls.
+34. Given an Editor, when they try to edit or delete another person's transaction directly (not through the app), then the database rejects it and nothing changes.
+35. Given the owner, then they can edit and delete any member's transactions.
+36. Given transactions that existed before the household was created, then they count as the owner's: an Editor cannot edit or delete them (read-only, "Added by <owner first name>").
+37. Given a transfer (two linked entries), a stablecoin income or expense, or a repeating transaction's generated entries, then they belong to the person who created the transfer, entry or repeating rule, and an Editor can change them only if they are that person; the owner can always change them.
 32. (Slice 2) Given the Activity page, then it lists adds, edits, deletes and balance changes with person, item and time, newest first, filterable by person and type, for 180 days (owner to confirm), readable by Viewers.
 
 ## 5. Edge cases and rules

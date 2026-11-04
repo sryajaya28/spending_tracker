@@ -33,9 +33,9 @@ Owner brief -> PM: PRD + acceptance checks          [gate 1: owner approves PRD]
 |---|---|
 | Developer 1 | session_01JJfLhrQSd1XVht9Kuu2E5t |
 | Developer 2 (integrator) | session_01JJfLhsnC5r5ZtEKaKwccW2 |
-| Product Manager | (set when started) |
-| Designer | (set when started) |
-| QA | (set when started) |
+| Product Manager | session_01JJfLhsEphniXYziB3hR1sg |
+| Designer | session_01JJfLhsxXTKmJzUn51SEBrW |
+| QA | session_01JJfLhprXxKbPwErGNHC3SK |
 
 ## Lanes
 - **Fast lane / hotfix:** owner says "fast lane": no PRD, designer optional (post the Figma link and build), QA runs the affected tests only.

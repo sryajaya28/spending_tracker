@@ -389,7 +389,7 @@ Written from the PRD's acceptance checks, not from the implementation. Needs two
 | HH-13 | 13 | Sign out, sign in with email + password **(M)** | Lands in household with same data |
 | HH-14 | 14 | Forgot password, set a new one, sign in **(M)** | Works and lands in the household |
 | HH-15 | 15 | Open the link while signed in as another person (same browser; then another device) **(M)** | "You're signed in as <name>. Sign out to join <owner>'s household."; nothing changes until Sign out is tapped; then the join continues; other person's data not touched |
-| HH-16 | 16 | Invited email uses Create account first, confirms, signs in **(M, DB)** | Lands in the household, never in a separate empty ledger; no seeded sample data; pending invite becomes accepted |
+| HH-16 | 16 (changed) | Create account with an email that has a pending invitation (also different letter case, e.g. `Name+x@Gmail.com`) **(E, DB, M)** | Shows 'Check your invite email'; **no** auth user, password, profile or seed data is created (query `auth.users` and `profiles` before/after); no confirmation email is sent; the original invite link still works afterwards and joins the household; membership exists only after the invite link; a revoked/expired invite lets Create account proceed normally |
 | HH-17 | 17, 30 | Viewer: walk every screen; deep link to add; direct REST/RPC insert, update, delete on every money table **(E, DB)** | No Add/Edit/Delete anywhere; deep link shows a read-only message; every direct write rejected by RLS (no row changed) |
 | HH-18 | 18 | Editor: add/edit/delete transaction, transfer, savings, debt, lent, investment, budget, category, occasion, recurring rule **(E, M)** | All work; owner sees them; rows carry `user_id` = owner |
 | HH-19 | 19 | Owner changes a signed-in person's role (Editor to Viewer and back) while their app is open **(M)** | Within 30 s or on return to the app: controls change and "Your access changed" shows; a save attempted in between is rejected with the same notice, not lost silently |
@@ -463,6 +463,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-04: HH-16 rewritten for the approved check-16 change (Create account with a pending-invite email is blocked).
 - 2026-11-04: HH-20 updated for PRD v2.1 (Delete my login), added HH-35, HH-36.
 - 2026-11-04: Section 16 HH-01..HH-36 (household access, from PRD `docs/prd/household.md`) and planned tests in the coverage map.
 - 2026-11-04: RC-14..RC-17 (Edit debt: Repeat payment block).

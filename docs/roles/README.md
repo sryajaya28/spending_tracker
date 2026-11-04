@@ -1,5 +1,7 @@
 # The Stiver team (who does what, how they talk)
 
+Full workflow with diagram and message formats: `docs/WORKFLOW.md`. Developer 1 builds; Developer 2 reviews, integrates and maintains the workflow.
+
 Owner (human): sets the brief, approves **three gates** (PRD, design, release). Everything between the gates is agent to agent.
 
 ```

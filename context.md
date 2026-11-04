@@ -139,6 +139,7 @@ supabase/tests/     pgTAP tests (first migrations only)
 tests/e2e/          Playwright browser tests with a fake Supabase; run_all.sh; record_demo_tour.js
 docs/NEXT_STEPS.md  roadmap, rules, known gaps            vercel.json  hosting, rewrites, security headers
 regression_scenario.md  manual regression scenarios per feature + automated coverage map (keep current)
+docs/WORKFLOW.md  agent-to-agent workflow, diagram, hand-off formats
 docs/roles/, docs/PRD_TEMPLATE.md  agent team (PM, Designer, QA, developers): flow, hand-offs, registry
 tools/regression.js, release.js, gates.js  one-command regression and release; docs/tooling-only diffs skip regression and the prod smoke test
 tests/test_yahoo.py  python check of the Yahoo price source (stubbed)

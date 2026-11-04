@@ -1,0 +1,1 @@
+2026-11-04: **PRD: household access (multi-user).** `docs/prd/household.md` (roles Owner/Editor/Viewer, invite by email, join page, attribution on every transaction row, Activity log, RLS design, gates: Product Manager review, Developer 2 technical review, Designer Figma, QA). Docs only, no code. Branch `docs/household-prd`.

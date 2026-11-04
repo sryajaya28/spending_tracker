@@ -1751,6 +1751,40 @@ function syncTransfer(form) {
     if (!form.received.dataset.touched) form.received.value = a > 0 ? toMajor(convert(toMinor(a, A.ccy), A.ccy, B.ccy), B.ccy).toFixed(expOf(B.ccy)) : '';
   }
 }
+/* write a transfer between two ends (amounts in minor units of each end's currency). editGid: replace that transfer. Returns { error } or { ok: true }; changes nothing on an error. */
+function saveTransfer({ from, to, amount, received, fee, date, note, editGid, repeat }) {
+  let snap = null;
+  if (editGid) { snap = JSON.stringify({ t: D().transactions, h: D().holdings }); if (!removeTransferGroup(editGid)) return { error: __("Can't change: the cash has already been spent") }; }   // put the old transfer back first (restores the Cash balance), so the checks see the right numbers
+  const fail = (msg) => { if (snap) { const o = JSON.parse(snap); D().transactions = o.t; D().holdings = o.h; } return { error: msg }; };
+  const A = xferEnd(from), B = xferEnd(to);
+  if (A.kind === 'w' && A.w.type !== 'card' && amount + fee > A.bal) return fail(__("{name} doesn't have enough balance", { name: A.name }));
+  if (A.kind === 'h' && toMinor(heldNow(A.h), A.ccy) < amount + fee) return fail(__("{name} doesn't have enough balance", { name: A.name }));
+  const gid = editGid || uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: date, transfer_id: gid }, extra = note ? ` · ${note}` : '';
+  const noteTo = __('Transfer to {name}', { name: B.name }) + extra, noteFrom = __('Transfer from {name}', { name: A.name }) + extra;
+  const cashEvent = (h, side, quantity, wallet, walletMinor, wcur) => { const tid = uid(); h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity)); h.trades.push({ id: tid, date, side, quantity, amount_minor: walletMinor, currency: wcur, wallet_id: wallet.id }); if (side === 'buy' && date.slice(0, 7) < h.since) h.since = date.slice(0, 7); return tid; };
+  if (A.kind === 'w' && B.kind === 'w') {
+    D().transactions.push({ id: uid(), wallet_id: A.w.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.ccy, note: noteTo, ...base });
+    D().transactions.push({ id: uid(), wallet_id: B.w.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.ccy, note: noteFrom, ...base });
+  } else if (A.kind === 'w') {   // a deposit into an investment Cash balance: the account's leg is tied to the cash event
+    const tid = cashEvent(B.h, 'buy', toMajor(received, B.ccy), A.w, amount, A.ccy);
+    D().transactions.push({ id: uid(), wallet_id: A.w.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A.ccy, note: noteTo, trade_id: tid, ...base });
+  } else {   // a withdrawal from an investment Cash balance into an account
+    const tid = cashEvent(A.h, 'sell', toMajor(amount, A.ccy), B.w, received, B.ccy);
+    D().transactions.push({ id: uid(), wallet_id: B.w.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B.ccy, note: noteFrom, trade_id: tid, ...base });
+  }
+  if (fee > 0) {
+    const feeNote = __('Transfer fee ({from} → {to})', { from: A.name, to: B.name });
+    if (A.kind === 'w') D().transactions.push({ id: uid(), wallet_id: A.w.id, type: 'expense', amount_minor: fee, currency: A.ccy, note: feeNote, ...base, category_id: feeCategory().id });
+    else {   // the fee of a withdrawal comes out of the Cash balance itself: its own event, and an expense in Fee with no account
+      const ftid = uid(); A.h.quantity = r12(A.h.quantity - toMajor(fee, A.ccy)); A.h.trades.push({ id: ftid, date, side: 'sell', kind: 'expense', quantity: toMajor(fee, A.ccy), amount_minor: fee, currency: A.ccy, wallet_id: null });
+      D().transactions.push({ id: detId('fee', ftid), wallet_id: null, trade_id: ftid, type: 'expense', amount_minor: fee, currency: A.ccy, note: feeNote, ...base, category_id: feeCategory().id });
+    }
+  }
+  if (repeat && A.kind === 'w' && B.kind === 'w') addRule('transfer', repeat, date, { from: A.w.id, to: B.w.id, amount_minor: amount, received_minor: received, fee_minor: fee, note });
+  sortTxns();
+  state.ui.month = periodKeyOf(date) <= currentPeriod() ? periodKeyOf(date) : state.ui.month;
+  return { ok: true };
+}
 /* take a saved transfer apart: restore the Cash balance it moved and remove its legs and fee; false when that cash was already spent */
 function removeTransferGroup(gid) {
   const legs = D().transactions.filter((t) => t.transfer_id === gid), undo = new Map();
@@ -2282,6 +2316,37 @@ function costDialog(h) {
     <label class="field">${__('Price currency')}${h.ccy ? `<input value="${h.ccy}" disabled>` : `<select name="pccy">${ccyOptions(defaultPriceCcy(info, cur()))}</select>`}</label></div>
   <div class="actions"><button class="btn" type="submit">${__('Save')}</button></div></form>`);
 }
+/* Deposit / Withdraw on an investment Cash balance (Portfolio): amount, optional fee, no quantity; saved as a transfer with a bank / e-wallet account */
+function cashDialog(h, side) {
+  const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), dep = side === 'buy', hc = cashCcy(h);
+  if (!ws.length) { toast('Add an account first'); return; }
+  const last = recallAcct(dep ? 'cashin' : 'cashout', ws.map((w) => `value="${w.id}"`).join('')), first = ws.find((w) => w.id === last) || ws.find((w) => w.currency === hc) || ws[0];
+  open(`<h2>${dep ? __('Deposit {symbol}', { symbol: esc(info.symbol) }) : __('Withdraw {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h), h), symbol: esc(info.symbol) })}</p>
+  <form data-form="cashx" data-id="${h.id}" style="display:contents">
+    <div class="seg"><label><input type="radio" name="side" value="buy" ${dep ? 'checked' : ''}>${__('Deposit')}</label><label><input type="radio" name="side" value="sell" ${dep ? '' : 'checked'}>${__('Withdraw')}</label></div>
+    <label class="field"><span>${dep ? __('Pay with') : __('Receive into')}</span><select name="account">${ws.map((w) => `<option value="${w.id}" ${w.id === first.id ? 'selected' : ''}>${esc(w.name)} (${esc(w.currency)}) · ${money(walletBalance(w), w.currency)}</option>`).join('')}</select></label>
+    <div class="two"><label class="field"><span data-cx-amt></span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required placeholder="${__('amount')}"></label>
+      <label class="field"><span data-cx-fee></span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label></div>
+    <label class="field" data-cx-recv hidden><span data-cx-recv-label></span><input name="received" type="number" inputmode="decimal" min="0" step="any"></label>
+    <label class="field">${__('Date')}<input name="date" type="date" required value="${isoDate(new Date())}"></label>
+    <p class="hint" data-cx-hint></p>
+    <div class="actions"><button class="btn" type="submit">${__('Save')}</button></div></form>`);
+  syncCashForm($('#dlg form'));
+}
+/* labels follow the side and the chosen account; the received amount only appears when the account and the Cash balance use different currencies */
+function syncCashForm(form) {
+  const h = D().holdings.find((x) => x.id === form.dataset.id), w = walletOf(form.account.value); if (!h || !w) return;
+  const dep = form.side.value === 'buy', hc = cashCcy(h), src = dep ? w.currency : hc, dst = dep ? hc : w.currency, cross = src !== dst;
+  $('[data-cx-amt]', form).textContent = dep ? __('Amount paid ({unit})', { unit: src }) : __('Amount ({cur})', { cur: src });
+  $('[data-cx-fee]', form).textContent = __('Fee, optional ({cur})', { cur: src });
+  $('[data-cx-recv]', form).hidden = !cross;
+  if (cross) {
+    $('[data-cx-recv-label]', form).textContent = __('Amount received ({cur}) · estimated, edit if different', { cur: dst });
+    const a = parseFloat(form.amount.value);
+    if (!form.received.dataset.touched) form.received.value = a > 0 ? toMajor(convert(toMinor(a, src), src, dst), dst).toFixed(expOf(dst)) : '';
+  }
+  $('[data-cx-hint]', form).textContent = dep ? __('The money leaves that account. A fee is taken from it on top and counts as spending; the deposit itself is not spending or income.') : __('The money goes into that account. A fee comes out of the Cash balance and counts as spending; the withdrawal itself is not spending or income.');
+}
 function tradeDialog(h, side) {
   const info = assetInfo(h.symbol), ws = D().wallets.filter((w) => !w.archived), first = ws.find((w) => w.currency === cur()) || ws[0];
   open(`<h2>${info.cash ? (side === 'buy' ? __('Deposit {symbol}', { symbol: esc(info.symbol) }) : __('Withdraw {symbol}', { symbol: esc(info.symbol) })) : side === 'buy' ? __('Buy {symbol}', { symbol: esc(info.symbol) }) : __('Sell {symbol}', { symbol: esc(info.symbol) })}</h2><p class="muted" style="margin-top:-10px">${__('You hold {qty} {symbol}', { qty: qtyFmt(heldNow(h)), symbol: esc(info.symbol) })}</p>
@@ -2545,7 +2610,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-holding') { holdingDialog(null, el.dataset.account, el.dataset.type === 'cash' ? { pickType: 'cash' } : {}); }
   else if (act === 'edit-holding') holdingDialog(find(D().holdings));
   else if (act === 'view-history') { close(); location.hash = '#/portfolio/' + id; }
-  else if (act === 'trade') { const th = find(D().holdings); if (assetInfo(th.symbol).type === 'cash') { const other = D().wallets.find((w) => !w.archived); const me = 'h:' + th.id, oth = other ? 'w:' + other.id : ''; transferDialog(el.dataset.side === 'buy' ? { from: oth, to: me } : { from: me, to: oth }); } else tradeDialog(th, el.dataset.side); }
+  else if (act === 'trade') { const th = find(D().holdings); if (assetInfo(th.symbol).type === 'cash') cashDialog(th, el.dataset.side); else tradeDialog(th, el.dataset.side); }
   else if (act === 'set-cost') costDialog(find(D().holdings));
   else if (act === 'delete-trade') {
     const h = find(D().holdings), tr = h.trades.find((x) => x.id === el.dataset.tid);
@@ -2604,6 +2669,7 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.
 
 document.addEventListener('input', (e) => {
   const t = e.target, f = t.form;
+  if (f?.dataset.form === 'cashx') { if (t.name === 'received') t.dataset.touched = '1'; else if (t.name === 'amount') syncCashForm(f); return; }
   if (f?.dataset.form !== 'transfer') return;
   if (t.name === 'received') t.dataset.touched = '1';   // the user set it: stop auto-filling
   else if (t.name === 'amount') syncTransfer(f);
@@ -2641,6 +2707,8 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-demo]')) setDemo(t.checked);
   else if (t.matches('[data-setting]')) applySetting(t);
   else if (t.name === 'side' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, true);
+  else if (t.form?.dataset.form === 'cashx' && t.name === 'side') cashDialog(D().holdings.find((x) => x.id === t.form.dataset.id), t.value);
+  else if (t.form?.dataset.form === 'cashx' && t.name === 'account') { delete t.form.received.dataset.touched; syncCashForm(t.form); }
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
   else if (t.form?.dataset.form === 'recedit' && ['wallet', 'from', 'fund'].includes(t.name)) syncRuleUnit(t.form);
@@ -2796,37 +2864,22 @@ document.addEventListener('submit', async (e) => {
     const received = cross ? toMinor(parseFloat(v.received), B.ccy) : amount;
     if (!(amount > 0) || !(received > 0)) { toast(cross && !(received > 0) ? 'Enter the amount received' : 'Enter an amount above zero'); return; }
     if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
-    // editing: put the old transfer back first (restores the Cash balance), so the balance checks below see the right numbers; undone if a check fails
-    let snap = null;
-    if (editGid) { snap = JSON.stringify({ t: D().transactions, h: D().holdings }); if (!removeTransferGroup(editGid)) { toast(__("Can't change: the cash has already been spent")); return; } }
-    const fail = (msg) => { if (snap) { const o = JSON.parse(snap); D().transactions = o.t; D().holdings = o.h; } toast(msg); };
-    const A2 = xferEnd(v.from), B2 = xferEnd(v.to);   // balances again, now without the old transfer
-    if (A2.kind === 'w' && A2.w.type !== 'card' && amount + fee > A2.bal) { fail(__("{name} doesn't have enough balance", { name: A2.name })); return; }
-    if (A2.kind === 'h' && toMinor(heldNow(A2.h), A2.ccy) < amount + fee) { fail(__("{name} doesn't have enough balance", { name: A2.name })); return; }
-    const gid = editGid || uid(), base = { category_id: null, category_source: 'user', ai_confidence: null, occurred_at: v.date, transfer_id: gid }, extra = v.note.trim() ? ` · ${v.note.trim()}` : '';
-    const noteTo = __('Transfer to {name}', { name: B2.name }) + extra, noteFrom = __('Transfer from {name}', { name: A2.name }) + extra;
-    const cashEvent = (h, side, quantity, wallet, walletMinor, wcur) => { const tid = uid(); h.quantity = r12(h.quantity + (side === 'buy' ? quantity : -quantity)); h.trades.push({ id: tid, date: v.date, side, quantity, amount_minor: walletMinor, currency: wcur, wallet_id: wallet.id }); if (side === 'buy' && v.date.slice(0, 7) < h.since) h.since = v.date.slice(0, 7); return tid; };
-    if (A2.kind === 'w' && B2.kind === 'w') {
-      D().transactions.push({ id: uid(), wallet_id: A2.w.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A2.ccy, note: noteTo, ...base });
-      D().transactions.push({ id: uid(), wallet_id: B2.w.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B2.ccy, note: noteFrom, ...base });
-    } else if (A2.kind === 'w') {   // a deposit into an investment Cash balance: the account's leg is tied to the cash event
-      const tid = cashEvent(B2.h, 'buy', toMajor(received, B2.ccy), A2.w, amount, A2.ccy);
-      D().transactions.push({ id: uid(), wallet_id: A2.w.id, type: 'transfer', flow: 'out', amount_minor: amount, currency: A2.ccy, note: noteTo, trade_id: tid, ...base });
-    } else {   // a withdrawal from an investment Cash balance into an account
-      const tid = cashEvent(A2.h, 'sell', toMajor(amount, A2.ccy), B2.w, received, B2.ccy);
-      D().transactions.push({ id: uid(), wallet_id: B2.w.id, type: 'transfer', flow: 'in', amount_minor: received, currency: B2.ccy, note: noteFrom, trade_id: tid, ...base });
-    }
-    if (fee > 0) {
-      if (A2.kind === 'w') D().transactions.push({ id: uid(), wallet_id: A2.w.id, type: 'expense', amount_minor: fee, currency: A2.ccy, note: __('Transfer fee ({from} → {to})', { from: A2.name, to: B2.name }), ...base, category_id: feeCategory().id });
-      else {   // the fee of a withdrawal comes out of the Cash balance itself: its own event, and an expense in Fee with no account
-        const ftid = uid(); A2.h.quantity = r12(A2.h.quantity - toMajor(fee, A2.ccy)); A2.h.trades.push({ id: ftid, date: v.date, side: 'sell', kind: 'expense', quantity: toMajor(fee, A2.ccy), amount_minor: fee, currency: A2.ccy, wallet_id: null });
-        D().transactions.push({ id: detId('fee', ftid), wallet_id: null, trade_id: ftid, type: 'expense', amount_minor: fee, currency: A2.ccy, note: __('Transfer fee ({from} → {to})', { from: A2.name, to: B2.name }), ...base, category_id: feeCategory().id });
-      }
-    }
-    if (v.repeat && A2.kind === 'w' && B2.kind === 'w') addRule('transfer', v.repeat, v.date, { from: A2.w.id, to: B2.w.id, amount_minor: amount, received_minor: received, fee_minor: fee, note: v.note.trim() });
-    sortTxns();
-    state.ui.month = periodKeyOf(v.date) <= currentPeriod() ? periodKeyOf(v.date) : state.ui.month;
-    save(); close(); render(); toast(editGid ? 'Saved' : __('Moved {amount} from {from} to {to}', { amount: money(amount, A2.ccy), from: A2.name, to: B2.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A2.ccy) }) : '')); return;
+    const r = saveTransfer({ from: v.from, to: v.to, amount, received, fee, date: v.date, note: v.note.trim(), editGid, repeat: v.repeat });
+    if (r.error) { toast(r.error); return; }
+    save(); close(); render(); toast(editGid ? 'Saved' : __('Moved {amount} from {from} to {to}', { amount: money(amount, A.ccy), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.ccy) }) : '')); return;
+  }
+  if (kind === 'cashx') {   // a deposit into / withdrawal from an investment Cash balance (the Portfolio dialog): a transfer with an account
+    const h = D().holdings.find((x) => x.id === f.dataset.id), w = walletOf(v.account), dep = v.side === 'buy';
+    if (!h || !w) { toast('Pick an account'); return; }
+    const hc = cashCcy(h), srcCcy = dep ? w.currency : hc, dstCcy = dep ? hc : w.currency, cross = srcCcy !== dstCcy;
+    const amount = toMinor(parseFloat(v.amount), srcCcy), fee = v.fee ? toMinor(parseFloat(v.fee), srcCcy) : 0;
+    const received = cross ? toMinor(parseFloat(v.received), dstCcy) : amount;
+    if (!(amount > 0) || !(received > 0)) { toast(cross && !(received > 0) ? 'Enter the amount received' : 'Enter an amount above zero'); return; }
+    if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+    const r = saveTransfer({ from: dep ? 'w:' + w.id : 'h:' + h.id, to: dep ? 'h:' + h.id : 'w:' + w.id, amount, received, fee, date: v.date, note: '' });
+    if (r.error) { toast(r.error); return; }
+    state.ui.pfTab = 'investment'; rememberAcct(dep ? 'cashin' : 'cashout', v.account);
+    save(); close(); render(); toast(`${dep ? __('Deposited') : __('Withdrew')} ${money(dep ? received : amount, hc)}`); return;
   }
   if (kind === 'occasion') {
     const picked = !f.dataset.id && v.pick && v.pick !== '__new' ? occasionOf(v.pick) : null, existing = (f.dataset.id && occasionOf(f.dataset.id)) || picked, c = existing ? existing.currency : v.currency;

@@ -55,9 +55,22 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // spending the Cash balance blocks deleting its deposit
   await p.evaluate((id) => { const h = D().holdings.find((x) => x.id === id); h.quantity = 100; h.trades.push({ id: uid(), date: '2026-01-02', side: 'sell', quantity: 5999900, amount_minor: 1, currency: 'IDR', wallet_id: null, kind: 'expense' }); }, ids.c);
   await p.evaluate((g) => { window.__r = removeTransferGroup(g); }, gid); assert.equal(await p.evaluate(() => window.__r), false, 'cannot take back a deposit that was already spent');
-  // 5. the buttons of a Cash balance open the transfer form: Deposit with it as destination, Withdraw with it as source
-  await p.evaluate((id) => { holdingDialog(D().holdings.find((x) => x.id === id)); }, ids.c); await p.waitForSelector('#dlg [data-act=trade][data-side=sell]'); await p.click('#dlg [data-act=trade][data-side=sell]'); await p.waitForSelector('form[data-form=transfer]');
-  assert.equal(await p.$eval('select[name=from]', (s) => s.value), 'h:' + ids.c); await p.click('#dlg [data-act=close]');
+  await p.evaluate((id) => { const h = D().holdings.find((x) => x.id === id); h.trades = h.trades.filter((t) => t.amount_minor !== 1 || t.wallet_id !== null); h.quantity = 6000000; }, ids.c);   // undo the pretend spending
+  // 5. the Portfolio buttons of a Cash balance keep the old pop-up: Deposit / Withdraw with an account, amount, fee and date, no quantity; it saves as a transfer
+  await p.evaluate((id) => { holdingDialog(D().holdings.find((x) => x.id === id)); }, ids.c); await p.waitForSelector('#dlg [data-act=trade][data-side=sell]'); await p.click('#dlg [data-act=trade][data-side=sell]'); await p.waitForSelector('form[data-form=cashx]');
+  assert.equal(await p.$$eval('input[name=quantity]', (e) => e.length), 0, 'no quantity box'); assert(await p.isVisible('input[name=fee]')); assert.equal(await p.$eval('input[name=side][value=sell]', (e) => e.checked), true); { const t = await p.innerText('#dlg'); assert(/You hold/.test(t) && !/\d[.,]\d{3,}\s*IDR/.test(t.replace(/\d{1,3}([.,]\d{3})+/g, 'N')), 'a tidy balance line: ' + t.slice(0, 120)); }
+  const before5 = [await cashQ(ids.c), await bank()];
+  await p.selectOption('select[name=account]', ids.w); await p.fill('input[name=amount]', '1000000'); await p.fill('input[name=fee]', '2000'); await p.click('#dlg button[type=submit]'); await settle();
+  assert.deepEqual([await cashQ(ids.c), await bank()], [before5[0] - 1000000 - 2000, before5[1] + 1000000], 'withdrawal: the Cash balance gave amount + fee, the bank received the amount');
+  const t5 = await p.evaluate(() => D().transactions.filter((t) => t.transfer_id && /Transfer from Ajaib/.test(t.note)).length + D().transactions.filter((t) => t.transfer_id && t.type === 'expense' && !t.wallet_id).length); assert.equal(t5, 2, 'saved as a transfer with its fee');
+  await p.evaluate((id) => { holdingDialog(D().holdings.find((x) => x.id === id)); }, ids.c); await p.waitForSelector('#dlg [data-act=trade][data-side=buy]'); await p.click('#dlg [data-act=trade][data-side=buy]'); await p.waitForSelector('form[data-form=cashx]');
+  await p.selectOption('select[name=account]', ids.w); await p.fill('input[name=amount]', '500000'); await p.fill('input[name=fee]', '1000'); await p.click('#dlg button[type=submit]'); await settle();
+  assert.deepEqual([await cashQ(ids.c), await bank()], [before5[0] - 1000000 - 2000 + 500000, before5[1] + 1000000 - 500000 - 1000], 'deposit: the bank paid amount + fee, the Cash balance received the amount');
+  // the Deposit / Withdraw switch inside the pop-up changes the side
+  await p.evaluate((id) => cashDialog(D().holdings.find((x) => x.id === id), 'buy'), ids.c); await p.waitForSelector('form[data-form=cashx]'); await p.click('input[name=side][value=sell] + *, label:has(input[name=side][value=sell])'); await p.waitForFunction(() => document.querySelector('input[name=side][value=sell]').checked); await p.click('#dlg [data-act=close]');
+  // such a transfer opens in the Transactions list as an editable transfer
+  await p.evaluate(() => { location.hash = '#/transactions'; render(); }); await p.waitForSelector('#txn-list .day-row'); await p.evaluate(() => document.querySelector('[data-act=days-all]').click());
+  await p.click('#txn-list .day-body .row:has-text("Transfer from Ajaib")'); await p.waitForSelector('[data-act=delete-transfer]'); assert.equal(await p.inputValue('input[name=fee]'), '2000'); await p.click('#dlg [data-act=close]');
   // 6. cash trades made before transfers existed become transfers on load
   await p.evaluate((x) => { const h = D().holdings.find((q) => q.id === x.c2); const tr = { id: uid(), date: '2026-01-05', side: 'buy', quantity: 1000, amount_minor: 1000, currency: 'IDR', wallet_id: x.w }; h.trades.push(tr); h.quantity = 1000;
     D().transactions.push({ id: uid(), trade_id: tr.id, wallet_id: x.w, type: 'transfer', flow: 'out', amount_minor: 1000, currency: 'IDR', occurred_at: '2026-01-05', note: 'Bought 1,000 IDR', category_id: null, category_source: 'user', ai_confidence: null }); }, ids);

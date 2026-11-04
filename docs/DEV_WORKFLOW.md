@@ -21,10 +21,24 @@ Nothing moves to the next stage without the owner's explicit approval. "Approved
 feature branch ──(owner approves)──▶ staging ──(owner asks for regression, then approves summary)──▶ production ──▶ smoke test
 ```
 
-## 0. Design first (UI changes)
+## 0. Design first (Figma)
 
-For any change the user can see, the assistant **creates the design in Figma first**, sends the owner the Figma link and a screenshot,
-and **does not build until the owner approves the design**. Design feedback is applied in Figma, then the build follows the approved design.
+Every request that changes a screen, flow or text starts with a design in the project's Figma file, before any code (copy of the shared
+rule in `dev-workflow`; the shared repo wins if they differ). Figma file for Stiver: "Stiver design",
+https://www.figma.com/design/GmKRa3rj8x7WJjANv4ciWS
+
+1. Design the change in the app's real look (reuse components and tokens), including the states that matter (empty, error, dark mode,
+   desktop and phone) and a flow with arrows when several screens are involved.
+2. Give the feature its own Figma section `Feature - <short-name>` (same short name as the branch) with a note: the request in the
+   owner's words, decisions/open questions, and status (`design` / `approved` / `implemented` / `released`).
+3. Send the owner the link, screenshots and open questions, then stop until the owner approves **the design** in plain words
+   (this is not approval to merge to `staging`).
+4. Then develop (section 1) against the approved design; if the work must deviate, tell the owner and update the design first.
+5. When implemented, update the feature section to the as-built screens (status `implemented`); after the smoke test set `released`.
+6. If the owner says "skip figma", go straight to development, but update Figma after the release.
+7. If Figma cannot be reached, say so at once and let the owner choose; never claim Figma is updated when it is not.
+
+Changes that touch no screen, flow or text (typo, calculation bug, backend only) need no design; say "no design change" and why.
 
 ## 1. Local first
 
@@ -94,6 +108,7 @@ and **does not build until the owner approves the design**. Design feedback is a
 
 | Item | Value |
 |---|---|
+| Figma file (design source of truth) | https://www.figma.com/design/GmKRa3rj8x7WJjANv4ciWS ("Stiver design"); one section `Feature - <short-name>` per feature |
 | Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
 | Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
 | Feature test list | `docs/FEATURE_TESTS.md` |

@@ -4,6 +4,8 @@ One entry per feature. The owner can add entries at any time ("also test X"); th
 records the result. A feature is **ready for review** only when its entry passes (see `docs/DEV_WORKFLOW.md`).
 Regression testing on staging runs only when the owner asks for it.
 
+Every entry must also check the feature's **event tracking** (new buttons have a `data-act`, new outcomes fire a named event, nothing private is sent): see `docs/ANALYTICS.md` and `tests/e2e/analytics.js`.
+
 How to fill an entry:
 
 | Field | Meaning |

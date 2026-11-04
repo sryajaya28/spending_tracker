@@ -23,7 +23,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/transactions/2026-01-05'; }); await p.waitForTimeout(300);
   await p.evaluate(() => { location.hash = '#/budgets'; }); await p.waitForTimeout(300);
   const all = await p.evaluate(() => window.__phEvents);
-  const tx = all.find((e) => e.event === 'transaction_saved'); assert(tx, 'transaction_saved'); assert.equal(tx.properties.type, 'expense'); assert.equal(tx.properties.edit, false);
+  const tx = all.find((e) => e.event === 'expense_recorded'); assert(tx, 'expense_recorded'); assert.equal(tx.properties.type, 'expense'); assert.equal(tx.properties.payment_source, 'account'); assert.equal(tx.properties.is_recurring, false);
+  assert(!all.some((e) => e.event === 'transaction_saved'), 'old event name is gone');
   const pages = all.filter((e) => e.event === '$pageview').map((e) => e.properties.page); assert(pages.includes('landing') && pages.includes('transactions') && pages.includes('budgets'), 'page names: ' + pages);
   assert(!pages.some((x) => /\d{4}-\d\d-\d\d|SECRET/.test(x)), 'no dates or tokens in page names');
   const blob = JSON.stringify(all);
@@ -31,6 +32,14 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(all.every((e) => !e.properties.$current_url || !/[?#]/.test(e.properties.$current_url)), 'addresses are cut at ? and #');
   assert(all.every((e) => e.properties.env === 'staging' || e.properties.env === 'production'), 'env property');
   const idn = await p.evaluate(() => posthog.get_distinct_id()); assert.equal(idn, await p.evaluate(() => window.__uidNow || state.auth.uid), 'identified by the account id only');
+  // domain events: category and sub-category
+  await p.evaluate(() => catDialog(null)); await p.waitForSelector('#dlg [name=name]'); await p.fill('#dlg [name=name]', 'Zzz Hobby'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  const par = await p.evaluate(() => D().categories.find((c) => c.name === 'Zzz Hobby').id);
+  await p.evaluate((i) => catDialog(null, i), par); await p.waitForSelector('#dlg [name=name]'); await p.fill('#dlg [name=name]', 'Zzz Sub'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  const dom = await p.evaluate(() => window.__phEvents);
+  assert(dom.some((e) => e.event === 'add_category' && e.properties.type === 'expense'), 'add_category');
+  assert(dom.some((e) => e.event === 'add_sub_category' && e.properties.type === 'expense'), 'add_sub_category');
+  assert(!JSON.stringify(dom).includes('Zzz'), 'category names are not sent');
   // generic interaction events: button clicks, pop-ups, forms, filters, settings, links
   await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForTimeout(300);
   await p.click('.hero-actions [data-act=add-txn][data-type=income]'); await p.waitForSelector('#dlg[open]'); await p.waitForTimeout(150);

@@ -1,6 +1,6 @@
 -- pgTAP tests for household migration 4 (functions). Run with: supabase test db. (First run: staging dry-run, before anything is applied.)
 begin;
-select plan(26);
+select plan(37);
 
 -- owner O, a normal confirmed user X (cannot be invited), people for the invite flow ---------------------------------------------
 insert into auth.users (id, email, email_confirmed_at) values
@@ -56,6 +56,27 @@ select is((select detail ->> 'reason' from public.security_events order by id de
 
 -- reverse order fails: a profile that is not 'invited' cannot be inserted as a member --------------------------------------------------
 select throws_ok($$ insert into public.household_members (owner_id, member_id, role) values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000a9', 'viewer') $$, '23514', 'a household member must be an invited user', 'the member must be invited first; setting status member before inserting fails');
+
+-- member actions: who may do what, and what removal leaves behind -------------------------------------------------------------------------------
+insert into auth.sessions (id, user_id) values
+  ('00000000-0000-0000-0000-00000000f0a1', '00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-00000000f0b1', '00000000-0000-0000-0000-0000000000b1');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated","session_id":"00000000-0000-0000-0000-00000000f0b1"}', true);
+select throws_ok($$ select public.set_member_role('00000000-0000-0000-0000-0000000000b1', 'viewer') $$, '42501', 'only the owner can change roles', 'a member cannot change roles');
+select throws_ok($$ select public.remove_member('00000000-0000-0000-0000-0000000000b1') $$, '42501', 'only the owner can remove members', 'a member cannot remove members');
+select is((select count(*)::int from public.household_people()), 2, 'a member sees the owner and the members (names for the labels)');
+select is((select count(*)::int from public.household_profile()), 1, 'a member reads the owner''s household settings through household_profile()');
+select throws_ok($$ select public.create_invite('00000000-0000-0000-0000-0000000000a1', 'hack@test.dev', 'viewer', 'x', now() + interval '1 day') $$, '42501', 'permission denied for function create_invite', 'clients cannot call the service-only invite function');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","session_id":"00000000-0000-0000-0000-00000000f0a1"}', true);
+select lives_ok($$ select public.set_member_role('00000000-0000-0000-0000-0000000000b1', 'viewer') $$, 'the owner changes a role');
+select lives_ok($$ select public.remove_member('00000000-0000-0000-0000-0000000000b1') $$, 'the owner removes a member');
+reset role;
+select is((select household_status from public.profiles where id = '00000000-0000-0000-0000-0000000000b1'), 'former_member', 'a removed member becomes a former member');
+select is((select count(*)::int from public.household_former_members where owner_id = '00000000-0000-0000-0000-0000000000a1' and member_id = '00000000-0000-0000-0000-0000000000b1'), 1, 'and their name is kept for past entries');
+select is((select has_members from public.household_state where owner_id = '00000000-0000-0000-0000-0000000000a1'), false, 'the household has no members left');
+select public.delete_user_sessions('00000000-0000-0000-0000-0000000000b1');
+select is((select count(*)::int from auth.sessions where user_id = '00000000-0000-0000-0000-0000000000b1'), 0, 'delete_user_sessions ends all sessions of a user');
 
 select * from finish();
 rollback;

@@ -39,6 +39,7 @@ https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW
 5. When implemented, update the feature section to the as-built screens (status `implemented`); after the smoke test set `released`.
 6. If the owner says "skip figma", go straight to development, but update Figma after the release.
 7. If Figma cannot be reached, say so at once and let the owner choose; never claim Figma is updated when it is not.
+8. **Fast lane.** When the owner says "fast lane" on a request (meant for small changes: a field, a label, spacing, a one-screen tweak), post the Figma link and start building at once instead of waiting; tests and the merge into `staging` follow as usual, and the owner's one reply covers the design and the staging sign-off together. If the owner rejects the design, the work is redone. Without those words the order above applies.
 
 Changes that touch no screen, flow or text (typo, calculation bug, backend only) need no design; say "no design change" and why.
 

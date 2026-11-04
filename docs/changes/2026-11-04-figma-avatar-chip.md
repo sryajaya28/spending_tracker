@@ -1,0 +1,1 @@
+2026-11-04: **Figma Library: Avatar and Chip components (household design).** `docs/FIGMA.md` components table now lists Avatar (`Initial`) and Chip (`Text`, `Selected`) added by the Designer for the household feature; decision log merged from the PM's branches. Docs only; branch `chore/decisions-figma-lib`.

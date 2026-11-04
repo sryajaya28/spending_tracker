@@ -964,3 +964,4 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .mrow.open .pnl-chev { transform: rotate(90deg); }
 .holding-row .amt.amt-mid { align-self: center; padding-top: 0; }
 [data-fee-box][hidden] { display: none !important; }   /* the fee box only exists for a bank account */
+.field[hidden] { display: none !important; }   /* a field hidden on purpose (the received amount when both ends share a currency, the repeat choice for a Cash balance) must really be hidden: .field's display beats the hidden attribute */

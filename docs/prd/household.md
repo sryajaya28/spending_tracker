@@ -1,126 +1,87 @@
-# Household access (multi-user) — PRD, technical design and plan
+# PRD: Household access (multi-user)   (owner brief date: 2026-11-04)
 
-Status: v1 DRAFT, owner approved the direction (2026-11-04); waiting for **Product Manager review**, then Developer 2's technical review and the Designer's Figma work. No code, no migration, no Figma yet. Author: Developer 1.
+Status: `PRD v2 | owner approved: pending (gate 1) | Figma: pending | Branch: docs/household-prd | QA report: pending`
+v2 answers the Product Manager's review of v1 (4 blocking, 7 suggestions). Technical design: `docs/prd/household-technical-design.md` (for Developer 2).
 
-## 1. Context
+## 1. Problem and goal
+Owner's words: "multi-account is allowed. The admin (the account creator) can send an invite through email for another user to access the account also, either to write and read or read-only. The use case is for family to manage their household financial." And: "on transaction can see who submit the transaction, so they know who do what with the money."
+Today one login is one ledger, so a family cannot share it, and nothing says who entered what. Goal: an owner invites family by email as Editor or Viewer; everyone sees the same household data; every record shows who made it.
+Owner decisions: invitee is signed in straight after creating the password; Editor can do everything except household admin; household-only login in v1 (one household per person); an email that already has a Stiver account cannot be invited.
 
-Stiver today is one login = one ledger. Every money row has one `user_id` and RLS is `user_id = auth.uid()`; nothing records who changed a row; data loads once at sign-in with no live refresh and last-write-wins saves.
-Families want to run household finances together. The owner (account creator) invites other people by email, as **Editor** (read + write) or **Viewer** (read only); everyone sees the same data and every change shows who made it.
+## 2. Scope
+**In (slice 1):** invite by email (Editor/Viewer), pending list, resend/revoke, join page (create password), roles enforced by the database, change role / remove / leave, who-submitted labels on rows, "Added by / Edited by" on records, delete confirmations that name the item, refresh so people see each other's changes.
+**In (slice 2, same v1 release train):** Activity page (adds, edits, deletes, balance changes by person).
+**Out:** an invitee with their own separate ledger or a household switcher; several admins / transfer of ownership; hiding an account from some members; comments or approvals; push notifications; undo of others' changes; inviting someone who already has a Stiver account; realtime push (refresh instead).
+**Later (v1.1):** "Who" filter on Transactions, per-person spending split on Overview, optional own ledger for members.
 
-Decisions already made by the owner (2026-11-04): invitee is **signed in straight after creating the password**; **Editor can do everything except household admin**; invitee login is **household-only, one household per person, in v1**; v1 has **row labels + an Activity log**. Rule from the owner: an email that already has a Stiver account **cannot** be invited.
+## 3. User stories
+- As an **owner** I can invite a family member as Editor or Viewer so that they can see or help manage our money.
+- As an **owner** I can change a person's role, remove them, or cancel a pending invite so that I stay in control.
+- As an **invitee** I can accept from the email, create a password and land in the household so that I can start right away, and sign in later with email and password.
+- As an **editor** I can add and change transactions and accounts (savings, debt, lent, investment) so that I can help keep the books.
+- As a **viewer** I can see everything but change nothing so that I can stay informed safely.
+- As **any member** I can see who submitted each transaction and who added or changed each account so that we know who did what with the money.
 
-## 2. Goals / non-goals
+## 4. Acceptance checks (Given / When / Then)
+Invite
+1. Given I am the owner on Settings > Household, when I enter a valid email, choose Editor or Viewer and tap Send invite, then the person appears as "Pending" with role and date, and an invite email is sent.
+2. Given an email that already has a Stiver account (any letter case), when I invite it, then I see exactly "This email can't be invited. If they already use Stiver, they need to use a different email address." and nothing is created or sent.
+3. Given a pending invite, when I invite the same email again, then I see "Already invited" with Resend; Resend sends a fresh email and the old link stops working.
+4. Given an invalid email, then Send invite is disabled with an inline message. Emails are compared without regard to letter case.
+5. Given the household has 5 people (members plus pending, owner included), then Invite is disabled with "Household is full (5)". (Owner to confirm the cap.)
+6. Given the invite dialog, then it says "They will see all your data, including notes and the names of other members."
+7. Given I am an Editor or Viewer, then the Household card shows no Invite, role or Remove controls and no household-level settings (currency, period day) are editable.
+Email and link
+8. Given an invite email, then it names the inviter and the role, has one "Accept invitation" button, and is in the owner's language (English or Indonesian).
+9. Given the invite link is opened (including by an email scanner that prefetches links), then nothing is consumed and the Join page shows. Given the invitee sets a password and submits, then the link is consumed; opening it again shows "This invitation was already used or has expired. Ask <owner> to send a new one."
+10. Given an expired or revoked link, then the same message shows and nothing else happens.
+Join and sign in
+11. Given the Join page, then it shows "<owner> invited you to join their household as Editor/Viewer", a display name, a password (at least 8, show/hide) and the Terms/Privacy tick box; the button stays disabled until valid and ticked.
+12. Given a valid submit, then the invitee is signed in and sees the owner's accounts and transactions (not an empty ledger) and appears in the member list.
+13. Given the invitee signs out, when they sign in with email and password, then they land in the household with the same data.
+14. Given the invitee uses "Forgot password" and sets a new one, then sign-in works and lands in the household.
+15. Given the link is opened while another person is signed in on this browser, then the page says "You're signed in as <name>. Sign out to join <owner>'s household." and nothing changes until they do. Given it is opened on another device, it works the same way.
+16. Given an invited email signs up through "Create account" before accepting and confirms that email, then the pending invite is honoured and they land in the household (never in a separate empty ledger).
+Roles
+17. Given a Viewer, then no screen shows Add, Edit or Delete controls, a deep link to add shows a read-only message, and a direct write to the database is rejected.
+18. Given an Editor, then they can add, edit and delete transactions, transfers, accounts (savings, debt, lent, investment), budgets, categories, occasions and recurring rules.
+19. Given the owner changes a signed-in person's role, then within 30 seconds or when they return to the app it takes effect and they see "Your access changed".
+20. Given a person is removed or leaves, when they next use or sign in to the app, then they see "You no longer have access to <owner>'s household." with Sign out as the only action; their past entries keep their name.
+21. Given the owner revokes a pending invite, then it disappears from the list and its link shows the expired message.
+Who did it
+22. Given the household has two or more people, when I view the Transactions list or Overview's recent list, then each row shows who submitted it (name or initial).
+23. Given a transaction, then its detail shows "Added by <name>, <date time>" and, if someone edited it, "Edited by <name>, <time>".
+24. Given accounts, debts, lent, investments and budgets, then each shows "Added by <name>"; when someone changes an account amount or balance it shows "Edited by <name>, <time>".
+25. Given the household has only the owner, then no labels or avatars appear anywhere.
+26. Given a removed member's earlier entries, then they keep that member's name.
+Safety and freshness
+27. Given I delete a transaction or account, then a confirmation names the item ("Delete account 'BCA'?") before it happens.
+28. Given person A adds a transaction while person B has the app open, then B sees it within 30 seconds or when returning to the app.
+29. Given person B changed a record after person A loaded it, when A saves a change to that same record, then A sees "Updated by <B>. Please check and redo your change" and B's change is not overwritten.
+30. Given someone who is not the owner, when they try to invite, change a role or remove a member (through the app or directly), then it is rejected; more than 10 invites in an hour is limited with a message.
+31. Given a normal sign-up that claims to belong to a household in its details, then it gets no access.
+32. (Slice 2) Given the Activity page, then it lists adds, edits, deletes and balance changes with person, item and time, newest first, filterable by person and type, for 180 days (owner to confirm), readable by Viewers.
 
-Goals: (G1) invite by email with a role; (G2) invitee accepts from the email, creates a password, lands in the household; (G3) role enforced by the database, not only the UI; (G4) clear attribution of who created, edited or deleted anything; (G5) owner manages members (change role, remove, revoke, resend); (G6) no data loss or silent overwrite when two people use it at once.
-Non-goals (v1): invitee with their own separate ledger or a household switcher; several admins or ownership transfer; per-account privacy ("hide this account from Viewers"); comments, approvals, chat; push notifications; undo of others' changes; sharing with an existing Stiver account.
+## 5. Edge cases and rules
+Dark mode and 390 px phone width for every screen; Indonesian text for all new strings; email addresses are case-insensitive; very long names truncate with an ellipsis; a failed save shows the existing error toast and reloads; a Viewer opening a write link sees a read-only message; if account deletion exists, its dialog lists the members and warns they lose access, and they then see the "no longer have access" page. Known limitation in plain words: someone who already has a Stiver account cannot join a household in v1; they must use another email address (copy in check 2). Viewers see everything, including notes and other members' names and emails.
 
-## 3. Roles and permissions
+## 6. Data and privacy
+Stores: memberships, invites (email, role, status), who created or last changed each record, and (slice 2) an activity log with a few fields (item name, amount, currency, type). Migrations are additive first and backwards compatible (see technical design). **Never to analytics:** emails, names, ids, amounts, notes. Invitation links are single use and bound to the invited, verified email.
 
-| Action | Owner | Editor | Viewer |
-|---|---|---|---|
-| See all data, Activity log, members list | yes | yes | yes |
-| Add / edit / delete transactions, transfers | yes | yes | no |
-| Add / edit / archive / delete accounts (savings, debt, lent, investment), change balances | yes | yes | no |
-| Budgets, categories, occasions, recurring rules | yes | yes | no |
-| Invite, resend, revoke, change role, remove member | yes | no | no |
-| Household currency, budget period day, sample-data toggle, delete the account | yes | no | no |
-| Personal: own name, language, theme, sign out, **leave household** | yes (no leave) | yes | yes |
+## 7. Analytics and success metric
+Events (snake_case, no private data): `invite_sent`, `invite_resent`, `invite_revoked`, `invite_accepted`, `member_role_changed`, `member_removed`, `household_left`, `activity_opened`.
+Success metric (targets for the owner to confirm): within 30 days of release, at least 3 households with two or more people, and at least 60% of `invite_sent` followed by `invite_accepted` within 7 days. PostHog (EU project 334082, `env = production`): funnel `invite_sent` -> `invite_accepted` (7-day window), plus the count of `invite_accepted` events over 30 days.
 
-## 4. Key user stories and acceptance checks
+## 8. Design notes
+Screens: Settings > Household card (members, roles, Pending rows with Resend/Revoke), Invite dialog (with the privacy line), invite email (EN and ID), Join page and its error states (expired/used, signed in as someone else), "No longer have access" page, Viewer read-only states, row labels on Transactions and Overview, transaction detail "Added by / Edited by", account/debt/lent/investment/budget labels, "Your access changed" notice, delete confirmations, Activity page (slice 2). Light, dark, phone, wide, with a flow. Reuse the existing card, chip, badge, dialog and password field (show/hide, consent tick box) components. Designer fills the Figma link.
 
-1. **Invite.** Settings > Household > Invite: email + role (Editor/Viewer). Checks: invalid email rejected; an email that already has an account shows "This email can't be invited" (no other detail); a pending invite to the same email says "Already invited" with Resend; a successful invite shows the person as "Pending" with role and date; max 5 members including owner.
-2. **Email.** Invite email names the inviter, the role, and has one **Accept invitation** button; the link works once and expires (owner can resend). The email is in English and Indonesian (follows the owner's language).
-3. **Join page.** Link opens "Join <owner name>'s household": shows role, asks for display name, password (show/hide) and the Terms/Privacy tick box (same rule as sign-up). After submit the invitee is signed in and sees the household. Expired/used link shows a clear page with "ask the owner to resend".
-4. **Viewer is read-only.** Add buttons and edit controls are hidden/disabled for Viewers, and a direct write is rejected by the database (tested).
-5. **Attribution (owner request: see who submitted a transaction, so everyone knows who did what with the money).** Every **row in the Transactions list** (and on Overview's recent list) shows the submitter's name/avatar at a glance, e.g. "Rina · Groceries"; the transaction detail shows "Added by X, date/time" and "Edited by Y, time" if changed; the same on accounts, debts, lent, investments and budgets. Shown whenever the household has more than one member (a solo owner sees no clutter). Transactions can be filtered by person; **Activity** page lists add / edit / delete / balance change by person with time (filterable by person and type; kept 180 days). Names come from `household_people`; a removed member's past entries keep their name.
-6. **Manage members.** Owner can change a role (applies at once, even to a signed-in person), remove a member (loses access at once; their past entries stay labelled with their name), revoke a pending invite. A member can leave the household.
-7. **Freshness.** A change by one person appears for the others within about 30 seconds or when they return to the app; a stale edit never silently overwrites a newer one (see 6.5).
-8. **Safety.** Invites are rate-limited; only the owner can invite; membership is granted only to the verified email the invite was sent to.
+## 9. Open questions (recommended default each)
+1. Member cap 5 and Activity retention 180 days: confirm. Default 5 / 180.
+2. Editors may delete accounts and data (owner decision). Deletes are only traceable in Activity (slice 2): default is a confirmation that names the item in slice 1 and Activity in slice 2; alternative is soft delete.
+3. What a removed or departed member sees next time: default is the "no longer have access" page with Sign out only; alternative is letting them start their own ledger (v1.1).
+4. Invite email language: default the owner's language; the Join page has a language switch.
+5. Slice order: slice 1 (invite, join, roles, security, row labels) ships first; Activity follows. Default: ship slice 2 in the same release train if ready, else separately.
+6. A normal sign-up for an already-invited email: default the pending invite wins (check 16).
 
-## 5. Things you didn't list that I added (please confirm or cut)
-
-- Role changes, remove, revoke, resend, member **leave** (above).
-- **Activity log** including who deleted something (the only way to trace deletes) — your choice.
-- **"Who" filter** on Transactions and a small per-person spending split on the household Overview (v1.1 if you want it smaller).
-- Household-level settings (currency, period day) editable by the owner only; language/theme stay personal.
-- Invite **expiry and resend**, one-time link, 5-member cap, rate limit.
-- Terms/Privacy tick box on the join page (matches Release 3).
-- Removed-access handling: if a member is removed or demoted while the app is open, they see "Your access changed" and the app reloads.
-- Owner deleting the account warns that members lose access.
-- Analytics events (no emails, names or ids): `invite_sent`, `invite_resent`, `invite_revoked`, `invite_accepted`, `member_role_changed`, `member_removed`, `household_left`, `activity_opened`.
-- Out for later: own ledger per invitee, several admins/transfer ownership, hide-an-account, realtime push, undo.
-
-## 6. Technical design (for Developer 2's review)
-
-### 6.1 Data model — keep `user_id` as the household owner's id
-Chosen over adding `household_id` everywhere because every table, composite FK `(id,user_id)`, unique index and trigger already keys on `user_id`; for a member, rows are written with `user_id = owner id`, so **no existing FK, index or constraint changes**.
-
-New tables (all RLS on, anon revoked):
-- `household_members(owner_id uuid, member_id uuid unique, role text check in ('editor','viewer'), added_at, primary key(owner_id, member_id))`. One household per person (`member_id` unique); an owner cannot be a member (check in function).
-- `household_invites(id uuid pk, owner_id, email citext, role, invited_by, created_at, expires_at, status check in ('pending','accepted','revoked','expired'), unique (owner_id, email) where status='pending')`.
-- `activity_log(id bigint identity, owner_id, actor_id, entity text, entity_id, action text check in ('create','update','delete'), summary jsonb (a few fields: name/amount/currency/type, never more), at timestamptz default now())` + index `(owner_id, at desc)`; 180-day purge (scheduled).
-
-New columns: `created_by uuid`, `updated_by uuid` on `wallets, transactions, categories, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, occasions, recurring_rules`, set by a `before insert/update` trigger from `auth.uid()` (client cannot spoof). Existing rows: `created_by = user_id`.
-
-Helper functions (security definer, stable, `search_path=''`): `household_owner()` = owner id of the caller (self if owner), `can_read(owner)`, `can_write(owner)`. RLS on every money table becomes: select `can_read(user_id)`; insert/update/delete `can_write(user_id)` (wrapped as `(select …)` for the planner). `profiles` stays self-only; a view `household_people` (user_id, display_name, role) lets members see each other's names. Update the `auth.uid()`-filtered functions/views (`spending_by_category`, `budget_status`, `portfolio_history`) to use `household_owner()`. `handle_new_user` skips seeding when a pending invite exists for the new email (DB lookup, never client metadata).
-
-### 6.2 Invite and accept flow (server side)
-- **Edge Function `invite-member`** (Supabase, service role available there, no new Vercel secret): verifies caller JWT is an owner → rate limit → email format + not an existing confirmed account (generic error) + member cap → insert `household_invites` → `auth.admin.inviteUserByEmail(email, {data:{inviter_name, role}, redirectTo: appUrl()})`; Resend for a pending invite calls it again. Revoke/role-change/remove are plain RPCs checked by `can_write`/owner only.
-- **RPC `accept_household_invite()`** (security definer): requires the caller's JWT email to match a pending, unexpired invite and the email confirmed; inserts `household_members`, marks the invite accepted, writes the profile name. **Membership never comes from user_metadata** (a normal sign-up can send any metadata, so it is not trusted).
-- Email: customise the existing Supabase **Invite** template (`tools/build_email_templates.py`, `{{ .Data.inviter_name }}`, role) in EN/ID; **owner action:** paste into the Supabase dashboard for staging and production (Supabase MCP cannot edit auth templates). Redirect URL `stiver.io/**` is already allowed.
-
-### 6.3 Client (`prototype/`)
-- `cloud.js`: after sign-in compute `dataOwnerId` (owner id if member, else self); `rowsFromData` sets `user_id: dataOwnerId`; load reads owner's profile for household-level settings and the member's own profile for personal ones; pass `created_by/updated_by` through `dataFromRows`. `state.auth.uid` users (`defaultCatId`, onboarding key, analytics identify) switch to the data owner where they are about data.
-- Boot: detect the invite link (`type=invite` in the URL hash, captured before supabase-js clears it) → new **Join household** view built on the existing recovery/`pwField`/consent pieces (`app.js` ~1643, 3239-3300), then `accept_household_invite()` and continue signed in.
-- Role in state (`state.household = {owner, role, people[]}`); one `canWrite()` guard hides Add/Edit/Delete controls for Viewers; `onSaveError` shows "Your access changed" when RLS rejects.
-- Settings > **Household** card (between Smart tagging and Account): members list with role badges, Pending rows with Resend/Revoke, Invite dialog, role/remove actions (owner), Leave (member). New **Activity** page.
-- Attribution UI: "Added by / Edited by" on transaction rows and detail, account/debt/investment cards; avatar initials shown only when the household has >1 person.
-- i18n strings in `i18n-id.js`; `data-act`/`data-form` + analytics events + `docs/ANALYTICS.md`/`EVENTS.md`.
-
-### 6.4 Audit log
-Row triggers on the money tables write `activity_log` (actor = `auth.uid()`, owner = row `user_id`, small summary). RLS: members read their household's log; no one writes it directly. Bulk/diff-sync saves create one log row per changed row.
-
-### 6.5 Concurrency (biggest risk)
-Today: one load at sign-in, last-write-wins diff saves, no realtime. With two writers I add: **refresh on app focus and every 30 s while visible**, merging only when there are no unsaved local changes; and **optimistic concurrency** on update (`updated_at` compare via the upsert; a conflict shows "Updated by X, reload" and re-fetches instead of overwriting). Realtime subscriptions are a later upgrade, not v1.
-
-### 6.6 Migrations (staging first; backwards compatible)
-1. `household_tables` (members, invites, activity_log, columns, helper functions) — additive, old client still works (owner path unchanged).
-2. `household_rls` (new policies, replaces `user_id = auth.uid()` with `can_read/can_write`; owner behaviour identical).
-3. `household_triggers_audit` (created_by/updated_by triggers, activity log triggers, backfill `created_by`).
-4. `household_functions` (update `spending_by_category` etc., `handle_new_user`, `accept_household_invite`, purge job).
-Each applied to staging, SQL RLS tests run (`supabase/tests`), then production at release.
-
-## 7. Security / privacy checklist
-No secrets in repo; service role only inside the Edge Function. Invite endpoint: owner-only, rate limit (e.g. 10/hour), generic "can't be invited" for existing accounts (accepts the small account-enumeration leak you asked for, limited to signed-in owners). Single-use, expiring link; membership bound to the verified email. Activity log holds minimal fields. RLS tests for each role on every table; Viewer write must fail; removed member must lose access immediately. CSP unchanged.
-
-## 8. Delivery plan and gates (your required order)
-
-Team (sessions set up by Developer 2): **Product Manager** (session "Stiver: Product Manager"), **Designer** ("Stiver: Designer"), **QA** ("Stiver: QA"), Developer 1, Developer 2.
-
-| # | Step | Owner of step | Gate |
-|---|---|---|---|
-| 0 | Owner approves this plan as the starting brief (done: owner said OK, 2026-11-04) | **You** | Done |
-| 0b | I commit the PRD to the repo (docs only, branch `docs/household-prd`, `docs/prd/household.md`) and message the **Product Manager** with the branch + commit and the owner's brief; PM reviews scope, roles, acceptance checks and the "additions" list, edits the PRD if needed | **Product Manager** | PM replies "approved <commit>" or numbered findings; one round; I fix findings |
-| 0c | PM tells the **Designer** the PRD is approved (I also message the Designer the commit); **QA** gets the same commit to start the test plan | PM / Dev 1 | Designer and QA acknowledge |
-| 1 | **Technical design review** | **Developer 2** | "approved <commit>" or numbered findings; one round (can run in parallel with step 2) |
-| 2 | **Figma UI/UX** in "Stiver" file, section `Feature - household`: Settings > Household, Invite dialog, Pending/Accepted states, invite email, Join page, Viewer (read-only) states, attribution on rows/detail, Activity page, removed-access, error/expired link; light, dark, phone, wide; flow with arrows. Starts **only after the PM approves the PRD** | **Designer** | **You approve the design** |
-| 3 | Build on `feature/household` in slices (migrations 1-4 on staging, RLS tests, Edge Function, client, Activity, Figma-matching UI); feature tests first in `docs/FEATURE_TESTS.md`; analytics; i18n; change files | Developer 1 | tests + SQL RLS tests pass |
-| 4 | **Code peer review** (production code) | Developer 2 | "approved <commit>" |
-| 5 | Developer 2 merges to staging; I send staging link, screenshots, steps | Dev 2 / Dev 1 | **You sign off on staging** |
-| 6 | Regression on staging **only when you ask**, incl. two real accounts + a real invite email | Dev 1/2 | You approve the summary |
-| 7 | Release: migrations to production first, then code, production smoke test | Developer 2 | Your release approval |
-
-Fast lane does not apply (large, touches data and security).
-
-## 9. Verification (how we will prove it works)
-- **SQL RLS tests** (`supabase/tests`): owner, editor, viewer, removed member, non-member on every money table; `created_by` cannot be spoofed; invite accept only with matching verified email; seeding skipped for invitees.
-- **e2e** (extend `tests/e2e/fake_supabase.js` with a second user, `household_members`, an invite/recovery event and an `rpc` stub): owner invites; Viewer sees no write controls; Editor adds a transaction and the label shows; remove member; leave; role change while open; join page happy path and expired link; poll refresh and conflict message.
-- **Real staging** (`tests/staging`): two smoke accounts plus a real invite to a `+alias` inbox we can read through the Gmail connector (needs your OK to send those test emails), accept it, edit from both sides, check Activity and attribution, clean up.
-- **Real-browser proof** with `tools/staging_shot.js` (phone and dark) for the new screens; smoke test unchanged and run after release.
-
-## 10. Risks and open items
-- Concurrency (6.5) is the main engineering risk; v1 mitigation is refresh + conflict check, not realtime.
-- Supabase invite-link lifetime is set in the dashboard (OTP expiry); we will set and document it, and Resend covers expiry.
-- Email templates and Edge Function secrets/deploy need **owner actions** in the Supabase dashboard (staging and production): paste templates, confirm SMTP, set OTP expiry. I will give exact steps.
-- Existing production owners are unaffected (owner path identical); migrations are additive first.
-- Estimated size: large (about 4 migrations, 1 Edge Function, ~8 UI surfaces). I would build in 3 slices behind the Figma approval; the owner can ship the first slice (invite + join + roles + RLS) before Activity if wanted.
+## 10. Release plan
+Lane: feature (full flow, no fast lane; touches data and security). Migrations (additive, staging first, production at release by Developer 2). Owner actions in the Supabase dashboard (staging and production): paste the new invite email template, confirm SMTP, set the invite-link expiry. Slice 1 first, then slice 2; v1.1 later. How we know it worked: the PostHog funnel and counts in section 7.

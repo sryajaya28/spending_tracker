@@ -251,7 +251,7 @@ Agents: **Developer 2 is the integrator** (merges into `staging`, folds `docs/ch
 
 - `tests/e2e/` (Playwright, fake Supabase in `fake_supabase.js`): `run_all.sh` starts the dev server and runs ~17 tests.
   The fake seeds a new user like the signup trigger (12 categories + 11 sub-categories + Cash wallet).
-- Workflow tools: `node tools/affected_tests.js` (which tests a change needs; rules in `tests/e2e/affects.json`; `--verify` checks them against history), `node tools/trim_learnings.js` (moves old `learning.md` log entries to `docs/learning-archive.md`), `node tools/doc_budget.js` (size budget for the always-read files), `node tools/fold_changes.js`, `node tools/staging_shot.js`.
+- Workflow tools: `node tools/affected_tests.js` (which tests a change needs; rules in `tests/e2e/affects.json`; `--verify` checks them against history), `node tools/trim_learnings.js` (moves old `learning.md` log entries to `docs/learning-archive.md`), `node tools/doc_budget.js` (size budget for the always-read files), `node tools/fold_changes.js`, `node tools/staging_shot.js`; Figma: `docs/FIGMA.md` with `tools/figma/helpers.js` (component and variable helpers, section starter) and `tools/figma/lint.js` (checks every Feature section).
 - Many screens were verified only through these tests and screenshots, never on the real live site (the cloud sandbox
   cannot reach stiver.io, Supabase Auth or Google). Ask the owner to confirm real-world flows.
 - Useful one-offs: Supabase `query_logs` (`auth_logs`) shows email sends/errors; `execute_sql` inside `begin; ... rollback;`

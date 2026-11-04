@@ -1654,7 +1654,7 @@ const lockScroll = () => { if (lockY !== null) return; lockY = window.scrollY; d
 const unlockScroll = () => { if (lockY === null) return; const y = lockY; lockY = null; document.body.classList.remove('scroll-locked'); document.body.style.removeProperty('--lock-top'); window.scrollTo(0, y); };
 dlg().addEventListener('close', unlockScroll);
 // every pop-up has a ✕ in its top-right corner (Esc and a tap outside close it too)
-function open(html) { dlg().innerHTML = `<div class="dlg" tabindex="-1"><button type="button" class="dlg-x" data-act="close" aria-label="${__('Close')}">${icon('x')}</button>${html}</div>`; if (!dlg().open) { lockScroll(); dlg().showModal(); } $('.dlg', dlg()).focus({ preventScroll: true }); }
+function open(html) { Analytics.dialogOpened(html, dlg().open); dlg().innerHTML = `<div class="dlg" tabindex="-1"><button type="button" class="dlg-x" data-act="close" aria-label="${__('Close')}">${icon('x')}</button>${html}</div>`; if (!dlg().open) { lockScroll(); dlg().showModal(); } $('.dlg', dlg()).focus({ preventScroll: true }); }
 const close = () => dlg().open && dlg().close();
 /* a tap or click on the dimmed area outside a modal closes it (web and phone). A press that starts inside and is released outside (selecting text), or a tap that only closes an open dropdown list, does not. */
 let downOnBackdrop = false, listOpenAtDown = false;
@@ -3060,6 +3060,7 @@ async function loadUserData() {
     state.data.livePrices = loadPrices();
     const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(), addedSales = backfillSaleRecords(); if (addedCats || addedFee || addedSales) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
     if (api.finnhub || api.yahoo) refreshPrices(true);
+    Analytics.person(state.data.profile);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
     if (demoWanted()) await setDemo(true);

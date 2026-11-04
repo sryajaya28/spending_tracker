@@ -352,6 +352,8 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 | AN-05 | Browser with Do Not Track on, or local run (localhost) | Nothing is sent. |
 | AN-06 | Network tab on the hosted site | Requests go to `/ingest/...` on the app's own address (no direct call to posthog.com); the page shows no CSP error. |
 
+| AN-07 | Click buttons (Add expense, tabs, Edit, Close), open and close pop-ups, change a filter, the currency and the language | PostHog shows `button_clicked` (`action`, `page`, `in_dialog`), `dialog_opened` (`form`), `form_submitted`, `filter_changed`, `setting_changed`, each with `page`, `lang`, `theme`, `viewport`, `env`; no event holds text typed by you, an amount, a name or a record id. |
+
 Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`). The real PostHog dashboard is checked manually.
 
 ## Automated coverage map
@@ -403,6 +405,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-04: AN-07 (generic click, dialog, form, filter and setting events).
 - 2026-11-04: Added section 15 (usage analytics, AN-01..06) and the `analytics` test.
 - 2026-11-01: First version, covering all features up to the Commodities asset type.
 - 2026-11-01: IV-08 now covers the price-refresh disclaimer on the Investment tab.

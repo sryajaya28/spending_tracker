@@ -1867,7 +1867,7 @@ function syncTxnUnit(form) {
 }
 function txnDialog(t, presetType, presetOccasion, presetDate) {
   const type = t?.type || presetType || 'expense', ws = D().wallets.filter((w) => !w.archived);
-  const live = D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id), occ0 = t ? t.occasion_id : presetOccasion?.id || (occasionOn(isoDate(new Date()))[0]?.id);
+  const live = D().occasions.filter((o) => !o.archived || o.id === t?.occasion_id), occ0 = t ? t.occasion_id : presetOccasion?.id;   // a new expense starts with no special occasion (only the occasion's own + Expense button presets it); nothing is remembered from the last time
   const date0 = t?.occurred_at || presetDate || (presetOccasion?.start && presetOccasion.start > isoDate(new Date()) ? presetOccasion.start : isoDate(new Date()));
   // the amount is entered in the chosen wallet's currency
   const tcoin = coinOf(t);

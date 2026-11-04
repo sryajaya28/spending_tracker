@@ -52,6 +52,7 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `trade_recorded` | `side` | buy/sell of an asset |
 | `debt_payment_recorded` | `kind` (loan/lent) | loan payment / lent repayment |
 | `add_category` / `add_sub_category` / `update_category` | `type`, `source` (settings/quick_add) | categories |
+| `restore_category` | `type`, `level` (category/sub_category) | an archived category brought back (Settings > Categories > Archived) |
 | `add_account` | `type` | new account |
 | `add_budget` / `update_budget` / `delete_budget` | `scope` (overall/category) | budgets |
 | `add_occasion` / `update_occasion` | `has_budget`, `has_dates` | special occasions |

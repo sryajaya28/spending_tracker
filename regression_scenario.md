@@ -482,3 +482,6 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Create account page: the agreement box is unticked; "Continue with Google" and "Create account" are greyed out and do nothing. Tick it: both work; untick: disabled again; what you typed stays. The two links open the Privacy Policy and Terms in a new tab. (tests/e2e/consent.js)
 - Sign-in page: "Continue with Google" works as before, with the note about the policy and terms underneath.
 - Sign-in, sign-up and reset-password boxes: the eye button shows and hides the password and keeps what was typed.
+
+### Archived categories
+- Settings > Categories: the "Archived" button is left of "+ Category". Archive a category with sub-categories: it leaves the list; Archived lists it (with its sub-category count); Restore brings it back with its sub-categories. A sub-category archived alone is listed as "in <parent>" and comes back alone. Empty state: "No archived categories." (tests/e2e/archcat.js)

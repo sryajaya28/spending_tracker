@@ -87,6 +87,7 @@ Fired in `prototype/app.js` right before `save(); close(); render();`, only on t
 | `add_asset` | `funded` (paid from an account or coin) | an asset was added to a portfolio |
 | `debt_payment_recorded` | `kind` (`loan`, `lent`) | a loan payment or lent repayment |
 | `add_category` / `add_sub_category` | `type` (`expense`, `income`), `source` (`settings`, `quick_add`) | category created |
+| `restore_category` | `type` (`expense`, `income`), `level` (`category`, `sub_category`) | an archived category restored |
 | `update_category` | `type`, `source` | category edited |
 | `add_account` | `type` (`cash`, `bank`, `ewallet`, `card`) | savings account created |
 | `add_budget` / `update_budget` | `scope` (`overall`, `category`) | budget created / edited |

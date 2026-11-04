@@ -49,7 +49,10 @@
       "mcp__Vercel__stage_routes",
       "mcp__Vercel__update_route_versions",
       "mcp__Vercel__restore_redirects",
-      "mcp__Vercel__revoke_kms_signing_key"
+      "mcp__Vercel__revoke_kms_signing_key",
+      "mcp__Supabase__execute_sql",
+      "mcp__Vercel__run_session_command",
+      "mcp__github__create_repository"
     ]
   }
 }

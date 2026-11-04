@@ -1415,7 +1415,7 @@ function categoriesCard() {
       <div class="cat-list ${more ? '' : 'collapsed'}">${roots.map((c, n) => (n >= 5 ? row(c).replace('<div class="brow cat-row">', '<div class="brow cat-row more-item">') : row(c))).join('')}
       ${rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="cat-${type}" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : ''}</div></div>`;
   };
-  return `<section class="card"><div class="card-head"><h2>${__('Categories')}</h2><div class="tools"><button class="chip" data-act="archived-cats">${__('Archived')}</button><button class="btn" data-act="add-cat">${__('+ Category')}</button></div></div>
+  return `<section class="card"><div class="card-head"><h2>${__('Categories')}</h2><div class="tools">${D().categories.some((c) => c.archived) ? `<button class="chip" data-act="archived-cats">${__('Archived')}</button>` : ''}<button class="btn" data-act="add-cat">${__('+ Category')}</button></div></div>
     ${section('expense', __('Expense'), '#E5484D')}${section('income', __('Income'), '#1fa971')}</section>`;
 }
 function viewSettings() {

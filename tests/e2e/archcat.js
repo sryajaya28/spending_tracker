@@ -1,5 +1,5 @@
 const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
-/* Settings > Categories has an Archived button left of + Category: it lists archived categories and restores them
+/* Settings > Categories has an Archived button left of + Category, shown only while something is archived: it lists archived categories and restores them
    (a parent comes back with the sub-categories archived with it; a sub-category archived alone comes back alone). */
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 900 } });
@@ -11,15 +11,16 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const settle = () => p.evaluate(() => Cloud.idle());
   const ids = await p.evaluate(() => { state.ui.onbSkipped = true; const par = { id: uid(), parent_id: null, name: 'Zzz Hobby', type: 'expense', icon: '🎨', color: '#EC4899', archived: false }; const k1 = { id: uid(), parent_id: par.id, name: 'Zzz Paint', type: 'expense', icon: '🖌️', color: '#EC4899', archived: false }, k2 = { id: uid(), parent_id: par.id, name: 'Zzz Clay', type: 'expense', icon: '🏺', color: '#EC4899', archived: false }; D().categories.push(par, k1, k2); save(); location.hash = '#/settings'; render(); return { par: par.id, k1: k1.id, k2: k2.id }; });
   await p.waitForSelector('[data-act=add-cat]'); await settle();
-  // the button sits left of + Category, always there
-  const order = await p.$$eval('.card-head .tools [data-act]', (b) => b.map((x) => x.dataset.act)); assert(order.indexOf('archived-cats') >= 0 && order.indexOf('archived-cats') === order.indexOf('add-cat') - 1, 'Archived is left of + Category: ' + order);
-  await p.click('[data-act=archived-cats]'); await p.waitForSelector('#dlg[open] .empty'); assert(/No archived categories/.test(await p.innerText('#dlg')), 'empty state'); await p.click('#dlg [data-act=close]');
+  // nothing is archived yet: the button is not shown
+  assert.equal(await p.$$eval('[data-act=archived-cats]', (b) => b.length), 0, 'no Archived button without archived categories');
   // archive the parent (its sub-categories go with it) from its edit pop-up
   await p.evaluate((i) => catDialog(D().categories.find((c) => c.id === i)), ids.par); await p.waitForSelector('[data-act=archive-cat]'); await p.click('[data-act=archive-cat]'); await settle();
   assert.equal(await p.evaluate(() => !!D().categories.find((c) => c.name === 'Zzz Hobby').archived), true); assert.equal(await p.$$eval('.cat-name', (e) => e.filter((x) => /Zzz Hobby/.test(x.textContent)).length), 0, 'gone from the list');
+  // now it is shown, left of + Category
+  const order = await p.$$eval('.card-head .tools [data-act]', (b) => b.map((x) => x.dataset.act)); assert(order.indexOf('archived-cats') >= 0 && order.indexOf('archived-cats') === order.indexOf('add-cat') - 1, 'Archived is left of + Category: ' + order);
   await p.click('[data-act=archived-cats]'); await p.waitForSelector('#dlg[open] [data-act=restore-cat]');
   const t = await p.innerText('#dlg'); assert(/Zzz Hobby/.test(t) && /Expense/.test(t) && /2 sub-categories/.test(t) && !/Zzz Paint/.test(t), 'the parent is listed with a count, its sub-categories are not listed on their own: ' + t.slice(0, 200));
-  await p.click('#dlg [data-act=restore-cat]'); await settle(); await p.waitForSelector('#dlg .empty');
+  await p.click('#dlg [data-act=restore-cat]'); await settle(); await p.waitForSelector('#dlg .empty'); assert(/No archived categories/.test(await p.innerText('#dlg')), 'empty state after the last restore'); assert.equal(await p.$$eval('[data-act=archived-cats]', (b) => b.length), 0, 'button gone again');
   assert.deepEqual(await p.evaluate(() => D().categories.filter((c) => /^Zzz/.test(c.name)).map((c) => c.archived)), [false, false, false], 'restored with its sub-categories'); await p.click('#dlg [data-act=close]');
   assert.equal(await p.$$eval('.cat-name', (e) => e.filter((x) => /Zzz Hobby/.test(x.textContent)).length), 1, 'back in the list');
   // a sub-category archived alone is listed under its parent's name and comes back alone

@@ -484,4 +484,4 @@ on a real phone keyboard, and anything that depends on the current date being a 
 - Sign-in, sign-up and reset-password boxes: the eye button shows and hides the password and keeps what was typed.
 
 ### Archived categories
-- Settings > Categories: the "Archived" button is left of "+ Category". Archive a category with sub-categories: it leaves the list; Archived lists it (with its sub-category count); Restore brings it back with its sub-categories. A sub-category archived alone is listed as "in <parent>" and comes back alone. Empty state: "No archived categories." (tests/e2e/archcat.js)
+- Settings > Categories: the "Archived" button is left of "+ Category" and is **not shown** while nothing is archived (it disappears again after the last Restore). Archive a category with sub-categories: it leaves the list; Archived lists it (with its sub-category count); Restore brings it back with its sub-categories. A sub-category archived alone is listed as "in <parent>" and comes back alone. Empty state: "No archived categories." (tests/e2e/archcat.js)

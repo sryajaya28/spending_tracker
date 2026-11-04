@@ -197,7 +197,7 @@ Migrations (repo file names; applied through the Supabase tools with different r
 | Finnhub | free plan (personal use only); stock/ETF/crypto lists and quotes; key in Vercel env and `.env.local` |
 | Frankfurter / open.er-api | free FX rates (no key), proxied via `/api/fx` |
 | Cloudflare Turnstile | **not set up yet**; code is dormant until `TURNSTILE_SITE_KEY` is set |
-| PostHog | **Cloud EU** (Frankfurt, matches the production Supabase region), project "Default project" id 334082, host `eu.i.posthog.com`. The public project token is `POSTHOG_KEY` in `prototype/config.js`; production, staging and previews share it and are told apart by the event property `env`. Browser traffic goes through our own `/ingest` rewrite in `vercel.json`. The PostHog connector (MCP) is attached to the owner's Claude account for reading data |
+| PostHog | **Cloud EU** (Frankfurt, matches the production Supabase region), project "Default project" id 334082, host `eu.i.posthog.com`. The public project token is `POSTHOG_KEY` in `prototype/config.js`; production, staging and previews share it and are told apart by the event property `env`. Browser traffic goes through our own `/ingest` rewrite in `vercel.json`. The PostHog connector (MCP) is attached to the owner's Claude account for reading data. Dashboard **"Stiver key flows"** (id 1083794, https://eu.posthog.com/project/334082/dashboard/1083794; filter `env = production`, last 30 days): sign-up funnel, activation funnel, daily active users, mobile vs desktop, transactions per day, feature adoption, most clicked buttons, page views by page, weekly retention. Built in PostHog (not in the repo); tiles stay empty until production sends events |
 
 Old names: the Vercel project, repo and Supabase project are still called `spending_tracker`; Vercel also keeps the
 aliases `spendingtracker-three.vercel.app` and `spendingtracker-suryajaya378-4429s-projects.vercel.app`.
@@ -295,6 +295,7 @@ git push origin HEAD:main                   # deploy (Vercel builds on push)
 
 Newest first. One line per change; keep it short and dated.
 
+- 2026-11-04: Created the PostHog dashboard "Stiver key flows" (9 insights, dashboard filter `env = production`); see section 8 (PostHog row). No code change.
 - 2026-11-04: **Fix: no analytics event ever reached PostHog.** The rewrite `/ingest/:path*` did not match the SDK's `POST /ingest/e/` (trailing slash): Vercel answered 404 and every browser event was dropped (found by probing the live proxy: `/ingest/e` 200, `/ingest/e/` 404). Rewrite is now `/ingest/(.*)` -> `https://eu.i.posthog.com/$1`. Guards added: `tests/e2e/analytics.js` checks the rewrite matches `/ingest/e/`, `/ingest/e`, `/ingest/i/v0/e/`; the smoke test posts an empty body to `/ingest/e/` and fails on 404/5xx (`docs/SMOKE_TEST.md` step 3). Lesson: a stubbed network route cannot prove a hosting rewrite; check the real URL on a deployed copy.
 - 2026-11-04: Added `docs/EVENTS.md`, the complete analytics event reference (frontend events, all `button_clicked` actions and form kinds, properties, privacy rules; backend: none sent yet, proposal included).
 - 2026-11-04: **Event tracking is now a standing step of every feature.** New `docs/ANALYTICS.md` (checklist + event catalog); rule added to `CLAUDE.md` (5b), this file's working agreement (7), `learning.md` checklist and `docs/FEATURE_TESTS.md`.

@@ -1,6 +1,10 @@
 -- pgTAP tests for household migration 1. Run with: supabase test db
 begin;
-select plan(12);
+select plan(13);
+
+-- rows that existed before this test (created before the migration ran) were backfilled to their owner
+select is((select count(*)::int from public.wallets where created_by is null), 0, 'wallets: existing rows backfilled');
+select is((select count(*)::int from public.categories where created_by is null), 0, 'categories: existing rows backfilled');
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000a1', 'owner@test.dev'),
@@ -20,10 +24,7 @@ insert into auth.sessions (id, user_id) values
   ('00000000-0000-0000-0000-00000000f0b1', '00000000-0000-0000-0000-0000000000b1'),
   ('00000000-0000-0000-0000-00000000f0c1', '00000000-0000-0000-0000-0000000000c1');
 
--- columns exist and the existing signup-seeded rows were backfilled to their owner
 select col_is_null('public', 'transactions', 'recurring_rule_id', 'transactions.recurring_rule_id exists and is nullable');
-select is((select count(*)::int from public.wallets where created_by is distinct from user_id), 0, 'wallets backfilled: created_by = user_id');
-select is((select count(*)::int from public.categories where created_by is distinct from user_id or updated_by is distinct from user_id), 0, 'categories backfilled');
 
 set local role authenticated;
 

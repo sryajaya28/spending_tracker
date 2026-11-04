@@ -1,0 +1,466 @@
+{
+ "_about": "Rules for tools/affected_tests.js. A rule fires when a changed file path matches one of `files` (regex) or a changed line of an app file matches one of `diff` (regex, case-insensitive). `tests` are run_all.sh test names. Keep the rules broad rather than clever: a missed test costs more than an extra one. `node tools/affected_tests.js --verify` checks them against the repo history.",
+ "always": [
+  "run",
+  "sample",
+  "onboarding"
+ ],
+ "fullSuiteFiles": [
+  "^prototype/(cloud|config|index)\\.(js|html)$",
+  "^prototype/sw\\.js$",
+  "^api/",
+  "^vercel\\.json$",
+  "^supabase/",
+  "^package",
+  "^tests/e2e/fake_supabase\\.js$"
+ ],
+ "rules": [
+  {
+   "name": "debts",
+   "diff": [
+    "loanDialog",
+    "loanCard",
+    "loanBalance",
+    "loanCycle",
+    "debtN\\b",
+    "debtPlan",
+    "debtLeft",
+    "debtRule",
+    "paymentDialog",
+    "loanPayment",
+    "loanHistory",
+    "archivedLoans",
+    "repaymentOf",
+    "LOAN_TYPES",
+    "syncDebtForm",
+    "debtForm",
+    "lentRepayment"
+   ],
+   "tests": [
+    "debtrec",
+    "debtedit",
+    "debtcalc",
+    "repay",
+    "loanpay",
+    "samplelocal",
+    "sample"
+   ]
+  },
+  {
+   "name": "recurring",
+   "diff": [
+    "recurring",
+    "addRule",
+    "runRecurring",
+    "ruleDialog",
+    "generateRecurring",
+    "debtPaymentDue",
+    "repeatField",
+    "recedit",
+    "firstEntryOf"
+   ],
+   "tests": [
+    "recurring",
+    "recedit",
+    "debtrec",
+    "debtedit",
+    "samplelocal"
+   ]
+  },
+  {
+   "name": "analytics",
+   "diff": [
+    "Analytics\\.",
+    "analytics",
+    "posthog"
+   ],
+   "tests": [
+    "analytics",
+    "csp",
+    "consent"
+   ]
+  },
+  {
+   "name": "new buttons and forms",
+   "diff": [
+    "data-act=\"",
+    "data-form=\""
+   ],
+   "tests": [
+    "analytics"
+   ]
+  },
+  {
+   "name": "consent",
+   "diff": [
+    "consent",
+    "opt-?out"
+   ],
+   "tests": [
+    "consent",
+    "analytics"
+   ]
+  },
+  {
+   "name": "translations",
+   "files": [
+    "^prototype/i18n(-id)?\\.js$"
+   ],
+   "diff": [],
+   "tests": [
+    "langsave",
+    "landshot",
+    "darkshots"
+   ]
+  },
+  {
+   "name": "styles",
+   "files": [
+    "^prototype/styles\\.css$"
+   ],
+   "diff": [],
+   "tests": [
+    "darkshots",
+    "noscroll",
+    "ios",
+    "modalscroll",
+    "dropdown",
+    "landshot",
+    "debtrec",
+    "quickcat"
+   ]
+  },
+  {
+   "name": "dropdown",
+   "files": [
+    "^prototype/dropdown\\.js$"
+   ],
+   "diff": [
+    "cs-pop",
+    "buildList",
+    "enhanceSelect"
+   ],
+   "tests": [
+    "dropdown",
+    "ios",
+    "quickcat"
+   ]
+  },
+  {
+   "name": "datepicker",
+   "files": [
+    "^prototype/datepicker\\.js$"
+   ],
+   "diff": [
+    "dp-text",
+    "dpOpen",
+    "datepicker"
+   ],
+   "tests": [
+    "datepick",
+    "ios"
+   ]
+  },
+  {
+   "name": "sample data",
+   "files": [
+    "^prototype/sample\\.js$"
+   ],
+   "diff": [
+    "seed\\(",
+    "setDemo",
+    "SAMPLE\\.",
+    "\\bEXTRA\\b",
+    "demoWanted",
+    "removeSample"
+   ],
+   "tests": [
+    "sample",
+    "samplelocal",
+    "onboarding"
+   ]
+  },
+  {
+   "name": "onboarding",
+   "diff": [
+    "onboardingView",
+    "setupState",
+    "congratsView",
+    "skipOnboarding",
+    "setupStrip",
+    "endCongrats"
+   ],
+   "tests": [
+    "onboarding",
+    "sample"
+   ]
+  },
+  {
+   "name": "auth",
+   "diff": [
+    "submitAuth",
+    "viewAuth",
+    "onAuth\\b",
+    "checkConfirmed",
+    "claimHandoff",
+    "consumeHandoff",
+    "resetSessionView",
+    "startPolling",
+    "friendlyAuthError",
+    "signup",
+    "agree",
+    "viewAuth",
+    "auth-",
+    "IS_STANDALONE",
+    "standalone",
+    "install"
+   ],
+   "tests": [
+    "loginstart",
+    "handoff",
+    "confirm",
+    "csp",
+    "scrollpos",
+    "langsave"
+   ]
+  },
+  {
+   "name": "support",
+   "diff": [
+    "submitSupport",
+    "supportDialog",
+    "supportShots",
+    "SUPPORT_MAX"
+   ],
+   "tests": [
+    "support"
+   ]
+  },
+  {
+   "name": "transactions",
+   "diff": [
+    "txnDialog",
+    "txnRow",
+    "txnListHtml",
+    "filteredTxns",
+    "dayTxns",
+    "day-group",
+    "openDays",
+    "sortTxns",
+    "dayListHtml"
+   ],
+   "tests": [
+    "daily",
+    "balancecheck",
+    "recedit",
+    "lastacct",
+    "occtx",
+    "scrollpos",
+    "onboarding"
+   ]
+  },
+  {
+   "name": "transfers",
+   "diff": [
+    "transferDialog",
+    "saveTransfer",
+    "xferRead",
+    "removeTransferGroup",
+    "transferTitle",
+    "feeCategory",
+    "addFeeRecord",
+    "transfer_id",
+    "trade_id",
+    "fee_minor",
+    "\\bfee\\b"
+   ],
+   "tests": [
+    "transfer",
+    "fees",
+    "cashxfer",
+    "cashacct",
+    "invest"
+   ]
+  },
+  {
+   "name": "accounts",
+   "diff": [
+    "walletDialog",
+    "archiveWallet",
+    "walletBalance",
+    "wallet-menu",
+    "accountDialog",
+    "restore-wallet"
+   ],
+   "tests": [
+    "wallet",
+    "arch",
+    "cashacct",
+    "balancecheck",
+    "onboarding"
+   ]
+  },
+  {
+   "name": "categories",
+   "diff": [
+    "catDialog",
+    "quickAddCategory",
+    "ensureDefaultCategories",
+    "archivedCats",
+    "catOptions",
+    "childrenOf",
+    "rootOf\\b",
+    "qc_",
+    "quick-cat"
+   ],
+   "tests": [
+    "cats",
+    "quickcat",
+    "archcat",
+    "trend",
+    "donut",
+    "onboarding"
+   ]
+  },
+  {
+   "name": "budgets and occasions",
+   "diff": [
+    "budgetDialog",
+    "budgetStatus",
+    "occasionDialog",
+    "occasionStatus",
+    "occasion[A-Z]\\w*",
+    "periodStart",
+    "periodEnd",
+    "currentPeriod",
+    "periodKeyOf",
+    "inPeriod",
+    "budgetCatOptions"
+   ],
+   "tests": [
+    "budgetbar",
+    "ovbud",
+    "ovocc",
+    "occnobudget",
+    "occtx",
+    "period",
+    "onboarding"
+   ]
+  },
+  {
+   "name": "investments",
+   "diff": [
+    "holdingDialog",
+    "recordTrade",
+    "removeTrade",
+    "assetInfo",
+    "sellAssetDialog",
+    "recordCoinTxn",
+    "heldNow",
+    "trackCost",
+    "CASH:",
+    "syncAvgPrice",
+    "runAssetSearch",
+    "yahoo",
+    "pnl[A-Z-]",
+    "\\bsell\\b",
+    "\\bbuy\\b",
+    "quantity",
+    "holdings",
+    "portfolioView",
+    "pfTab"
+   ],
+   "tests": [
+    "invest",
+    "coin",
+    "cashacct",
+    "cashxfer",
+    "avgprice",
+    "idx",
+    "pfrange"
+   ]
+  },
+  {
+   "name": "charts and overview",
+   "diff": [
+    "halfDonut",
+    "moneyFlow",
+    "trendChart",
+    "pfRange",
+    "portfolioChart",
+    "categoryTrend",
+    "fitOverviewBudgets",
+    "spendingTree",
+    "breakdown",
+    "legend",
+    "Overview\\b",
+    "overviewView"
+   ],
+   "tests": [
+    "donut",
+    "trend",
+    "pfrange",
+    "ovbud",
+    "ovocc",
+    "curdd",
+    "onboarding"
+   ]
+  },
+  {
+   "name": "currency",
+   "diff": [
+    "\\bRATES\\b",
+    "convert\\(",
+    "expOf",
+    "ZERO_DECIMAL",
+    "NATIVE_LOCALE",
+    "compactInr",
+    "rpSpace",
+    "toLocaleString",
+    "Intl\\.",
+    "locale\\(",
+    "money\\("
+   ],
+   "tests": [
+    "curdd",
+    "inrphp",
+    "samplelocal"
+   ]
+  },
+  {
+   "name": "layout and navigation",
+   "diff": [
+    "sidebar\\(",
+    "bottomNav",
+    "hashchange",
+    "scrollPos",
+    "lockScroll",
+    "dlg-x"
+   ],
+   "tests": [
+    "noscroll",
+    "scrollpos",
+    "modalscroll",
+    "ios",
+    "darkshots"
+   ]
+  },
+  {
+   "name": "settings",
+   "diff": [
+    "settingsView",
+    "data-setting",
+    "applyTheme",
+    "setLang\\(",
+    "periodDay",
+    "recurringCard"
+   ],
+   "tests": [
+    "period",
+    "langsave",
+    "darkshots",
+    "recedit"
+   ]
+  }
+ ]
+}

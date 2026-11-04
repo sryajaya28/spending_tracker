@@ -16,7 +16,8 @@ const results = [];
 const step = async (name, fn) => { const t = Date.now(); try { await fn(); results.push([true, name, Date.now() - t]); console.log('PASS  ' + name); } catch (e) { results.push([false, name, Date.now() - t, e.message.split('\n')[0]]); console.log('FAIL  ' + name + '  ' + e.message.split('\n')[0]); throw e; } };
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 430, height: 900 } }); const p = await ctx.newPage();
-  const errs = []; p.on('pageerror', (e) => errs.push('pageerror: ' + e.message)); p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource.*(404|401)/.test(m.text())) errs.push('console: ' + m.text().slice(0, 160)); });
+  const errs = []; p.on('pageerror', (e) => errs.push('pageerror: ' + e.message)); // the analytics probe below posts an empty body on purpose, and PostHog answers 400: that console line is expected
+  p.on('console', (m) => { if (m.type() === 'error' && !/favicon|Failed to load resource.*(404|401)/.test(m.text()) && !/\/ingest\//.test((m.location() || {}).url || '')) errs.push('console: ' + m.text().slice(0, 160) + ' [' + ((m.location() || {}).url || '').slice(0, 80) + ']'); });
   // a save may be queued a moment after the click (the app first tries to tag the record), so: wait, let the queue drain, wait again, let the network go quiet
   const idle = () => p.evaluate(() => (window.Cloud && Cloud.idle ? Cloud.idle() : null));
   const settle = async () => { await p.waitForTimeout(900); await idle(); await p.waitForTimeout(700); await idle(); await p.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {}); };

@@ -66,3 +66,5 @@ Dashboard: "Stiver key flows" https://eu.posthog.com/project/334082/dashboard/10
 PostHog Cloud EU, project id 334082, token `POSTHOG_KEY` in `prototype/config.js` (public). Browser traffic goes through
 `/ingest` (Vercel rewrite to `eu.i.posthog.com`). SDK vendored in `prototype/vendor/posthog.js`. Privacy rules are in the
 header of `analytics.js` and in `prototype/privacy.html`; do not weaken them.
+
+Click actions added with the sign-up agreement: `agree_terms` (tick box) and `toggle_password` (show / hide), both through `button_clicked`.

@@ -11,7 +11,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.evaluate(() => Cloud.redirect()), 'http://127.0.0.1:5180/');
   // sign up on desktop while the email is not confirmed yet
   await p.evaluate(() => { window.__unconfirmed = true; });
-  await p.click('[data-view=signup]'); await p.fill('[name=name]', 'Ari'); await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'longenough1'); await p.click('button[type=submit]');
+  await p.click('[data-view=signup]'); await p.fill('[name=name]', 'Ari'); await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'longenough1'); await p.check('input[name=agree]'); await p.click('button[type=submit]');
   await p.waitForSelector('text=Check your email'); assert((await p.innerText('.onboard')).includes('signs you in on its own'));
   // not confirmed yet: pressing the button says so and stays put
   await p.click('[data-act=auth-check]'); await p.waitForTimeout(150);

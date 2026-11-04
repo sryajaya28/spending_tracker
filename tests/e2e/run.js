@@ -23,6 +23,7 @@ const assert = require('assert');
   // sign-up with email confirmation
   await page.click('[data-view=signup]');
   await page.fill('[name=name]', 'Ari'); await page.fill('[name=email]', 'a@b.co'); await page.fill('[name=password]', 'longenough1'); await page.selectOption('[name=currency]', 'IDR');
+  await page.check('input[name=agree]');
   await page.click('button[type=submit]');
   await page.waitForSelector('text=Check your email');
   const su = await page.evaluate(() => window.__signUp);

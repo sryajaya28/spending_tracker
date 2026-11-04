@@ -92,5 +92,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-act=signout]');
   await p.click('[data-act=signout]'); await p.waitForSelector('.land'); await p.waitForTimeout(400);
   assert.notEqual(await p.evaluate(() => posthog.get_distinct_id()), idn, 'sign-out starts a new anonymous id');
+  // sign-up page: the agreement tick and the show / hide password button are tracked as clicks (action names only)
+  await p.click('.land-cta [data-view=signup]'); await p.waitForSelector('form[data-form=signup]'); await p.check('input[name=agree]'); await p.click('.pw-toggle'); await p.waitForTimeout(250);
+  const su = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'button_clicked').map((e) => e.properties.action);
+  assert(su.includes('agree_terms') && su.includes('toggle_password'), 'agree_terms and toggle_password clicks: ' + su.join());
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

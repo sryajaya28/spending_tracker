@@ -10,6 +10,7 @@ Acceptance checks (from "Done when"):
   [ ] <check>  -> not checked, because ...
 Real-browser proof: <screenshots from tools/staging_shot.js or the preview: phone + dark for UI changes>
 Differences from the design: <none | list>
+Reviewed by: <other developer> approved <commit>   (production code outside the fast lane; "exempt: <why>" otherwise)
 Not verified: <real phone, real third-party service, production data ...>
 Decisions needed: <none | question + recommendation>
 Migrations: <none | file names, backwards compatible?>

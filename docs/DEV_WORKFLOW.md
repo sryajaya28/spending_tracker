@@ -29,7 +29,7 @@ https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW
 
 **Figma is the only home of the design**: no design files, exports or feature folders are kept in the repository, and `tools/design/export.js` is deleted.
 
-1. Design the change in the app's real look (reuse components and tokens), including the states that matter (empty, error), **always the
+1. Design the change in the app's real look: **build it from the Figma Library components and variables** (`docs/FIGMA.md`; dark mode is a variable mode, so dark costs almost nothing) and add a component when a design needs a new element. Include the states that matter (empty, error), **always the
    dark-mode and phone-width versions of every screen** (plus desktop where it exists) and a flow with arrows when several screens are involved.
 2. Give the feature its own Figma section `Feature - <short-name>` (same short name as the branch) with a note: the request in the
    owner's words, decisions/open questions, and status (`design` / `approved` / `implemented` / `released`).

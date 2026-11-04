@@ -1,6 +1,6 @@
 # PRD: Household access (multi-user)   (owner brief date: 2026-11-04)
 
-Status: `PRD v2 | owner approved: 2026-11-04 (v2.1 + check 16 change + Editor own-transactions rule + account-delete guard; design gate 2 approved) | Figma: pending | Branch: docs/household-prd | QA report: pending`
+Status: `PRD v2 | owner approved: 2026-11-04 (v2.1 + check 16 change + Editor own-transactions rule + account-delete guard + category/occasion guard; design gate 2 approved) | Figma: pending | Branch: docs/household-prd | QA report: pending`
 v2 answers the Product Manager's review of v1 (4 blocking, 7 suggestions). Changes after owner approval need the owner's decision (see 'Pending owner decisions' in the technical design). v2.1 = v2 plus the owner-approved 'Delete my login' and leave/owner-deleted clarifications. Technical design: `docs/prd/household-technical-design.md` (for Developer 2).
 
 ## 1. Problem and goal
@@ -66,6 +66,7 @@ Safety and freshness
 36. Given transactions that existed before the household was created, then they count as the owner's: an Editor cannot edit or delete them (read-only, "Added by <owner first name>").
 37. Given a transfer (two linked entries), a stablecoin income or expense, or a repeating transaction's generated entries, then they belong to the person who created the transfer, entry or repeating rule, and an Editor can change them only if they are that person; the owner can always change them.
 38. Given an Editor who tries to delete an account (wallet, debt, lent, investment) that holds transactions created by other people, then it is rejected with "Can't delete '<name>'" and "'<name>' holds <n> transactions added by others. Ask the owner.", nothing is deleted and nothing cascades; the same rejection applies to a direct database delete; the owner can delete it. (Archiving an account is still allowed for Editors.)
+39. Given an Editor who tries to delete or merge a category (or an occasion) that is used by transactions created by other people, then it is rejected with "Can't delete '<name>'" (or "Can't merge ...") and "'<name>' is used by <n> transactions added by others. Archive it instead, or ask the owner.", with Archive and OK, nothing changes, and a direct database delete is rejected too; the owner is never blocked; archiving is allowed for everyone who can write; an Editor can delete or merge a category used only by their own transactions.
 32. (Slice 2) Given the Activity page, then it lists adds, edits, deletes and balance changes with person, item and time, newest first, filterable by person and type, for 180 days (owner to confirm), readable by Viewers.
 
 ## 5. Edge cases and rules

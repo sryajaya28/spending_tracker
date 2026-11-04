@@ -48,6 +48,8 @@ const SCREENS = [
   ['dialog-add-income', 'dialog', `txnDialog(null, 'income');`],
   ['dialog-edit-transaction', 'dialog', `txnDialog(D().transactions.find((t) => t.type === 'expense' && t.occurred_at <= todayIso()));`],
   ['dialog-transfer', 'dialog', `transferDialog();`],
+  ['dialog-transfer-cash', 'dialog', `(() => { const h = D().holdings.find((x) => assetInfo(x.symbol).type === 'cash'); const w = D().wallets.find((x) => !x.archived); if (h && w) transferDialog({ from: 'w:' + w.id, to: 'h:' + h.id }); else transferDialog(); })();`],
+  ['dialog-transfer-edit', 'dialog', `(() => { const g = (D().transactions.find((t) => t.transfer_id) || {}).transfer_id; if (g) transferDialog(null, g); else transferDialog(); })();`],
   ['dialog-invest', 'dialog', `holdingDialog(null, null, { invest: true });`],
   ['dialog-add-asset', 'dialog', `holdingDialog(null, D().investments[0].id);`],
   ['dialog-add-cash', 'dialog', `holdingDialog(null, D().investments[0].id, { pickType: 'cash' });`],

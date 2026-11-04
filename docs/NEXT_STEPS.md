@@ -27,7 +27,8 @@ lines in one file) becomes hard to maintain: components, TypeScript, server-side
 5. **Supabase hardening:** minimum password length 8, leaked-password check (Pro plan), custom SMTP already on Resend.
 6. **Staging environment:** separate Supabase project + `staging` branch; make `config.js` pick the project by hostname.
 7. **Cross-user security test:** prove user B cannot read user A's rows (run as the `authenticated` role in a rolled-back transaction).
-8. **Plans:** Vercel Hobby and Supabase Free are fine for now; public/commercial use needs Vercel Pro and Supabase Pro
+8. **Analytics follow-ups (PostHog EU is wired in, see `context.md` changelog 2026-11-04):** build the sign-up -> first account -> first budget -> first transaction funnel and a retention insight in PostHog; decide on an in-app opt-out switch / consent banner; confirm events arrive from the preview link.
+9. **Plans:** Vercel Hobby and Supabase Free are fine for now; public/commercial use needs Vercel Pro and Supabase Pro
    (free Supabase projects pause after a week of inactivity and have no daily backups).
 
 ## Rules the app encodes (keep them)

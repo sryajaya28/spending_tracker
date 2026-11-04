@@ -28,7 +28,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // transfer, monthly
   await p.evaluate(() => { D().wallets.push({ id: uid(), name: 'Bank', type: 'bank', currency: 'IDR', opening_balance_minor: 0, archived: false, since: '2026-01' }); save(); render(); });
   const ws = await p.evaluate(() => D().wallets.map((w) => w.id));
-  await p.evaluate(() => transferDialog()); await p.selectOption('select[name=from]', ws[0]); await p.selectOption('select[name=to]', ws[1]);
+  await p.evaluate(() => transferDialog()); await p.selectOption('select[name=from]', 'w:' + ws[0]); await p.selectOption('select[name=to]', 'w:' + ws[1]);
   await p.fill('input[name=amount]', '100000'); await p.fill('input[name=fee]', '2500'); await p.selectOption('select[name=repeat]', 'monthly'); await p.click('#dlg button[type=submit]'); await settle();
   assert.equal(await p.evaluate(() => D().recurring.length), 2);
   await p.evaluate(() => { const r = D().recurring[1]; r.next = '2026-09-10'; r.start = '2026-07-10'; runRecurring(); });

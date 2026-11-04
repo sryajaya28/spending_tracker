@@ -2,7 +2,7 @@
 
 Rules so two agents (or sessions) on Stiver do not collide. The owner can override any of them in plain words.
 
-1. **Roles (owner, 2026-11-04): Developer 2 is the integrator; Developer 1 builds on feature branches.** An agent that is not sure whether it is Developer 2 asks the owner
+1. **Roles (owner, 2026-11-04; updated: Developer 1 is the main developer): Developer 1 builds all production code on feature branches; Developer 2 reviews it, is the integrator and maintains the workflow (`docs/WORKFLOW.md`).** An agent that is not sure whether it is Developer 2 asks the owner
    before merging to `staging`. Only the integrator merges into `staging`, runs `node tools/fold_changes.js`, `node tools/trim_learnings.js` and `node tools/doc_budget.js` (keep the always-read files small), releases to `main` and runs the
    smoke test. Other agents work on `feature/<name>` branches only, rebase on the latest `staging`
    (`git fetch origin staging && git merge origin/staging`), run the affected tests plus `bash tests/e2e/run_all.sh`, then tell the
@@ -34,3 +34,4 @@ Rules so two agents (or sessions) on Stiver do not collide. The owner can overri
    - **Nobody answers?** Say so to the owner and ask whether to wait or waive; never approve your own change.
 6. **Tool prompts vs workflow approvals.** `.claude/settings.json` allows routine Figma, GitHub, Supabase and Vercel tool calls without a prompt and still asks for irreversible or production-affecting ones. This only removes tool prompts; the owner's approval for a release, the regression summary and peer review still apply, and an agent never uses an allowed tool to get around them.
 7. **The wider team (owner, 2026-11-04).** Product Manager, Designer and QA agents work beside the two developers; roles, hand-off formats, the owner's three gates and the session registry are in `docs/roles/README.md`. Developers receive an approved PRD and an approved Figma link, build, then hand to QA; QA, not the developer, runs regression and smoke. Peer review (rule 5) stays.
+8. **Main developer (owner, 2026-11-04).** Developer 1 does the building; Developer 2 reviews every non-fast-lane production change before it reaches `staging` (this replaces the two-way peer review of rule 5 while Developer 1 is the only builder), integrates and releases. The full agent-to-agent workflow and message formats are in `docs/WORKFLOW.md`.

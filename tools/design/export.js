@@ -70,6 +70,7 @@ const SCREENS = [
   ['dialog-occasion-budget', 'dialog', `D().occasions.push({ id: uid(), name: 'Wedding', amount_minor: null, currency: cur(), start: '', end: '', archived: false }); occasionDialog(null, true);`],
   ['dialog-account', 'dialog', `walletDialog();`],
   ['dialog-category', 'dialog', `catDialog();`],
+  ['dialog-debt-edit', 'dialog', `loanDialog(D().loans[0]);`],
   ['dialog-loan-payment', 'dialog', `paymentDialog(D().loans[0], 'loan');`],
   ['transactions-upcoming', 'page', PAGE('#/transactions', `Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); ${UPCOMING}`)],
   ['dialog-upcoming', 'dialog', `${UPCOMING} Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); upcomingDialog();`],

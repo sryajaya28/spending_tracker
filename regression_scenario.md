@@ -341,6 +341,19 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 6. Check `/api/status` returns JSON; if Finnhub is configured `"finnhub": true`, and `"yahoo": true`.
 7. For database changes: confirm the migration is applied and the app still loads existing data.
 
+## 15. Usage analytics (PostHog EU)
+
+| ID | Scenario | Expected |
+|---|---|---|
+| AN-01 | Open the staging preview, browse Overview, Transactions, Budgets, add a transaction | In PostHog (EU, project token in `config.js`) the events `$pageview` (property `page` = landing/overview/transactions/budgets), `signed_in`, `transaction_saved` arrive with `env = staging`; the person id is the account id; **no** event property holds an amount, note, email, token or date. |
+| AN-02 | Open the app from an email confirmation or Google return link (`#access_token=...`, `?code=...`) | The captured addresses have no `?` or `#` part. |
+| AN-03 | Turn sample data on, browse, turn it off | Only `demo_on` and `demo_off` are sent; nothing in between. |
+| AN-04 | Sign out | A new anonymous id is used afterwards (no events tied to the old account). |
+| AN-05 | Browser with Do Not Track on, or local run (localhost) | Nothing is sent. |
+| AN-06 | Network tab on the hosted site | Requests go to `/ingest/...` on the app's own address (no direct call to posthog.com); the page shows no CSP error. |
+
+Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`). The real PostHog dashboard is checked manually.
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |
@@ -379,6 +392,7 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 | `cashacct` | fiat cash balance in an investment account: currency dropdown, + Cash button, deposit, buy with it, withdraw, View history page, reload |
 | `noscroll` | no sideways overflow at 360 and 390 px, zoom lock |
 | `dropdown` | app-styled dropdown lists: open, choose, Esc, outside tap, keyboard, groups, inside dialogs |
+| `analytics` | PostHog events, privacy scrubbing, demo mode silence, sign-out reset, `/ingest` path |
 | `ios`, `confirm`, `csp`, `landshot`, `langsave`, `darkshots`, `idcrawl` | phone rendering, email confirmation flow, CSP, landing, language and dark mode |
 | `tests/test_yahoo.py` | Yahoo price/search parsing and unit conversion (stubbed) |
 
@@ -389,6 +403,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-04: Added section 15 (usage analytics, AN-01..06) and the `analytics` test.
 - 2026-11-01: First version, covering all features up to the Commodities asset type.
 - 2026-11-01: IV-08 now covers the price-refresh disclaimer on the Investment tab.
 - 2026-11-01: IV-08 rewritten for the 6-hour price cache and the single disclaimer (Refresh prices button removed).

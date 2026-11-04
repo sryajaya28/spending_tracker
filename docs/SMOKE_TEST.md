@@ -28,7 +28,7 @@ It needs the host under Allowed domains in the assistant's environment. It check
 
 1. the landing page loads;
 2. the page is the expected environment (production or staging);
-3. the price/FX service answers (`/api/status`, `/api/fx`);
+3. the price/FX service answers (`/api/status`, `/api/fx`) and the analytics proxy answers (`POST /ingest/e/` is not a 404; an empty body records nothing);
 4. sign in works;
 5. the overview shows no `NaN`/`undefined`;
 6. an income and an expense can be added and appear in the list;

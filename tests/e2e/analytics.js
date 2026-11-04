@@ -61,6 +61,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   clicks.forEach((e) => Object.keys(e.properties).filter((k) => !k.startsWith('$')).forEach((k) => assert(ok.has(k), 'unexpected click property ' + k)));
   const mine = all2.map((e) => Object.entries(e.properties).filter(([k]) => !k.startsWith('$') && !['distinct_id', 'token'].includes(k)));
   assert(!JSON.stringify(mine).match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/), 'no record ids in any of our own event properties');
+  // the hosting rewrite must match the exact paths the SDK posts to, including the trailing slash (a miss = Vercel 404 = every event lost)
+  const rewrites = JSON.parse(fs.readFileSync(__dirname + '/../../vercel.json', 'utf8')).rewrites.filter((r) => r.destination.includes('eu.i.posthog.com'));
+  assert(rewrites.length > 0, 'a rewrite to eu.i.posthog.com exists');
+  rewrites.forEach((r) => assert(/^\/ingest\/\(\.\*\)$/.test(r.source), 'unsupported rewrite form (update this test): ' + r.source));
+  for (const path of ['/ingest/e/', '/ingest/e', '/ingest/i/v0/e/', '/ingest/flags/']) assert(rewrites.some((r) => new RegExp('^' + r.source + '$').test(path)), 'rewrite matches ' + path);
   // sent through our own address
   await p.evaluate(() => posthog.capture('probe')); await p.waitForTimeout(1500);
   assert(sent.length > 0 && sent.every((u) => u.includes('/ingest/')), 'requests go to /ingest: ' + JSON.stringify(sent));

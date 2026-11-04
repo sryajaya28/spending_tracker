@@ -1,6 +1,6 @@
 # PRD: Household access (multi-user)   (owner brief date: 2026-11-04)
 
-Status: `PRD v2 | owner approved: 2026-11-04 (v2.1 + check 16 change + Editor own-transactions rule) | Figma: pending | Branch: docs/household-prd | QA report: pending`
+Status: `PRD v2 | owner approved: 2026-11-04 (v2.1 + check 16 change + Editor own-transactions rule + account-delete guard; design gate 2 approved) | Figma: pending | Branch: docs/household-prd | QA report: pending`
 v2 answers the Product Manager's review of v1 (4 blocking, 7 suggestions). Changes after owner approval need the owner's decision (see 'Pending owner decisions' in the technical design). v2.1 = v2 plus the owner-approved 'Delete my login' and leave/owner-deleted clarifications. Technical design: `docs/prd/household-technical-design.md` (for Developer 2).
 
 ## 1. Problem and goal
@@ -60,11 +60,12 @@ Safety and freshness
 29. Given person B changed a record after person A loaded it, when A saves a change to that same record, then A sees "Updated by <B>. Please check and redo your change" and B's change is not overwritten.
 30. Given someone who is not the owner, when they try to invite, change a role or remove a member (through the app or directly), then it is rejected; more than 10 invites in an hour is limited with a message.
 31. Given a normal sign-up that claims to belong to a household in its details, then it gets no access.
-33. Given a transaction added by another person, when an Editor opens it, then it is read-only, shows "Added by <first name>", and has no Edit or Delete controls.
+33. Given a transaction added by another person, when an Editor views the list or opens it, then the list row says "read-only" in its subline (text only, no lock icon), and the detail is read-only, shows "Added by <first name>" and has no Edit or Delete controls.
 34. Given an Editor, when they try to edit or delete another person's transaction directly (not through the app), then the database rejects it and nothing changes.
 35. Given the owner, then they can edit and delete any member's transactions.
 36. Given transactions that existed before the household was created, then they count as the owner's: an Editor cannot edit or delete them (read-only, "Added by <owner first name>").
 37. Given a transfer (two linked entries), a stablecoin income or expense, or a repeating transaction's generated entries, then they belong to the person who created the transfer, entry or repeating rule, and an Editor can change them only if they are that person; the owner can always change them.
+38. Given an Editor who tries to delete an account (wallet, debt, lent, investment) that holds transactions created by other people, then it is rejected with "Can't delete '<name>'" and "'<name>' holds <n> transactions added by others. Ask the owner.", nothing is deleted and nothing cascades; the same rejection applies to a direct database delete; the owner can delete it. (Archiving an account is still allowed for Editors.)
 32. (Slice 2) Given the Activity page, then it lists adds, edits, deletes and balance changes with person, item and time, newest first, filterable by person and type, for 180 days (owner to confirm), readable by Viewers.
 
 ## 5. Edge cases and rules

@@ -357,6 +357,8 @@ Automated: `run`, `wallet`, `sample`, `fake_supabase.js` log assertions.
 
 Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`). The real PostHog dashboard is checked manually.
 
+- Loan / paylater account filter (Transactions > account = a debt account): every spending row shows `−` (charges made with it and payments made on it), the day total is the sum of them with a minus (`−Rp 362.725` for charges 29.900 + 73.800 and a payment 259.025), and the same rows show the same signs with no account filter (`loanpay`, `repay`).
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |
@@ -406,6 +408,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-04: Loan/paylater account filter signs and day total (spending is always minus).
 - 2026-11-04: Section 15 intro: new features must ship with tracking (`docs/ANALYTICS.md`).
 - 2026-11-04: AN-08 (named business events: expense_recorded, add_category, ...).
 - 2026-11-04: AN-07 (generic click, dialog, form, filter and setting events).

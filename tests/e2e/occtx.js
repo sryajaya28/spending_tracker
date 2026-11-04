@@ -19,6 +19,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('input[name=amount]', '350000'); await p.click('#dlg button[type=submit]'); await settle();
   let l = await log(); const occ = await p.evaluate(() => D().occasions[0].id);
   assert(l.some((o) => o.table === 'transactions' && o.rows[0].occasion_id === occ && o.rows[0].amount_minor === 350000), JSON.stringify(l));
+  // an occasion that is running today must not be preselected either, and nothing is remembered between openings
+  await p.evaluate(() => { const f = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return isoDate(d); }; D().occasions.push({ id: uid(), name: 'Running Trip', amount_minor: null, currency: 'IDR', start: f(-1), end: f(1), archived: false }); save(); });
+  await p.evaluate(() => { location.hash = '#/transactions'; }); await p.click('[data-act=add-txn]'); assert.equal(await p.inputValue('select[name=occasion]'), '', 'null by default even inside a running occasion');
+  await p.selectOption('select[name=occasion]', { label: 'Running Trip' }); await p.click('[data-act=close]'); await p.click('[data-act=add-txn]'); assert.equal(await p.inputValue('select[name=occasion]'), '', 'not remembered after reopening'); await p.click('[data-act=close]');
   // normal Add: no occasion by default today; picking a date inside the trip selects it
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.click('[data-act=add-txn]');
   assert.equal(await p.inputValue('select[name=occasion]'), '');

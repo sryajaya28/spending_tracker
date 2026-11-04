@@ -2,7 +2,7 @@
 
 Rules so two agents (or sessions) on Stiver do not collide. The owner can override any of them in plain words.
 
-1. **One integrator: Developer 2** (named by the owner, 2026-11-04). An agent that is not sure whether it is Developer 2 asks the owner
+1. **Roles (owner, 2026-11-04): Developer 2 is the integrator; Developer 1 builds on feature branches.** An agent that is not sure whether it is Developer 2 asks the owner
    before merging to `staging`. Only the integrator merges into `staging`, runs `node tools/fold_changes.js`, releases to `main` and runs the
    smoke test. Other agents work on `feature/<name>` branches only, rebase on the latest `staging`
    (`git fetch origin staging && git merge origin/staging`), run the affected tests plus `bash tests/e2e/run_all.sh`, then tell the

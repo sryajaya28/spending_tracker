@@ -1,6 +1,6 @@
 # PRD: Household access (multi-user)   (owner brief date: 2026-11-04)
 
-Status: `PRD v2 | owner approved: pending (gate 1) | Figma: pending | Branch: docs/household-prd | QA report: pending`
+Status: `PRD v2.1 | owner approved: pending (gate 1) | Figma: pending | Branch: docs/household-prd | QA report: pending`
 v2 answers the Product Manager's review of v1 (4 blocking, 7 suggestions). Technical design: `docs/prd/household-technical-design.md` (for Developer 2).
 
 ## 1. Problem and goal
@@ -46,7 +46,7 @@ Roles
 17. Given a Viewer, then no screen shows Add, Edit or Delete controls, a deep link to add shows a read-only message, and a direct write to the database is rejected.
 18. Given an Editor, then they can add, edit and delete transactions, transfers, accounts (savings, debt, lent, investment), budgets, categories, occasions and recurring rules.
 19. Given the owner changes a signed-in person's role, then within 30 seconds or when they return to the app it takes effect and they see "Your access changed".
-20. Given a person is removed or leaves, when they next use or sign in to the app, then they see "You no longer have access to <owner>'s household." with Sign out as the only action; their past entries keep their name.
+20. Given a person is removed or leaves, when they next use or sign in to the app, then they see "You no longer have access to <owner>'s household." with **Sign out** and **Delete my login** as the only actions; their past entries keep their name.
 21. Given the owner revokes a pending invite, then it disappears from the list and its link shows the expired message.
 Who did it
 22. Given the household has two or more people, when I view the Transactions list or Overview's recent list, then each row shows who submitted it (name or initial).
@@ -63,7 +63,7 @@ Safety and freshness
 32. (Slice 2) Given the Activity page, then it lists adds, edits, deletes and balance changes with person, item and time, newest first, filterable by person and type, for 180 days (owner to confirm), readable by Viewers.
 
 ## 5. Edge cases and rules
-Dark mode and 390 px phone width for every screen; Indonesian text for all new strings; email addresses are case-insensitive; very long names truncate with an ellipsis; a failed save shows the existing error toast and reloads; a Viewer opening a write link sees a read-only message; if account deletion exists, its dialog lists the members and warns they lose access, and they then see the "no longer have access" page. Known limitation in plain words: someone who already has a Stiver account cannot join a household in v1; they must use another email address (copy in check 2). Viewers see everything, including notes and other members' names and emails.
+Dark mode and 390 px phone width for every screen; Indonesian text for all new strings; email addresses are case-insensitive; very long names truncate with an ellipsis; a failed save shows the existing error toast and reloads; a Viewer opening a write link sees a read-only message; if account deletion exists, its dialog lists the members and warns they lose access, and they then see the "no longer have access" page. Known limitation in plain words: someone who already has a Stiver account cannot join a household in v1; they must use another email address (copy in check 2). This includes a person who left or was removed: they must tap Delete my login before they can be invited again. Viewers see everything, including notes and other members' names and emails.
 
 ## 6. Data and privacy
 Stores: memberships, invites (email, role, status), who created or last changed each record, and (slice 2) an activity log with a few fields (item name, amount, currency, type). Migrations are additive first and backwards compatible (see technical design). **Never to analytics:** emails, names, ids, amounts, notes. Invitation links are single use and bound to the invited, verified email.
@@ -82,6 +82,7 @@ Screens: Settings > Household card (members, roles, Pending rows with Resend/Rev
 4. Invite email language: default the owner's language; the Join page has a language switch.
 5. Slice order: slice 1 (invite, join, roles, security, row labels) ships first; Activity follows. Default: ship slice 2 in the same release train if ready, else separately.
 6. A normal sign-up for an already-invited email: default the pending invite wins (check 16).
+7. A departed member keeps a login without a household (household-only v1), so they can sign out or delete the login (needed to be invited again): default as written; alternative is deleting the login automatically on removal.
 
 ## 10. Release plan
 Lane: feature (full flow, no fast lane; touches data and security). Migrations (additive, staging first, production at release by Developer 2). Owner actions in the Supabase dashboard (staging and production): paste the new invite email template, confirm SMTP, set the invite-link expiry. Slice 1 first, then slice 2; v1.1 later. How we know it worked: the PostHog funnel and counts in section 7.

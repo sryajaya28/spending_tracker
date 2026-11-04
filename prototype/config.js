@@ -16,6 +16,10 @@ window.STIVER = {
   SITE_URL: PROD ? 'https://stiver.io' : location.origin,
   // Public contact address shown on the privacy policy and terms pages. Leave empty to show a generic line.
   CONTACT_EMAIL: '',
+  // PostHog Cloud EU project token (public by design, like the Supabase anon key). Events go through our own /ingest rewrite (vercel.json).
+  POSTHOG_KEY: 'phc_vn3JVcm3krGACtE3b7ReFTVT8NLyp9D3Nn2LLo9AXvgq',
+  POSTHOG_HOST: '/ingest',
+  POSTHOG_UI_HOST: 'https://eu.posthog.com',
 };
 /* a small label on every hosted non-production copy, so nobody mistakes it for the live app (not shown on local runs) */
 if (!PROD && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {

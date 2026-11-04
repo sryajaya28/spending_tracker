@@ -1180,9 +1180,9 @@ function setupState() {
 /* "Skip for now" on the first-run screen is remembered on this device (per account) */
 const onbKey = () => 'stiver.onb.skip.' + (state.auth.uid || '');
 function onbSkipped() { if (state.ui.onbSkipped === undefined) { try { state.ui.onbSkipped = localStorage.getItem(onbKey()) === '1'; } catch { state.ui.onbSkipped = false; } } return state.ui.onbSkipped; }
-function skipOnboarding() { state.ui.onbSkipped = true; try { localStorage.setItem(onbKey(), '1'); } catch { /* storage unavailable: skipped for this visit */ } render(); }
+function skipOnboarding() { Analytics.track('onboarding_skipped'); state.ui.onbSkipped = true; try { localStorage.setItem(onbKey(), '1'); } catch { /* storage unavailable: skipped for this visit */ } render(); }
 /* the celebration after the last step: shown once, then the normal Overview (a tap or a few seconds) */
-function endCongrats() { if (state.ui.congrats) { state.ui.congrats = false; if (route() === 'overview') render(); } }
+function endCongrats() { if (state.ui.congrats) { Analytics.track('onboarding_completed'); state.ui.congrats = false; if (route() === 'overview') render(); } }
 function congratsView() {
   const colors = ['#4A44C6', '#F5B800', '#EC4899', '#14B8A6', '#F97316', '#0EA5E9', '#22C55E'];
   const bits = Array.from({ length: 30 }, (_, n) => `<i style="--x:${(n * 37) % 100}%;--c:${colors[n % colors.length]};--d:${2.4 + (n % 5) * 0.35}s;--w:${(n % 7) * 0.12}s;--r:${(n * 47) % 180}deg"></i>`).join('');
@@ -1655,7 +1655,7 @@ const lockScroll = () => { if (lockY !== null) return; lockY = window.scrollY; d
 const unlockScroll = () => { if (lockY === null) return; const y = lockY; lockY = null; document.body.classList.remove('scroll-locked'); document.body.style.removeProperty('--lock-top'); window.scrollTo(0, y); };
 dlg().addEventListener('close', unlockScroll);
 // every pop-up has a ✕ in its top-right corner (Esc and a tap outside close it too)
-function open(html) { dlg().innerHTML = `<div class="dlg" tabindex="-1"><button type="button" class="dlg-x" data-act="close" aria-label="${__('Close')}">${icon('x')}</button>${html}</div>`; if (!dlg().open) { lockScroll(); dlg().showModal(); } $('.dlg', dlg()).focus({ preventScroll: true }); }
+function open(html) { Analytics.dialogOpened(html, dlg().open); dlg().innerHTML = `<div class="dlg" tabindex="-1"><button type="button" class="dlg-x" data-act="close" aria-label="${__('Close')}">${icon('x')}</button>${html}</div>`; if (!dlg().open) { lockScroll(); dlg().showModal(); } $('.dlg', dlg()).focus({ preventScroll: true }); }
 const close = () => dlg().open && dlg().close();
 /* a tap or click on the dimmed area outside a modal closes it (web and phone). A press that starts inside and is released outside (selecting text), or a tap that only closes an open dropdown list, does not. */
 let downOnBackdrop = false, listOpenAtDown = false;
@@ -1678,7 +1678,9 @@ function quickAddCategory(form) {
   if (!name) { toast('Enter a name for the category'); form.qc_name.focus(); return; }
   if (D().categories.some((c) => !c.archived && (c.parent_id || null) === (parent?.id || null) && c.type === type && c.name.toLowerCase() === name.toLowerCase())) { toast('That name already exists here'); return; }
   const c = { id: uid(), parent_id: parent ? parent.id : null, name, type, icon: lastEmoji(form.qc_icon.value) || '🏷️', color: parent ? parent.color : SWATCHES[D().categories.length % SWATCHES.length], archived: false };
-  D().categories.push(c); save();
+  D().categories.push(c);
+  Analytics.track(parent ? 'add_sub_category' : 'add_category', { type, source: 'quick_add' });
+  save();
   $('select[name=category]', form).innerHTML = form.dataset.form === 'budget' ? budgetCatOptions(c.id, new Set(D().budgets.map((x) => x.category_id))) : catOptions(type, c.id, true); $('select[name=category]', form).dataset.prev = c.id;
   form.qc_name.value = ''; form.qc_icon.value = '🏷️'; $('.quick-cat', form).hidden = true;
   toast(parent ? __('Added {name} under {parent}', { name, parent: parent.name }) : __('Added {name}', { name }));
@@ -2559,7 +2561,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
   else if (act === 'view-transfer') transferDialog(null, id);
-  else if (act === 'delete-transfer') { if (!removeTransferGroup(id)) { toast(__("Can't delete: the cash has already been spent")); return; } save(); close(); render(); toast('Transfer deleted'); }
+  else if (act === 'delete-transfer') { if (!removeTransferGroup(id)) { toast(__("Can't delete: the cash has already been spent")); return; } Analytics.track('delete_transfer'); save(); close(); render(); toast('Transfer deleted'); }
   else if (act === 'edit-txn') { const tx = find(D().transactions); if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
@@ -2629,7 +2631,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'goto') location.hash = '#/' + el.dataset.route;
-  else if (act === 'demo-on') setDemo(true);
+  else if (act === 'demo-on') { Analytics.track('demo_on', {}, true); setDemo(true); }
   else if (act === 'onb-skip') skipOnboarding();
   else if (act === 'congrats-add') { endCongrats(); txnDialog(null, 'expense'); }   // on to the normal Overview, with the Add transaction pop-up open
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
@@ -2646,9 +2648,10 @@ document.addEventListener('click', (e) => {
     const tx = find(D().transactions), coin = coinOf(tx);
     if (coin) { if (!removeTrade(coin, coin.trades.find((x) => x.id === tx.trade_id))) { toast(__("Can't delete: the {symbol} has already been spent", { symbol: assetInfo(coin.symbol).symbol })); return; } }
     else { D().transactions = D().transactions.filter((t) => t.id !== id); D().loans.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); D().lent.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); }   // a loan charge or a repayment made from this account goes with it
+    Analytics.track('delete_transaction', { type: tx.type });
     save(); close(); render(); toast('Transaction deleted');
   }
-  else if (act === 'delete-budget') { D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
+  else if (act === 'delete-budget') { Analytics.track('delete_budget'); D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; resetSessionView(); state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); window.scrollTo(0, 0); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
@@ -2662,7 +2665,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
-  else if (act === 'demo-off') setDemo(false);
+  else if (act === 'demo-off') { Analytics.track('demo_off', {}, true); setDemo(false); }
   else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); if (e.key === 'Escape' && state.ui.walletMenu) { state.ui.walletMenu = null; render(); } });
@@ -2854,6 +2857,7 @@ document.addEventListener('submit', async (e) => {
     sortTxns();
     state.ui.month = periodKeyOf(row.occurred_at) <= currentPeriod() ? periodKeyOf(row.occurred_at) : state.ui.month;
     if (!existing) rememberAcct(type, v.wallet);
+    Analytics.track(existing ? 'update_transaction' : type + '_recorded', { type, payment_source: coin ? 'stablecoin' : loan ? 'debt' : 'account', has_category: !!row.category_id, has_occasion: !!row.occasion_id, is_recurring: !!v.repeat });
     save(); close(); render(); toast(msg);
   }
   if (kind === 'transfer') {
@@ -2866,6 +2870,7 @@ document.addEventListener('submit', async (e) => {
     if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
     const r = saveTransfer({ from: v.from, to: v.to, amount, received, fee, date: v.date, note: v.note.trim(), editGid, repeat: v.repeat });
     if (r.error) { toast(r.error); return; }
+    Analytics.track(editGid ? 'transfer_edited' : 'transfer_recorded', { has_fee: fee > 0, is_recurring: !!v.repeat, involves_investment_cash: A.kind === 'h' || B.kind === 'h' });
     save(); close(); render(); toast(editGid ? 'Saved' : __('Moved {amount} from {from} to {to}', { amount: money(amount, A.ccy), from: A.name, to: B.name }) + (fee > 0 ? ' ' + __('(fee {fee})', { fee: money(fee, A.ccy) }) : '')); return;
   }
   if (kind === 'cashx') {   // a deposit into / withdrawal from an investment Cash balance (the Portfolio dialog): a transfer with an account
@@ -2879,6 +2884,7 @@ document.addEventListener('submit', async (e) => {
     const r = saveTransfer({ from: dep ? 'w:' + w.id : 'h:' + h.id, to: dep ? 'h:' + h.id : 'w:' + w.id, amount, received, fee, date: v.date, note: '' });
     if (r.error) { toast(r.error); return; }
     state.ui.pfTab = 'investment'; rememberAcct(dep ? 'cashin' : 'cashout', v.account);
+    Analytics.track(dep ? 'cash_deposited' : 'cash_withdrawn', { has_fee: fee > 0, is_cross_currency: cross });
     save(); close(); render(); toast(`${dep ? __('Deposited') : __('Withdrew')} ${money(dep ? received : amount, hc)}`); return;
   }
   if (kind === 'occasion') {
@@ -2890,6 +2896,7 @@ document.addEventListener('submit', async (e) => {
     if (!picked && v.start && v.end && v.end < v.start) { toast('The end date is before the start date'); return; }
     const fields = picked ? { amount_minor: minor } : { name, amount_minor: minor, start: v.start || '', end: v.end || '' };   // no budget = null: the occasion only groups expenses
     if (existing) Object.assign(existing, fields); else D().occasions.push({ id: uid(), currency: c, archived: false, ...fields });
+    Analytics.track(existing ? 'update_occasion' : 'add_occasion', { has_budget: minor !== null, has_dates: !!(v.start && v.end) });
     save(); close(); render(); toast('Occasion saved'); return;
   }
   if (kind === 'budget') {
@@ -2901,6 +2908,7 @@ document.addEventListener('submit', async (e) => {
       if (same) Object.assign(same, { amount_minor: minor, currency: cur() });
       else D().budgets.push({ id: uid(), category_id: cat, amount_minor: minor, currency: cur(), start_month: start });
     }
+    Analytics.track(f.dataset.id ? 'update_budget' : 'add_budget', { scope: v.category ? 'category' : 'overall' });
     save(); close(); render(); toast('Budget saved');
   }
   if (kind === 'cat') {
@@ -2913,6 +2921,7 @@ document.addEventListener('submit', async (e) => {
     if (existing) Object.assign(existing, fields);
     else D().categories.push({ id: uid(), archived: false, ...fields });
     if (parent) { state.ui['more_cat-' + parent.type] = true; state.ui.openCats.add(parent.id); }   // show the sub-category you just added
+    Analytics.track(existing ? 'update_category' : parent ? 'add_sub_category' : 'add_category', { type, source: 'settings' });
     save(); close(); render(); toast(existing ? 'Category saved' : 'Category added');
     return;
   }
@@ -2926,6 +2935,7 @@ document.addEventListener('submit', async (e) => {
   }
   if (kind === 'wallet') {
     D().wallets.push({ id: uid(), name: v.name.trim(), type: v.type, currency: v.currency, opening_balance_minor: toMinor(parseFloat(v.opening || 0), v.currency), since: monthKey(new Date()), archived: false });
+    Analytics.track('add_account', { type: v.type });
     save(); close(); render(); toast(__('Account added in {cur}', { cur: v.currency }));
   }
   if (kind === 'loan') {
@@ -2937,6 +2947,7 @@ document.addEventListener('submit', async (e) => {
     const fields = { name: v.name.trim(), type: v.type, original_minor: original, monthly_minor: monthly, rate: parseFloat(v.rate) || 0, flat: v.flat === '1' };
     if (existing) Object.assign(existing, fields);
     else D().loans.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
+    Analytics.track(existing ? 'update_debt' : 'add_debt', { has_interest: (parseFloat(v.rate) || 0) > 0 });
     state.ui.pfTab = 'loan'; save(); close(); render(); toast('Debt saved'); return;
   }
   if (kind === 'lent') {
@@ -2946,6 +2957,7 @@ document.addEventListener('submit', async (e) => {
     const fields = { name: v.name.trim(), original_minor: amount, due: v.due || '', note: v.note.trim() };
     if (existing) Object.assign(existing, fields);
     else D().lent.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
+    Analytics.track(existing ? 'update_lent' : 'add_lent', { has_due_date: !!v.due });
     state.ui.pfTab = 'lent'; save(); close(); render(); toast('Saved'); return;
   }
   if (kind === 'payment') {
@@ -2965,6 +2977,7 @@ document.addEventListener('submit', async (e) => {
       D().transactions.push(t); pay.txn_id = t.id; rememberAcct('repay', acct.id); sortTxns();
     } else rememberAcct(f.dataset.kind === 'lent' ? 'lentrecv' : 'repay', '');
     l.payments.push(pay);
+    Analytics.track('debt_payment_recorded', { kind: f.dataset.kind });
     save(); close(); render(); toast(applied < amount ? __('Recorded {amount} (the remaining balance)', { amount: money(applied, l.currency) }) : 'Recorded'); return;
   }
   if (kind === 'account') {
@@ -3021,6 +3034,7 @@ document.addEventListener('submit', async (e) => {
     const fee = v.fee ? (src.kind === 'wallet' ? toMinor(parseFloat(v.fee), src.wallet.currency) : side === 'sell' && !info.cash ? parseFloat(v.fee) : 0) : 0; if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
     const short = payShortfall(src, side, amount + (side === 'buy' ? fee : 0)); if (short) { toast(short); return; }   // a buy needs the fee on top of the amount
     recordTrade(h, { side, quantity: qty, source: src, amount, date: v.date, price: parseFloat(v.price), fee });
+    Analytics.track('trade_recorded', { side });
     save(); close(); render(); toast(`${side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(qty, h)} ${info.symbol}`); return;
   }
   if (kind === 'holding' && f.dataset.sell) {
@@ -3072,6 +3086,7 @@ document.addEventListener('submit', async (e) => {
       if (v.repeat && f.dataset.invest) addRule('invest', v.repeat, v.date || isoDate(new Date()), { account: v.account, symbol: sym, quantity: qty, fund: v.fund, fundamount: v.fundamount });
     } else addOpening(h, qty, parseFloat(v.avgprice), v.pccy);
     if (f.dataset.invest) { state.ui.pfTab = 'investment'; rememberAcct('invest', v.fund); rememberAcct('investacct', v.account); }
+    Analytics.track('add_asset', { funded: !!src });
     save(); close(); render(); toast(`${assetInfo(sym).symbol} ${src ? 'bought' : 'added'}${src ? ` · ${qtyFmt(paid)} ${sourceUnit(src)} paid` : ''}`);
   }
 });
@@ -3082,6 +3097,7 @@ let lastKey = pageKey();
 const forgetScroll = (key) => { delete scrollPos[key]; };   // used when a button opens a page with a new filter: that view starts at the top
 window.addEventListener('hashchange', () => {
   scrollPos[lastKey] = lockY !== null ? lockY : window.scrollY; lastKey = pageKey();
+  Analytics.page();
   render(); window.scrollTo(0, scrollPos[lastKey] || 0);
 });
 window.addEventListener('beforeunload', (e) => { if (Cloud.pending > 0) { e.preventDefault(); e.returnValue = ''; } });
@@ -3122,7 +3138,11 @@ async function submitAuth(kind, v, f) {
     } else if (kind === 'signup') {
       const { data, error } = await Cloud.signUp(a.email, v.password, v.name.trim(), v.currency, captchaToken || undefined);
       if (error) a.error = friendlyAuthError(error);
-      else if (!data.session) { a.view = 'sent'; startPolling(a.email, v.password); }   // email confirmation is on: wait for the link
+      else {
+        Analytics.track('signed_up', { confirmed: !!data.session });
+        // email confirmation is on: wait for the link
+        if (!data.session) { a.view = 'sent'; startPolling(a.email, v.password); }
+      }
     } else if (kind === 'forgot') {
       const { error } = await Cloud.reset(a.email, captchaToken || undefined);
       if (error) a.error = error.message; else a.notice = 'If that email has an account, a reset link is on its way.';
@@ -3146,10 +3166,11 @@ function resetSessionView() {
 async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
-  if (!session) { state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
+  if (!session) { Analytics.reset(); Analytics.page(); state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
   stopPolling(); a.email = session.user.email || a.email;
+  Analytics.identify(session.user.id); Analytics.page();
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
-  if (event === 'SIGNED_IN') resetSessionView(); else resetPeriodView();   // a real login opens Overview at the top; reopening the app with a saved session keeps the page you were on
+  if (event === 'SIGNED_IN') { resetSessionView(); Analytics.track('signed_in'); } else resetPeriodView();   // a real login opens Overview at the top; reopening the app with a saved session keeps the page you were on
   Object.assign(a, { status: 'in', uid: session.user.id, loadError: '', view: a.view === 'recovery' ? 'recovery' : 'signin', error: '', notice: '' });
   render(); loadUserData();
 }
@@ -3164,6 +3185,7 @@ async function loadUserData() {
     state.data.livePrices = loadPrices();
     const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(), addedSales = backfillSaleRecords(), addedCash = convertCashTrades(); if (addedCats || addedFee || addedSales || addedCash) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
     if (api.finnhub || api.yahoo) refreshPrices(true);
+    Analytics.person(state.data.profile);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
     if (demoWanted()) await setDemo(true);

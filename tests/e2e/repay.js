@@ -27,6 +27,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { Object.assign(state.ui, { wallet: 'l:loan1', q: '', cat: '', occ: '', month: currentPeriod(), allPeriods: false }); location.hash = '#/transactions'; render(); }); await p.waitForSelector('#txn-list .day-row'); await p.click('[data-act=days-all]');
   let rows = await p.$$eval('#txn-list .day-body .row', (e) => e.map((x) => ({ t: x.querySelector('.title').textContent.trim(), a: x.querySelector('.amt').textContent.trim(), s: x.querySelector('.sub').textContent.trim() })));
   assert.equal(rows.length, 1, 'one record in the loan view: ' + JSON.stringify(rows)); assert(rows[0].t === 'Car loan' && rows[0].a.startsWith('−') && /Debt Payment/.test(rows[0].s) && /BCA/.test(rows[0].s), JSON.stringify(rows));
+  const dayTot = await p.$eval('#txn-list .day-row .amt', (e) => e.textContent.replace(/\u00a0/g, ' ').trim()); assert.equal(dayTot, rows[0].a.replace(/\u00a0/g, ' '), 'the day total in the loan view equals its one spending row');
   await p.evaluate(() => { state.ui.wallet = ''; render(); }); assert.equal(await p.$$eval('#txn-list .row[data-id]', (e) => e.length) >= 0, true);
   assert.equal(await p.evaluate(() => filteredTxns().filter((t) => t.note === 'Car loan').length), 1, 'once in the normal list');
   // 3. editing the expense moves the loan's payment with it; deleting it takes the payment away and restores both balances

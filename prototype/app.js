@@ -1261,7 +1261,7 @@ function viewOverview() {
 const hiddenLeg = (t, wallet = state.ui.wallet) => t.type === 'transfer' && !!t.transfer_id && t.flow === 'in' && wallet !== t.wallet_id && D().transactions.some((o) => o.transfer_id === t.transfer_id && o.type === 'transfer' && o.flow === 'out');
 const transferTitle = (t) => String(t.note || '').split(' · ')[0];
 const transferNote = (t) => String(t.note || '').split(' · ').slice(1).join(' · ');
-function txnRow(t, loanView) {
+function txnRow(t) {
   if (t.type === 'loan_payment') return `<div class="row" data-act="loan-payment" data-id="${t.loan_id}" data-pid="${String(t.id).replace('pay:', '')}" tabindex="0"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   const lr = t.type === 'transfer' && !t.transfer_id && lentRepaymentOf(t.id);
   if (lr) return `<div class="row" data-act="lent-repayment" data-id="${lr.lent.id}" data-pid="${lr.payment.id}" tabindex="0"><span class="tile" style="--c:#0EA5A4">🤝</span>
@@ -1275,7 +1275,7 @@ function txnRow(t, loanView) {
     <div class="sub">${xfer ? __('Transfer') : t.flow === 'out' ? __('Buy Invest') : __('Sell Invest')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
     <div class="amt-col"><div class="amt num"><span class="xfer-ico">${icon('transfer')}</span>${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   }
-  const c = catOf(t.category_id), sign = (loanView && !repaymentOf(t.id)) || t.type === 'income' ? '+' : '−';   // on a loan, what was charged raises it (+) and a payment lowers it (−)
+  const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
     <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
     <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}</div></div>
@@ -1310,12 +1310,12 @@ function txnListHtml() {
   rows.forEach((t) => { (days[t.occurred_at] = days[t.occurred_at] || []).push(t); });
   const keys = Object.keys(days).sort().reverse(), searching = !!state.ui.q.trim();
   const group = (d) => {
-    const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = loanView ? l.reduce((a, t) => a + (t.type === 'loan_payment' || repaymentOf(t.id) ? -amt(t) : amt(t)), 0) : inc - exp, open = searching || state.ui.openDays.has(d);
+    const l = days[d], inc = sumBy(l, 'income'), exp = sumBy(l, 'expense'), net = inc - exp - sumBy(l, 'loan_payment'), open = searching || state.ui.openDays.has(d);
     return `<div class="day-group ${open ? 'open' : ''}" data-day="${d}"><div class="row day-row" data-act="toggle-day" data-id="${d}" tabindex="0" role="button" aria-expanded="${open}"><span class="daybox"><b>${+d.slice(8)}</b><small>${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { month: 'short' }))}</small></span>
     <div><div class="title">${esc(new Date(d + 'T00:00').toLocaleDateString(locale(), { weekday: 'long' }))}</div>
     <div class="sub">${countLabel(l.length)}</div></div>
     ${!loanView && l.length && l.every((t) => t.type === 'transfer') ? `<div class="amt num muted" title="${__('Money moved: not income or spending')}"><span class="xfer-ico">${icon('transfer')}</span>${money(l.reduce((a, t) => a + amt(t), 0), cur())}</div>` : `<div class="amt num">${net < 0 ? '−' : net > 0 ? '+' : ''}${money(Math.abs(net), cur())}</div>`}<span class="day-chev" aria-hidden="true">›</span></div>
-    <div class="day-body">${l.map((t) => txnRow(t, loanView)).join('')}</div></div>`;
+    <div class="day-body">${l.map((t) => txnRow(t)).join('')}</div></div>`;
   };
   // when the list spans several periods (All periods, or an occasion across months) each period gets its own heading
   const multi = new Set(keys.map(periodKeyOf)).size > 1; let lastP = '';

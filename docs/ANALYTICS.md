@@ -61,6 +61,8 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 
 ## Setup facts
 
+Dashboard: "Stiver key flows" https://eu.posthog.com/project/334082/dashboard/1083794 (production only). When you add a feature with a new outcome event, add or extend a tile there.
+
 PostHog Cloud EU, project id 334082, token `POSTHOG_KEY` in `prototype/config.js` (public). Browser traffic goes through
 `/ingest` (Vercel rewrite to `eu.i.posthog.com`). SDK vendored in `prototype/vendor/posthog.js`. Privacy rules are in the
 header of `analytics.js` and in `prototype/privacy.html`; do not weaken them.

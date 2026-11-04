@@ -27,6 +27,8 @@ Silent by design: localhost, the sample-data demo (except `demo_on` / `demo_off`
 
 ## Event catalog
 
+The full reference (every `action` value, form kind, property and the backend status) is `docs/EVENTS.md`; update it with this table.
+
 Every event also carries `page`, `lang`, `theme`, `viewport` (mobile/desktop), `env` (production/staging), `app`.
 Person properties: `currency`, `language`, `theme`. The person id is the account id (no email).
 

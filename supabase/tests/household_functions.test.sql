@@ -1,6 +1,6 @@
 -- pgTAP tests for household migration 4 (functions). Run with: supabase test db. (First run: staging dry-run, before anything is applied.)
 begin;
-select plan(41);
+select plan(42);
 
 -- owner O, a normal confirmed user X (cannot be invited), people for the invite flow ---------------------------------------------
 insert into auth.users (id, email, email_confirmed_at) values
@@ -71,6 +71,7 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select throws_ok($$ select public.set_member_role('00000000-0000-0000-0000-0000000000b1', 'viewer') $$, '42501', 'only the owner can change roles', 'a member cannot change roles');
 select throws_ok($$ select public.remove_member('00000000-0000-0000-0000-0000000000b1') $$, '42501', 'only the owner can remove members', 'a member cannot remove members');
 select is((select count(*)::int from public.household_people()), 2, 'a member sees the owner and the members (names for the labels)');
+select is((select count(*)::int from public.household_people() where role = 'owner' and email is not null), 1, 'a member sees the owner''s email next to the name (PRD: members see names and emails)');
 select is((select count(*)::int from public.household_profile()), 1, 'a member reads the owner''s household settings through household_profile()');
 select throws_ok($$ select public.create_invite('00000000-0000-0000-0000-0000000000a1', 'hack@test.dev', 'viewer', 'x', now() + interval '1 day') $$, '42501', 'permission denied for function create_invite', 'clients cannot call the service-only invite function');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","session_id":"00000000-0000-0000-0000-00000000f0a1"}', true);

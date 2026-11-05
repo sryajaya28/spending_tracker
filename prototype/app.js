@@ -817,7 +817,7 @@ function viewAsset(h) {
 /* flags for the currency lists (emoji: they show in the list, the chosen value stays the plain code) */
 const CCY_FLAG = { IDR: '🇮🇩', USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', SGD: '🇸🇬', AUD: '🇦🇺', JPY: '🇯🇵', HKD: '🇭🇰', CNY: '🇨🇳', INR: '🇮🇳', PHP: '🇵🇭' };
 const flagLabel = (c) => (CCY_FLAG[c] ? `${CCY_FLAG[c]}  ${c}` : c);
-const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>`;
+const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" ${hhLocked()} aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>`;
 /* realized profit and loss from selling assets, one entry per sale (computed from the trades, so sales made before the separate profit/loss records existed are included;
    assets whose cost is unknown are left out). Amounts are in the reporting currency. */
 function realizedPnl() {
@@ -1467,12 +1467,13 @@ function viewSettings() {
   ${recurringCard()}
   <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
     <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
-    <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></div></div>
-    <div class="form-row"><div>${__('Budget period starts on')}</div><div class="field"><select data-setting="period" aria-label="${__('Budget period starts on')}">${Array.from({ length: 28 }, (_, n) => `<option value="${n + 1}" ${n + 1 === periodDay() ? 'selected' : ''}>${n === 0 ? __('Day 1 (calendar month)') : __('Day {n}', { n: n + 1 })}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" ${hhLocked()} aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Budget period starts on')}</div><div class="field"><select data-setting="period" ${hhLocked()} aria-label="${__('Budget period starts on')}">${Array.from({ length: 28 }, (_, n) => `<option value="${n + 1}" ${n + 1 === periodDay() ? 'selected' : ''}>${n === 0 ? __('Day 1 (calendar month)') : __('Day {n}', { n: n + 1 })}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Language')}</div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Appearance')}</div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div></section>
   <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
     <div class="form-row"><div>${__('AI category suggestions')}</div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
+  ${householdCard()}
   <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
     <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div>
     <div class="form-row"><div>${__('Sign out')}</div><button class="btn secondary" data-act="signout">${__('Sign out')}</button></div>
@@ -1694,6 +1695,83 @@ async function hhRefresh() {
 }
 function hhStartPolling() { if (hhTimer) clearInterval(hhTimer); hhTimer = setInterval(hhRefresh, 30000); }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) hhRefresh(); });
+
+/* ---------- Settings > Household (Figma frames 1-4, 24): members, pending invites, invite dialog, role/remove/leave ---------- */
+const hhState = { invites: [] };
+const HH_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, HH_CAP = 5;
+const roleLabel = (r) => ({ owner: __('Owner'), editor: __('Editor'), viewer: __('Viewer') }[r] || r);
+const hhShort = (iso) => new Date(iso).toLocaleDateString(LANG === 'id' ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short' });
+const hhLocked = () => (Cloud.household.status === 'member' ? 'disabled title="' + __('Set by the household owner') + '"' : '');   // currency and period day belong to the owner
+const hhPeople = () => (Cloud.household.people || []).filter((p) => !p.former);
+const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+async function hhLoadInvites() {
+  if (Cloud.household.status !== 'owner' || state.real || !Cloud.configured) { hhState.invites = []; return; }
+  try { hhState.invites = await Cloud.listInvites(); } catch { hhState.invites = []; }
+  if (route() === 'settings') render();
+}
+function householdCard() {
+  if (state.real || !Cloud.configured || !state.auth.uid) return '';
+  const h = Cloud.household, me = state.auth.uid, isOwner = h.status === 'owner', live = hhPeople();
+  const list = live.length ? live : [{ user_id: me, display_name: D().profile.name, role: 'owner', email: state.auth.email }];
+  const pending = isOwner ? hhState.invites : [], full = list.length + pending.length >= HH_CAP;
+  const ownerP = list.find((x) => x.role === 'owner'), ownerFirst = hhFirstName(ownerP && ownerP.display_name) || __('The owner');
+  const initial = (x) => esc((String(x || '?').trim()[0] || '?').toUpperCase());
+  const row = (x) => `<div class="form-row hh-row${isOwner && x.role !== 'owner' ? ' tap' : ''}" ${isOwner && x.role !== 'owner' ? `data-act="hh-member" data-id="${x.user_id}" tabindex="0" role="button"` : ''}>
+    <div class="hh-who"><span class="avatar" aria-hidden="true">${initial(x.display_name || x.email)}</span><div><span class="hh-name">${esc(x.display_name || (x.email || '').split('@')[0])}${x.user_id === me ? ' ' + __('(you)') : ''}</span><small>${esc(x.email || '')}</small></div></div><span class="badge">${roleLabel(x.role)}</span></div>`;
+  const pend = (i) => `<div class="form-row hh-row"><div class="hh-who"><span class="avatar pending" aria-hidden="true">✉</span><div><span class="hh-name">${esc(i.email)}</span><small>${__('Invited {date} · as {role}', { date: hhShort(i.created_at), role: roleLabel(i.role) })}</small></div></div><span class="badge warning">${__('Pending')}</span></div>
+    <div class="hh-pend-actions"><button class="btn secondary" data-act="hh-resend" data-id="${i.id}">${__('Resend')}</button><button class="btn secondary" data-act="hh-revoke" data-id="${i.id}">${__('Revoke')}</button></div>`;
+  const intro = isOwner ? __('Everyone here sees the same accounts and transactions.') : h.role === 'editor' ? __('{owner} manages this household. You can add and change entries, but not household settings or people.', { owner: ownerFirst }) : __('{owner} manages this household. You can see everything but not change it.', { owner: ownerFirst });
+  return `<section class="card hh-card"><div class="card-head"><h2>${__('Household')}</h2><span class="badge">${roleLabel(h.status === 'member' ? h.role : 'owner')}</span></div>
+    <p class="muted hh-intro">${intro}</p>${list.map(row).join('')}${pending.map(pend).join('')}
+    ${isOwner ? `<button class="btn lg hh-invite" data-act="hh-invite" ${full ? 'disabled' : ''}>${__('Invite someone')}</button>${full ? `<small class="muted">${__('Household is full ({n})', { n: HH_CAP })}</small>` : ''}${live.length > 1 ? `<small class="muted hh-foot">${__('Tap a person to change their role or remove them.')}</small>` : ''}`
+      : `<button class="btn secondary lg hh-invite" data-act="hh-leave">${__('Leave household')}</button><small class="muted hh-foot">${__('Currency and period day are set by the owner, so they are read-only here.')}</small>`}</section>`;
+}
+function inviteDialog(prefill = '') {
+  open(`<h2>${__('Invite someone')}</h2><form data-form="invite" style="display:contents" novalidate>
+    <label class="field">${__('Email')}<input name="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" maxlength="254" required value="${esc(prefill)}"></label>
+    <p class="auth-err" id="inv-msg" role="alert" hidden></p>
+    <div class="field">${__('Role')}<div class="seg"><label><input type="radio" name="role" value="editor" checked>${__('Editor')}</label><label><input type="radio" name="role" value="viewer">${__('Viewer')}</label></div></div>
+    <small class="muted">${__('Editor: adds and changes everything except household settings. Viewer: sees everything, changes nothing.')}</small>
+    <p class="hint">${__('They will see all your data, including notes and the names of other members.')}</p>
+    <div class="actions" id="inv-actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit" data-send>${__('Send invite')}</button></div></form>`);
+}
+function hhMsg(f, text, resendId) {
+  const m = $('#inv-msg', f); m.hidden = !text; m.textContent = text || '';
+  const a = $('#inv-actions', f), old = $('[data-act="hh-resend"]', a); if (old) old.remove();
+  if (resendId) a.insertAdjacentHTML('afterbegin', `<button type="button" class="btn secondary" data-act="hh-resend" data-id="${resendId}">${__('Resend')}</button>`);
+}
+async function hhInviteSubmit(f, v) {
+  const email = String(v.email || '').trim().toLowerCase(), role = v.role === 'viewer' ? 'viewer' : 'editor', btn = $('[data-send]', f);
+  if (!HH_EMAIL.test(email)) { hhMsg(f, __('Enter a valid email address.')); return; }
+  btn.disabled = true; btn.textContent = __('Sending…');
+  const r = await Cloud.inviteMember(email, role).catch(() => ({ error: 'network' }));
+  btn.disabled = false; btn.textContent = __('Send invite');
+  if (r && r.result === 'ok') { Analytics.track('invite_sent', { role }); close(); toast(__('Invite sent')); hhLoadInvites(); return; }
+  const mine = hhState.invites.find((i) => i.email === email);
+  hhMsg(f, r && r.result === 'cannot_invite' ? __("This email can't be invited. If they already use Stiver, they need to use a different email address.")
+    : r && r.result === 'already_invited' ? __('Already invited. Resend sends a fresh email and the old link stops working.')
+    : r && r.result === 'full' ? __('Household is full ({n}). Revoke a pending invite or remove someone to invite more.', { n: HH_CAP })
+    : r && r.result === 'rate_limited' ? __('Too many invites. Please try again later.')
+    : r && r.result === 'invalid' ? __('Enter a valid email address.') : __("Couldn't send the invite. Please try again."), r && r.result === 'already_invited' && mine ? mine.id : '');
+}
+async function hhInviteAction(act, id) {
+  const r = await Cloud.manageInvite(act, id).catch(() => ({ error: 'network' }));
+  if (r && r.result === 'ok') { Analytics.track(act === 'resend' ? 'invite_resent' : 'invite_revoked'); if (dlg().open) close(); toast(act === 'resend' ? __('Invite sent again') : __('Invite revoked')); hhLoadInvites(); return; }
+  toast(r && r.result === 'rate_limited' ? __('Too many invites. Please try again later.') : r && r.result === 'not_found' ? __('This invite no longer exists.') : __("Couldn't do that. Please try again."));
+  hhLoadInvites();
+}
+function memberDialog(id) {
+  const x = hhPeople().find((p) => p.user_id === id); if (!x || x.role === 'owner') return;
+  open(`<h2>${esc(x.display_name || x.email || '')}</h2><p class="muted">${esc(x.email || '')}</p>
+    <form data-form="member-role" data-id="${id}" style="display:contents"><div class="field">${__('Role')}<div class="seg"><label><input type="radio" name="role" value="editor" ${x.role === 'editor' ? 'checked' : ''}>${__('Editor')}</label><label><input type="radio" name="role" value="viewer" ${x.role === 'viewer' ? 'checked' : ''}>${__('Viewer')}</label></div></div>
+    <div class="actions"><button type="button" class="btn danger" data-act="hh-remove" data-id="${id}">${__('Remove')}</button><button class="btn" type="submit" data-send>${__('Save')}</button></div></form>`);
+}
+function hhConfirm(act, id, title, body, go) {
+  open(`<h2>${title}</h2><p class="muted">${body}</p><div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button type="button" class="btn danger" data-act="${act}" data-id="${id || ''}">${go}</button></div>`);
+}
+async function hhDo(fn, ev, ok) {
+  try { await fn(); Analytics.track(ev); close(); toast(ok); loadUserData(); } catch (e) { toast(__("Couldn't do that. Please try again.")); }
+}
 
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
@@ -2783,6 +2861,13 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-google' && state.auth.view === 'signup' && !state.auth.agree) { /* the agreement is not ticked yet */ }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
+  else if (act === 'hh-invite') inviteDialog();
+  else if (act === 'hh-member') memberDialog(id);
+  else if (act === 'hh-resend' || act === 'hh-revoke') hhInviteAction(act === 'hh-resend' ? 'resend' : 'revoke', id);
+  else if (act === 'hh-remove') { const x = hhPeople().find((p) => p.user_id === id); hhConfirm('hh-remove-go', id, __('Remove {name}?', { name: esc(hhFirstName(x && x.display_name) || __('this person')) }), __('They lose access right away. What they entered stays, under their name.'), __('Remove')); }
+  else if (act === 'hh-remove-go') hhDo(() => Cloud.removeMember(id), 'member_removed', __('Removed from the household'));
+  else if (act === 'hh-leave') hhConfirm('hh-leave-go', '', __('Leave this household?'), __('You will lose access to its accounts and transactions. What you entered stays, under your name. You can only come back if the owner invites you again.'), __('Leave household'));
+  else if (act === 'hh-leave-go') hhDo(() => Cloud.leaveHousehold(), 'household_left', __('You left the household'));
   else if (act === 'delete-my-login') { Cloud.deleteMyLogin().then((r) => { if (r && r.error) { toast(__("Couldn't delete your login. Try again.")); return; } Analytics.track('login_deleted'); Cloud.signOut().then(() => { state.auth.noAccess = false; }); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
   else if (act === 'demo-off') { Analytics.track('demo_off', {}, true); setDemo(false); }
@@ -2920,6 +3005,11 @@ function applySetting(el) {
   save(); render();
 }
 
+document.addEventListener('input', (e) => {
+  const f = e.target.form; if (!f || f.dataset.form !== 'invite' || e.target.name !== 'email') return;
+  const val = e.target.value.trim(), bad = val && !HH_EMAIL.test(val.toLowerCase());
+  hhMsg(f, bad ? __('Enter a valid email address.') : ''); $('[data-send]', f).disabled = !!bad;
+});
 document.addEventListener('submit', async (e) => {
   const f = e.target, kind = f.dataset.form; if (!kind) return;
   e.preventDefault();
@@ -3123,6 +3213,12 @@ document.addEventListener('submit', async (e) => {
     if (f.dataset.id) D().investments.find((a) => a.id === f.dataset.id).name = name;
     else D().investments.push({ id: uid(), name, archived: false });
     save(); close(); render(); toast('Account saved');
+  }
+  if (kind === 'invite') { hhInviteSubmit(f, v); return; }
+  if (kind === 'member-role') {
+    const role = v.role === 'viewer' ? 'viewer' : 'editor';
+    try { await Cloud.setRole(f.dataset.id, role); Analytics.track('member_role_changed', { role }); close(); toast(__('Role updated')); loadUserData(); } catch { toast(__("Couldn't do that. Please try again.")); }
+    return;
   }
   if (kind === 'support') {
     const msg = (v.message || '').trim(), btn = $('[data-send]', f);
@@ -3333,7 +3429,7 @@ async function loadUserData() {
     Analytics.person(state.data.profile);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
-    hhStartPolling();
+    hhStartPolling(); hhLoadInvites();
     if (demoWanted()) await setDemo(true);
     else setTimeout(recurringNow, 300);
   } catch (err) { state.auth.loadError = err.message || 'network error'; }

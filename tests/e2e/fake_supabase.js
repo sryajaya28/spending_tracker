@@ -35,6 +35,7 @@
         out = JSON.parse(JSON.stringify(out));
         return { data: this.one ? out[0] : out, error: null };
       }
+      if (this.op === 'upsert' && t === 'manual_prices' && this.rows.some((r) => 'id' in r)) return { data: null, error: { message: "Could not find the 'id' column of 'manual_prices' in the schema cache" } };   // the real table has no id column
       if (this.op === 'upsert') {
         log.push({ op: 'upsert', table: t, rows: JSON.parse(JSON.stringify(this.rows)), onConflict: this.o.onConflict });
         this.rows.forEach((n) => { const i = rows.findIndex((r) => keyOf(t, r) === keyOf(t, n)); if (i >= 0) Object.assign(rows[i], n); else rows.push({ created_at: new Date().toISOString(), ...JSON.parse(JSON.stringify(n)) }); });   // like the database default (created_at = now() on insert, kept on update)

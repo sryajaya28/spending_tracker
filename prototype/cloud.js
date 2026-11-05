@@ -68,7 +68,7 @@ const Cloud = (() => {
     Object.entries(d.customAssets).forEach(([key, m]) => {
       if (m.fh || m.yh || m.cash || !(m.price > 0) || !d.holdings.some((h) => h.symbol === key)) return;
       m.price_date ||= new Date().toISOString().slice(0, 10);
-      R.manual_prices.push({ id: key, user_id: ownerId, symbol: key, price_date: m.price_date, price_usd: m.price });
+      R.manual_prices.push({ user_id: ownerId, symbol: key, price_date: m.price_date, price_usd: m.price });
     });
     R.profile = { id: userId, display_name: d.profile.name || null, default_currency: d.profile.currency, ai_tagging_enabled: !!d.profile.ai, sample_ids: d.profile.sample || null, language: d.profile.language || null, period_day: d.profile.period || 1, theme: d.profile.theme || null };
     return R;
@@ -327,10 +327,11 @@ const Cloud = (() => {
     /* queue a save; saves run one at a time, each sending only what changed since the last one */
     save(data) {
       if (!userId || !synced) return;
+      if (!(hh.status === 'owner' || (hh.status === 'member' && hh.role === 'editor'))) return;   // a Viewer (or someone without access) never writes, not even on load
       latest = data; pending++;
       chain = chain.then(async () => {
         try {
-          const { ops, next } = diff(rowsFromData(latest, catalog, userId), synced);
+          const { ops, next } = diff(rowsFromData(latest, catalog, userId, hh.ownerId), synced);   // the same owner id as the load snapshot, or a member's manual prices differ on every save
           await apply(ops); synced = next;
         } catch (err) { onSaveError(err); }
         finally { pending--; }

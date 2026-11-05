@@ -24,7 +24,7 @@ function contents(from, to, o) {
   out.push(`## Release ${o.n ? o.n + ' ' : ''}contents${o.main ? ' (main ' + o.main + ')' : ''}`);
   out.push(`Range: ${g.sh('git rev-parse --short ' + from)}..${g.sh('git rev-parse --short ' + to)}. ${commits.length} commits, ${files.length} files.`);
   out.push('', '**What changed, in plain words** (from the changelog lines this release added)');
-  out.push(...(added.length ? added.map((l) => '- ' + l.replace(/\*\*/g, '').slice(0, 420)) : ['- (no changelog line added: say what changed here)']));
+  out.push(...(added.length ? added.map((l) => '- ' + l.replace(/\*\*/g, '')) : ['- (no changelog line added: say what changed here)']));
   out.push('', '**What a user can see change**');
   out.push(visible.length ? `Yes: ${visible.length} app files changed (${visible.slice(0, 8).join(', ')}${visible.length > 8 ? ', ...' : ''}).` : 'Nothing: docs, tooling and settings only. The app and its data are untouched.');
   out.push('', '**Commits**', ...commits.map((c) => `- ${c[0]} ${c[1]}`));

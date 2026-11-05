@@ -1,0 +1,1 @@
+2026-11-05: **Handoff hardening test plan (QA).** Added FT-009 and `regression_scenario.md` section 17 (HO-01..HO-08) from the PRD `docs/prd/2026-11-05-handoff-hardening.md`; docs only, branch `qa/handoff`.

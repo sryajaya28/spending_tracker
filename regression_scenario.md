@@ -368,6 +368,21 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 
 - Loan / paylater account filter (Transactions > account = a debt account): every spending row shows `−` (charges made with it and payments made on it), the day total is the sum of them with a minus (`−Rp 362.725` for charges 29.900 + 73.800 and a payment 259.025), and the same rows show the same signs with no account filter (`loanpay`, `repay`).
 
+## 17. Sign-in handoff hardening (PRD `docs/prd/2026-11-05-handoff-hardening.md`, checks 1-7)
+
+Written from the PRD only. **E** = automated e2e, **DB** = real staging database test (`tests/staging/handoff.js`, planned), **M** = manual. Extends AP-01.
+
+| ID | PRD | Scenario | Expected |
+|---|---|---|---|
+| HO-01 | 1 | Signed-in user creates a code, types it on another browser within 15 minutes **(E `handoff`, M)** | Other browser is signed in as the same user (as today); the first browser is signed out as before |
+| HO-02 | 2 | Use a code twice; use one after 15 minutes (set `expires_at` in the past on staging) **(DB, E)** | Both fail with the existing "invalid or expired" message; row removed after claim/expiry |
+| HO-03 | 3 | Anonymous caller sends wrong codes in a loop against staging (RPC `claim_handoff`) **(DB)** | After a few misses (about 5) every attempt is refused for about 1 minute; measure: time for 10,000 wrong guesses, must be far longer than 15 minutes (report the rate and the arithmetic); lock is per what (caller/IP/global)? state what is observed; a different caller or a fresh minute is not permanently locked |
+| HO-04 | 4 | While locked, a real user types a correct code **(E, DB, M)** | Sees "Too many tries. Wait a minute and try again." (EN and ID, phone width 390 px, dark mode); after at most 1 minute the correct code works; no lock lasts longer than 1 minute; one attacker cannot keep everyone locked out for more than that minute |
+| HO-05 | 5 | Read the handoff table as a table reader (service/dump or `select *`) after create **(DB)** | No usable access or refresh token readable (encrypted or replaced by one-time exchange); decrypt/exchange not possible with the table alone; claimed and expired rows are deleted (count rows after claim and after 15 min) |
+| HO-06 | 6 | Query function definitions and grants (`pg_proc.proconfig`, `has_function_privilege`) **(DB)** | Both functions have a fixed `search_path`; `create_handoff` executable by signed-in only (not anon); `claim_handoff` executable by anon, rate limited; no other rights |
+| HO-07 | 7 | Run `tests/e2e/handoff.js`, the full suite, and the staging smoke test **(E, DB)** | All pass; migration applied to staging before production; codes created before the migration still expire normally |
+| HO-08 | 7 (analytics) | Rate-limit hit **(E)** | Event `handoff_rate_limited` fires with no code or user id; message has a `data-` hook per the analytics checklist |
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |
@@ -419,6 +434,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-05: Section 17 HO-01..HO-08 (handoff hardening, from the PRD).
 - 2026-11-04: RC-14..RC-17 (Edit debt: Repeat payment block).
 - 2026-11-04: RC-09..RC-12 (repeating debt payments; simple debt cards without percentages).
 - 2026-11-04: Loan/paylater account filter signs and day total (spending is always minus).

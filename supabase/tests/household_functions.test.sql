@@ -1,6 +1,6 @@
 -- pgTAP tests for household migration 4 (functions). Run with: supabase test db. (First run: staging dry-run, before anything is applied.)
 begin;
-select plan(42);
+select plan(44);
 
 -- owner O, a normal confirmed user X (cannot be invited), people for the invite flow ---------------------------------------------
 insert into auth.users (id, email, email_confirmed_at) values
@@ -83,6 +83,15 @@ select is((select count(*)::int from public.household_former_members where owner
 select is((select has_members from public.household_state where owner_id = '00000000-0000-0000-0000-0000000000a1'), false, 'the household has no members left');
 select public.delete_user_sessions('00000000-0000-0000-0000-0000000000b1');
 select is((select count(*)::int from auth.sessions where user_id = '00000000-0000-0000-0000-0000000000b1'), 0, 'delete_user_sessions ends all sessions of a user');
+
+-- household_people() scope (migration 29): a stranger's own household only, nothing for a removed member
+reset role;
+insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000f9'::text::uuid, 'stranger@test.dev');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000f9","role":"authenticated"}', true);
+select is((select count(*)::int from public.household_people()), 1, 'a user outside the household sees only their own household (themselves), never the owner''s people');
+select is((select user_id from public.household_people()), '00000000-0000-0000-0000-0000000000f9'::uuid, 'and that one row is their own');
+reset role;
 
 select * from finish();
 rollback;

@@ -18,6 +18,8 @@ Mobile / Desktop / Components (older flat imports of the app: reference only, no
 | Field | `Type` input / select, `State` default / new (outlined = new or changing), `Label`, `Value` |
 | Hint (yellow note) | `Text` |
 | Recurring row | `Icon`, `Title`, `Amount`, `Where`, `When` (has a Manage button) |
+| Avatar (who did it; shown only when a household has more than one person) | `Initial` |
+| Chip (filter, e.g. by person) | `Text`, `Selected` |
 
 Figma instances cannot take new children, so **containers** (card, dialog, phone frame, rows) are built by the helper functions (`frame`, `card`, `phone`) with the same variable bindings.
 A review frame per mode ("Library overview - Light / Dark") and an example ("Example - Edit debt, Every month") sit on the Library page.

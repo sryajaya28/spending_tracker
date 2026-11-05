@@ -178,7 +178,7 @@ Migrations (repo file names; applied through the Supabase tools with different r
 1 schema, 2 RLS, 3 signup seed, 4 views+functions, 5 portfolio, 6 debts, 7 trades, 8 app seed + `holdings.since_month`,
 9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme, 14 `recurring_rules`, 15 nullable `transactions.wallet_id` for coin income/expense 16 `profiles.period_day`, 21 optional occasion budget (14, 15 and 16 applied to the live project).
 
-## 6b. Household (several people on one set of books; branch feature/household, not yet released)
+## 6b. Household (several people on one set of books; RELEASED in Release 15, 2026-11-05, main 52b656e; migrations 24-31 and 6 Edge Functions are on production)
 
 - **Model:** one data owner per household; every row keeps `user_id = owner`, RLS reads `household_owner()` and writes need `is_writer()` (migrations 24-30, applied to STAGING only; production is applied by the Tech-Lead at release). New columns on the money tables: `created_by`, `updated_by`, `rev`; `household_members`, `household_invites` (token hash only), `household_state(rev)`, `household_former_members`. Roles: owner, editor, viewer. Editors change only their own transactions and transfers (others read-only), but may add/edit/delete accounts, debts, lent, investments, budgets, categories, occasions and recurring rules. Generated recurring rows belong to the rule's creator.
 - **Server:** RPCs `household_people` (names and emails), `household_profile`, `set_member_role`, `remove_member`, `leave_household`; delete guards raise `42501 household_guard:<kind>:<n>`; stale edits raise `PT409 household_stale` (HTTP 409; SQLSTATE 40001 is retried by PostgREST and ends in a 504, so never use it). Edge Functions on staging: `invite-member`, `manage-invite`, `delete-my-login` (JWT required), `join-household`, `signup-gate`, `invite-sweep` (public); see `supabase/functions/DEPLOY.md`.
@@ -248,6 +248,8 @@ which is a public suffix and is rejected).
 - The e2e tests used a rolled-back transaction with a fake user to validate SQL shapes against the real schema.
 
 ## 12. Deployment and workflow
+
+**Risk-tiered workflow (owner, 2026-11-05):** changes take Tier 1 (presentation only), Tier 2 (standard) or Tier 3 (full); the minimum tier comes from the files touched and agents can only raise it. See `docs/workflows/README.md` and `TIER_1-3.md`, AGENTS.md rule 17. CI automation is still to build (`docs/NEXT_STEPS.md` item 0).
 
 Agents: **Tech-Lead is the integrator** (merges into `staging`, folds `docs/changes/` into the changelog, releases); **Full-stack engineer** works on feature branches and reports "ready" (owner, 2026-11-04; see `docs/AGENTS.md`).
 

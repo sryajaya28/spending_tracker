@@ -25,3 +25,7 @@ tests/e2e/*_ops.json
 
 # screenshots the e2e tests rewrite on every run
 tests/e2e/*.png
+
+# python bytecode
+__pycache__/
+*.pyc

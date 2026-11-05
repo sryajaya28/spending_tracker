@@ -32,6 +32,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.match(asked, /My coffee/, 'the confirmation names the entry: ' + asked); assert.equal(await p.evaluate(() => D().transactions.some((t) => t.id === 't2')), true, 'cancel keeps it');
   await p.click('#dlg [data-act=close]');
   assert.match(await p.evaluate(() => byLine(D().wallets[0])), /Added by Sari/, 'accounts show who added them');
+  assert.match(await p.evaluate(() => { D().wallets[0].byAt = '2026-11-04T09:30:00.000Z'; return byLine(D().wallets[0]); }), /Added by Sari, .*\d/, 'the label carries the time for accounts too');
   // settings: Leave instead of Invite, currency and period locked
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('.hh-card');
   assert.equal(await p.$('[data-act=hh-invite]'), null, 'no Invite for a member'); assert.equal(await p.$$eval('[data-act=hh-leave]', (e) => e.length), 1);

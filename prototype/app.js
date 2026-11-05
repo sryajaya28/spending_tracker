@@ -1714,7 +1714,7 @@ const hhName = (id) => { const x = (Cloud.household.people || []).find((p) => p.
 const hhWhen = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 /* an Editor changes only what they created; the owner changes everything; a Viewer nothing. A row not yet saved has no creator and is the viewer-of-it's own. */
 const canEditRec = (r) => state.real || Cloud.household.status === 'owner' || (Cloud.canWrite() && (!r.by || r.by === state.auth.uid));
-const whoLine = (r) => (r.by ? __('Added by {name}, {when}', { name: esc(hhName(r.by) || '?'), when: r.created_at ? esc(hhWhen(r.created_at)) : '' }).replace(/, $/, '') : '') + (r.edBy ? '<br>' + __('Edited by {name}, {when}', { name: esc(hhName(r.edBy) || '?'), when: esc(hhWhen(r.edAt)) }) : '');
+const whoLine = (r) => (r.by ? __('Added by {name}, {when}', { name: esc(hhName(r.by) || '?'), when: (r.byAt || r.created_at) ? esc(hhWhen(r.byAt || r.created_at)) : '' }).replace(/, $/, '') : '') + (r.edBy ? '<br>' + __('Edited by {name}, {when}', { name: esc(hhName(r.edBy) || '?'), when: esc(hhWhen(r.edAt)) }) : '');
 function txnReadDialog(t) {
   const c = catOf(t.category_id), row = (k, v) => (v ? `<div class="form-row"><div>${k}</div><b>${v}</b></div>` : '');
   open(`<h2>${esc(t.note || c?.name || __('Transaction'))}</h2>

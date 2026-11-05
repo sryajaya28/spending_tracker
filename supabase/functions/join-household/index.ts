@@ -11,6 +11,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return reply(req, { error: "method" }, 405);
   const b = await readJson(req); if (!b) return reply(req, GENERIC, 400);
   const token = String(b.token ?? ""), tokenHash = await sha256(token), ipHash = await ipBucketHash(req, "join");
+  // IP-independent backstop: all join and preview calls together, at most 300 an hour, fails closed (whatever the client-address header does)
+  if (!(await takeAttempt("join_attempts", { ip_hash: "G:join", token_hash: "g" }, [{ filters: { ip_hash: "G:join" }, since: HOUR, max: 300 }]))) return reply(req, GENERIC, 429);
   // fails closed; the attempt row is written only while under both limits and always before any token lookup. A preview plus a join is two attempts.
   if (!(await takeAttempt("join_attempts", { ip_hash: ipHash, token_hash: tokenHash }, [
     { filters: { ip_hash: ipHash }, since: HOUR, max: 30 }, { filters: { token_hash: tokenHash }, since: HOUR, max: 10 }]))) return reply(req, GENERIC, 429);
@@ -32,9 +34,12 @@ Deno.serve(async (req) => {
   // 1) read-only check of the invited account; a tampered account is refused through apply (which revokes the invite and records the event)
   const { data: why } = await admin.rpc("join_household_check", { p_invite: inv.id, p_user: inv.invited_user_id });
   if (why !== "ok") { await admin.rpc("join_household_apply", { p_invite: inv.id, p_user: inv.invited_user_id, p_display_name: name }); return reply(req, GENERIC, 400); }
+  // 1b) claim the invite atomically before the password is set: a second simultaneous submit gets false here and changes nothing
+  const { data: claimed } = await admin.rpc("join_household_claim", { p_invite: inv.id });
+  if (claimed !== true) return reply(req, GENERIC, 409);
   // 2) the password is set and the email confirmed first: from here nobody else can sign in to this login
   const { error: pe } = await admin.auth.admin.updateUserById(inv.invited_user_id, { password, email_confirm: true });
-  if (pe) return reply(req, { error: "password_failed" }, 400);   // nothing changed; the same link works again
+  if (pe) { await admin.rpc("join_household_release", { p_invite: inv.id }); return reply(req, { error: "password_failed" }, 400); }   // nothing changed; the same link works again
   // 3) apply: re-checks, writes the membership and ends all sessions in one transaction
   const { data: a } = await admin.rpc("join_household_apply", { p_invite: inv.id, p_user: inv.invited_user_id, p_display_name: name });
   if (a?.result !== "ok") return reply(req, GENERIC, 400);   // refused: the invite is revoked, the login holds no membership

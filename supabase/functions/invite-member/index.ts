@@ -1,5 +1,5 @@
 // invite-member: an owner invites someone as editor or viewer (design 5.1). verify_jwt ON; the caller is taken from the JWT only.
-import { admin, callerOwner, reply, preflight, readJson, sha256, randomToken, EMAIL_RE, takeAttempt, sendsLast, HOUR, DAY, sendInviteEmail, cleanupInvite } from "../_shared/util.ts";
+import { admin, callerOwner, reply, preflight, readJson, sha256, randomToken, EMAIL_RE, takeAttempt, sendsLast, totalSends, HOUR, DAY, sendInviteEmail, cleanupInvite } from "../_shared/util.ts";
 
 Deno.serve(async (req) => {
   const pf = preflight(req); if (pf) return pf;
@@ -15,6 +15,8 @@ Deno.serve(async (req) => {
   // the per-email cap counts SENDS across owners (an invite really created or resent), so nobody can burn it with failed attempts (E3)
   const sent24 = await sendsLast(emailHash, DAY);
   if (sent24 === null || sent24 >= 3) return reply(req, { result: "rate_limited" }, 429);
+  const total1h = await totalSends(HOUR);   // IP-independent backstop: at most 200 invites sent per hour in total, fails closed
+  if (total1h === null || total1h >= 200) return reply(req, { result: "rate_limited" }, 429);
 
   const token = randomToken(), tokenHash = await sha256(token);
   const { data: r, error } = await admin.rpc("create_invite", { p_owner: owner.uid, p_email: email, p_role: role, p_token_hash: tokenHash, p_expires: new Date(Date.now() + 7 * DAY).toISOString() });

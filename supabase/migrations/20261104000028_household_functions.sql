@@ -235,6 +235,20 @@ language sql security definer set search_path = '' as $$
   delete from auth.sessions where user_id = p_user
 $$;
 
+-- join, step 1b: atomically claim the invite before the password is set (a second simultaneous submit gets false and changes nothing).
+-- A claim older than 2 minutes counts as abandoned. Release gives it back when the password step fails.
+create or replace function public.join_household_claim(p_invite uuid) returns boolean
+language plpgsql security definer set search_path = '' as $$
+begin
+  update public.household_invites set claimed_at = now()
+   where id = p_invite and status = 'pending' and expires_at > now() and (claimed_at is null or claimed_at < now() - interval '2 minutes');
+  return found;
+end $$;
+create or replace function public.join_household_release(p_invite uuid) returns void
+language sql security definer set search_path = '' as $$
+  update public.household_invites set claimed_at = null where id = p_invite and status = 'pending'
+$$;
+
 -- join, step 1 (read-only, E1): the reason the invited account may not join, or 'ok'. No writes.
 create or replace function public.join_household_check(p_invite uuid, p_user uuid) returns text
 language plpgsql stable security definer set search_path = '' as $$
@@ -322,10 +336,10 @@ create trigger household_owner_deleting before delete on auth.users for each row
 revoke execute on function public.household_profile(), public.household_people(), public.household_touch(uuid), public.set_member_role(uuid, text),
   public.household_detach(uuid, uuid), public.remove_member(uuid), public.leave_household(),
   public.create_invite(uuid, text, text, text, timestamptz), public.resend_invite(uuid, uuid, text, timestamptz),
-  public.can_delete_invited_user(uuid), public.can_delete_invited_user_rows(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(), public.household_logins_to_delete(), public.join_household_check(uuid, uuid),
+  public.can_delete_invited_user(uuid), public.can_delete_invited_user_rows(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(), public.household_logins_to_delete(), public.join_household_check(uuid, uuid), public.join_household_claim(uuid), public.join_household_release(uuid),
   public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text), public.household_owner_deleting(), public.email_exists(text) from public, anon, authenticated;
 grant execute on function public.household_profile(), public.household_people(), public.set_member_role(uuid, text),
   public.remove_member(uuid), public.leave_household() to authenticated;
 grant execute on function public.create_invite(uuid, text, text, text, timestamptz), public.resend_invite(uuid, uuid, text, timestamptz),
-  public.can_delete_invited_user(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(), public.household_logins_to_delete(), public.join_household_check(uuid, uuid),
+  public.can_delete_invited_user(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(), public.household_logins_to_delete(), public.join_household_check(uuid, uuid), public.join_household_claim(uuid), public.join_household_release(uuid),
   public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text), public.email_exists(text) to service_role;

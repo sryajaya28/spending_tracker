@@ -62,3 +62,6 @@ create table public.invite_sends (
 create index invite_sends_email_idx on public.invite_sends (email_hash, at);
 alter table public.invite_sends enable row level security;
 revoke all on public.invite_sends from anon, authenticated;
+
+-- 7. a join claims its invite before the password is set, so two simultaneous submits of the join form cannot both set a password
+alter table public.household_invites add column claimed_at timestamptz;

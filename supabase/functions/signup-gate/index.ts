@@ -7,6 +7,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return reply(req, { error: "method" }, 405);
   const b = await readJson(req); if (!b) return reply(req, { error: "bad_request" }, 400);
   const email = String(b.email ?? "").trim().toLowerCase(), password = String(b.password ?? "");
+  // IP-independent backstop: all sign-ups through the gate together, at most 300 an hour, fails closed
+  if (!(await takeAttempt("join_attempts", { ip_hash: "G:signup", token_hash: "g" }, [{ filters: { ip_hash: "G:signup" }, since: HOUR, max: 300 }]))) return reply(req, { error: "rate_limited" }, 429);
   const ipHash = await ipBucketHash(req, "signup");   // its own bucket: sign-ups never share a counter with join/preview
   if (!(await takeAttempt("join_attempts", { ip_hash: ipHash, token_hash: await sha256("signup:" + email) }, [{ filters: { ip_hash: ipHash }, since: HOUR, max: 30 }]))) return reply(req, { error: "rate_limited" }, 429);
   if (!EMAIL_RE.test(email) || email.length > 254 || !passwordOk(password)) return reply(req, { error: "invalid_input" }, 400);

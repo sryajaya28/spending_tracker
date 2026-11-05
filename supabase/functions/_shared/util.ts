@@ -36,7 +36,9 @@ export function randomToken(): string {
   return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-// Client address (E2). NOT verified against the platform yet: the first staging run logs the raw headers once and the verified choice is
+// Client address (E2). The per-IP limit is NOT a protection claim until the logged-headers run on staging has shown which header the platform
+// really controls: a caller can forge the first x-forwarded-for entry. The IP-independent global limits in the functions are the real backstops.
+// NOT verified against the platform yet: the first staging run logs the raw headers once and the verified choice is
 // written here. Until then: the first PUBLIC entry of x-forwarded-for, else x-real-ip. Private and internal hops are skipped so an internal
 // proxy cannot put every caller into one bucket, and a header the caller can rotate is not trusted blindly.
 const PRIVATE = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|fc|fd|fe80)/i;
@@ -88,6 +90,11 @@ export async function takeAttempt(table: string, row: Record<string, string>, li
     const { error } = await admin.from(table).insert(row);
     return !error;
   } catch { return false; }
+}
+// total invites really created or resent in the window, across all owners and addresses (IP-independent backstop)
+export async function totalSends(since: number): Promise<number | null> {
+  const { count, error } = await admin.from("invite_sends").select("id", { count: "exact", head: true }).gte("at", ago(since).toISOString());
+  return error ? null : (count ?? 0);
 }
 // count of invites really created or resent for an address, across owners (E3)
 export async function sendsLast(emailHash: string, since: number): Promise<number | null> {

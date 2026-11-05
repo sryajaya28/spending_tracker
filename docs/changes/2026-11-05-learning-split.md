@@ -1,1 +1,0 @@
-2026-11-05: **learning.md split by area.** learning.md is now an index with a load table (which area files each kind of task needs) plus the Session log; the rules moved verbatim into docs/learning/ (release, data, code, ui, testing, owner). Nothing was dropped (checked line by line); CLAUDE.md rule 0 updated. Docs only; branch staging.

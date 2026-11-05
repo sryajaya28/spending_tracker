@@ -1,1 +1,0 @@
-- 2026-11-05 · docs/AGENTS.md rule 16 (message economy, hand off at 400k tokens, no repeated pastes) from the session usage review; docs only.

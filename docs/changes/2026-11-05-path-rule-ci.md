@@ -1,1 +1,0 @@
-2026-11-05: **Path rule and CI.** tools/path_tier.js (+ tests/path_tier.test.js) computes the minimum tier of a change from its files; .github/workflows/ci.yml labels every PR to staging or main with tier-N and runs the e2e suite. Not yet seen running on GitHub (first PR will show); branch protection is the owner's setting. Branch staging.

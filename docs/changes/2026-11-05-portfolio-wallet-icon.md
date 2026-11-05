@@ -1,0 +1,1 @@
+2026-11-05: **Portfolio icon.** The Portfolio entry in the bottom bar and the desktop sidebar now uses the wallet icon (drawn 20% larger so it matches the other tabs) instead of the trend arrow (owner request, first Tier 1 change; no logic, data or access change). Affected tests pass. Branch feature/portfolio-wallet-icon.

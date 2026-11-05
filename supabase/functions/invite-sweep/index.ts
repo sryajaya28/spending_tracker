@@ -21,8 +21,9 @@ Deno.serve(async (req) => {
     const { error } = await admin.auth.admin.deleteUser(row.invited_user_id);
     if (!error) deleted++;
   }
+  const { data: purged } = await admin.rpc("purge_household_activity");   // Activity older than 180 days (migration 31)
   const cutoff = ago(7 * DAY).toISOString();
   for (const t of ["invite_attempts", "join_attempts", "invite_sends"]) await admin.from(t).delete().lt("at", cutoff);
   const { count: refusals } = await admin.from("security_events").select("id", { count: "exact", head: true }).gte("at", ago(DAY).toISOString());
-  return new Response(JSON.stringify({ expired: expired ?? 0, deleted, join_refusals_last_day: refusals ?? 0 }), { headers: { "content-type": "application/json" } });
+  return new Response(JSON.stringify({ expired: expired ?? 0, activity_purged: purged ?? 0, deleted, join_refusals_last_day: refusals ?? 0 }), { headers: { "content-type": "application/json" } });
 });

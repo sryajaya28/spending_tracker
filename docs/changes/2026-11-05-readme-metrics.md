@@ -1,0 +1,1 @@
+2026-11-05: **README: success and performance metrics (docs only).** DAU/WAU (users recording transactions), churn (no transaction for 7 days), paid conversion later (Xendit/Stripe), plus performance metrics: data freshness, app speed and proposed save reliability, price freshness, recurring accuracy. Branch docs/readme-metrics.

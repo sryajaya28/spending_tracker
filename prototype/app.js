@@ -1086,14 +1086,14 @@ function sidebar() {
   const r = route();
   const link = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}<span>${__(label)}</span></a>`;
   return `<aside class="sidebar"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
-    <div class="nav-label">${__('MENU')}</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'swap', 'Transactions')}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'trend', 'Portfolio')}</nav>
+    <div class="nav-label">${__('MENU')}</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'swap', 'Transactions')}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'wallet', 'Portfolio')}</nav>
     <div class="nav-label">${__('ACCOUNT')}</div><nav class="nav">${link('settings', 'gear', 'Settings')}</nav></aside>`;
 }
 function bottomNav() {
   const r = route();
   const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
   const add = canWrite() ? `<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>` : '';   // a Viewer has no Add: four equal tabs, no empty slot
-  return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}</nav>`;
+  return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'wallet', 'Portfolio')}</nav>`;
 }
 function topbar(title, sub) {
   const p = D().profile, hour = new Date().getHours();

@@ -1,6 +1,6 @@
 -- pgTAP tests for migration 31: the Activity log (written by triggers, readable by members, not writable by clients, purged after 180 days).
 begin;
-select plan(12);
+select plan(13);
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000a1', 'o@test.dev', now()), ('00000000-0000-0000-0000-0000000000b1', 'e@test.dev', now()), ('00000000-0000-0000-0000-0000000000c1', 'v@test.dev', now());
@@ -29,6 +29,8 @@ update public.transactions set note = 'Coffee beans' where id = '00000000-0000-0
 select is((select count(*)::int from public.activity_log where entity_id = '00000000-0000-0000-0000-00000000c001' and action = 'update'), 1, 'a save that changes nothing visible is not logged');
 update public.wallets set opening_balance_minor = 777 where user_id = '00000000-0000-0000-0000-0000000000a1' and id = (select id from public.wallets where user_id = '00000000-0000-0000-0000-0000000000a1' limit 1);
 select is((select (summary ->> 'balance_minor') from public.activity_log where entity = 'wallets' and action = 'update'), '777', 'a balance change carries the new balance');
+update public.transactions set amount_minor = 30000 where id = '00000000-0000-0000-0000-00000000c001';
+select is((select summary ->> 'was_amount_minor' from public.activity_log where entity_id = '00000000-0000-0000-0000-00000000c001' and summary ? 'was_amount_minor'), '25000', 'an edit that changes the amount keeps the old amount');
 delete from public.transactions where id = '00000000-0000-0000-0000-00000000c001';
 select is((select count(*)::int from public.activity_log where entity_id = '00000000-0000-0000-0000-00000000c001' and action = 'delete'), 1, 'a delete is logged');
 select is((select count(*)::int from public.activity_log) >= 4, true, 'the Editor reads the log');

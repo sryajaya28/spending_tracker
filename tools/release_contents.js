@@ -18,13 +18,25 @@ function contents(from, to, o) {
   const commits = g.sh(`git log --no-merges --format=%h%x09%s ${from}..${to}`).split('\n').filter(Boolean).map((l) => l.split('\t'));
   // plain-words lines: the changelog lines this release added
   const added = g.sh(`git diff ${from} ${to} -- docs/CHANGELOG.md`).split('\n').filter((l) => /^\+- 20\d\d-/.test(l)).map((l) => l.slice(3));
-  const visible = files.filter((f) => USER_VISIBLE.test(f) && !/^supabase\/migrations\//.test(f));
   const migrations = files.filter((f) => /^supabase\/migrations\//.test(f));
+  const visible = files.filter((f) => USER_VISIBLE.test(f) && !/^supabase\/migrations\//.test(f));
+  // high-level items (owner, 2026-11-05): one plain line per changelog entry, grouped, with its branch; no files or hashes up here
+  const items = { Features: [], Fixes: [], 'Docs/process': [], Tooling: [] };
+  for (const l of added) {
+    const t = (/\*\*(.+?)\*\*/.exec(l) || [])[1] || l.slice(0, 80), title = t.replace(/\s*\((owner[^)]*|[^)]*request[^)]*)\)/i, '').replace(/\.$/, '');
+    const br = (/branch `([^`]+)`/.exec(l) || [])[1], docsOnly = /(docs|page|settings|tooling)( and (docs|page|tooling|settings))* only/i.test(l);
+    const line = `${title}${br ? ' [' + br + ']' : ''}`;
+    const cat = /\bfix(es|ed)?\b|\bbug\b/i.test(t) ? 'Fixes' : (!docsOnly && visible.length) ? 'Features' : /tool|script|release_|regression/i.test(t) ? 'Tooling' : 'Docs/process';
+    items[cat].push(line);
+  }
   const out = [];
   out.push(`## Release ${o.n ? o.n + ' ' : ''}contents${o.main ? ' (main ' + o.main + ')' : ''}`);
-  out.push(`Range: ${g.sh('git rev-parse --short ' + from)}..${g.sh('git rev-parse --short ' + to)}. ${commits.length} commits, ${files.length} files.`);
-  out.push('', '**What changed, in plain words** (from the changelog lines this release added)');
-  out.push(...(added.length ? added.map((l) => '- ' + l.replace(/\*\*/g, '')) : ['- (no changelog line added: say what changed here)']));
+  out.push('', '**Items in this release**');
+  let any = false; for (const [k, v] of Object.entries(items)) if (v.length) { any = true; out.push(`${k}:`, ...v.map((x) => '- ' + x)); }
+  if (!any) out.push('- (no changelog entry: write the items here)');
+  out.push('', `**Exact detail.** Range: ${g.sh('git rev-parse --short ' + from)}..${g.sh('git rev-parse --short ' + to)}. ${commits.length} commits, ${files.length} files.`);
+  out.push('', '**What changed, in plain words** (the changelog lines this release added)');
+  out.push(...(added.length ? added.map((l) => '- ' + l.replace(/\*\*/g, '')) : ['- (no changelog line added)']));
   out.push('', '**What a user can see change**');
   out.push(visible.length ? `Yes: ${visible.length} app files changed (${visible.slice(0, 8).join(', ')}${visible.length > 8 ? ', ...' : ''}).` : 'Nothing: docs, tooling and settings only. The app and its data are untouched.');
   out.push('', '**Commits**', ...commits.map((c) => `- ${c[0]} ${c[1]}`));

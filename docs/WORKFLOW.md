@@ -60,6 +60,7 @@ Reviews follow `docs/AGENTS.md` rule 9: findings carry evidence, the reviewer li
 ## Rules of the road
 - Owner approval comes only from the owner's own messages. No agent approves its own work; no agent skips a gate.
 - Full-stack engineer does not merge to `staging` or `main`; Tech-Lead does, after review (and QA pass for non-fast-lane work).
+- **Nobody asks the owner anything directly** (`docs/AGENTS.md` rule 14): every ask for the owner goes to the PM as a hand-off and appears on the Workspace as a decision or action; no plan mode or question prompts for owner approvals.
 - A bug found anywhere goes to Full-stack engineer on the same branch with steps and a screenshot; one retest round per fix.
 - Disagreement between agents (scope, review findings): both state their case in one message each, then ask the owner with a recommendation.
 - Anything blocked more than one hand-off: tell the owner, with a recommendation.

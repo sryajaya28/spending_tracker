@@ -2,6 +2,39 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 13 contents (main 6761bfe)
+
+**Items in this release**
+Docs/process:
+- Opus review needs the owner's approval [chore/opus-approval]
+- Opus review only for big features [chore/opus-scope]
+
+**Exact detail.** Range: 8c6e642..8e163d7. 4 commits, 4 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-05: Opus review needs the owner's approval (owner request). `docs/AGENTS.md` rules 9 and 15 and `docs/roles/pm.md`: before any Opus / different-model reviewer session starts, the Tech-Lead hands the PM a short case and cost; the PM posts a Workspace decision; no answer means normal review only. Docs only; branch `chore/opus-approval`.
+- 2026-11-05: Opus review only for big features (owner request). `docs/AGENTS.md` rules 9 and 15: the different-model (Opus) review is used only for a big feature or a major authentication/database change; small changes, even in those areas, get normal peer review and QA. Docs only; branch `chore/opus-scope`.
+
+**What a user can see change**
+Nothing: docs, tooling and settings only. The app and its data are untouched.
+
+**Commits**
+- 8e163d7 Fold opus-approval change file
+- b768e7d Opus review needs the owner's approval
+- babfbe6 Fold opus-scope change file
+- ce71ae9 Opus review only for big features; record Release 12
+
+**Files by area**
+- Docs and rules (4): docs/AGENTS.md, docs/CHANGELOG.md, docs/RELEASES.md, docs/roles/pm.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** regression and production smoke skipped by rule (docs only). Production serves stiver-shell-6761bfe917 (checked). PR 18
+**Known gaps:** none
+
+---
+
 ## Release 12 contents (main 8c6e642)
 
 **Items in this release**

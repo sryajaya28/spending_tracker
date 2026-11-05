@@ -400,12 +400,13 @@ Written from the PRD's acceptance checks, not from the implementation. Needs two
 | HH-42 | 18, 5 | Transfers (both legs), stablecoin (USDT/USDC) income/expense rows, investment cash deposit/withdraw transfers **(E, DB, M)** | Same rule: the Editor who created it can edit/delete (both legs together, balances follow); another's is read-only; a transfer's two legs can never be split between creators |
 | HH-43 | 18 (owner decision) | Recurring-generated entries: rule created by the owner vs by Editor A, viewed by Editor A and Editor B **(E, DB, M)** | A generated entry belongs to the rule's creator. Editor A can edit/delete entries from A's rule; Editor B cannot (UI read-only marker + direct REST rejected); entries from the owner's rule are editable only by the owner; the owner can edit all; no duplicate or lost entries when two people have the app open; editing the rule itself stays allowed for Editors |
 | HH-44 | 18 (owner decision) | Editor deletes an account that holds transactions created by others **(E, DB, M)** | Rejected with a message naming the count of others' transactions; nothing deleted (query before/after); no cascade; same rejection by a direct REST/RPC delete; an Editor can delete an account holding only their own or no transactions; the owner can delete (with the confirmation naming the item) |
+| HH-45 | 18 (owner decision x11) | Editor deletes or merges a category used by others' transactions **(E, DB, M)** | Rejected (UI message and direct REST/RPC) while any other member's transaction uses the category or one of its sub-categories; allowed when only the Editor's own or none use it; the owner may always delete/merge; merge never re-labels others' transactions silently |
 | HH-19 | 19 | Owner changes a signed-in person's role (Editor to Viewer and back) while their app is open **(M)** | Within 30 s or on return to the app: controls change and "Your access changed" shows; a save attempted in between is rejected with the same notice, not lost silently |
 | HH-20 | 20 (v2.1) | Remove a signed-in member; also a member leaving; owner deleted/removed **(M, DB)** | Next use/sign-in (and within the 30 s refresh): "You no longer have access to <owner>'s household." with **Sign out** and **Delete my login** as the only actions; data requests return nothing at once; past entries keep their name; signing in again shows the same page, not an empty ledger. If the owner is deleted, members see the same page and pending invites show the expired message |
 | HH-35 | 20 (v2.1) | On the no-access page tap Delete my login **(E, M, DB)** | A confirmation names what is deleted (login, not household data); Cancel keeps everything; confirming deletes the login, signs out, and the same email can sign in no more; household data and the person's past entries (with their name) remain; nothing private in analytics |
 | HH-36 | 5 (Edge, v2.1) | Invite a departed member's email before and after they tapped Delete my login **(DB, M)** | Before: the check-2 "can't be invited" message; after Delete my login: invite works and the person can join again as a new member. Leave by Editor/Viewer works from the Household card; the owner has no Leave |
 | HH-21 | 21 | Revoke a pending invite **(E, M)** | Disappears from the list; its link shows the expired message |
-| HH-22 | 22 | 2+ people: Transactions list and Overview recent list **(E, M)** | Each row shows who submitted it (name/initial); long names ellipsized |
+| HH-22 | 22 (owner: first name only) | 2+ people: Transactions list and Overview recent list **(E, M)** | Each row shows who submitted it by **first name only** (never surname, email or initials of a full name); two people with the same first name are still distinguishable or the behaviour is reported; long names ellipsized |
 | HH-23 | 23 | Open a transaction detail, then edit it as another person **(E, M)** | "Added by <name>, <date time>"; after edit "Edited by <name>, <time>" |
 | HH-24 | 24 | Savings, debt, lent, investment, budgets **(E, M)** | "Added by <name>"; changing an amount/balance shows "Edited by <name>, <time>" |
 | HH-25 | 25 | Solo owner, and after the last member is removed **(E)** | No labels or avatars anywhere (rows, details, cards) |
@@ -461,7 +462,7 @@ Written from the PRD's acceptance checks, not from the implementation. Needs two
 | `dropdown` | app-styled dropdown lists: open, choose, Esc, outside tap, keyboard, groups, inside dialogs |
 | `analytics` | PostHog events, privacy scrubbing, demo mode silence, sign-out reset, `/ingest` path |
 | `ios`, `confirm`, `csp`, `landshot`, `langsave`, `darkshots`, `idcrawl` | phone rendering, email confirmation flow, CSP, landing, language and dark mode |
-| `household` (planned, QA), `householdroles`, `householdjoin`, `tests/staging/household.js` | household access HH-01..HH-44: invite and join UI, Viewer/Editor controls, labels, delete confirmations, analytics (local, stubbed); real-database RLS/rate-limit/invite checks on staging |
+| `household` (planned, QA), `householdroles`, `householdjoin`, `tests/staging/household.js` | household access HH-01..HH-45: invite and join UI, Viewer/Editor controls, labels, delete confirmations, analytics (local, stubbed); real-database RLS/rate-limit/invite checks on staging |
 | `tests/test_yahoo.py` | Yahoo price/search parsing and unit conversion (stubbed) |
 
 ## Not covered by automation (always check manually)
@@ -471,11 +472,12 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-05: HH-22 first name only (owner x07), HH-45 category delete/merge rule (owner x11), from the Workspace decisions.
 - 2026-11-04: HH-38/43/44 made pass/fail after the owner decisions (read-only text marker, recurring entries belong to the rule creator, account delete rejected when others' transactions exist).
 - 2026-11-04: HH-18 changed and HH-37..HH-44 added (Editor edits/deletes only own transactions; owner decision).
 - 2026-11-04: HH-16 rewritten for the approved check-16 change (Create account with a pending-invite email is blocked).
 - 2026-11-04: HH-20 updated for PRD v2.1 (Delete my login), added HH-35, HH-36.
-- 2026-11-04: Section 16 HH-01..HH-44 (household access, from PRD `docs/prd/household.md`) and planned tests in the coverage map.
+- 2026-11-04: Section 16 HH-01..HH-45 (household access, from PRD `docs/prd/household.md`) and planned tests in the coverage map.
 - 2026-11-04: RC-14..RC-17 (Edit debt: Repeat payment block).
 - 2026-11-04: RC-09..RC-12 (repeating debt payments; simple debt cards without percentages).
 - 2026-11-04: Loan/paylater account filter signs and day total (spending is always minus).

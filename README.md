@@ -52,6 +52,29 @@ Stiver is designed, built and run by a team of AI agents (Claude): a **Product M
 
 Live at https://stiver.io with early users. Next up: household access, then hardening the sign-in handoff. Priorities and known gaps are in `docs/NEXT_STEPS.md`.
 
+## Success metrics
+
+How we know Stiver is working. Measured in PostHog (EU); the event names are in `docs/ANALYTICS.md` (`expense_recorded`, `income_recorded`). A user is "active" only when they **record a transaction**, not when they merely open the app.
+
+| Metric | Definition | Status |
+|---|---|---|
+| **DAU** | Distinct users who record at least one transaction on a given day | Now |
+| **WAU** | Distinct users who record at least one transaction in a 7-day window | Now |
+| **Churned users** | Users who recorded transactions before and have recorded none for 7 days | Now |
+| **Paid conversion** | Subscribed users divided by active users, and divided by registered users | Later: once a payment gateway (Xendit for Indonesia, Stripe for international customers) is integrated |
+
+DAU/WAU shows the habit (a finance tracker only works if entries keep coming); churn shows where it breaks; paid conversion comes only when there is something to pay for. Targets will be set after we have a baseline from real usage.
+
+### Performance metrics
+
+| Metric | What it measures | Notes |
+|---|---|---|
+| **Data freshness** | Time from submitting a transaction until it is saved and visible, on this device and (with household access) on another person's device | Household v1 target: other members see a change within about 30 seconds or when they return to the app |
+| **App speed** | How fast the app loads and responds: load time, and time from tapping save to the confirmation | Measured on phone-size screens, the main way it is used |
+| **Save reliability** (proposed) | Share of saves that succeed without an error or reload | A failed save is the worst thing a money app can do |
+| **Price freshness** (proposed) | Age of the live prices and exchange rates used in net worth | Net worth is only as good as its latest prices |
+| **Recurring accuracy** (proposed) | Recurring entries created on the right day without duplicates | They are created when the app is opened |
+
 ## Deliberately not building (yet)
 
 - **Bank syncing: not now.** Bank API coverage in Indonesia is uneven, and holding bank credentials or tokens is a serious security responsibility. The end goal is unchanged, though: **fewer manual entries and more automated records**, through other routes than bank or exchange syncing.

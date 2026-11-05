@@ -19,3 +19,7 @@ Before any limit is described as protection: deploy a throwaway function that lo
 IP-independent backstops already in the code (fail closed): join + preview <= 300/h in total, signup-gate <= 300/h in total, invites sent <= 200/h in total,
 per-token <= 10/h. The per-IP limit is not claimed as protection in release notes until that run is done.
 Double submit of the join form: the invite is claimed atomically (`join_household_claim`) before the password is set; the client also disables the button after the first tap.
+
+## Follow-ups (Developer 2 review of 0ee937e)
+- Rate limits: the global 300/hour join and preview backstops fail closed, so a determined caller can burn the budget with garbage and block real joins for that hour. Once the logged-headers run shows a trustworthy client-IP header, make the per-IP limit the primary control and raise or drop the global one.
+- A claim abandoned by a crashed function blocks retries for 2 minutes. The Join page error text must say "try again in a minute".

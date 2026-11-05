@@ -1,1 +1,0 @@
-2026-11-05: **Tier 1 release steps.** docs/workflows/TIER_1.md now says a Tier 1 batch release needs no regression run and no production smoke test (CI e2e and the owner's screenshot review replace them); after the owner's Release only the site answer and build stamp are checked. Owner correction recorded in docs/learning/release.md. Docs only; branch staging.

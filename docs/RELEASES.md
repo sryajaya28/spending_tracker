@@ -2,6 +2,106 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 15 contents (main 52b656e)
+
+**Items in this release**
+- Feature (branch feature/household): household access. An owner invites people as Editor or Viewer by email; members work on the owner's data (invites, join page, roles, remove, Delete my login with confirmation, Activity feed, Household card, Indonesian text). Database migrations 24-31 and six Edge Functions.
+- Fixes (found by QA on staging): a Viewer sees no write controls and never writes; a Viewer's bottom bar has four equal tabs; manual_prices no longer sends a nonexistent `id` column (also hit solo owners changing a hand-typed asset price); a member removed while the app is open reaches the no-access page within one poll.
+- Docs/process: README rewrite and metrics, contact email (support@stiver.io), PM and Tech-Lead handoff notes, message-economy rules, the owner SQL file docs/handoff/release15_prod_migrations_25_31.sql.
+
+**Exact detail.** Range: e64e5e9..9e1ca50. 67 commits, 72 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- (no changelog line added)
+
+**What a user can see change**
+Yes: 6 app files changed (prototype/app.js, prototype/cloud.js, prototype/config.js, prototype/i18n-id.js, prototype/styles.css, vercel.json).
+
+**Commits**
+- 9e1ca50 Release 15: migrations 25-31 as one transaction for the owner to run in the production SQL editor
+- fb6cfa3 No-access page: Delete my login asks for confirmation first
+- 7836051 HH-20: a member removed while the app is open reaches the no-access page within one poll
+- 00acd41 Bottom bar: no empty slot for a Viewer (four equal tabs, no raised Add)
+- 1b839b9 QA fixes: Viewer sees no write controls and never writes; manual_prices rows carry no id and use the owner id in the save diff
+- 1dc7283 Handoff: new Tech-Lead session id
+- cb6269b Registry: fresh Tech-Lead session; learning on usage review
+- db8bc49 Handoff note rewritten for the household feature (state at 543b241)
+- 51884ab Tech-Lead handoff: Release 15 state and production procedure
+- 8d04cda Registry: fresh Product Manager session
+- f41c417 PM handoff: state at Release 15 for the PM session replacement
+- 0b3358b AGENTS.md rule 16: message economy and hand-off at 400k tokens
+- ce24ee5 Set CONTACT_EMAIL to support@stiver.io; remove personal address fragment from learning.md
+- 543b241 Household card rework (fast lane): Manage button, badge after name, Pending row icons, remove confirm names the person
+- b2812b3 Migration 31 is the single final file (includes the was_* body); staging already has the same end state
+- 131fec2 Repo matches staging: migration 31 as applied, migration 32 adds the was_* function body
+- 722b82b Household slice 2: Activity page (#/activity), filters, entry row, activity_opened, tests, docs, Indonesian
+- 22ed956 Activity: log the old amount and old balance (Figma 'was ...' rows)
+- 2c50a68 Household slice 2: migration 31 activity_log (triggers, RLS, 180-day purge) + SQL test
+- abd8152 Household: creation time on every record label, ignore __pycache__
+- 061f915 Learning: Tech-Lead session notes
+- 05cb9c6 Restore tools/__pycache__ (accidental binary change on the feature branch)
+- e51027b README: activation target 25% (owner)
+- eca7697 Household slice 1 ready report
+- c10b29f Join page: language chips stay right of the logo at phone width
+- bcb1328 README: activation metric, retention, targets, guardrail metrics
+- 7cfffcf README: success and performance metrics
+- 6895a03 Household docs: context, regression scenarios, FT-008, change note, learning
+- d160363 Household: sign-up goes through signup-gate; sent screen mentions the invite email
+- dd4703c Analytics: assert invite_accepted and login_deleted
+- b03ecc2 Household: a Viewer's app does not generate recurring entries
+- 54c2948 Household: guard messages name the item being deleted (Figma 27/29)
+- d0b4e4c Registry: fresh Full-stack engineer session; Figma status suffix convention
+- 15c5e77 Handoff note for a fresh Full-stack engineer session
+- e35dc4d Household UI slice E: delete confirmations name the item, Added by on accounts/debts/investments/budget dialog, Your access changed notice
+- 52d562d Household: Indonesian strings, analytics events (docs + test), error-contract test
+- 4f00560 README: AI team, not building, known limits, pre-public checklist
+- f92b265 Household: spike 2 round 2 results; error-contract test (PT409 stale)
+- d2dd587 Household: migration 30 (stale revision raises PT409, not retried by PostgREST), client classifier, spike 2 report
+- 1ae36ac Household: clientIp() uses cf-connecting-ip, then sb-forwarded-for, then the first x-forwarded-for entry (E2 verified on staging); remove throwaway debug-headers
+- f0c2104 Household UI slice D: who-submitted labels, read-only rows and detail for Editors/Viewers, Added by/Edited by, fake household support, household_labels e2e
+- 61d7a49 Rewrite README: problem-first, household in development, remove stale text
+- 4a9289b Household: Join page e2e test (household_join), fake setSession, Join page keeps its own address
+- 56ba1f0 Household UI slice C: Join page at /join (token kept in memory, fragment removed), expired/used and signed-in-as-someone-else states, vercel rewrite for /join
+- 15bc54c Household: scope tests for household_people(); throwaway debug-headers function for spike 2 (staging only)
+- 71d3780 Household: migration 29 adds email to household_people(); migration 28 restored to the applied content; UI slice B e2e 55/55
+- 99fa9c9 Record Release 14
+- cfbcacd Household UI slice B: Settings Household card, invite dialog and states, pending Resend/Revoke, role/remove/leave dialogs, member lock on currency/period; household_people returns email
+- 2f9b895 Household: local SQL check harness; fix three test expectations found by it (125/125 pass on migrations 25-28)
+- 78b9e61 PM handoff note
+- baba1a9 Household UI slice A: no-access page, Viewer write guard, household error messages, 30s/focus refresh; attribution fields from the database
+- a764121 e2e fake: maybeSingle for household load
+- 778cf5b Household: cloud.js household layer (strict write path, load by status, poll, error classes, function calls); deploy follow-ups
+- 0ee937e Household: IP-independent global backstops, atomic invite claim before the password, notes (Developer 2's E2 condition)
+- f99a73c household_functions tests: read-only join check, sessions ended by apply, reason named by the check
+- 8b3661d Household review fixes E1-E14: join order (check, bytes, password, apply with session delete), join_household_check, salted bucketed IP limits failing closed, send-based per-email cap, own-timeout mail, stray-login refusal, body guards, sweep split and pruning, stored names, deploy notes
+- 36d30a5 Household Edge Functions as code (invite-member, manage-invite, join-household, signup-gate, delete-my-login, invite-sweep) and email_exists(); not deployed
+- 866798a Household guard tests: FK cascade/set-null delete guards, linked-row policies, transfer legs, manual_prices, MFA refusal, owner deletion
+- 060ad3e Household function tests: member action permissions, removal, household_people/profile, session delete, execute rights
+- 9c8ac26 Household SQL tests for migration 4 functions (invite lifecycle, cap, join refusals, guard order)
+- 947bd44 Household SQL tests: message patterns, upsert with rev, re-save of generated rows, UTC slack, solo ledger, nothing cascaded after refusal, broader policy loop
+- 491123c Household migrations: review fixes S1-S5, M1-M4 and suggestions (no rev reset on insert, recurring checks only for new rows, UTC slack, no kind check, error contract, phone checks, live-invite cap, member name on delete)
+- 9df8179 Household migration 4 (functions, sign-up trigger change, member actions, service-only invite/join functions) - NOT applied
+- 5791cac Household SQL tests for RLS, stamps, recurring attribution and delete guards; change file; FT-008 status
+- 04f8559 Household migrations 2 and 3 (RLS, transaction ownership, profile grants, stamps, stale-edit check, recurring attribution, poll counter, delete guards) and down script - NOT applied
+- 0a7ca80 household_hardening test: plan(9)
+- 4bfd4fa Household migration 1b (hardening) and tests: household_state via household_owner(), membership guard trigger, recurring_rule_id note
+
+**Files by area**
+- App (what users see) (5): prototype/app.js, prototype/cloud.js, prototype/config.js, prototype/i18n-id.js, prototype/styles.css
+- Database migrations (8): supabase/migrations/20261104000024_household_tables.sql, supabase/migrations/20261104000025_household_hardening.sql, supabase/migrations/20261104000026_household_rls.sql, supabase/migrations/20261104000027_household_triggers.sql, supabase/migrations/20261104000028_household_functions.sql, supabase/migrations/20261104000029_household_people_email.sql, supabase/migrations/20261104000030_household_stale_409.sql, supabase/migrations/20261105000031_household_activity.sql
+- Edge Functions (8): supabase/functions/DEPLOY.md, supabase/functions/_shared/util.ts, supabase/functions/delete-my-login/index.ts, supabase/functions/invite-member/index.ts, supabase/functions/invite-sweep/index.ts, supabase/functions/join-household/index.ts, supabase/functions/manage-invite/index.ts, supabase/functions/signup-gate/index.ts
+- API and hosting (1): vercel.json
+- Tests (7): tests/e2e/analytics.js, tests/e2e/fake_supabase.js, tests/e2e/household_activity.js, tests/e2e/household_join.js, tests/e2e/household_labels.js, tests/e2e/run.js, tests/e2e/run_all.sh
+- Tooling (2): tools/__pycache__/dev_server.cpython-313.pyc, tools/sql_local_test.sh
+- Docs and rules (32): README.md, context.md, docs/AGENTS.md, docs/ANALYTICS.md, docs/FEATURE_TESTS.md, docs/FIGMA.md, docs/RELEASES.md, docs/changes/2026-11-04-household-migration-1.md, docs/changes/2026-11-04-household-migration-2-3.md, docs/changes/2026-11-04-household-prd.md, docs/changes/2026-11-05-contact-email.md, docs/changes/2026-11-05-household-activity.md, docs/changes/2026-11-05-household-card-rework.md, docs/changes/2026-11-05-household-edge-functions.md, docs/changes/2026-11-05-household-local-sql-check.md, docs/changes/2026-11-05-household-people-email.md, docs/changes/2026-11-05-household-slice1-client.md, docs/changes/2026-11-05-household-viewer-controls-manual-prices.md, docs/changes/2026-11-05-message-economy.md, docs/changes/2026-11-05-readme-metrics.md, docs/changes/2026-11-05-readme-rewrite.md, docs/handoff/fullstack.md, docs/handoff/pm.md, docs/handoff/release15_prod_migrations_25_31.sql, docs/handoff/techlead.md, docs/prd/household-technical-design.md, docs/prd/household.md, docs/reports/2026-11-05-household-slice1-ready.md, docs/reviews/2026-11-05-household-spike2.md, docs/roles/README.md, learning.md, regression_scenario.md
+- Other (9): .gitignore, supabase/migrations_down/20261104000026_household_rls.down.sql, supabase/tests/household_activity.test.sql, supabase/tests/household_functions.test.sql, supabase/tests/household_guards.test.sql, supabase/tests/household_hardening.test.sql, supabase/tests/household_rls.test.sql, supabase/tests/household_tables.test.sql, supabase/tests/local/stubs.sql
+
+**Database migrations**
+supabase/migrations/20261104000024_household_tables.sql, supabase/migrations/20261104000025_household_hardening.sql, supabase/migrations/20261104000026_household_rls.sql, supabase/migrations/20261104000027_household_triggers.sql, supabase/migrations/20261104000028_household_functions.sql, supabase/migrations/20261104000029_household_people_email.sql, supabase/migrations/20261104000030_household_stale_409.sql, supabase/migrations/20261105000031_household_activity.sql. Applied to staging: NOT RECORDED. Applied to production: NOT RECORDED.
+
+**Tests and smoke:** tools/regression.js 4/4 on ac59ab6; full e2e 58/58; QA real-account household checks green with accepted gaps (forgot-password, join while signed in as someone else, two-session conflict UI, live transfers/recurring/category merge, Indonesian Join page and owner card, invite-sweep with the real service key). production smoke 15/15 on https://stiver.io (main 52b656e, stiver-shell-52b656e082); migrations 24-31 applied on production (24 via the tool, 25-31 as one transaction by the owner in the SQL editor); 6 Edge Functions deployed and curl-checked
+**Known gaps:** release.js --verify-only compares 7-char sha with the 10-char stamp (known bug); production Edge Function secrets RESEND_API_KEY/MAIL_FROM/SITE_URL not visible to agents (owner to confirm); invite-sweep daily schedule is the owner's Action; qa-hh-p1: revoking an invite did not remove the half-created login in a direct sign-up test (look next to invite-sweep)
+
 ## Release 14 contents (main e64e5e9)
 
 **Items in this release**

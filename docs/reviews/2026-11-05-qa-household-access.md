@@ -79,3 +79,32 @@ All my test logins deleted (0 left), no pending invites, no members, owner data 
 Not fully green. Bugs 1 and 2 are fixed. Bug 4 is major (stale screen after removal; data safe) and bug 3 is cosmetic; I recommend fixing both, or the owner accepting 4 plus the unverified list above (cap, link expiry, Indonesian, owner card). 
 
 Owner-bound asks: all on the Workspace (yes/no): no.
+
+---
+# Round 3: staging ac59ab6 (final candidate for Release 15)
+
+## Verdict: NOT GREEN YET (regression green; one fix unproven live, several checks never run). Releasable only if the open items below are accepted.
+
+| Item | Result | How verified |
+|---|---|---|
+| Owner/editor regression (`node tools/regression.js` on ac59ab6) | PASS 4/4: browser suite, staging smoke, real-DB create and cleanup; 71 files since production | script run |
+| Viewer bottom bar (bug 3, owner request) | PASS, layout only: four equal 95 px tabs, no raised Add element, no empty slot, light and dark at 390 px (`docs/reviews/img/qa-ac59-viewer-bar-light.png`) | owner's real session with the app's role switched to Viewer in the page. NOT a real Viewer login |
+| Owner/editor bar unchanged | PASS: five slots with the raised Add, light and dark | same session |
+| Delete my login confirmation | PASS for the dialog: names what is deleted, has Cancel, Cancel closes it, Indonesian text translated (`.../qa-ac59-confirm-id-dark.png`) | dialog opened with the app's own helper; the confirm button was never pressed |
+| Bug 4 fix (removed member reaches the no-access page within a poll) | NOT PROVEN LIVE. Code now reads `if (!st) return hh.status === 'member'` (cloud.js ~288), which addresses the cause I found | code read only; no member available |
+| Confirm deletes the login (end to end) | NOT RUN | needs a real removed member |
+| Real Viewer/Editor on ac59ab6 (bugs 1 and 2, bar) | NOT RE-RUN; verified on 0f8283a with a real member | no member available |
+
+## Why there was no real member this round
+Mailinator is still blocked by the sandbox (the owner's action `a-allow-mailinator` was still open), Gmail aliases are off-limits, and a DB shortcut is refused by design (`household_members_guard`: a member must be an invited user). My attempt to build a valid invite by hand needed database writes that waited for an approval nobody answered (timed out twice).
+
+## Still NOT verified (never run)
+Member cap (HH-05), expired/revoked links, re-invite after Delete my login, resend, Indonesian invite email, Settings > Household owner card at 390 px and dark.
+
+## Left on staging by me (needs removal)
+One test login `qa-hh-ui2-a25aa8@mailinator.com` (status "invited", clean account, password only in QA's scratch) and its expired pending invite, created by my aborted attempt above. My delete timed out waiting for an approval. Harmless but not clean; owner data is at baseline.
+
+## Recommendation
+Release only if the Tech-Lead and owner accept: bug 4 proven by e2e and code read but not live, the Delete-my-login confirm path unrun, and the never-run list above. Otherwise: allow Mailinator (or approve one Gmail alias) and I finish in about 30 minutes.
+
+Owner-bound asks: all on the Workspace (yes/no): yes (a-allow-mailinator is still open; the leftover-login cleanup approval).

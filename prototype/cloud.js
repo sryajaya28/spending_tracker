@@ -203,7 +203,7 @@ const Cloud = (() => {
     const row = hh.status === 'member' ? { display_name, ai_tagging_enabled, language, theme } : { display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme, period_day };
     must(await client.from('profiles').update(row).eq('id', userId));
   }
-  /* households: new rows are inserted, known rows are updated with the revision last seen (a stale one raises 40001), and an edit or delete
+  /* households: new rows are inserted, known rows are updated with the revision last seen (a stale one is refused with HTTP 409, code PT409), and an edit or delete
      of a row someone else already deleted is refused instead of bringing it back (design 7) */
   async function applyStrict(ops) {
     for (const { table, rows, known, onConflict } of ops.upserts) {
@@ -290,7 +290,7 @@ const Cloud = (() => {
     classify(e) {   // the error contract (design 16): guards carry a prefix, plain RLS has none
       const m = String((e && e.message) || '');
       if (e && e.code === 'HH_GONE') return { kind: 'gone' };
-      if ((e && e.code === '40001') || /household_stale/.test(m)) return { kind: 'stale' };
+      if ((e && (e.code === 'PT409' || e.code === '40001')) || /household_stale/.test(m)) return { kind: 'stale' };
       const g = /household_guard:([a-z_]+)(?::(\d+))?/.exec(m);
       if (g) return { kind: 'guard', what: g[1], n: +g[2] || 0 };
       if (e && e.code === '42501') return { kind: 'rls' };

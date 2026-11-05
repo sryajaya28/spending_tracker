@@ -77,7 +77,7 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 with u as (update public.transactions set amount_minor = 2600 where note = 'editor row' returning 1) select is((select count(*)::int from u), 1, 'the owner updates an editor''s transaction');
 
 -- 5. stale-edit check only for households with members; ownership pinned ------------------------------------------------------
-select throws_ok($$ update public.transactions set amount_minor = 1, rev = 99 where note = 'owner row' $$, '40001', 'household_stale', 'a wrong revision is a conflict when the household has members');
+select throws_ok($$ update public.transactions set amount_minor = 1, rev = 99 where note = 'owner row' $$, 'PT409', 'household_stale', 'a wrong revision is a conflict when the household has members');
 select lives_ok($$ update public.transactions set amount_minor = 1100, rev = (select rev from public.transactions where note = 'owner row') where note = 'owner row' $$, 'the current revision is accepted');
 select is((select rev from public.transactions where note = 'owner row'), 2, 'revision increases by one per update');
 update public.transactions set created_by = '00000000-0000-0000-0000-0000000000b1' where note = 'owner row';
@@ -112,7 +112,7 @@ select lives_ok($$ insert into public.transactions (id, user_id, wallet_id, type
   on conflict (id) do update set amount_minor = excluded.amount_minor, rev = excluded.rev $$, 'an upsert carrying the current rev is accepted (rev is not reset on insert)');
 select throws_ok($$ insert into public.transactions (id, user_id, wallet_id, type, amount_minor, occurred_at, rev)
   select t.id, t.user_id, t.wallet_id, t.type, 1, t.occurred_at, t.rev - 1 from public.transactions t where t.note = 'editor row'
-  on conflict (id) do update set amount_minor = excluded.amount_minor, rev = excluded.rev $$, '40001', 'household_stale', 'an upsert carrying a stale rev conflicts');
+  on conflict (id) do update set amount_minor = excluded.amount_minor, rev = excluded.rev $$, 'PT409', 'household_stale', 'an upsert carrying a stale rev conflicts');
 
 -- 6d. a solo ledger (the stranger has no household_state row): stale rev causes no conflict and household_state is not written -----------
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated","session_id":"00000000-0000-0000-0000-00000000f0d1"}', true);

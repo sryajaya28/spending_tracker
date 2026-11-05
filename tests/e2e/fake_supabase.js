@@ -1,6 +1,7 @@
 /* in-memory stand-in for supabase-js, used only by the e2e test */
 (function () {
   const uuid = () => crypto.randomUUID();
+  /*SCHEMA*/ const SCHEMA = {"budgets":["id","user_id","category_id","amount_minor","currency","start_month","created_at","created_by","updated_by","rev"],"categories":["id","user_id","parent_id","name","type","icon","color","archived","created_at","created_by","updated_by","rev"],"debt_payments":["id","user_id","debt_id","paid_on","amount_minor","created_at","kind","transaction_id","created_by","updated_by","rev"],"debts":["id","user_id","direction","name","type","currency","original_minor","monthly_minor","interest_rate","due_date","note","start_month","archived","created_at","interest_flat","created_by","updated_by","rev"],"holding_events":["id","user_id","holding_id","occurred_at","quantity_delta","unit_price_usd","note","created_at","pair_id","unit_price","created_by","updated_by","rev"],"holdings":["id","user_id","account_id","symbol","provider_symbol","name","asset_type","archived","created_at","since_month","cost_currency","created_by","updated_by","rev"],"investment_accounts":["id","user_id","name","archived","created_at","created_by","updated_by","rev"],"manual_prices":["user_id","symbol","price_date","price_usd"],"occasions":["id","user_id","name","amount_minor","currency","start_date","end_date","archived","created_at","created_by","updated_by","rev"],"profiles":["id","display_name","default_currency","timezone","ai_tagging_enabled","created_at","sample_ids","language","theme","period_day","household_status"],"recurring_rules":["id","user_id","kind","frequency","start_date","next_date","end_date","active","spec","created_at","created_by","updated_by","rev"],"support_reports":["id","type","message","attachments","user_id","email","context","status","created_at"],"transactions":["id","user_id","wallet_id","category_id","type","amount_minor","currency","occurred_at","note","category_source","ai_confidence","created_at","updated_at","transfer_direction","holding_event_id","occasion_id","transfer_group_id","debt_id","created_by","updated_by","rev","recurring_rule_id"],"wallets":["id","user_id","name","type","currency","opening_balance_minor","archived","created_at","since_month","created_by","updated_by","rev"]}; /*END SCHEMA*/   // columns of the real tables (production, 2026-11-05); refresh with tools/check_fake_schema.js
   const T = {}; const log = []; window.__log = log; window.__T = T;
   const uid = 'user-0000-0000-0000-000000000001';
   let session = null, cb = null;
@@ -34,6 +35,10 @@
         if (this.r) out = out.slice(this.r[0], this.r[1] + 1);
         out = JSON.parse(JSON.stringify(out));
         return { data: this.one ? out[0] : out, error: null };
+      }
+      if (this.op !== 'select' && SCHEMA[t]) {   // strict like the real table: an unknown column is refused (PGRST204), as 'manual_prices.id' would have been
+        const sent = this.op === 'upsert' ? this.rows : this.op === 'insert' ? [this.row] : [this.v];
+        for (const r of sent) for (const k of Object.keys(r || {})) if (!SCHEMA[t].includes(k)) return { data: null, error: { code: 'PGRST204', message: "Could not find the '" + k + "' column of '" + t + "' in the schema cache" } };
       }
       if (this.op === 'upsert' && t === 'manual_prices' && this.rows.some((r) => 'id' in r)) return { data: null, error: { message: "Could not find the 'id' column of 'manual_prices' in the schema cache" } };   // the real table has no id column
       if (this.op === 'upsert') {

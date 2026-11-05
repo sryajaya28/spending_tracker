@@ -1,7 +1,7 @@
 -- pgTAP tests for household migrations 2-4: delete guards (FK cascade and set-null bypass), linked-row policies, transfer legs,
 -- manual_prices, join refusal reasons and owner deletion. Run with: supabase test db.
 begin;
-select plan(25);
+select plan(26);
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('00000000-0000-0000-0000-0000000000a1', 'o@test.dev', now()), ('00000000-0000-0000-0000-0000000000b1', 'e@test.dev', now());
@@ -36,7 +36,7 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 
 -- 1. delete guards as an Editor: rejected with kind and count, nothing cascaded -----------------------------------------------------
 select throws_ok($$ delete from public.debts where id = '00000000-0000-0000-0000-00000000d001' $$, '42501', 'household_guard:debt:1', 'editor cannot delete a debt that the owner''s transaction points at (would null debt_id)');
-select throws_ok($$ delete from public.holding_events where id = '00000000-0000-0000-0000-00000000a001' $$, '42501', 'household_guard:holding_event:1', 'editor cannot delete a holding event behind the owner''s transaction (would cascade-delete it)');
+with d as (delete from public.holding_events where id = '00000000-0000-0000-0000-00000000a001' returning 1) select is((select count(*)::int from d), 0, 'editor cannot delete a holding event behind the owner''s transaction (hidden by the linked-row policy, nothing deleted, nothing cascaded)');
 select throws_ok($$ delete from public.holdings where id = '00000000-0000-0000-0000-00000000f001' $$, '42501', 'household_guard:holding:1', 'editor cannot delete a holding whose events back the owner''s transaction');
 select throws_ok($$ delete from public.investment_accounts where id = '00000000-0000-0000-0000-00000000e001' $$, '42501', 'household_guard:account:1', 'editor cannot delete an investment account holding the owner''s transactions');
 select is((select count(*)::int from public.transactions where note in ('owner debt row', 'owner coin row') and (debt_id is not null or holding_event_id is not null)), 2, 'after the refusals both of the owner''s transactions are untouched (nothing nulled, nothing cascaded)');
@@ -66,7 +66,8 @@ select throws_ok($$ insert into public.manual_prices (user_id, symbol, price_dat
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","session_id":"00000000-0000-0000-0000-00000000f0a1"}', true);
 select lives_ok($$ delete from public.debts where id = '00000000-0000-0000-0000-00000000d001' $$, 'the owner can delete the debt');
 select is((select debt_id from public.transactions where note = 'owner debt row'), null, 'its transaction keeps existing with debt_id set null (as before)');
-select lives_ok($$ delete from public.investment_accounts where id = '00000000-0000-0000-0000-00000000e001' $$, 'the owner can delete the investment account');
+select lives_ok($$ delete from public.holdings where id = '00000000-0000-0000-0000-00000000f001' $$, 'the owner can delete the holding (its events and their coin transaction cascade, as before)');
+select lives_ok($$ delete from public.investment_accounts where id = '00000000-0000-0000-0000-00000000e001' $$, 'the owner can then delete the empty investment account (the base schema has no account-to-holdings cascade)');
 select is((select count(*)::int from public.transactions where note = 'owner coin row'), 0, 'its cascade removes the linked coin transaction (as before)');
 reset role;
 

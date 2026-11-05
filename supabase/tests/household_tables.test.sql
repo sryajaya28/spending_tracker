@@ -1,6 +1,6 @@
 -- pgTAP tests for household migration 1. Run with: supabase test db
 begin;
-select plan(13);
+select plan(12);
 
 -- rows that existed before this test (created before the migration ran) were backfilled to their owner
 select is((select count(*)::int from public.wallets where created_by is null), 0, 'wallets: existing rows backfilled');

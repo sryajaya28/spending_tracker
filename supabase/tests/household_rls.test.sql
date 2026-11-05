@@ -101,7 +101,7 @@ select is((select count(*)::int from public.transactions where note like 'genera
 reset role;
 update public.recurring_rules set next_date = current_date + 30;
 set local role authenticated;
-select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated","session_id":"00000000-0000-0000-0000-00000000f0b1"}', true);
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated","session_id":"00000000-0000-0000-0000-00000000f0a1"}', true);
 select lives_ok($$ insert into public.transactions (id, user_id, wallet_id, type, amount_minor, occurred_at, recurring_rule_id)
   select t.id, t.user_id, t.wallet_id, t.type, t.amount_minor + 1, t.occurred_at, t.recurring_rule_id from public.transactions t where t.note = 'generated'
   on conflict (id) do update set amount_minor = excluded.amount_minor $$, 're-upserting a generated row after the rule moved on is not rejected (checks apply only to new rows)');

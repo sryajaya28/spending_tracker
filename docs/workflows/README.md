@@ -50,6 +50,13 @@ Production is broken or data is at risk: the owner says "hotfix" (or the Tech-Le
 - Messages carry a file path or commit, not a summary; one message per event; nothing is re-sent (AGENTS.md rule 16).
 - Documentation per change: Tier 1 adds only its change file; Tier 2 and 3 also update `context.md`, `regression_scenario.md`, `docs/ANALYTICS.md` where the rules in CLAUDE.md apply. `learning.md` is appended when a mistake happens.
 
+## Release hygiene (fewer round trips)
+Every push to a PR restarts its checks (about 2 minutes for the browser suite), so a release is prepared in this order and then left alone:
+1. Merge everything for the release into `staging`; run `node tools/fold_changes.js` and commit the folded changelog **in the same push**.
+2. Run regression (`node tools/regression.js`) on that exact staging commit.
+3. Open the PR to `main` (ready, not draft) and wait for its checks. **No further commits** to `staging` until it is merged. A late fix is a new change for the next release unless it is a hotfix.
+4. Tier 1 PRs skip the browser suite in CI (`.github/workflows/ci.yml`: the `e2e` job runs only when the path rule says Tier 2 or 3), so docs, CSS, translations and tooling merge in about a minute.
+
 ## Metrics (from the first week)
 | Metric | Warning sign |
 |---|---|

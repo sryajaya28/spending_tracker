@@ -10,6 +10,8 @@ permissions:
 jobs:
   tier:
     runs-on: ubuntu-latest
+    outputs:
+      tier: ${{ steps.tier.outputs.tier }}
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
@@ -32,6 +34,9 @@ jobs:
             for (const l of cur) if (/^tier-\d$/.test(l) && l !== want) await github.rest.issues.removeLabel({ owner, repo, issue_number, name: l });
             if (!cur.includes(want)) await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [want] });
   e2e:
+    needs: tier
+    # Tier 1 (docs, CSS, translations, tooling) cannot change app behaviour: the browser suite is skipped. A skipped job counts as passing for the required `e2e` check.
+    if: ${{ needs.tier.outputs.tier != '1' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

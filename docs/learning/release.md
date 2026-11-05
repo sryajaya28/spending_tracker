@@ -17,4 +17,4 @@ Part of `learning.md` (index). Add a line here when a mistake in this area happe
 - **Look at every screenshot before sending it.** Several previews were sent unseen and had layout bugs (overlapping amounts,
   chevron wrapping, transparent popover mid-animation). Wait for animations to finish before capturing.
 - **Hosting config (rewrites, headers, CSP) is only proven on a real deployed URL.** A stubbed network route passed while the `/ingest/:path*` rewrite missed `/ingest/e/` (trailing slash) and no analytics event ever arrived. After such a change, curl the exact path and method the client uses on staging and confirm the data shows up at its destination.
-
+- **Do not push to a release PR after its checks started.** Every push restarts them (Release 16: three extra commits, one run that started late). Fold the changelog, run regression, open the PR, then stop committing (see `docs/workflows/README.md`, Release hygiene).

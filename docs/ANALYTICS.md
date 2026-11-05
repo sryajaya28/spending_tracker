@@ -51,6 +51,7 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `invite_sent` / `invite_resent` / `invite_revoked` | `role` (editor/viewer) / none / none | the owner invites, resends or cancels an invitation (never the email) |
 | `invite_accepted` | `role` | the invitee finished the Join page and is signed in |
 | `member_role_changed` / `member_removed` / `household_left` | `role` / none / none | household admin actions and a member leaving |
+| `activity_opened` | none | a member opened the Activity page (Settings > Household > Activity) |
 | `login_deleted` | none | a person without access chose Delete my login |
 | `cash_deposited` / `cash_withdrawn` | `has_fee`, `is_cross_currency` | Deposit / Withdraw on an investment Cash balance (Portfolio pop-up) |
 | `trade_recorded` | `side` | buy/sell of an asset |

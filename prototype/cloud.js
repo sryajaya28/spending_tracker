@@ -300,6 +300,8 @@ const Cloud = (() => {
     async removeMember(memberId) { must(await client.rpc('remove_member', { p_member: memberId })); },
     async leaveHousehold() { must(await client.rpc('leave_household')); },
     /* invites: every query names its columns (token_hash is not readable by clients) */
+    /* Activity (slice 2): the latest 300 rows of the household's log, newest first; the screen filters by person and type */
+    async activity() { return must(await client.from('activity_log').select('id, actor_id, actor_name, entity, action, summary, at').order('at', { ascending: false }).range(0, 299)); },
     async listInvites() { return must(await client.from('household_invites').select('id, email, role, status, created_at, expires_at').in('status', ['pending']).order('created_at', { ascending: false })); },
     async fn(name, body) {
       const { data, error } = await client.functions.invoke(name, { body });

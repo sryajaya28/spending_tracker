@@ -46,10 +46,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(async () => {
     Cloud.joinHousehold = async () => ({ result: 'ok' }); joinExit = () => {}; joinState = { token: 'T', role: 'viewer' };
     const f = document.createElement('form'); f.innerHTML = '<button data-send></button><p id="join-msg"></p>'; await joinSubmit(f, { name: 'Budi', password: 'longenough1', agree: 'on' }); joinState = null; render();
+    Cloud.activity = async () => []; actState.rows = null; await actLoad();
     const so = Cloud.signOut; Cloud.deleteMyLogin = async () => ({}); Cloud.signOut = async () => {};
     document.body.insertAdjacentHTML('beforeend', '<button id="dml" data-act="delete-my-login"></button>'); document.getElementById('dml').click(); await new Promise((r) => setTimeout(r, 100)); Cloud.signOut = so; document.getElementById('dml').remove();
   }); await p.waitForTimeout(300);
-  const hh = await p.evaluate(() => window.__phEvents), hhNames = ['invite_sent', 'invite_resent', 'invite_revoked', 'member_role_changed', 'member_removed', 'household_left', 'invite_accepted', 'login_deleted'];
+  const hh = await p.evaluate(() => window.__phEvents), hhNames = ['invite_sent', 'invite_resent', 'invite_revoked', 'member_role_changed', 'member_removed', 'household_left', 'invite_accepted', 'login_deleted', 'activity_opened'];
   hhNames.forEach((n) => assert(hh.some((e) => e.event === n), 'household event ' + n));
   assert.equal(hh.find((e) => e.event === 'invite_sent').properties.role, 'viewer'); assert.equal(hh.find((e) => e.event === 'member_role_changed').properties.role, 'viewer');
   assert(!/secret\.person|@example|@x\.co|Member One/.test(JSON.stringify(hh)), 'no email or name in any event');

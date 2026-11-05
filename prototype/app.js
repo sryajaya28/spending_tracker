@@ -1741,6 +1741,7 @@ function householdCard() {
   const intro = isOwner ? __('Everyone here sees the same accounts and transactions.') : h.role === 'editor' ? __('{owner} manages this household. You can add and change entries, but not household settings or people.', { owner: ownerFirst }) : __('{owner} manages this household. You can see everything but not change it.', { owner: ownerFirst });
   return `<section class="card hh-card"><div class="card-head"><h2>${__('Household')}</h2><span class="badge">${roleLabel(h.status === 'member' ? h.role : 'owner')}</span></div>
     <p class="muted hh-intro">${intro}</p>${list.map(row).join('')}${pending.map(pend).join('')}
+    <button type="button" class="form-row hh-row tap hh-activity" data-act="goto" data-route="activity"><div><b>${__('Activity')}</b><small class="muted">${__('Who added, edited or deleted what')}</small></div><span aria-hidden="true">›</span></button>
     ${isOwner ? `<button class="btn lg hh-invite" data-act="hh-invite" ${full ? 'disabled' : ''}>${__('Invite someone')}</button>${full ? `<small class="muted">${__('Household is full ({n})', { n: HH_CAP })}</small>` : ''}${live.length > 1 ? `<small class="muted hh-foot">${__('Tap a person to change their role or remove them.')}</small>` : ''}`
       : `<button class="btn secondary lg hh-invite" data-act="hh-leave">${__('Leave household')}</button><small class="muted hh-foot">${__('Currency and period day are set by the owner, so they are read-only here.')}</small>`}</section>`;
 }
@@ -1847,7 +1848,52 @@ async function joinSubmit(f, v) {
 }
 
 /* ---------- render ---------- */
-const VIEWS = { overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
+
+/* ---------- Activity (Figma 51:176 / 51:477 / 51:638): who added, edited or deleted what, for 180 days; every member may read it ---------- */
+const actState = { rows: null, who: '', type: 'all', loading: false, error: '' };
+const ACT_TYPES = [['all', 'All'], ['create', 'Added'], ['update', 'Edited'], ['delete', 'Deleted'], ['balance', 'Balance']];
+const ACT_THING = { transactions: 'Transaction', wallets: 'Account', debts: 'Debt', debt_payments: 'Payment', investment_accounts: 'Investment account', holdings: 'Asset', holding_events: 'Trade', budgets: 'Budget', categories: 'Category', occasions: 'Occasion', recurring_rules: 'Recurring entry' };
+async function actLoad() {
+  if (actState.loading) return; actState.loading = true; actState.error = ''; Analytics.track('activity_opened');
+  try { actState.rows = (await Cloud.activity()).sort((a, b) => (a.at < b.at ? 1 : -1)); } catch (e) { actState.error = 'load'; actState.rows = actState.rows || []; }
+  actState.loading = false; if (route() === 'activity') render();
+}
+const actKind = (r) => (r.summary && r.summary.balance_minor != null ? 'balance' : r.action);
+function actLine(r) {
+  const s = r.summary || {}, c = s.currency || D().profile.currency || 'IDR';
+  const sign = s.type === 'expense' ? '−' : s.type === 'income' ? '+' : '';
+  const t = new Date(r.at).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit', hour12: false });
+  const amt = (m) => (m == null ? '' : sign + money(m, c));
+  const k = actKind(r);
+  if (k === 'balance') return `${money(s.was_balance_minor, c)} → ${money(s.balance_minor, c)} · ${t}`;
+  if (k === 'update') return [s.was_amount_minor != null ? __('was {amount}', { amount: amt(s.was_amount_minor) }) : '', t].filter(Boolean).join(' · ');
+  return [amt(s.amount_minor), s.amount_minor != null ? c : '', t].filter(Boolean).join(' · ');
+}
+function actTitle(r) {
+  const name = esc(hhFirstName(r.actor_name) || '?'), item = esc((r.summary && r.summary.name) || __(ACT_THING[r.entity] || 'Item'));
+  const k = actKind(r);
+  return k === 'create' ? __("{name} added '{item}'", { name, item }) : k === 'update' ? __("{name} edited '{item}'", { name, item }) : k === 'delete' ? __("{name} deleted '{item}'", { name, item }) : __("{name} changed the balance of '{item}'", { name, item });
+}
+function viewActivity() {
+  if (actState.rows === null) { actLoad(); }
+  const rows = actState.rows || [], me = Cloud.household;
+  const people = [...new Map(rows.map((r) => [r.actor_id, hhFirstName(r.actor_name)])).entries()].filter(([id, n]) => id && n);
+  const shown = rows.filter((r) => (!actState.who || r.actor_id === actState.who) && (actState.type === 'all' || actKind(r) === actState.type));
+  const dayName = (iso) => { const d = new Date(iso), today = new Date(); const y = new Date(today); y.setDate(y.getDate() - 1); const same = (a, b) => a.toDateString() === b.toDateString(); return same(d, today) ? __('Today') : same(d, y) ? __('Yesterday') : d.toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' }); };
+  let list = '', last = '';
+  shown.forEach((r) => { const dn = dayName(r.at); if (dn !== last) { list += `<div class="act-day muted">${esc(dn)}</div>`; last = dn; } list += `<div class="act-row"><span class="avatar" aria-hidden="true">${esc((String(r.actor_name || '?').trim()[0] || '?').toUpperCase())}</span><div><b>${actTitle(r)}</b><small class="muted">${esc(actLine(r))}</small></div></div>`; });
+  const who = actState.who ? hhFirstName((people.find(([id]) => id === actState.who) || [])[1]) : '';
+  const typeName = __((ACT_TYPES.find((x) => x[0] === actState.type) || [])[1] || 'All').toLowerCase();
+  const empty = actState.rows === null || actState.loading ? `<p class="muted">${__('Loading…')}</p>` : actState.error ? `<div class="card"><h3>${__("Couldn't load Activity")}</h3><p class="muted">${__('Check your connection and try again.')}</p><button class="btn secondary" data-act="act-retry">${__('Try again')}</button></div>`
+    : !rows.length ? `<div class="card"><h3>${__('No activity yet')}</h3><p class="muted">${__('Adds, edits, deletes and balance changes by anyone in the household show up here for 180 days.')}</p></div>`
+    : !shown.length ? `<div class="card"><h3>${__('Nothing here')}</h3><p class="muted">${__('No {type} {by} in the last 180 days. Try another person or type.', { type: typeName, by: who ? __('by {name}', { name: esc(who) }) : '' })}</p></div>` : '';
+  return `${topbar('Activity', me.role === 'viewer' ? 'View only' : 'Last 180 days')}
+    ${me.role === 'viewer' ? `<p class="muted">${__('Viewers can read Activity; nothing on it can be changed.')}</p>` : ''}
+    ${people.length > 1 ? `<div class="act-chips"><button type="button" class="chip${actState.who ? '' : ' on'}" data-act="act-who" data-id="">${__('Everyone')}</button>${people.map(([id, n]) => `<button type="button" class="chip${actState.who === id ? ' on' : ''}" data-act="act-who" data-id="${esc(id)}">${esc(n)}</button>`).join('')}</div>` : ''}
+    <div class="act-chips">${ACT_TYPES.map(([k, l]) => `<button type="button" class="chip${actState.type === k ? ' on' : ''}" data-act="act-type" data-type="${k}">${__(l)}</button>`).join('')}</div>
+    ${list ? `<section class="card act-list">${list}</section>` : empty}`;
+}
+const VIEWS = { activity: viewActivity, overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
   const a = state.auth;
@@ -2898,7 +2944,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
-  else if (act === 'goto') location.hash = '#/' + el.dataset.route;
+  else if (act === 'goto') { if (el.dataset.route === 'activity') { actState.rows = null; actState.who = ''; actState.type = 'all'; } location.hash = '#/' + el.dataset.route; }
   else if (act === 'demo-on') { Analytics.track('demo_on', {}, true); setDemo(true); }
   else if (act === 'onb-skip') skipOnboarding();
   else if (act === 'congrats-add') { endCongrats(); txnDialog(null, 'expense'); }   // on to the normal Overview, with the Add transaction pop-up open
@@ -2940,6 +2986,9 @@ document.addEventListener('click', (e) => {
   else if (act === 'join-signout') Cloud.idle().then(() => Cloud.signOut()).then(() => render());
   else if (act === 'join-lang') { setLang(el.dataset.lang); render(); }
   else if (act === 'hh-invite') inviteDialog();
+  else if (act === 'act-who') { actState.who = el.dataset.id || ''; render(); }
+  else if (act === 'act-type') { actState.type = el.dataset.type; render(); }
+  else if (act === 'act-retry') { actState.rows = null; actState.error = ''; render(); }
   else if (act === 'hh-member') memberDialog(id);
   else if (act === 'hh-resend' || act === 'hh-revoke') hhInviteAction(act === 'hh-resend' ? 'resend' : 'revoke', id);
   else if (act === 'hh-remove') { const x = hhPeople().find((p) => p.user_id === id); hhConfirm('hh-remove-go', id, __('Remove {name}?', { name: esc(hhFirstName(x && x.display_name) || __('this person')) }), __('They lose access right away. What they entered stays, under their name.'), __('Remove')); }

@@ -1002,3 +1002,15 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .join-card { display: flex; flex-direction: column; gap: 14px; }
 
 .hh-who-line { font-size: 13px; margin: 4px 0 10px; }
+
+/* Activity page (Figma 51:176) */
+.act-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.act-chips .chip.on { background: var(--brand); color: #fff; }
+.act-list { padding: 8px 20px; }
+.act-day { font-size: 13px; padding: 14px 0 4px; }
+.act-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.act-row:last-child { border-bottom: 0; }
+.act-row .avatar { width: 32px; height: 32px; font-size: 13px; flex: 0 0 auto; }
+.act-row > div { min-width: 0; } .act-row b { display: block; overflow-wrap: anywhere; } .act-row small { display: block; }
+.hh-activity { width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); font: inherit; color: inherit; padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+.hh-activity small { display: block; }

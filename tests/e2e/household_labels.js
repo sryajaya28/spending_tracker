@@ -41,5 +41,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'a Viewer never gets the edit form'); await p.click('#dlg [data-act=close]');
   await p.evaluate(() => document.querySelector('[data-act=add-txn]') && document.querySelector('[data-act=add-txn]').click());
   assert.equal(await p.evaluate(() => document.querySelector('#dlg').open), false, 'add is blocked for a Viewer');
+  // the error contract: HTTP 409 PT409 'household_stale' is the stale-edit case, a guard carries kind and count, plain RLS has no prefix
+  const kinds = await p.evaluate(() => [Cloud.classify({ code: 'PT409', message: 'household_stale' }), Cloud.classify({ code: '42501', message: 'household_guard:debt:3' }), Cloud.classify({ code: '42501', message: 'new row violates row-level security policy' }), Cloud.classify({ code: 'HH_GONE' })]);
+  assert.deepEqual(kinds, [{ kind: 'stale' }, { kind: 'guard', what: 'debt', n: 3 }, { kind: 'rls' }, { kind: 'gone' }]);
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

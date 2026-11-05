@@ -22,3 +22,15 @@ Run on STAGING with the deployed Edge Functions, one real invite (to a +alias in
 
 Not run yet: refresh token after removal (needs a second test member), `admin.updateUserById` GoTrue password policy beyond our own 8..72-byte check, invite-sweep with the real service key (Tech-Lead), resend (old link stops), leave_household, owner delete.
 Follow-up for the design: Edge Functions authenticated with `getUser` cannot rely on the JWT being rejected after removal; they check the owner status server-side (invite-member returned 403 for the member), which held.
+
+## Round 2 (after migration 30 on staging; +hh2 alias; 2 more emails, 3 in total)
+| Check | Result |
+|---|---|
+| Resend | new email; the OLD link is dead (generic `invalid_link`), the new one previews and joins |
+| Weak password `12345678` | accepted: GoTrue has no extra password policy here; the only rule is ours (8 to 72 bytes). Decision for the owner/Tech-Lead if a stronger rule is wanted (server-side in join-household). |
+| Stale revision (after migration 30) | **409, `PT409`, `household_stale`, 342 ms** (was 504). Update with the right rev: ok, rev 2. Reusing the old rev: 409 again. |
+| Viewer add | 403 RLS |
+| Member `leave_household` | ok; old access token reads 0 rows; profile `former_member` |
+| Refresh token after leaving | still exchanges for an access token (sessions are not what cuts access): the new token reads nothing because membership is gone (`household_owner()` is null for a former member). Not a data risk; the former member stays signed in on the no-access page until they sign out or delete their login. |
+| Cleanup | both test member logins deleted via Delete my login; test transactions deleted; no pending invites left |
+Open for the Tech-Lead: invite-sweep with the real service key (test accounts are clean now).

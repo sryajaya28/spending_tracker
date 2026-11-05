@@ -2,7 +2,7 @@
 
 Rules so two agents (or sessions) on Stiver do not collide. The owner can override any of them in plain words.
 
-1. **Roles (owner, 2026-11-04; updated: Developer 1 is the main developer): Developer 1 builds all production code on feature branches; Developer 2 reviews it, is the integrator and maintains the workflow (`docs/WORKFLOW.md`).** An agent that is not sure whether it is Developer 2 asks the owner
+1. **Roles (owner, 2026-11-04; updated: Full-stack engineer is the main developer): Full-stack engineer builds all production code on feature branches; Tech-Lead reviews it, is the integrator and maintains the workflow (`docs/WORKFLOW.md`).** An agent that is not sure whether it is Tech-Lead asks the owner
    before merging to `staging`. Only the integrator merges into `staging`, runs `node tools/fold_changes.js`, `node tools/trim_learnings.js` and `node tools/doc_budget.js` (keep the always-read files small), releases to `main` and runs the
    smoke test. Other agents work on `feature/<name>` branches only, rebase on the latest `staging`
    (`git fetch origin staging && git merge origin/staging`), run the affected tests plus `bash tests/e2e/run_all.sh`, then tell the
@@ -16,7 +16,7 @@ Rules so two agents (or sessions) on Stiver do not collide. The owner can overri
    (`prototype/app.js`) region at the same time as another agent. If you must, keep the change small and rebase often.
 4. **Hand off in writing.** When you stop with work in progress, add a short "state of my branch" note under
    `context.md` section 16 (done / untested / blocked), so the next agent does not re-read the transcript.
-5. **Peer review of production code (owner, 2026-11-04).** Developer 1 and Developer 2 review each other's work before it reaches `staging`.
+5. **Peer review of production code (owner, 2026-11-04).** Full-stack engineer and Tech-Lead review each other's work before it reaches `staging`.
    - **Applies to** changes under `prototype/`, `api/`, `supabase/` or `vercel.json` (and the tests that gate them) that are **not** in the fast lane.
      **Exempt:** fast lane, docs- or tooling-only changes, and an owner-ordered hotfix (the other developer reviews it afterwards, in the next session).
    - **Author:** when the tests pass, send the ready report to the owner and a short message to the other developer
@@ -29,12 +29,12 @@ Rules so two agents (or sessions) on Stiver do not collide. The owner can overri
      5. simplicity (no duplicate helpers, unique global names, no dead code).
      The `code-review` skill (medium) can do the first pass. Reply with `approved <commit>` or numbered findings marked **blocking** or **suggestion**.
      One round; the reviewer does not push to the author's branch.
-   - **Merging:** the integrator (Developer 2) merges Developer 1's branch after reviewing it (that is the review). Developer 2's own production-code branches need Developer 1's
-     `approved <commit>` before Developer 2 merges them into `staging`. Put `Reviewed by: <developer> approved <commit>` in the ready report.
+   - **Merging:** the integrator (Tech-Lead) merges Full-stack engineer's branch after reviewing it (that is the review). Tech-Lead's own production-code branches need Full-stack engineer's
+     `approved <commit>` before Tech-Lead merges them into `staging`. Put `Reviewed by: <developer> approved <commit>` in the ready report.
    - **Nobody answers?** Say so to the owner and ask whether to wait or waive; never approve your own change.
 6. **Tool prompts vs workflow approvals.** `.claude/settings.json` allows routine Figma, GitHub, Supabase and Vercel tool calls without a prompt and still asks for irreversible or production-affecting ones. This only removes tool prompts; the owner's approval for a release, the regression summary and peer review still apply, and an agent never uses an allowed tool to get around them.
 7. **The wider team (owner, 2026-11-04).** Product Manager, Designer and QA agents work beside the two developers; roles, hand-off formats, the owner's three gates and the session registry are in `docs/roles/README.md`. Developers receive an approved PRD and an approved Figma link, build, then hand to QA; QA, not the developer, runs regression and smoke. Peer review (rule 5) stays.
-8. **Main developer (owner, 2026-11-04).** Developer 1 does the building; Developer 2 reviews every non-fast-lane production change before it reaches `staging` (this replaces the two-way peer review of rule 5 while Developer 1 is the only builder), integrates and releases. The full agent-to-agent workflow and message formats are in `docs/WORKFLOW.md`.
+8. **Main developer (owner, 2026-11-04).** Full-stack engineer does the building; Tech-Lead reviews every non-fast-lane production change before it reaches `staging` (this replaces the two-way peer review of rule 5 while Full-stack engineer is the only builder), integrates and releases. The full agent-to-agent workflow and message formats are in `docs/WORKFLOW.md`.
 9. **Review standard (owner, 2026-11-04).** Agents on the same model share blind spots, so a review counts only when it rests on evidence and, for risky changes, on something independent.
    - **Evidence, not opinion.** Every finding cites `file:line`, a failing test, a query result or a reproduction. A finding without evidence is marked "unverified" and cannot block. "Approved" lists what was run (tests, queries, screenshots) and what was not checked.
    - **Risks first.** The reviewer reads the PRD acceptance checks and writes down the risks it expects (data loss, access, privacy, migrations, concurrency, performance at scale) **before** reading the diff or the author's explanation, then checks those plus rule 5's list. Authors send facts (branch, commit, tests), not conclusions.

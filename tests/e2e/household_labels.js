@@ -50,6 +50,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // the error contract: HTTP 409 PT409 'household_stale' is the stale-edit case, a guard carries kind and count, plain RLS has no prefix
   const kinds = await p.evaluate(() => [Cloud.classify({ code: 'PT409', message: 'household_stale' }), Cloud.classify({ code: '42501', message: 'household_guard:debt:3' }), Cloud.classify({ code: '42501', message: 'new row violates row-level security policy' }), Cloud.classify({ code: 'HH_GONE' })]);
   assert.deepEqual(kinds, [{ kind: 'stale' }, { kind: 'guard', what: 'debt', n: 3 }, { kind: 'rls' }, { kind: 'gone' }]);
+  // a Viewer's app never generates recurring entries
+  assert.equal(await p.evaluate(() => { state.data.recurring = [{ id: 'rv', kind: 'txn', next: '2020-01-01', spec: {} }]; return runRecurring(); }), 0, 'Viewer: no recurring generation');
   // guard text names the item being deleted (Figma frames 27/29)
   const gm = await p.evaluate(() => { hhLastDel = 'Groceries'; return householdSaveError({ code: '42501', message: 'household_guard:category:3' }); });
   assert.equal(gm, "Can't delete 'Groceries'. 'Groceries' holds 3 transactions added by others. Ask the owner.");

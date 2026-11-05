@@ -2742,7 +2742,7 @@ function linkFirstEntries() {
 }
 let relinked = false;   // runRecurring just repaired an upcoming entry (the screen needs a redraw)
 function runRecurring() {
-  const d = state.data; if (!d || state.real || !(d.recurring || []).length) return 0;
+  const d = state.data; if (!d || state.real || !canWrite() || !(d.recurring || []).length) return 0;   // a Viewer's app never generates entries (the database would refuse them)
   const today = isoDate(new Date()); let n = 0; const linked = linkFirstEntries(); relinked = linked;
   d.recurring.forEach((r) => {
     if (r.active === false) return;

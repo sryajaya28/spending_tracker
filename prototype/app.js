@@ -1679,11 +1679,12 @@ const viewNoAccess = () => `<div class="onboard"><div class="card"><div class="l
   <button class="btn secondary lg" data-act="signout">${__('Sign out')}</button>
   <button class="btn danger lg" data-act="delete-my-login">${__('Delete my login')}</button></div></div>`;
 /* the error contract (Cloud.classify): tell the person what happened in words, then show the server's truth again */
+let hhLastDel = '';   // name of the item the person last deleted, so a database guard can say which one it refused
 function householdSaveError(err) {
   const c = Cloud.classify(err);
   if (c.kind === 'stale') return __('Someone else changed this just now. Please check it and redo your change.');
   if (c.kind === 'gone') return __('Someone else already deleted this. Showing the latest.');
-  if (c.kind === 'guard') return __("Can't delete this: it is used by {n} entries added by others. Ask the owner.", { n: c.n });
+  if (c.kind === 'guard') return hhLastDel ? __("Can't delete '{name}'. '{name}' holds {n} transactions added by others. Ask the owner.", { name: hhLastDel, n: c.n }) : __("Can't delete this: it is used by {n} entries added by others. Ask the owner.", { n: c.n });
   if (c.kind === 'rls') return Cloud.household.role === 'editor' ? __('Only the person who added this, or the owner, can change it.') : __('Your access changed.');
   return '';
 }
@@ -1707,7 +1708,7 @@ const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 /* who did it (PRD 22-26, 33-37): labels only show when the household has other people; a removed member's entries keep their name */
 const hhMulti = () => !state.real && Cloud.household.hasMembers;
 /* in a household a delete names what goes (PRD 27): other people can see and rely on it */
-const hhOk = (name) => !hhMulti() || confirm(__('Delete "{name}"? This can\'t be undone.', { name }));
+const hhOk = (name) => { hhLastDel = name; return !hhMulti() || confirm(__('Delete "{name}"? This can\'t be undone.', { name })) };
 const byLine = (r) => (hhMulti() && r && r.by ? `<small class="muted hh-by">${whoLine(r).replace('<br>', ' · ')}</small>` : '');
 const hhName = (id) => { const x = (Cloud.household.people || []).find((p) => p.user_id === id); return hhFirstName(x && x.display_name) || ''; };
 const hhWhen = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -2825,7 +2826,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-txn') { const tx = find(D().transactions); if (!canEditRec(tx)) { txnReadDialog(tx); return; } if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
-  else if (act === 'rec-del') { close(); D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
+  else if (act === 'rec-del') { close(); hhLastDel = find(D().recurring)?.note || find(D().recurring)?.name || ''; D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
   else if (act === 'add-budget') budgetDialog(null, el.dataset.preset);
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
   else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }
@@ -2908,7 +2909,7 @@ document.addEventListener('click', (e) => {
     const w = walletOf(id), n = D().transactions.filter((t) => t.wallet_id === id).length;
     if (n) { toast(__(n === 1 ? "Can't delete: {n} transaction uses this account. Restore it instead." : "Can't delete: {n} transactions use this account. Restore it instead.", { n })); return; }
     if (!confirm(__('Delete "{name}" permanently? This can\'t be undone.', { name: w.name }))) return;
-    D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Account deleted');
+    hhLastDel = w.name; D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Account deleted');
   }
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Account archived'); }
   else if (act === 'delete-txn') {

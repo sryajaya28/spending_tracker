@@ -824,6 +824,7 @@ DICT.id = {
  "A repeating payment is listed under Recurring in Settings and is made automatically on its date.": "Pembayaran berulang tercantum di Pengaturan > Berulang dan dilakukan otomatis pada tanggalnya.",
  "Recorded. Added to Recurring in Settings.": "Tercatat. Ditambahkan ke Berulang di Pengaturan.",
  "No account": "Tanpa akun",
+ "Can't delete '{name}'. '{name}' holds {n} transactions added by others. Ask the owner.": "Tidak bisa menghapus '{name}'. '{name}' berisi {n} transaksi yang ditambahkan orang lain. Tanyakan ke pemilik.",
  "Can't delete this: it is used by {n} entries added by others. Ask the owner.": "Tidak bisa dihapus: dipakai oleh {n} catatan yang ditambahkan orang lain. Tanyakan ke pemilik.",
  "Couldn't delete your login. Try again.": "Login tidak bisa dihapus. Coba lagi.",
  "Couldn't do that. Please try again.": "Tidak berhasil. Silakan coba lagi.",

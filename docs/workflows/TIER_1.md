@@ -16,3 +16,5 @@
 **Gap:** the Tech-Lead reviews its own work. Acceptable only because Tier 1 cannot touch data or money, CI catches breakage and the owner sees the result. If e2e coverage of an area is thin, add tests before using Tier 1 there.
 
 **Docs:** a change file only. Event tracking (CLAUDE.md rule 5b) still applies to anything that adds a button or form (then it is not Tier 1).
+
+**Releasing a Tier 1 batch (owner, 2026-11-05):** no regression run and no production smoke test. CI's e2e run and the owner's review of the preview screenshots are the gates (they replace the regression and smoke passes). After the owner says "Release": merge `staging` into `main`, then only check that the site answers 200 and serves the new build stamp. `tools/gates.js` and `tools/release.js` still apply the old docs-only rule to `prototype/` changes: for a Tier 1 batch, say so in the release PR and skip those steps; teaching the tools about tiers is open (docs/NEXT_STEPS.md item 0).

@@ -27,6 +27,27 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(!all.some((e) => e.event === 'transaction_saved'), 'old event name is gone');
   const pages = all.filter((e) => e.event === '$pageview').map((e) => e.properties.page); assert(pages.includes('landing') && pages.includes('transactions') && pages.includes('budgets'), 'page names: ' + pages);
   assert(!pages.some((x) => /\d{4}-\d\d-\d\d|SECRET/.test(x)), 'no dates or tokens in page names');
+  // household events: role only, never an email, name or id
+  await p.evaluate(() => {
+    Cloud.inviteMember = async () => ({ result: 'ok' }); Cloud.manageInvite = async () => ({ result: 'ok' }); Cloud.setRole = async () => {}; Cloud.removeMember = async () => {}; Cloud.leaveHousehold = async () => {};
+    location.hash = '#/settings';
+  });
+  await p.waitForSelector('[data-act=hh-invite]'); await p.click('[data-act=hh-invite]'); await p.waitForSelector('form[data-form=invite]');
+  await p.fill('form[data-form=invite] [name=email]', 'secret.person@example.com'); await p.click('form[data-form=invite] label:has(input[value=viewer])'); await p.click('form[data-form=invite] [data-send]'); await p.waitForTimeout(300);
+  await p.evaluate(() => { hhState.invites = [{ id: 'i1', email: 'secret.person@example.com', role: 'viewer', created_at: new Date().toISOString() }]; render(); });
+  await p.click('[data-act=hh-resend]'); await p.waitForTimeout(300); await p.evaluate(() => { hhState.invites = [{ id: 'i1', email: 'secret.person@example.com', role: 'viewer', created_at: new Date().toISOString() }]; render(); }); await p.click('[data-act=hh-revoke]'); await p.waitForTimeout(300);
+  await p.evaluate(() => { Cloud.household.people = [{ user_id: state.auth.uid, display_name: 'Owner', role: 'owner', former: false, email: 'o@x.co' }, { user_id: 'm1', display_name: 'Member One', role: 'editor', former: false, email: 'm@x.co' }]; Cloud.household.hasMembers = true; render(); });
+  await p.click('[data-act=hh-member]'); await p.waitForSelector('form[data-form=member-role]'); await p.click('form[data-form=member-role] label:has(input[value=viewer])'); await p.click('form[data-form=member-role] [data-send]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { Cloud.household.people = [{ user_id: state.auth.uid, display_name: 'Owner', role: 'owner', former: false }, { user_id: 'm1', display_name: 'Member One', role: 'editor', former: false }]; Cloud.household.hasMembers = true; render(); });
+  await p.click('[data-act=hh-member]'); await p.waitForSelector('[data-act=hh-remove]'); await p.click('[data-act=hh-remove]'); await p.waitForSelector('[data-act=hh-remove-go]'); await p.click('[data-act=hh-remove-go]'); await p.waitForTimeout(400);
+  await p.evaluate(() => { Cloud.household.status = 'member'; Cloud.household.role = 'editor'; render(); });
+  await p.click('[data-act=hh-leave]'); await p.waitForSelector('[data-act=hh-leave-go]'); await p.click('[data-act=hh-leave-go]'); await p.waitForTimeout(400);
+  const hh = await p.evaluate(() => window.__phEvents), hhNames = ['invite_sent', 'invite_resent', 'invite_revoked', 'member_role_changed', 'member_removed', 'household_left'];
+  hhNames.forEach((n) => assert(hh.some((e) => e.event === n), 'household event ' + n));
+  assert.equal(hh.find((e) => e.event === 'invite_sent').properties.role, 'viewer'); assert.equal(hh.find((e) => e.event === 'member_role_changed').properties.role, 'viewer');
+  assert(!/secret\.person|@example|@x\.co|Member One/.test(JSON.stringify(hh)), 'no email or name in any event');
+  const base = new Set(Object.keys(hh.find((e) => e.event === 'invite_revoked').properties));   // invite_revoked carries no custom property: its keys are the standard ones
+  hh.filter((e) => hhNames.includes(e.event)).forEach((e) => assert.deepEqual(Object.keys(e.properties).filter((k) => !base.has(k)), e.event === 'invite_sent' || e.event === 'member_role_changed' ? ['role'] : [], 'household event ' + e.event + ' carries the role only'));
   const blob = JSON.stringify(all);
   for (const bad of ['Secret coffee', '12345', 'a@b.co', 'SECRET', 'access_token', 'code=ABC']) assert(!blob.includes(bad), 'leaked: ' + bad);
   assert(all.every((e) => !e.properties.$current_url || !/[?#]/.test(e.properties.$current_url)), 'addresses are cut at ? and #');

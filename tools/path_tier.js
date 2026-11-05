@@ -6,6 +6,7 @@
  * Prints one line per file and a final "TIER n". Exit code is always 0 (CI reads the last line / --json). --json prints {tier, files}. */
 const { execSync } = require('child_process');
 const RULES = [
+  [1, /^supabase\/.*\.md$/, 'documentation inside supabase/'],
   [3, /^supabase\/(migrations|templates|functions)\//, 'database, auth email or Edge Function'],
   [3, /\.sql$/, 'SQL'],
   [3, /^prototype\/cloud\.js$/, 'sync with the server'],

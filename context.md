@@ -242,7 +242,7 @@ which is a public suffix and is rejected).
 
 ## 12. Deployment and workflow
 
-Agents: **Developer 2 is the integrator** (merges into `staging`, folds `docs/changes/` into the changelog, releases); **Developer 1** works on feature branches and reports "ready" (owner, 2026-11-04; see `docs/AGENTS.md`).
+Agents: **Tech-Lead is the integrator** (merges into `staging`, folds `docs/changes/` into the changelog, releases); **Full-stack engineer** works on feature branches and reports "ready" (owner, 2026-11-04; see `docs/AGENTS.md`).
 
 1. Edit files, run `bash tests/e2e/run_all.sh`, commit, `git push origin HEAD:main` (and the session branch).
 2. Vercel builds in seconds. Check with the Vercel tools (`list_deployments`) when available.

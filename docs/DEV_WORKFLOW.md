@@ -103,7 +103,7 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
 
 Several assistants (or sessions) can work on one project if they do not edit the same things at the same time (details: `docs/AGENTS.md`).
 
-1. **One integrator: Developer 2** (Developer 1 and other agents build on feature branches). Only the integrator merges into `staging`, folds the changelog (`node tools/fold_changes.js`) and releases.
+1. **One integrator: Tech-Lead** (Full-stack engineer and other agents build on feature branches). Only the integrator merges into `staging`, folds the changelog (`node tools/fold_changes.js`) and releases.
    Every other agent works on its own `feature/<name>` branch, rebases on the latest `staging`, runs the tests, and tells the owner
    "ready: <branch>, tests pass, design link, steps". Explicit owner instructions (including a hotfix) go before this rule; whoever acts tells the other agent.
 2. **No shared edit hotspots:** the service-worker cache name is stamped at deploy (never bumped by hand); each change adds its own changelog
@@ -128,7 +128,7 @@ Several assistants (or sessions) can work on one project if they do not edit the
 | Item | Value |
 |---|---|
 | Figma file (design source of truth) | https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW ("Stiver"); one section `Feature - <short-name>` per feature |
-| Agents | **Developer 2** = integrator (merges to `staging`, releases); **Developer 1** = feature branches only (named by the owner; see `docs/AGENTS.md`) |
+| Agents | **Tech-Lead** = integrator (merges to `staging`, releases); **Full-stack engineer** = feature branches only (named by the owner; see `docs/AGENTS.md`) |
 | Local run command | `python3 tools/dev_server.py 5180` (uses the staging database; the automated tests use a fake database) |
 | Test command (automated suite) | `bash tests/e2e/run_all.sh` (49 tests, all must say PASS) |
 | Figma file (design source of truth) | https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW/Stiver |

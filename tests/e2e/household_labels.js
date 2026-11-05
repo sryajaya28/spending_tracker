@@ -50,7 +50,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     const left = await p.evaluate(() => [...document.querySelectorAll('#app button[data-act]')].filter((e) => WRITE_ACT.test(e.dataset.act) && e.dataset.act !== 'edit-txn' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0).map((e) => e.dataset.act));
     assert.deepEqual(left, [], 'Viewer sees write controls on ' + r + ': ' + left);
   }
-  assert.equal(await p.$eval('.nav-add', (e) => getComputedStyle(e).visibility), 'hidden', 'the raised Add is hidden for a Viewer');
+  assert.equal(await p.$('.nav-add'), null, 'a Viewer has no raised Add');
+  assert.equal(await p.$$eval('.bottom-nav > a', (a) => a.length), 4, 'four tabs'); const xs = await p.$$eval('.bottom-nav > a', (a) => a.map((e) => Math.round(e.getBoundingClientRect().width))); assert.ok(Math.max(...xs) - Math.min(...xs) <= 1, 'four equal tabs, no empty slot: ' + xs);
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t2]', { state: 'visible' });
   await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'a Viewer never gets the edit form'); await p.click('#dlg [data-act=close]');
   await p.evaluate(() => document.querySelector('[data-act=add-txn]') && document.querySelector('[data-act=add-txn]').click());

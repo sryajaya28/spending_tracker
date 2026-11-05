@@ -1028,3 +1028,5 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .hh-card .form-row { align-items: center; }
 @media (max-width: 600px) { .hh-pa { padding: 10px; border-radius: 999px; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; } .hh-pa .pa-txt { display: none; } .hh-pa .pa-ico { display: inline-flex; } }
 @media (min-width: 601px) { .hh-line .hh-name { max-width: 260px; } .hh-line.pend .hh-name { max-width: 240px; } }
+
+@media (max-width: 899px) { .bottom-nav.four { grid-template-columns: repeat(4, 1fr); } }

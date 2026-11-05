@@ -1092,7 +1092,8 @@ function sidebar() {
 function bottomNav() {
   const r = route();
   const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
-  return `<nav class="bottom-nav">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}</nav>`;
+  const add = canWrite() ? `<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>` : '';   // a Viewer has no Add: four equal tabs, no empty slot
+  return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'trend', 'Portfolio')}</nav>`;
 }
 function topbar(title, sub) {
   const p = D().profile, hour = new Date().getHours();
@@ -1894,12 +1895,12 @@ function viewActivity() {
     ${list ? `<section class="card act-list">${list}</section>` : empty}`;
 }
 /* a Viewer sees no write controls (PRD check 17): buttons that start a change are removed after every render; rows that only open a read-only detail stay.
-   The raised Add button keeps its place in the bottom bar but is hidden. The database refuses writes anyway; this is the screen telling the truth. */
+   The raised Add button is not drawn at all for a Viewer (see bottomNav), so the bar has four equal tabs. The database refuses writes anyway; this is the screen telling the truth. */
 function hideWriteControls() {
   if (canWrite()) return;
   document.querySelectorAll('#app button[data-act]').forEach((b) => {
     const act = b.dataset.act; if (!WRITE_ACT.test(act) || act === 'edit-txn') return;
-    if (b.classList.contains('nav-add')) { b.style.visibility = 'hidden'; b.setAttribute('aria-hidden', 'true'); b.tabIndex = -1; } else b.remove();
+    b.remove();
   });
 }
 const VIEWS = { activity: viewActivity, overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };

@@ -18,6 +18,8 @@ Mobile / Desktop / Components (older flat imports of the app: reference only, no
 | Field | `Type` input / select, `State` default / new (outlined = new or changing), `Label`, `Value` |
 | Hint (yellow note) | `Text` |
 | Recurring row | `Icon`, `Title`, `Amount`, `Where`, `When` (has a Manage button) |
+| Avatar (who did it; shown only when a household has more than one person) | `Initial` |
+| Chip (filter, e.g. by person) | `Text`, `Selected` |
 
 Figma instances cannot take new children, so **containers** (card, dialog, phone frame, rows) are built by the helper functions (`frame`, `card`, `phone`) with the same variable bindings.
 A review frame per mode ("Library overview - Light / Dark") and an example ("Example - Edit debt, Every month") sit on the Library page.
@@ -34,6 +36,9 @@ A review frame per mode ("Library overview - Light / Dark") and an example ("Exa
 - Feedback: the owner writes it in the `Owner comments` layer or pastes it in the chat (agents cannot read Figma comments).
 - Update the section to `implemented` when built; add as-built frames only where the build differs from the approved design.
 - Size check (2026-11-04): the Edit debt frame in light and dark takes about 5.4k characters including the helpers, against about 9.5k before for one build of the same kind; more states or the dark version cost a few lines.
+
+## Frame status suffix (Designer, 2026-11-05)
+Every design frame or section name ends with one status suffix, kept current by the Designer: `[IN PROGRESS]` (being drawn), `[DONE]` (finished, waiting for the owner) or `[APPROVED]` (the owner approved it; only then may the Full-stack engineer build from it). Never build from a frame without `[APPROVED]` unless the fast lane applies (CLAUDE.md rule 6).
 
 ## Not done
 The older flat sections on Mobile, Desktop and Components are not converted to components (kept as reference). Light and Dark modes were created without error, so the file's plan allows at least two modes (a plan limit on modes would have blocked the second one).

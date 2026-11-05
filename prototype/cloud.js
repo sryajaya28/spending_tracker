@@ -22,7 +22,7 @@ const Cloud = (() => {
   const tradeSign = (tr) => (tr.side === 'buy' ? 1 : -1);
 
   /* catalog: Map(symbol -> [name, type]) for built-in assets, so they need no stored metadata */
-  function rowsFromData(d, catalog, userId) {
+  function rowsFromData(d, catalog, userId, ownerId = userId) {   // ownerId: whose household the rows belong to (a member's rows carry the owner's id)
     const R = {
       categories: [], wallets: [], occasions: [], investment_accounts: [], holdings: [], holding_events: [],
       transactions: [], budgets: [], debts: [], debt_payments: [], manual_prices: [], recurring_rules: [],
@@ -68,7 +68,7 @@ const Cloud = (() => {
     Object.entries(d.customAssets).forEach(([key, m]) => {
       if (m.fh || m.yh || m.cash || !(m.price > 0) || !d.holdings.some((h) => h.symbol === key)) return;
       m.price_date ||= new Date().toISOString().slice(0, 10);
-      R.manual_prices.push({ id: key, user_id: userId, symbol: key, price_date: m.price_date, price_usd: m.price });
+      R.manual_prices.push({ id: key, user_id: ownerId, symbol: key, price_date: m.price_date, price_usd: m.price });
     });
     R.profile = { id: userId, display_name: d.profile.name || null, default_currency: d.profile.currency, ai_tagging_enabled: !!d.profile.ai, sample_ids: d.profile.sample || null, language: d.profile.language || null, period_day: d.profile.period || 1, theme: d.profile.theme || null };
     return R;
@@ -141,6 +141,11 @@ const Cloud = (() => {
       return o;
     });
     d.loans = debts('owed'); d.lent = debts('lent');
+    /* who made and last changed each record (labels in a household; not part of what is saved back): by = creator, byAt = creation time, edBy/edAt = last editor and time (only when changed after creation) */
+    const meta = (o, r) => { if (r && r.created_by) { o.by = r.created_by; if (r.created_at) o.byAt = new Date(r.created_at).toISOString(); if (r.updated_by && r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 2000) { o.edBy = r.updated_by; o.edAt = new Date(r.updated_at).toISOString(); } } return o; };
+    const attach = (list, rows) => { const m = new Map(rows.map((r) => [r.id, r])); list.forEach((o) => meta(o, m.get(o.id))); };
+    attach(d.transactions, S.transactions); attach(d.wallets, S.wallets); attach(d.investments, S.investment_accounts); attach(d.budgets, S.budgets);
+    attach(d.loans, S.debts); attach(d.lent, S.debts); attach(d.categories, S.categories); attach(d.occasions, S.occasions);
     return d;
   }
 
@@ -159,7 +164,7 @@ const Cloud = (() => {
     STAGES.forEach((st) => {
       const key = st.stage || st.name, old = prev.get(key), cur = next.get(key);
       const rows = R[st.name].filter(st.pick || (() => true)).filter((r) => old.get(keyOf(st.name, r)) !== cur.get(keyOf(st.name, r)));
-      if (rows.length) ops.upserts.push({ table: st.name, rows });
+      if (rows.length) ops.upserts.push({ table: st.name, rows, known: new Set(rows.filter((r) => old.has(keyOf(st.name, r))).map((r) => keyOf(st.name, r))) });   // known = already on the server (an edit, not an insert)
       const gone = [...old.keys()].filter((k) => !cur.has(k));
       if (gone.length) ops.deletes.unshift({ table: st.name, ids: gone });
     });
@@ -173,6 +178,9 @@ const Cloud = (() => {
   }
 
   /* ---------- runtime ---------- */
+  /* household (design 6.3, 7): who this login works for. status: owner | member | invited | former_member. Solo owners keep today's save path exactly. */
+  let hh = { status: 'owner', role: 'owner', ownerId: null, people: [], rev: 0, hasMembers: false };
+  const revs = new Map();   // 'table|id' -> the revision last seen on the server, sent back with an edit so a stale edit is refused (households only)
   let client = null, userId = null, catalog = new Map(), synced = null, chain = Promise.resolve(), pending = 0, latest = null, onSaveError = () => {};
   const must = (res) => { if (res.error) throw res.error; return res.data; };
   const chunk = (a, n) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
@@ -181,20 +189,51 @@ const Cloud = (() => {
     const out = [];
     for (let from = 0; ; from += 1000) {
       const rows = must(await client.from(table).select('*').order(table === 'manual_prices' ? 'symbol' : 'id', { ascending: true }).range(from, from + 999));
+      if (table !== 'manual_prices') rows.forEach((r) => revs.set(`${table}|${r.id}`, r.rev));
       out.push(...rows);
       if (rows.length < 1000) break;
     }
     return out;
   }
 
+  const gone = () => Object.assign(new Error('household_gone'), { code: 'HH_GONE' });
+  async function applyProfile(p) {
+    const { display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme, period_day } = p;
+    // a member changes only their own settings; currency, period day and sample data belong to the household owner
+    const row = hh.status === 'member' ? { display_name, ai_tagging_enabled, language, theme } : { display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme, period_day };
+    must(await client.from('profiles').update(row).eq('id', userId));
+  }
+  /* households: new rows are inserted, known rows are updated with the revision last seen (a stale one is refused with HTTP 409, code PT409), and an edit or delete
+     of a row someone else already deleted is refused instead of bringing it back (design 7) */
+  async function applyStrict(ops) {
+    for (const { table, rows, known, onConflict } of ops.upserts) {
+      if (table === 'manual_prices') { for (const part of chunk(rows, 400)) must(await client.from(table).upsert(part, { onConflict: onConflict || 'id' })); continue; }
+      const fresh = rows.filter((r) => !known.has(r.id)), edits = rows.filter((r) => known.has(r.id));
+      for (const part of chunk(fresh, 400)) must(await client.from(table).insert(part).select('id, rev')).forEach((x) => revs.set(`${table}|${x.id}`, x.rev));
+      for (const r of edits) {
+        const rev = revs.get(`${table}|${r.id}`), out = must(await client.from(table).update(rev == null ? r : { ...r, rev }).eq('id', r.id).select('id, rev'));
+        if (!out.length) throw gone();
+        revs.set(`${table}|${r.id}`, out[0].rev);
+      }
+    }
+    if (ops.profile) await applyProfile(ops.profile);
+    for (const { table, ids } of ops.deletes) {
+      for (const id of ids) {
+        if (table === 'manual_prices') { const [symbol, price_date] = id.split('|'); must(await client.from(table).delete().eq('symbol', symbol).eq('price_date', price_date)); continue; }
+        const rev = revs.get(`${table}|${id}`);
+        let q = client.from(table).delete().eq('id', id); if (rev != null) q = q.eq('rev', rev);
+        if (!must(await q.select('id')).length) throw gone();
+        revs.delete(`${table}|${id}`);
+      }
+    }
+  }
+
   async function apply(ops) {
+    if (hh.hasMembers) return applyStrict(ops);
     for (const { table, rows, onConflict } of ops.upserts) {
       for (const part of chunk(rows, 400)) must(await client.from(table).upsert(part, { onConflict: onConflict || 'id' }));
     }
-    if (ops.profile) {
-      const { display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme, period_day } = ops.profile;
-      must(await client.from('profiles').update({ display_name, default_currency, ai_tagging_enabled, sample_ids, language, theme, period_day }).eq('id', userId));
-    }
+    if (ops.profile) await applyProfile(ops.profile);
     for (const { table, ids } of ops.deletes) {
       for (const part of chunk(ids, 200)) {
         if (table === 'manual_prices') for (const k of part) { const [symbol, price_date] = k.split('|'); must(await client.from(table).delete().eq('symbol', symbol).eq('price_date', price_date)); }
@@ -217,14 +256,73 @@ const Cloud = (() => {
     },
 
     async load() {
-      const [profile, categories, wallets, occasions, transactions, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, manual_prices, recurring_rules] = await Promise.all([
-        client.from('profiles').select('*').eq('id', userId).single().then(must),
-        ...['categories', 'wallets', 'occasions', 'transactions', 'budgets', 'investment_accounts', 'holdings', 'holding_events', 'debts', 'debt_payments', 'manual_prices', 'recurring_rules'].map(fetchAll),
-      ]);
+      revs.clear();
+      const me = must(await client.from('profiles').select('*').eq('id', userId).single());
+      hh = { status: me.household_status || 'owner', role: 'owner', ownerId: userId, people: [], rev: 0, hasMembers: false };
+      const noAccess = () => { synced = null; latest = null; return null; };   // the app shows the "no longer have access" page
+      if (hh.status === 'invited' || hh.status === 'former_member') return noAccess();
+      let profile = me;
+      if (hh.status === 'member') {
+        const m = must(await client.from('household_members').select('owner_id, role').eq('member_id', userId).maybeSingle());
+        if (!m) { hh.status = 'former_member'; return noAccess(); }
+        hh.ownerId = m.owner_id; hh.role = m.role; hh.hasMembers = true;
+        const hp = must(await client.rpc('household_profile')), h = Array.isArray(hp) ? hp[0] : hp;
+        if (h) profile = { ...me, default_currency: h.default_currency, period_day: h.period_day, sample_ids: h.sample_ids };
+      }
+      const st = must(await client.from('household_state').select('rev, has_members').eq('owner_id', hh.ownerId).maybeSingle());
+      if (st) { hh.rev = st.rev; hh.hasMembers = hh.hasMembers || !!st.has_members; }
+      if (hh.hasMembers) hh.people = must(await client.rpc('household_people')) || [];
+      const [categories, wallets, occasions, transactions, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, manual_prices, recurring_rules] = await Promise.all(
+        ['categories', 'wallets', 'occasions', 'transactions', 'budgets', 'investment_accounts', 'holdings', 'holding_events', 'debts', 'debt_payments', 'manual_prices', 'recurring_rules'].map(fetchAll));
       const data = dataFromRows({ profile, categories, wallets, occasions, transactions, budgets, investment_accounts, holdings, holding_events, debts, debt_payments, manual_prices, recurring_rules }, catalog);
-      synced = snapshot(rowsFromData(data, catalog, userId)); latest = data;
+      synced = snapshot(rowsFromData(data, catalog, userId, hh.ownerId)); latest = data;
       return data;
     },
+
+    /* household: state, the 30-second poll (one tiny row), member actions and the server functions (design 5, 7) */
+    get household() { return hh; },
+    canWrite: () => hh.status === 'owner' || (hh.status === 'member' && hh.role === 'editor'),
+    async pollChanged() {   // true when someone else changed the household and nothing of ours is waiting to be saved
+      if (!userId || !synced || !hh.hasMembers || pending) return false;
+      const st = must(await client.from('household_state').select('rev').eq('owner_id', hh.ownerId).maybeSingle());
+      return !!st && st.rev !== hh.rev;
+    },
+    classify(e) {   // the error contract (design 16): guards carry a prefix, plain RLS has none
+      const m = String((e && e.message) || '');
+      if (e && e.code === 'HH_GONE') return { kind: 'gone' };
+      if ((e && (e.code === 'PT409' || e.code === '40001')) || /household_stale/.test(m)) return { kind: 'stale' };
+      const g = /household_guard:([a-z_]+)(?::(\d+))?/.exec(m);
+      if (g) return { kind: 'guard', what: g[1], n: +g[2] || 0 };
+      if (e && e.code === '42501') return { kind: 'rls' };
+      return { kind: 'other' };
+    },
+    async setRole(memberId, role) { must(await client.rpc('set_member_role', { p_member: memberId, p_role: role })); },
+    async removeMember(memberId) { must(await client.rpc('remove_member', { p_member: memberId })); },
+    async leaveHousehold() { must(await client.rpc('leave_household')); },
+    /* invites: every query names its columns (token_hash is not readable by clients) */
+    /* Activity (slice 2): the latest 300 rows of the household's log, newest first; the screen filters by person and type */
+    async activity() { return must(await client.from('activity_log').select('id, actor_id, actor_name, entity, action, summary, at').order('at', { ascending: false }).range(0, 299)); },
+    async listInvites() { return must(await client.from('household_invites').select('id, email, role, status, created_at, expires_at').in('status', ['pending']).order('created_at', { ascending: false })); },
+    async fn(name, body) {
+      const { data, error } = await client.functions.invoke(name, { body });
+      if (!error) return data;
+      try { return await error.context.json(); } catch (e) { throw error; }
+    },
+    inviteMember: (email, role) => Cloud.fn('invite-member', { email, role }),
+    manageInvite: (action, inviteId) => Cloud.fn('manage-invite', { action, invite_id: inviteId }),
+    deleteMyLogin: () => Cloud.fn('delete-my-login', {}),
+    /* the join page: no session yet, so a plain call that always carries the token (design 5.2) */
+    async joinCall(body, fnName = 'join-household') {
+      const r = await fetch(`${cfg.SUPABASE_URL}/functions/v1/${fnName}`, { method: 'POST', headers: { 'content-type': 'application/json', apikey: cfg.SUPABASE_ANON_KEY }, body: JSON.stringify(body) });
+      const j = await r.json().catch(() => ({ error: 'invalid_link' })); return { ...j, _status: r.status };
+    },
+    joinPreview: (token) => Cloud.joinCall({ action: 'preview', token }),
+    async joinHousehold(token, password, displayName) {
+      const res = await Cloud.joinCall({ action: 'join', token, password, display_name: displayName });
+      if (res.session) must(await client.auth.setSession({ access_token: res.session.access_token, refresh_token: res.session.refresh_token }));
+      return res;
+    },
+    signupGate: (body) => Cloud.joinCall(body, 'signup-gate'),
 
     /* queue a save; saves run one at a time, each sending only what changed since the last one */
     save(data) {
@@ -245,7 +343,13 @@ const Cloud = (() => {
     /* auth */
     redirect: () => appUrl(), appUrl,
     getSession: async () => must(await client.auth.getSession()).session,
-    signUp: (email, password, name, currency, captchaToken) => client.auth.signUp({ email, password, options: { data: { full_name: name, currency }, emailRedirectTo: appUrl(), captchaToken } }),
+    /* sign-up goes through the signup-gate function: a fresh address, an existing account and a pending-invite address all get the same answer, so the screen never reveals which (design 5.5) */
+    async signUp(email, password, name, currency, captchaToken) {
+      const { data, error } = await client.functions.invoke('signup-gate', { body: { email, password, full_name: name, currency, captchaToken } });
+      let j = data; if (error) { try { j = await error.context.json(); } catch (e) { return { data: null, error }; } }
+      if (j && j.result === 'check_email') return { data: { session: null }, error: null };
+      return { data: null, error: { message: j && j.error === 'invalid_input' ? 'Check your email and password (at least 8 characters).' : j && j.error === 'rate_limited' ? 'Too many attempts. Try again in a little while.' : 'Something went wrong. Try again.' } };
+    },
     signIn: (email, password, captchaToken) => client.auth.signInWithPassword({ email, password, options: { captchaToken } }),
     google: () => client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: appUrl() } }),
     resend: (email, captchaToken) => client.auth.resend({ type: 'signup', email, options: { emailRedirectTo: appUrl(), captchaToken } }),

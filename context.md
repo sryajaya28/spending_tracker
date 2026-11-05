@@ -139,6 +139,8 @@ supabase/tests/     pgTAP tests (first migrations only)
 tests/e2e/          Playwright browser tests with a fake Supabase; run_all.sh; record_demo_tour.js
 docs/NEXT_STEPS.md  roadmap, rules, known gaps            vercel.json  hosting, rewrites, security headers
 regression_scenario.md  manual regression scenarios per feature + automated coverage map (keep current)
+tools/release_contents.js, docs/RELEASES.md  exact release contents (never a summary)
+docs/WORKSPACE.md  Workspace artifact: shared feed + Needs-you tray (URL, schema, rules)
 docs/WORKFLOW.md  agent-to-agent workflow, diagram, hand-off formats
 docs/roles/, docs/PRD_TEMPLATE.md  agent team (PM, Designer, QA, developers): flow, hand-offs, registry
 tools/regression.js, release.js, gates.js  one-command regression and release; docs/tooling-only diffs skip regression and the prod smoke test
@@ -175,6 +177,13 @@ from `options.data`), a **Cash** wallet, 12 default categories with emoji icons 
 Migrations (repo file names; applied through the Supabase tools with different recorded version numbers):
 1 schema, 2 RLS, 3 signup seed, 4 views+functions, 5 portfolio, 6 debts, 7 trades, 8 app seed + `holdings.since_month`,
 9 occasions, 10 `wallets.since_month`, 11 transfer groups, 12 `profiles.sample_ids`, 13 profile language/theme, 14 `recurring_rules`, 15 nullable `transactions.wallet_id` for coin income/expense 16 `profiles.period_day`, 21 optional occasion budget (14, 15 and 16 applied to the live project).
+
+## 6b. Household (several people on one set of books; branch feature/household, not yet released)
+
+- **Model:** one data owner per household; every row keeps `user_id = owner`, RLS reads `household_owner()` and writes need `is_writer()` (migrations 24-30, applied to STAGING only; production is applied by the Tech-Lead at release). New columns on the money tables: `created_by`, `updated_by`, `rev`; `household_members`, `household_invites` (token hash only), `household_state(rev)`, `household_former_members`. Roles: owner, editor, viewer. Editors change only their own transactions and transfers (others read-only), but may add/edit/delete accounts, debts, lent, investments, budgets, categories, occasions and recurring rules. Generated recurring rows belong to the rule's creator.
+- **Server:** RPCs `household_people` (names and emails), `household_profile`, `set_member_role`, `remove_member`, `leave_household`; delete guards raise `42501 household_guard:<kind>:<n>`; stale edits raise `PT409 household_stale` (HTTP 409; SQLSTATE 40001 is retried by PostgREST and ends in a 504, so never use it). Edge Functions on staging: `invite-member`, `manage-invite`, `delete-my-login` (JWT required), `join-household`, `signup-gate`, `invite-sweep` (public); see `supabase/functions/DEPLOY.md`.
+- **Client:** `prototype/cloud.js` household layer (status load, strict insert/update/delete with `rev` only when the household has members, 30 s poll, `Cloud.classify()` error contract); `app.js`: Settings > Household card, invite/role/remove/leave dialogs, `/join#t=` page (token only in memory), no-access page, Viewer write guard (`WRITE_ACT`), who-submitted labels and "Added by / Edited by", named delete confirmations, guard messages that name the item (`hhLastDel`), "Your access changed" toast. Sign-up now goes through `signup-gate` (same answer for fresh, existing and invited addresses; the sent screen says to use the invite email). A Viewer's app never generates recurring entries.
+- **Tests:** e2e `household_join`, `household_labels`, the household block in `analytics`; SQL `bash tools/sql_local_test.sh` (local PostgreSQL 16 + pgTAP shim). Slice 2: migration 31 `activity_log` (AFTER row triggers on the 11 money tables write add/edit/delete rows only for households with members, no-op saves skipped, summary = name, amount, currency, type, was_amount, balance/was_balance; RLS select for every member, no client writes; `purge_household_activity()` 180 days via the invite-sweep function). Client: `#/activity` (`viewActivity`, `Cloud.activity()` latest 300 rows, person and type filters in the client), entry row in the Household card, event `activity_opened`. e2e `household_activity`; SQL `household_activity.test.sql` (13).
 
 ## 7. Business rules the code encodes
 
@@ -240,7 +249,7 @@ which is a public suffix and is rejected).
 
 ## 12. Deployment and workflow
 
-Agents: **Developer 2 is the integrator** (merges into `staging`, folds `docs/changes/` into the changelog, releases); **Developer 1** works on feature branches and reports "ready" (owner, 2026-11-04; see `docs/AGENTS.md`).
+Agents: **Tech-Lead is the integrator** (merges into `staging`, folds `docs/changes/` into the changelog, releases); **Full-stack engineer** works on feature branches and reports "ready" (owner, 2026-11-04; see `docs/AGENTS.md`).
 
 1. Edit files, run `bash tests/e2e/run_all.sh`, commit, `git push origin HEAD:main` (and the session branch).
 2. Vercel builds in seconds. Check with the Vercel tools (`list_deployments`) when available.

@@ -53,6 +53,11 @@
       "mcp__Supabase__execute_sql",
       "mcp__Vercel__run_session_command",
       "mcp__github__create_repository"
+    ],
+    "deny": [
+      "AskUserQuestion",
+      "EnterPlanMode",
+      "ExitPlanMode"
     ]
   }
 }

@@ -420,6 +420,13 @@ Written from the PRD's acceptance checks, not from the implementation. Needs two
 | HH-33 | 5 (Edge) | Existing solo user data, regression after the migrations **(E, DB)** | The whole suite and the staging regression pass unchanged; owner behaviour identical; `created_by` backfilled |
 | HH-34 | Analytics | Invite sent/resent/revoked/accepted, role changed, removed, left, Activity opened **(E)** | Event names as in PRD section 7; no email, name, id, amount or note in any payload; every new button has `data-act`, forms `data-form` |
 
+## Household (feature/household)
+- Owner invites an Editor and a Viewer from Settings > Household; Pending rows show Resend/Revoke; the Join link (`/join#t=...`) asks for name and password, signs in and lands in the household; the token never stays in the address bar.
+- Editor: can add everything, edits only own transactions (others show "read-only" and "Added by <name>"); Viewer: no Add/Edit/Delete anywhere. Deleting an item used by others' entries shows "Can't delete '<name>'. '<name>' holds <n> transactions added by others. Ask the owner."
+- Removed member sees "You no longer have access" with Sign out / Delete my login. Create account with a pending-invite address shows the same "Check your email" screen as any address.
+- Activity (Settings > Household > Activity): rows grouped by day (Today, Yesterday, dates) with who did what; filter by person and by All/Added/Edited/Deleted/Balance; an edit shows "was <old amount>", a balance change "old -> new"; empty and filtered-empty messages; a Viewer sees "Viewers can read Activity". A solo ledger has no Household activity.
+- Covered by `household_join`, `household_labels`, `household_activity`, `analytics`, `run`, and `bash tools/sql_local_test.sh`.
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |

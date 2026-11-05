@@ -11,6 +11,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const ME = 'user-0000-0000-0000-000000000001', OWNER = 'owner-0000-0000-0000-000000000009';
   await p.evaluate(({ ME, OWNER }) => {
     const today = new Date().toISOString().slice(0, 10), w = __T.wallets[0].id, now = new Date().toISOString();
+    __T.wallets[0].created_by = OWNER; __T.wallets[0].updated_by = OWNER;
     __T.profiles[0].household_status = 'member';
     __T.household_members = [{ owner_id: OWNER, member_id: ME, role: 'editor' }]; __T.household_state = [{ owner_id: OWNER, rev: 3, has_members: true }];
     __hhPeople = [{ user_id: OWNER, display_name: 'Sari Dewi', role: 'owner', former: false, email: 'sari@test.dev' }, { user_id: ME, display_name: 'Budi Santoso', role: 'editor', former: false, email: 'budi@test.dev' }, { user_id: 'gone', display_name: 'Maria Lim', role: 'former', former: true, email: null }];
@@ -25,7 +26,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.match(await sub('t3'), /Maria/, "a removed member's entry keeps their name"); assert.match(await sub('t3'), /read-only/);
   // read-only detail for the owner's row; the edit form for their own
   await p.click('.row[data-id=t1]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'no edit form on another person\'s entry'); assert.match(await p.textContent('#dlg .hh-who-line'), /Added by Sari/); await p.click('#dlg [data-act=close]');
-  await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg form[data-form=txn]'); await p.click('#dlg [data-act=close]');
+  await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg form[data-form=txn]');
+  // deleting in a household names the entry first; cancelling keeps it
+  let asked = ''; p.once('dialog', async (d) => { asked = d.message(); await d.dismiss(); }); await p.click('#dlg [data-act=delete-txn]'); await p.waitForTimeout(200);
+  assert.match(asked, /My coffee/, 'the confirmation names the entry: ' + asked); assert.equal(await p.evaluate(() => D().transactions.some((t) => t.id === 't2')), true, 'cancel keeps it');
+  await p.click('#dlg [data-act=close]');
+  assert.match(await p.evaluate(() => byLine(D().wallets[0])), /Added by Sari/, 'accounts show who added them');
   // settings: Leave instead of Invite, currency and period locked
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('.hh-card');
   assert.equal(await p.$('[data-act=hh-invite]'), null, 'no Invite for a member'); assert.equal(await p.$$eval('[data-act=hh-leave]', (e) => e.length), 1);
@@ -36,7 +42,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('[data-act=hh-leave]'); await p.waitForSelector('[data-act=hh-leave-go]'); await p.click('[data-act=hh-leave-go]'); await p.waitForFunction(() => (window.__hhCalls || []).length > 0);
   assert.equal(await p.evaluate(() => window.__hhCalls[0][0]), 'leave_household');
   // a Viewer: details open, nothing can be added
-  await p.evaluate((ME) => { __T.household_members[0].role = 'viewer'; __T.profiles[0].household_status = 'member'; return loadUserData(); }, ME); await p.waitForFunction(() => Cloud.household.role === 'viewer');
+  await p.evaluate((ME) => { __T.household_members[0].role = 'viewer'; __T.profiles[0].household_status = 'member'; return loadUserData(); }, ME); await p.waitForFunction(() => Cloud.household.role === 'viewer'); await p.waitForFunction(() => document.body.textContent.includes('Your access changed'), null, { timeout: 5000 });   // the owner changed the role while the app was open
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t2]', { state: 'visible' });
   await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'a Viewer never gets the edit form'); await p.click('#dlg [data-act=close]');
   await p.evaluate(() => document.querySelector('[data-act=add-txn]') && document.querySelector('[data-act=add-txn]').click());

@@ -900,4 +900,5 @@ DICT.id = {
  "Checking your invitation…": "Memeriksa undangan Anda…",
  "Joining the household…": "Bergabung ke rumah tangga…",
  "You joined the household. Sign in with your new password.": "Anda sudah bergabung. Masuk dengan kata sandi baru Anda.",
+ "Delete \"{name}\"? This can't be undone.": "Hapus \"{name}\"? Ini tidak bisa dibatalkan."
 };

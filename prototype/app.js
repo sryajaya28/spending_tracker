@@ -759,7 +759,7 @@ function archivedWallets() {
   const open = state.ui.archOpen;
   return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>${__('Archived accounts ({n})', { n: list.length })}</b></button>
     ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
-      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
+      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small>${byLine(w)}</div>
         <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">${__('Restore')}</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">${__('Delete')}</button></div></div>`; }).join('') : ''}</div>`;
 }
 /* every list on Portfolio is sorted from the highest amount (compared in one currency) */
@@ -791,7 +791,7 @@ function loanCard(l, vc, kind = 'loan') {
   const planText = plan ? `<b>${shown(plan.amount)}</b> ${wk ? __('every week') : __('every month')}` : '';
   const leftText = left ? (wk ? (left === 1 ? __('1 week left') : __('{n} weeks left', { n: left })) : (left === 1 ? __('1 month left') : __('{n} months left', { n: left }))) : '';
   const debtMeta = l.rate ? `${l.rate}% ${l.flat ? __('flat') : 'APR'}` : '';
-  return `<section class="card${leftText ? ' has-tab' : ''}">${leftText ? `<span class="loan-tab">${leftText}</span>` : ''}<div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>
+  return `<section class="card${leftText ? ' has-tab' : ''}">${leftText ? `<span class="loan-tab">${leftText}</span>` : ''}<div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>${byLine(l)}
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn secondary" data-act="history-${kind}" data-id="${l.id}">${__('Details')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
     ${lent ? `<div class="bar"><i style="width:${pct}%;background:#1fa971"></i></div>
@@ -912,7 +912,7 @@ function viewPortfolio() {
       ${pnlSection(rm, vc)}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
-        return `<section class="card"><div class="card-head acct-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
+        return `<section class="card"><div class="card-head acct-head"><div><h2>${esc(a.name)}</h2>${byLine(a)}<div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
           <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">${__('Edit')}</button><button class="btn secondary" data-act="add-holding" data-account="${a.id}" data-type="cash">${__('+ Cash')}</button><button class="btn" data-act="add-holding" data-account="${a.id}">${__('+ Asset')}</button></div></div>
           <div class="list">${hs.map((h) => holdingRow(h, vc, total)).join('') || ('<div class="empty">' + __('No assets yet. Add one to start tracking.') + '</div>')}</div></section>`;
       }).join('')}</div>`;
@@ -1688,7 +1688,7 @@ function householdSaveError(err) {
   return '';
 }
 /* refresh when someone else changed the household: every 30 s while the page is visible, and when you come back to it */
-let hhTimer = null;
+let hhTimer = null, hhSeen = false;   // hhSeen: the first load of this session has happened, so a later difference in role is news
 async function hhRefresh() {
   if (!state.data || state.real || document.hidden || !Cloud.household.hasMembers) return;
   try { if (await Cloud.pollChanged()) loadUserData(); } catch { /* offline: try again next time */ }
@@ -1706,6 +1706,9 @@ const hhPeople = () => (Cloud.household.people || []).filter((p) => !p.former);
 const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 /* who did it (PRD 22-26, 33-37): labels only show when the household has other people; a removed member's entries keep their name */
 const hhMulti = () => !state.real && Cloud.household.hasMembers;
+/* in a household a delete names what goes (PRD 27): other people can see and rely on it */
+const hhOk = (name) => !hhMulti() || confirm(__('Delete "{name}"? This can\'t be undone.', { name }));
+const byLine = (r) => (hhMulti() && r && r.by ? `<small class="muted hh-by">${whoLine(r).replace('<br>', ' · ')}</small>` : '');
 const hhName = (id) => { const x = (Cloud.household.people || []).find((p) => p.user_id === id); return hhFirstName(x && x.display_name) || ''; };
 const hhWhen = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 /* an Editor changes only what they created; the owner changes everything; a Viewer nothing. A row not yet saved has no creator and is the viewer-of-it's own. */
@@ -2112,7 +2115,7 @@ function budgetDialog(b, preset) {
   const used = new Set(D().budgets.map((x) => x.category_id));
   const opts = [{ id: '', name: '' }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id }))];
   const pick = !b && preset === 'category' ? (opts.find((o) => o.id && !used.has(o.id)) || { id: '' }).id : '';   // the "By category" Add button starts on a category without a budget yet
-  open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2><form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
+  open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2>${b && hhMulti() && b.by ? `<p class="muted hh-who-line">${whoLine(b)}</p>` : ''}<form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
     <label class="field">${__('Applies to')}<select name="category" data-search data-empty="${__('Category not found')}" data-prev="${b ? b.category_id || '' : pick}" ${b ? 'disabled' : ''}>${b ? budgetCatOptions(b.category_id || '', new Set(), false) : budgetCatOptions(pick, used)}</select></label>
     ${b ? '' : `<div class="quick-cat" hidden>
       <div class="two"><label class="field">${__('Name')}<input name="qc_name" maxlength="40" placeholder="${__('e.g. Gym, or Snacks')}" autocomplete="off"></label>
@@ -2837,7 +2840,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-occasion-txn') txnDialog(null, 'expense', occasionOf(id));
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
-  else if (act === 'delete-occasion') { D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
+  else if (act === 'delete-occasion') { if (!hhOk(find(D().occasions)?.name || '')) return; D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
   else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); const view = occasionView(o); state.ui.month = view.month; state.ui.allPeriods = view.all; if (el.closest('#dlg')) close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; render(); }
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
@@ -2876,7 +2879,7 @@ document.addEventListener('click', (e) => {
     if (!removeTrade(h, tr)) { toast("Can't remove this: it would leave a negative holding (part of it was sold or spent since)"); return; }
     save(); render(); if (routeArg() !== h.id) holdingDialog(h); toast('Trade removed and balances restored');
   }
-  else if (act === 'delete-holding') { D().holdings = D().holdings.filter((x) => x.id !== id); save(); close(); render(); toast('Asset removed'); }
+  else if (act === 'delete-holding') { if (!hhOk(assetInfo(find(D().holdings)?.symbol).name || '')) return; D().holdings = D().holdings.filter((x) => x.id !== id); save(); close(); render(); toast('Asset removed'); }
   else if (act === 'breakdown') breakdownDialog(id);
   else if (act === 'add-cat') catDialog(null, el.dataset.parent);
   else if (act === 'edit-cat') catDialog(catOf(id));
@@ -2910,12 +2913,13 @@ document.addEventListener('click', (e) => {
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Account archived'); }
   else if (act === 'delete-txn') {
     const tx = find(D().transactions), coin = coinOf(tx);
+    if (!hhOk(`${tx.note || catOf(tx.category_id)?.name || __('Transaction')} (${money(tx.amount_minor, tx.currency)})`)) return;
     if (coin) { if (!removeTrade(coin, coin.trades.find((x) => x.id === tx.trade_id))) { toast(__("Can't delete: the {symbol} has already been spent", { symbol: assetInfo(coin.symbol).symbol })); return; } }
     else { D().transactions = D().transactions.filter((t) => t.id !== id); D().loans.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); D().lent.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); }   // a loan charge or a repayment made from this account goes with it
     Analytics.track('delete_transaction', { type: tx.type });
     save(); close(); render(); toast('Transaction deleted');
   }
-  else if (act === 'delete-budget') { Analytics.track('delete_budget'); D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
+  else if (act === 'delete-budget') { if (!hhOk(catOf(find(D().budgets)?.category_id)?.name || __('Budget'))) return; Analytics.track('delete_budget'); D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; resetSessionView(); state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); window.scrollTo(0, 0); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
@@ -3481,7 +3485,7 @@ function resetSessionView() {
 async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
-  if (!session) { Analytics.reset(); Analytics.page(); state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
+  if (!session) { hhSeen = false; Analytics.reset(); Analytics.page(); state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
   stopPolling(); a.email = session.user.email || a.email;
   Analytics.identify(session.user.id); Analytics.page();
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
@@ -3494,8 +3498,12 @@ async function loadUserData() {
   const mine = ++loadSeq;   // a reload can start twice (sign-in events arrive in pairs); only the newest one may apply its result
   try {
     state.real = null;   // leave demo mode while reloading; it is switched back on below if you had it on
+    const before = hhSeen ? `${Cloud.household.status}:${Cloud.household.role}` : '';
     const loaded = await Cloud.load();
     if (mine !== loadSeq) return;   // a newer load took over
+    const nowAcc = `${Cloud.household.status}:${Cloud.household.role}`;
+    if (before && before !== nowAcc && loaded) toast(__('Your access changed.'));   // the owner changed your role while the app was open
+    hhSeen = true;
     state.auth.noAccess = !loaded;   // removed, never joined, or the household was deleted: the "no longer have access" page
     if (!loaded) { state.data = null; render(); return; }
     state.real = null; state.data = loaded;

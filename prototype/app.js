@@ -1893,6 +1893,15 @@ function viewActivity() {
     <div class="act-chips">${ACT_TYPES.map(([k, l]) => `<button type="button" class="chip${actState.type === k ? ' on' : ''}" data-act="act-type" data-type="${k}">${__(l)}</button>`).join('')}</div>
     ${list ? `<section class="card act-list">${list}</section>` : empty}`;
 }
+/* a Viewer sees no write controls (PRD check 17): buttons that start a change are removed after every render; rows that only open a read-only detail stay.
+   The raised Add button keeps its place in the bottom bar but is hidden. The database refuses writes anyway; this is the screen telling the truth. */
+function hideWriteControls() {
+  if (canWrite()) return;
+  document.querySelectorAll('#app button[data-act]').forEach((b) => {
+    const act = b.dataset.act; if (!WRITE_ACT.test(act) || act === 'edit-txn') return;
+    if (b.classList.contains('nav-add')) { b.style.visibility = 'hidden'; b.setAttribute('aria-hidden', 'true'); b.tabIndex = -1; } else b.remove();
+  });
+}
 const VIEWS = { activity: viewActivity, overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
@@ -1911,6 +1920,7 @@ function render() {
   if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); state.ui.allPeriods = false; }   // a new start day (or switching demo/real data) re-selects the current period
   const r = VIEWS[route()] ? route() : 'overview';
   app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${bottomNav()}`;
+  hideWriteControls();
   if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);
   if (r === 'portfolio' && state.chart2 && $('#pnl')) bindValue(state.chart2.months, state.chart2.series, state.chart2.vc, { id: 'pnl', neg: true });   // the asset page (#/portfolio/<id>) has no value chart
   if (r === 'overview') {

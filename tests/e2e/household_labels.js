@@ -44,6 +44,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.evaluate(() => window.__hhCalls[0][0]), 'leave_household');
   // a Viewer: details open, nothing can be added
   await p.evaluate((ME) => { __T.household_members[0].role = 'viewer'; __T.profiles[0].household_status = 'member'; return loadUserData(); }, ME); await p.waitForFunction(() => Cloud.household.role === 'viewer'); await p.waitForFunction(() => document.body.textContent.includes('Your access changed'), null, { timeout: 5000 });   // the owner changed the role while the app was open
+  // PRD check 17: a Viewer sees no control that starts a change, on any screen (rows that only open a read-only detail stay)
+  for (const r of ['overview', 'transactions', 'budgets', 'portfolio', 'settings']) {
+    await p.evaluate((r) => { location.hash = '#/' + r; }, r); await p.waitForTimeout(300);
+    const left = await p.evaluate(() => [...document.querySelectorAll('#app button[data-act]')].filter((e) => WRITE_ACT.test(e.dataset.act) && e.dataset.act !== 'edit-txn' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0).map((e) => e.dataset.act));
+    assert.deepEqual(left, [], 'Viewer sees write controls on ' + r + ': ' + left);
+  }
+  assert.equal(await p.$eval('.nav-add', (e) => getComputedStyle(e).visibility), 'hidden', 'the raised Add is hidden for a Viewer');
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t2]', { state: 'visible' });
   await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'a Viewer never gets the edit form'); await p.click('#dlg [data-act=close]');
   await p.evaluate(() => document.querySelector('[data-act=add-txn]') && document.querySelector('[data-act=add-txn]').click());
@@ -56,5 +63,18 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // guard text names the item being deleted (Figma frames 27/29)
   const gm = await p.evaluate(() => { hhLastDel = 'Groceries'; return householdSaveError({ code: '42501', message: 'household_guard:category:3' }); });
   assert.equal(gm, "Can't delete 'Groceries'. 'Groceries' holds 3 transactions added by others. Ask the owner.");
+  // manual_prices has no id column: a household manual price must not break saves, and a Viewer never writes on load
+  const T0 = new Date().toISOString();
+  await p.evaluate((T0) => { __log.length = 0; const OW = 'owner-0000-0000-0000-000000000009'; __T.household_members[0].role = 'viewer';
+    __T.investment_accounts = [{ id: 'ia1', user_id: OW, name: 'Broker', currency: 'USD', archived: false, created_at: T0, updated_at: T0, created_by: OW, updated_by: OW, rev: 1 }];
+    __T.holdings = [{ id: 'h1', user_id: OW, account_id: 'ia1', symbol: 'QAHH1', asset_type: 'stock', name: 'QA', since_month: T0.slice(0, 10), created_at: T0, updated_at: T0, created_by: OW, updated_by: OW, rev: 1 }];
+    __T.holding_events = [{ id: 'he1', user_id: OW, holding_id: 'h1', quantity_delta: 1, price_usd: 1, occurred_at: T0, note: 'opening', created_at: T0, updated_at: T0, created_by: OW, updated_by: OW, rev: 1 }];
+    __T.manual_prices = [{ user_id: OW, symbol: 'QAHH1', price_date: T0.slice(0, 10), price_usd: 1 }]; return loadUserData(); }, T0);
+  await p.waitForFunction(() => Cloud.household.role === 'viewer'); await p.waitForTimeout(800);
+  assert.equal(await p.evaluate(() => __log.filter((x) => x.op === 'upsert' || x.op === 'insert' || x.op === 'delete').length), 0, 'a Viewer sends no write on load');
+  await p.evaluate(() => { __T.household_members[0].role = 'editor'; return loadUserData(); }); await p.waitForFunction(() => Cloud.household.role === 'editor'); await p.waitForTimeout(500);
+  await p.evaluate(() => { __log.length = 0; D().profile.name = D().profile.name + 'x'; Cloud.save(state.data); return Cloud.idle(); });
+  assert.doesNotMatch(await p.evaluate(() => document.querySelector('#toast').textContent), /id' column/, 'no manual_prices id error toast');
+  assert.equal(await p.evaluate(() => __log.some((x) => x.table === 'manual_prices')), false, 'a household manual price is not re-sent on every save');
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

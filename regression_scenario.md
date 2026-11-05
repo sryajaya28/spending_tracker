@@ -368,6 +368,12 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 
 - Loan / paylater account filter (Transactions > account = a debt account): every spending row shows `−` (charges made with it and payments made on it), the day total is the sum of them with a minus (`−Rp 362.725` for charges 29.900 + 73.800 and a payment 259.025), and the same rows show the same signs with no account filter (`loanpay`, `repay`).
 
+## Household (feature/household)
+- Owner invites an Editor and a Viewer from Settings > Household; Pending rows show Resend/Revoke; the Join link (`/join#t=...`) asks for name and password, signs in and lands in the household; the token never stays in the address bar.
+- Editor: can add everything, edits only own transactions (others show "read-only" and "Added by <name>"); Viewer: no Add/Edit/Delete anywhere. Deleting an item used by others' entries shows "Can't delete '<name>'. '<name>' holds <n> transactions added by others. Ask the owner."
+- Removed member sees "You no longer have access" with Sign out / Delete my login. Create account with a pending-invite address shows the same "Check your email" screen as any address.
+- Covered by `household_join`, `household_labels`, `analytics`, `run`, and `bash tools/sql_local_test.sh`.
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |

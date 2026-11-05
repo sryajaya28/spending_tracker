@@ -18,7 +18,7 @@
   window.__seedNewUser();
   class Q {
     constructor(t) { this.t = t; this.op = 'select'; this.f = []; }
-    select() { return this; } order() { return this; } range(a, b) { this.r = [a, b]; return this; } single() { this.one = true; return this; }
+    select() { return this; } order() { return this; } range(a, b) { this.r = [a, b]; return this; } single() { this.one = true; return this; } maybeSingle() { this.one = true; return this; }
     eq(k, v) { this.f.push((r) => r[k] === v); this.fl = (this.fl || []).concat([[k, v]]); return this; }
     in(k, vs) { this.f.push((r) => vs.includes(r[k])); this.fl = (this.fl || []).concat([[k, vs]]); return this; }
     upsert(rows, o) { this.op = 'upsert'; this.rows = rows; this.o = o || {}; return this; }
@@ -35,6 +35,7 @@
         out = JSON.parse(JSON.stringify(out));
         return { data: this.one ? out[0] : out, error: null };
       }
+      if (this.op === 'upsert' && t === 'manual_prices' && this.rows.some((r) => 'id' in r)) return { data: null, error: { message: "Could not find the 'id' column of 'manual_prices' in the schema cache" } };   // the real table has no id column
       if (this.op === 'upsert') {
         log.push({ op: 'upsert', table: t, rows: JSON.parse(JSON.stringify(this.rows)), onConflict: this.o.onConflict });
         this.rows.forEach((n) => { const i = rows.findIndex((r) => keyOf(t, r) === keyOf(t, n)); if (i >= 0) Object.assign(rows[i], n); else rows.push({ created_at: new Date().toISOString(), ...JSON.parse(JSON.stringify(n)) }); });   // like the database default (created_at = now() on insert, kept on update)
@@ -60,12 +61,20 @@
     const h = handoffs();
     if (fn === 'create_handoff') { if (!session) return { data: null, error: { message: 'not signed in' } }; const code = 'AB' + String(Object.keys(h).length + 1).padStart(2, '0') + 'XYZK' + 'K2'; h[code] = args.p_refresh_token || 'rt'; localStorage.setItem('__handoffs', JSON.stringify(h)); return { data: code, error: null }; }
     if (fn === 'claim_handoff') { const code = String(args.p_code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); const t = h[code] || null; delete h[code]; localStorage.setItem('__handoffs', JSON.stringify(h)); return { data: t, error: null }; }
+    if (fn === 'household_people') return { data: window.__hhPeople || [], error: null };
+    if (fn === 'household_profile') return { data: [{ default_currency: 'IDR', period_day: 1, sample_ids: null }], error: null };
+    if (['set_member_role', 'remove_member', 'leave_household'].includes(fn)) { (window.__hhCalls = window.__hhCalls || []).push([fn, args]); return { data: null, error: null }; }
     return { data: null, error: { message: 'unknown rpc' } };
   };
   window.supabase = { createClient: () => ({
     from: (t) => new Q(t),
     storage: { from: (bucket) => ({ upload: async (path, file, o) => { if (window.__failUpload) return { data: null, error: { message: 'upload failed' } }; (window.__uploads = window.__uploads || []).push({ bucket, path, size: file.size, type: o && o.contentType }); return { data: { path }, error: null }; } }) },
     rpc,
+    functions: { invoke: async (name, o) => {   // only the sign-up gate is faked here (the household tests replace Cloud.fn themselves)
+      const b = (o && o.body) || {};
+      if (name === 'signup-gate') { window.__signUp = { email: b.email, password: b.password, options: { data: { full_name: b.full_name, currency: b.currency }, captchaToken: b.captchaToken } }; window.__signUpOpts = window.__signUp.options; return { data: { result: window.__gateReply || 'check_email' }, error: null }; }
+      return { data: null, error: { message: 'unknown function' } };
+    } },
     auth: {
       onAuthStateChange: (f) => { cb = f; setTimeout(() => f('INITIAL_SESSION', session), 0); return { data: { subscription: {} } }; },
       signInWithPassword: async ({ email, password, options }) => {
@@ -79,6 +88,7 @@
       resend: async (a) => { window.__resend = a; return { error: null }; },
       resetPasswordForEmail: async (e, o) => { window.__reset = [e, o]; return { error: null }; },
       updateUser: async (a) => { window.__upd = a; return { error: null }; },
+      setSession: async (t) => { window.__setSession = t; session = mkSession(window.__joinEmail || 'invitee@test.dev'); setTimeout(() => cb('SIGNED_IN', session), 0); return { data: { session }, error: null }; },
       signOut: async (o) => { window.__signOut = o; if (!o || o.scope !== 'others') { session = null; setTimeout(() => cb('SIGNED_OUT', null), 0); } return { error: null }; },
       getSession: async () => ({ data: { session: session && { ...session, refresh_token: 'rt-1' } }, error: null }),
       refreshSession: async ({ refresh_token }) => { if (!refresh_token) return { error: { message: 'no token' } }; session = mkSession('a@b.co'); setTimeout(() => cb('SIGNED_IN', session), 0); return { data: { session }, error: null }; },

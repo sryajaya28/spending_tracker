@@ -1,0 +1,90 @@
+const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
+/* A household member's view: who submitted each transaction (first name in the subline), "read-only" on other people's rows for an Editor,
+   a read-only detail with "Added by", currency/period locked, Leave instead of Invite, and a Viewer who can open details but not add. */
+(async () => {
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 900 } });
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.route('**/vendor/supabase.js', (r) => r.fulfill({ contentType: 'text/javascript', body: fs.readFileSync(__dirname + '/fake_supabase.js', 'utf8') }));
+  await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
+  await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]');
+  await p.fill('[name=email]', 'budi@test.dev'); await p.fill('[name=password]', 'longenough1'); await p.click('form[data-form=signin] button[type=submit]'); await p.waitForSelector('.shell');
+  const ME = 'user-0000-0000-0000-000000000001', OWNER = 'owner-0000-0000-0000-000000000009';
+  await p.evaluate(({ ME, OWNER }) => {
+    const today = new Date().toISOString().slice(0, 10), w = __T.wallets[0].id, now = new Date().toISOString();
+    __T.wallets[0].created_by = OWNER; __T.wallets[0].updated_by = OWNER;
+    __T.profiles[0].household_status = 'member';
+    __T.household_members = [{ owner_id: OWNER, member_id: ME, role: 'editor' }]; __T.household_state = [{ owner_id: OWNER, rev: 3, has_members: true }];
+    __hhPeople = [{ user_id: OWNER, display_name: 'Sari Dewi', role: 'owner', former: false, email: 'sari@test.dev' }, { user_id: ME, display_name: 'Budi Santoso', role: 'editor', former: false, email: 'budi@test.dev' }, { user_id: 'gone', display_name: 'Maria Lim', role: 'former', former: true, email: null }];
+    const tx = (id, note, by) => ({ id, wallet_id: w, category_id: null, type: 'expense', amount_minor: 5000, currency: 'IDR', occurred_at: today, note, category_source: 'user', created_at: now, updated_at: now, created_by: by, updated_by: by });
+    __T.transactions = [tx('t1', 'Owner groceries', OWNER), tx('t2', 'My coffee', ME), tx('t3', 'Maria lunch', 'gone')];
+    return loadUserData();
+  }, { ME, OWNER });
+  await p.waitForFunction(() => Cloud.household.status === 'member'); await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t1]', { state: 'visible' });
+  const sub = (id) => p.$eval(`.row[data-id=${id}] .sub`, (e) => e.textContent);
+  assert.match(await sub('t1'), /Sari/); assert.match(await sub('t1'), /read-only/, "an Editor sees read-only on the owner's row");
+  assert.match(await sub('t2'), /Budi/); assert.doesNotMatch(await sub('t2'), /read-only/, 'their own row is editable');
+  assert.match(await sub('t3'), /Maria/, "a removed member's entry keeps their name"); assert.match(await sub('t3'), /read-only/);
+  // read-only detail for the owner's row; the edit form for their own
+  await p.click('.row[data-id=t1]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'no edit form on another person\'s entry'); assert.match(await p.textContent('#dlg .hh-who-line'), /Added by Sari/); await p.click('#dlg [data-act=close]');
+  await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg form[data-form=txn]');
+  // deleting in a household names the entry first; cancelling keeps it
+  let asked = ''; p.once('dialog', async (d) => { asked = d.message(); await d.dismiss(); }); await p.click('#dlg [data-act=delete-txn]'); await p.waitForTimeout(200);
+  assert.match(asked, /My coffee/, 'the confirmation names the entry: ' + asked); assert.equal(await p.evaluate(() => D().transactions.some((t) => t.id === 't2')), true, 'cancel keeps it');
+  await p.click('#dlg [data-act=close]');
+  assert.match(await p.evaluate(() => byLine(D().wallets[0])), /Added by Sari/, 'accounts show who added them');
+  assert.match(await p.evaluate(() => { D().wallets[0].byAt = '2026-11-04T09:30:00.000Z'; return byLine(D().wallets[0]); }), /Added by Sari, .*\d/, 'the label carries the time for accounts too');
+  // settings: Leave instead of Invite, currency and period locked
+  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('.hh-card');
+  assert.equal(await p.$('[data-act=hh-invite]'), null, 'no Invite for a member'); assert.equal(await p.$$eval('[data-act=hh-leave]', (e) => e.length), 1);
+  assert.equal(await p.$eval('select[data-setting=currency]', (e) => e.disabled), true); assert.equal(await p.$eval('select[data-setting=period]', (e) => e.disabled), true);
+  assert.match(await p.textContent('.hh-card'), /Sari/); assert.match(await p.textContent('.hh-card'), /sari@test\.dev/, 'members see names and emails');
+  assert.doesNotMatch(await p.textContent('.hh-card'), /Maria/, 'a removed member is not listed as a member');
+  // leaving asks first, then calls the server function
+  await p.click('[data-act=hh-leave]'); await p.waitForSelector('[data-act=hh-leave-go]'); await p.click('[data-act=hh-leave-go]'); await p.waitForFunction(() => (window.__hhCalls || []).length > 0);
+  assert.equal(await p.evaluate(() => window.__hhCalls[0][0]), 'leave_household');
+  // a Viewer: details open, nothing can be added
+  await p.evaluate((ME) => { __T.household_members[0].role = 'viewer'; __T.profiles[0].household_status = 'member'; return loadUserData(); }, ME); await p.waitForFunction(() => Cloud.household.role === 'viewer'); await p.waitForFunction(() => document.body.textContent.includes('Your access changed'), null, { timeout: 5000 });   // the owner changed the role while the app was open
+  // PRD check 17: a Viewer sees no control that starts a change, on any screen (rows that only open a read-only detail stay)
+  for (const r of ['overview', 'transactions', 'budgets', 'portfolio', 'settings']) {
+    await p.evaluate((r) => { location.hash = '#/' + r; }, r); await p.waitForTimeout(300);
+    const left = await p.evaluate(() => [...document.querySelectorAll('#app button[data-act]')].filter((e) => WRITE_ACT.test(e.dataset.act) && e.dataset.act !== 'edit-txn' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0).map((e) => e.dataset.act));
+    assert.deepEqual(left, [], 'Viewer sees write controls on ' + r + ': ' + left);
+  }
+  assert.equal(await p.$('.nav-add'), null, 'a Viewer has no raised Add');
+  assert.equal(await p.$$eval('.bottom-nav > a', (a) => a.length), 4, 'four tabs'); const xs = await p.$$eval('.bottom-nav > a', (a) => a.map((e) => Math.round(e.getBoundingClientRect().width))); assert.ok(Math.max(...xs) - Math.min(...xs) <= 1, 'four equal tabs, no empty slot: ' + xs);
+  await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t2]', { state: 'visible' });
+  await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'a Viewer never gets the edit form'); await p.click('#dlg [data-act=close]');
+  await p.evaluate(() => document.querySelector('[data-act=add-txn]') && document.querySelector('[data-act=add-txn]').click());
+  assert.equal(await p.evaluate(() => document.querySelector('#dlg').open), false, 'add is blocked for a Viewer');
+  // the error contract: HTTP 409 PT409 'household_stale' is the stale-edit case, a guard carries kind and count, plain RLS has no prefix
+  const kinds = await p.evaluate(() => [Cloud.classify({ code: 'PT409', message: 'household_stale' }), Cloud.classify({ code: '42501', message: 'household_guard:debt:3' }), Cloud.classify({ code: '42501', message: 'new row violates row-level security policy' }), Cloud.classify({ code: 'HH_GONE' })]);
+  assert.deepEqual(kinds, [{ kind: 'stale' }, { kind: 'guard', what: 'debt', n: 3 }, { kind: 'rls' }, { kind: 'gone' }]);
+  // a Viewer's app never generates recurring entries
+  assert.equal(await p.evaluate(() => { state.data.recurring = [{ id: 'rv', kind: 'txn', next: '2020-01-01', spec: {} }]; return runRecurring(); }), 0, 'Viewer: no recurring generation');
+  // guard text names the item being deleted (Figma frames 27/29)
+  const gm = await p.evaluate(() => { hhLastDel = 'Groceries'; return householdSaveError({ code: '42501', message: 'household_guard:category:3' }); });
+  assert.equal(gm, "Can't delete 'Groceries'. 'Groceries' holds 3 transactions added by others. Ask the owner.");
+  // manual_prices has no id column: a household manual price must not break saves, and a Viewer never writes on load
+  const T0 = new Date().toISOString();
+  await p.evaluate((T0) => { __log.length = 0; const OW = 'owner-0000-0000-0000-000000000009'; __T.household_members[0].role = 'viewer';
+    __T.investment_accounts = [{ id: 'ia1', user_id: OW, name: 'Broker', currency: 'USD', archived: false, created_at: T0, updated_at: T0, created_by: OW, updated_by: OW, rev: 1 }];
+    __T.holdings = [{ id: 'h1', user_id: OW, account_id: 'ia1', symbol: 'QAHH1', asset_type: 'stock', name: 'QA', since_month: T0.slice(0, 10), created_at: T0, updated_at: T0, created_by: OW, updated_by: OW, rev: 1 }];
+    __T.holding_events = [{ id: 'he1', user_id: OW, holding_id: 'h1', quantity_delta: 1, price_usd: 1, occurred_at: T0, note: 'opening', created_at: T0, updated_at: T0, created_by: OW, updated_by: OW, rev: 1 }];
+    __T.manual_prices = [{ user_id: OW, symbol: 'QAHH1', price_date: T0.slice(0, 10), price_usd: 1 }]; return loadUserData(); }, T0);
+  await p.waitForFunction(() => Cloud.household.role === 'viewer'); await p.waitForTimeout(800);
+  assert.equal(await p.evaluate(() => __log.filter((x) => x.op === 'upsert' || x.op === 'insert' || x.op === 'delete').length), 0, 'a Viewer sends no write on load');
+  await p.evaluate(() => { __T.household_members[0].role = 'editor'; return loadUserData(); }); await p.waitForFunction(() => Cloud.household.role === 'editor'); await p.waitForTimeout(500);
+  await p.evaluate(() => { __log.length = 0; D().profile.name = D().profile.name + 'x'; Cloud.save(state.data); return Cloud.idle(); });
+  assert.doesNotMatch(await p.evaluate(() => document.querySelector('#toast').textContent), /id' column/, 'no manual_prices id error toast');
+  assert.equal(await p.evaluate(() => __log.some((x) => x.table === 'manual_prices')), false, 'a household manual price is not re-sent on every save');
+  // HH-20: a member removed while the app is open reaches the no-access page within one poll (the state row stops being readable)
+  assert.equal(await p.evaluate(() => Cloud.pollChanged()), false, 'a normal poll with no change returns false');
+  await p.evaluate(() => { __T.household_members = []; __T.household_state = []; __T.profiles[0].household_status = 'former_member'; return hhRefresh(); });
+  await p.waitForFunction(() => /no longer have access/i.test(document.body.textContent), null, { timeout: 5000 });
+  // Delete my login asks first (QA FYI): Cancel does nothing, the confirm button deletes
+  await p.evaluate(() => { window.__dml = 0; Cloud.deleteMyLogin = async () => { window.__dml++; return {}; }; Cloud.signOut = async () => {}; });
+  await p.click('[data-act=delete-my-login-ask]'); await p.waitForSelector('#dlg[open] [data-act=delete-my-login]'); assert.match(await p.textContent('#dlg'), /Delete your login\?/);
+  await p.click('#dlg [data-act=close]:not(.dlg-x)').catch(() => p.click('#dlg .dlg-x')); await p.waitForTimeout(200); assert.equal(await p.evaluate(() => window.__dml), 0, 'Cancel deletes nothing');
+  await p.click('[data-act=delete-my-login-ask]'); await p.click('#dlg [data-act=delete-my-login]'); await p.waitForFunction(() => window.__dml === 1); 
+  console.log('ok', JSON.stringify(errs)); await b.close();
+})().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

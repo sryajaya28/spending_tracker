@@ -48,6 +48,11 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `update_transaction` / `delete_transaction` | same / `type` | edit / delete |
 | `transfer_recorded` / `transfer_edited` | `has_fee`, `is_recurring`, `involves_investment_cash` | transfer between accounts (or with an investment Cash balance), added / edited |
 | `delete_transfer` | none | a transfer deleted |
+| `invite_sent` / `invite_resent` / `invite_revoked` | `role` (editor/viewer) / none / none | the owner invites, resends or cancels an invitation (never the email) |
+| `invite_accepted` | `role` | the invitee finished the Join page and is signed in |
+| `member_role_changed` / `member_removed` / `household_left` | `role` / none / none | household admin actions and a member leaving |
+| `activity_opened` | none | a member opened the Activity page (Settings > Household > Activity) |
+| `login_deleted` | none | a person without access confirmed "Delete your login?" (the first tap only opens the confirm; the dialog is counted by `dialog_opened`) |
 | `cash_deposited` / `cash_withdrawn` | `has_fee`, `is_cross_currency` | Deposit / Withdraw on an investment Cash balance (Portfolio pop-up) |
 | `trade_recorded` | `side` | buy/sell of an asset |
 | `debt_payment_recorded` | `kind` (loan/lent), `is_recurring` | loan payment / lent repayment (`is_recurring` when it was set to repeat) |

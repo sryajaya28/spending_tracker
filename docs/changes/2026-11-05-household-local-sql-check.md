@@ -1,0 +1,4 @@
+# Household: local SQL check (tooling and tests only)
+- `tools/sql_local_test.sh` + `supabase/tests/local/stubs.sql`: throwaway local PostgreSQL 16 with stubbed Supabase roles/auth/storage and a minimal pgTAP shim; applies migrations 1-28 and runs the 125 household assertions in about a minute, no tokens, no Supabase. Pre-check only: the agreed staging dry-run and one-at-a-time applies still follow.
+- Result on migrations 25-28: 125/125 pass (tables 12, hardening 9, rls 37, functions 41, guards 26).
+- Test fixes found by it: tables plan 13 -> 12; guards: an Editor's delete of a holding event behind the owner's transaction is hidden by the linked-row policy (0 rows, nothing cascaded) instead of raising, and the owner deletes holdings before the account (the base schema has no account->holdings cascade); rls: the re-upsert of a generated row runs as the rule creator.

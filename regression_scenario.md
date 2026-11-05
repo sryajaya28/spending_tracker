@@ -368,6 +368,15 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 
 - Loan / paylater account filter (Transactions > account = a debt account): every spending row shows `−` (charges made with it and payments made on it), the day total is the sum of them with a minus (`−Rp 362.725` for charges 29.900 + 73.800 and a payment 259.025), and the same rows show the same signs with no account filter (`loanpay`, `repay`).
 
+## Household (feature/household)
+- Owner invites an Editor and a Viewer from Settings > Household; Pending rows show Resend/Revoke; the Join link (`/join#t=...`) asks for name and password, signs in and lands in the household; the token never stays in the address bar.
+- Editor: can add everything, edits only own transactions (others show "read-only" and "Added by <name>"); Viewer: no Add/Edit/Delete anywhere. Deleting an item used by others' entries shows "Can't delete '<name>'. '<name>' holds <n> transactions added by others. Ask the owner."
+- Removed member sees "You no longer have access" with Sign out / Delete my login, also when removed while the app is open (within about 30 seconds, no reload needed). Delete my login asks "Delete your login?" first; Cancel keeps the login. Create account with a pending-invite address shows the same "Check your email" screen as any address.
+- Household card: each member row except yours has a Manage button (role + Remove; Remove asks "Remove <name>?" naming the person); badge after the name; a Pending row has Resend and Revoke on one line (icons on a phone), long emails end with an ellipsis; no grey "Tap a person" hint.
+- Viewer: no Add/Edit/+ Budget/+ Account/Transfer/Invest buttons on Overview, Transactions, Budgets, Portfolio, Settings; the bottom bar has four equal tabs and no raised Add (no empty slot); rows still open read-only details. A household with a hand-typed asset price saves without an error toast.
+- Activity (Settings > Household > Activity): rows grouped by day (Today, Yesterday, dates) with who did what; filter by person and by All/Added/Edited/Deleted/Balance; an edit shows "was <old amount>", a balance change "old -> new"; empty and filtered-empty messages; a Viewer sees "Viewers can read Activity". A solo ledger has no Household activity.
+- Covered by `household_join`, `household_labels`, `household_activity`, `analytics`, `run`, and `bash tools/sql_local_test.sh`.
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |

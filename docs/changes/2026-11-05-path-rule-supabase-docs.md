@@ -1,0 +1,1 @@
+2026-11-05: **Path rule fix.** Documentation under supabase/ (for example supabase/functions/DEPLOY.md) is Tier 1, not Tier 3; CI also runs when a draft PR is marked ready for review. Tooling only; branch staging.

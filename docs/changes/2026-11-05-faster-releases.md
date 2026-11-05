@@ -1,0 +1,1 @@
+2026-11-05: **Faster releases.** CI skips the browser suite (e2e job) for Tier 1 PRs (docs, CSS, translations, tooling), where the path rule says nothing in app behaviour can change; docs/workflows/README.md gains a Release hygiene order (fold changelog, regression, open the PR, no further commits) and docs/learning/release.md a matching rule. Tooling/docs only; branch staging.

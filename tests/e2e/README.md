@@ -15,4 +15,5 @@ and the email-confirmation auto sign-in.
 
 `record_demo_tour.js` is not a test: it records the landing-page demo video (see `context.md`).
 `idcrawl.js` lists any English text left on screen when the app is in Indonesian.
+`fake_supabase.js` is strict: its `SCHEMA` block lists the real columns of each table and an insert, update or upsert with an unknown column fails like the real database (PGRST204). After a migration that adds a column, update `SCHEMA`; `node tools/check_fake_schema.js <db-columns.json>` compares it with the real database (instructions in its header).
 Outputs (screenshots, recordings) go to `tests/e2e/out/` and are gitignored.

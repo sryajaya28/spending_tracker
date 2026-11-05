@@ -1,5 +1,5 @@
 const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
-const vj = JSON.parse(fs.readFileSync('/home/user/spending_tracker/vercel.json', 'utf8'));
+const vj = JSON.parse(fs.readFileSync(__dirname + '/../../vercel.json', 'utf8'));
 const headers = Object.fromEntries(vj.headers[0].headers.map((h) => [h.key.toLowerCase(), h.value]));
 async function session(withCaptcha) {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1100, height: 900 } });

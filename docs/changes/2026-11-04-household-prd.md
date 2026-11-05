@@ -1,1 +1,0 @@
-2026-11-04: **Household: account-delete guard and category rule (owner decisions via PM); design gate 2 approved.** PRD check 38 and check 33 subline; technical design 4a gains the database guard on account/category delete (HH001 with count), the list of write paths and the extended SQL tests. Docs only. Branch `docs/household-prd`.

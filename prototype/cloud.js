@@ -141,8 +141,8 @@ const Cloud = (() => {
       return o;
     });
     d.loans = debts('owed'); d.lent = debts('lent');
-    /* who made and last changed each record (labels in a household; not part of what is saved back): by = creator, edBy/edAt = last editor and time (only when changed after creation) */
-    const meta = (o, r) => { if (r && r.created_by) { o.by = r.created_by; if (r.updated_by && r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 2000) { o.edBy = r.updated_by; o.edAt = new Date(r.updated_at).toISOString(); } } return o; };
+    /* who made and last changed each record (labels in a household; not part of what is saved back): by = creator, byAt = creation time, edBy/edAt = last editor and time (only when changed after creation) */
+    const meta = (o, r) => { if (r && r.created_by) { o.by = r.created_by; if (r.created_at) o.byAt = new Date(r.created_at).toISOString(); if (r.updated_by && r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 2000) { o.edBy = r.updated_by; o.edAt = new Date(r.updated_at).toISOString(); } } return o; };
     const attach = (list, rows) => { const m = new Map(rows.map((r) => [r.id, r])); list.forEach((o) => meta(o, m.get(o.id))); };
     attach(d.transactions, S.transactions); attach(d.wallets, S.wallets); attach(d.investments, S.investment_accounts); attach(d.budgets, S.budgets);
     attach(d.loans, S.debts); attach(d.lent, S.debts); attach(d.categories, S.categories); attach(d.occasions, S.occasions);
@@ -300,6 +300,8 @@ const Cloud = (() => {
     async removeMember(memberId) { must(await client.rpc('remove_member', { p_member: memberId })); },
     async leaveHousehold() { must(await client.rpc('leave_household')); },
     /* invites: every query names its columns (token_hash is not readable by clients) */
+    /* Activity (slice 2): the latest 300 rows of the household's log, newest first; the screen filters by person and type */
+    async activity() { return must(await client.from('activity_log').select('id, actor_id, actor_name, entity, action, summary, at').order('at', { ascending: false }).range(0, 299)); },
     async listInvites() { return must(await client.from('household_invites').select('id, email, role, status, created_at, expires_at').in('status', ['pending']).order('created_at', { ascending: false })); },
     async fn(name, body) {
       const { data, error } = await client.functions.invoke(name, { body });

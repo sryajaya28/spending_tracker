@@ -32,6 +32,14 @@ Owner brief -> PM: PRD + acceptance checks          [gate 1: owner approves PRD]
 - Blocked or unsure after one batched question: tell the owner; do not guess on irreversible things (releases, migrations).
 - Only the integrator (Tech-Lead) merges into `staging` and releases.
 
+## What each role reads at the start (owner, 2026-11-05: keep tokens low)
+Read ONLY this. `context.md` and `learning.md` are read by section: search the headings and read the one the task touches; never the whole file.
+- **PM:** `docs/roles/pm.md`, `docs/WORKSPACE.md`, `docs/NEXT_STEPS.md`, the owner's Workspace messages, the PRD in hand.
+- **Designer:** `docs/roles/designer.md`, `docs/FIGMA.md`, `CLAUDE.md` rule 6, the PRD in hand.
+- **QA:** `docs/roles/qa.md`, `regression_scenario.md` and `docs/FEATURE_TESTS.md` for the feature in hand, `docs/SMOKE_TEST.md`, the PRD.
+- **Full-stack engineer:** `CLAUDE.md`, the PRD and design in hand, the `context.md` sections and `learning.md` topics for the area touched.
+- **Tech-Lead:** `docs/AGENTS.md`, `docs/WORKFLOW.md`, `docs/WORKSPACE.md`, the diff under review.
+
 ## Registry (session ids, update when a session is replaced)
 | Role | Session id |
 |---|---|

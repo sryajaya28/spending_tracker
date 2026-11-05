@@ -36,15 +36,15 @@ export function randomToken(): string {
   return btoa(String.fromCharCode(...b)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-// Client address (E2). The per-IP limit is NOT a protection claim until the logged-headers run on staging has shown which header the platform
-// really controls: a caller can forge the first x-forwarded-for entry. The IP-independent global limits in the functions are the real backstops.
-// NOT verified against the platform yet: the first staging run logs the raw headers once and the verified choice is
-// written here. Until then: the first PUBLIC entry of x-forwarded-for, else x-real-ip. Private and internal hops are skipped so an internal
-// proxy cannot put every caller into one bucket, and a header the caller can rotate is not trusted blindly.
-const PRIVATE = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1|fc|fd|fe80)/i;
+// Client address (E2, verified on staging with a throwaway header-echo function, normal call and a forged X-Forwarded-For 203.0.113.9):
+// the platform overwrites a forged x-forwarded-for; the real client address arrives in cf-connecting-ip and sb-forwarded-for (identical), and
+// x-forwarded-for is "client, client, edge-proxy" (first entry = client). So: cf-connecting-ip, else sb-forwarded-for, else the FIRST
+// x-forwarded-for entry; never a later one. The IP-independent global limits in the functions stay as the backstops (a shared address
+// such as an office or a mobile carrier puts many people in one bucket, and IPv6 callers can rotate within their prefix).
 export function clientIp(req: Request): string {
-  const xs = (req.headers.get("x-forwarded-for") ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-  return xs.find((x) => !PRIVATE.test(x)) ?? req.headers.get("x-real-ip") ?? "unknown";
+  const h = (n: string) => (req.headers.get(n) ?? "").trim();
+  const first = h("x-forwarded-for").split(",")[0].trim();
+  return h("cf-connecting-ip") || h("sb-forwarded-for") || first || "unknown";
 }
 // the IP hash is salted (an unsalted hash of an IPv4 is reversible) and bucketed so join/preview and sign-up never share a counter
 const SALT = await sha256("household-ip:" + SVC);

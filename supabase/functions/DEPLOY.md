@@ -23,3 +23,6 @@ Double submit of the join form: the invite is claimed atomically (`join_househol
 ## Follow-ups (Developer 2 review of 0ee937e)
 - Rate limits: the global 300/hour join and preview backstops fail closed, so a determined caller can burn the budget with garbage and block real joins for that hour. Once the logged-headers run shows a trustworthy client-IP header, make the per-IP limit the primary control and raise or drop the global one.
 - A claim abandoned by a crashed function blocks retries for 2 minutes. The Join page error text must say "try again in a minute".
+
+## E2 result (staging, real run)
+Header-echo run with and without a forged `X-Forwarded-For: 203.0.113.9`: the forged value did not appear; `cf-connecting-ip` and `sb-forwarded-for` carry the real client address (identical), `x-forwarded-for` is "client, client, edge-proxy". `clientIp()` uses `cf-connecting-ip`, then `sb-forwarded-for`, then the first `x-forwarded-for` entry. Per-IP limits are now meaningful, but the global backstops stay (shared addresses, IPv6 rotation). The `debug-headers` function is an inert stub on staging: delete it in the dashboard (Edge Functions) when convenient; `supabase/functions/debug-headers` is removed from the repo.

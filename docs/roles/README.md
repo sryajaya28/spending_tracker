@@ -44,7 +44,7 @@ Read ONLY this. `context.md` and `learning.md` are read by section: search the h
 | Role | Session id |
 |---|---|
 | Full-stack engineer | session_01JJfLhrQSd1XVht9Kuu2E5t |
-| Tech-Lead (integrator) | session_01JJfLhsnC5r5ZtEKaKwccW2 |
+| Tech-Lead (integrator, fresh session from 2026-11-05) | session_01JJfLhpN6BVJt5435nPyDvh (replaces session_01JJfLhsnC5r5ZtEKaKwccW2) |
 | Product Manager | session_01JJfLhsEphniXYziB3hR1sg |
 | Designer | session_01JJfLhsxXTKmJzUn51SEBrW |
 | QA | session_01JJfLhprXxKbPwErGNHC3SK |

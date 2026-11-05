@@ -62,7 +62,7 @@ People need income, spending, investments, debt, money lent and several currenci
 
 | Metric | Definition | Initial target |
 |---|---|---|
-| **Activation (headline)** | Share of new users who, within their first 7 days, set up at least **two kinds of things beyond spending**: an investment, a loan, money lent, or an account in a second currency | Above 40% |
+| **Activation (headline)** | Share of new users who, within their first 7 days, set up at least **two kinds of things beyond spending**: an investment, a loan, money lent, or an account in a second currency | Above 25% |
 
 If it is high, the thesis holds. If almost everyone only logs expenses, we have built a budgeting app with extras, which is just as valuable to know.
 

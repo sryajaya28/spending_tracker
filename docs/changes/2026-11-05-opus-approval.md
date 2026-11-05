@@ -1,0 +1,1 @@
+2026-11-05: **Opus review needs the owner's approval (owner request).** `docs/AGENTS.md` rules 9 and 15 and `docs/roles/pm.md`: before any Opus / different-model reviewer session starts, the Tech-Lead hands the PM a short case and cost; the PM posts a Workspace decision; no answer means normal review only. Docs only; branch `chore/opus-approval`.

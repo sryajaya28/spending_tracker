@@ -3,7 +3,7 @@
 // (markup, URLs and control characters stripped), the link is SITE_URL/join#t=<token> and nothing else, and no images or scripts (mail apps block them).
 
 // text that ends up in an email: markup, URL-like text and control characters stripped, length limited (E14)
-export const cleanName = (s: unknown, max = 40) => String(s ?? "").replace(/<[^>]*>/g, "").replace(/(https?:\/\/|www\.)\S+/gi, "").replace(/[\u0000-\u001f<>&"']/g, "").trim().slice(0, max);
+export const cleanName = (s: unknown, max = 40) => String(s ?? "").replace(/<[^>]*>/g, "").replace(/(https?:\/\/|www\.)\S+/gi, "").replace(/[\u0000-\u001f\u2028\u2029\u200e\u200f\u202a-\u202e\u2066-\u2069<>&"']/g, "").trim().slice(0, max);
 
 type Lang = "en" | "id";
 const COPY = {
@@ -26,7 +26,7 @@ const COPY = {
     h1: "Anda diundang 🎉",
     intro: (who: string) => `${who} mengajak Anda bergabung di rumah tangganya di Stiver, tempat keuangan semua orang tetap satu halaman.`,
     editor: "✏️ Anda bergabung sebagai Editor: tambah dan ubah catatan bersama-sama.",
-    viewer: "👀 Anda bergabung sebagai Pembaca: boleh melihat-lihat, tanpa mengubah.",
+    viewer: "👀 Anda bergabung sebagai Pelihat: boleh melihat-lihat, tanpa mengubah.",
     see: "Anda akan melihat semua data rumah tangga.",
     cta: "Gabung ke rumah tangga →",
     nextH: "Langkah berikutnya",
@@ -35,7 +35,15 @@ const COPY = {
   },
 } as const;
 
+// The subject is the first thing a stranger reads. A display name is free text, so a name that could pass for Stiver itself ("Stiver Security", "Support",
+// "Admin", "Team") is replaced in the subject by the inviter's email; the body always shows the email first anyway.
+const LOOKS_OFFICIAL = /stiver|support|security|admin|team|official|help|no-?reply|invite/i;
+export const subjectName = (name: string, email: string) => (name && !LOOKS_OFFICIAL.test(name) ? name : email);
+
+const TOKEN_RE = /^[A-Za-z0-9_-]{20,64}$/;
+
 export function buildInviteEmail(o: { inviterName: string; inviterEmail: string; role: string; token: string; lang: string; siteUrl: string }): { subject: string; html: string; text: string } {
+  if (!TOKEN_RE.test(o.token)) throw new Error("invite token has an unexpected shape");   // it goes unescaped into the link: only base64url from the server
   const c = COPY[(o.lang === "id" ? "id" : "en") as Lang], link = `${o.siteUrl}/join#t=${o.token}`;
   const name = cleanName(o.inviterName), email = cleanName(o.inviterEmail, 80), role = o.role === "editor" ? c.editor : c.viewer;
   const who = name ? `${email} (${name})` : email;
@@ -56,5 +64,5 @@ export function buildInviteEmail(o: { inviterName: string; inviterEmail: string;
 <p style="color:#6b6f8f;font-size:12.5px;line-height:1.5;margin:16px 4px 0">${c.note}</p>
 </div></body></html>`;
   const text = [c.h1, "", c.intro(who), "", role, c.see, "", `${c.cta.replace(" →", "")}: ${link}`, "", c.nextH, ...c.steps.map((s, i) => `${i + 1}. ${s}`), "", c.note].join("\n");
-  return { subject: c.subject(name), html, text };
+  return { subject: c.subject(subjectName(name, email)), html, text };
 }

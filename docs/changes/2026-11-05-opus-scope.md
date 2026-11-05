@@ -1,0 +1,1 @@
+2026-11-05: **Opus review only for big features (owner request).** `docs/AGENTS.md` rules 9 and 15: the different-model (Opus) review is used only for a big feature or a major authentication/database change; small changes, even in those areas, get normal peer review and QA. Docs only; branch `chore/opus-scope`.

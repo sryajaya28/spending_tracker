@@ -215,6 +215,12 @@ begin
     select e.invited_user_id from e where e.invited_user_id is not null and public.can_delete_invited_user(e.invited_user_id);
 end $$;
 
+-- does an account with this address exist? (signup-gate: one generic answer for fresh / existing / pending-invite addresses)
+create or replace function public.email_exists(p_email text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from auth.users u where lower(u.email) = lower(p_email))
+$$;
+
 -- all sessions of a user end (sessions and, by foreign key, their refresh tokens): used at join (design 5.2 step 6)
 create or replace function public.delete_user_sessions(p_user uuid) returns void
 language sql security definer set search_path = '' as $$
@@ -295,9 +301,9 @@ revoke execute on function public.household_profile(), public.household_people()
   public.household_detach(uuid, uuid), public.remove_member(uuid), public.leave_household(),
   public.create_invite(uuid, text, text, text, timestamptz), public.resend_invite(uuid, uuid, text, timestamptz),
   public.can_delete_invited_user(uuid), public.can_delete_invited_user_rows(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(),
-  public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text), public.household_owner_deleting() from public, anon, authenticated;
+  public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text), public.household_owner_deleting(), public.email_exists(text) from public, anon, authenticated;
 grant execute on function public.household_profile(), public.household_people(), public.set_member_role(uuid, text),
   public.remove_member(uuid), public.leave_household() to authenticated;
 grant execute on function public.create_invite(uuid, text, text, text, timestamptz), public.resend_invite(uuid, uuid, text, timestamptz),
   public.can_delete_invited_user(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(),
-  public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text) to service_role;
+  public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text), public.email_exists(text) to service_role;

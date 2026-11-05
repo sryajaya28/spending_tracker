@@ -54,26 +54,45 @@ Live at https://stiver.io with early users. Next up: household access, then hard
 
 ## Success metrics
 
-How we know Stiver is working. Measured in PostHog (EU); the event names are in `docs/ANALYTICS.md` (`expense_recorded`, `income_recorded`). A user is "active" only when they **record a transaction**, not when they merely open the app.
+How we know Stiver is working. Measured in PostHog (EU); event names are in `docs/ANALYTICS.md`. Everything below excludes the team's own accounts, test accounts, staging traffic and sample-data mode. **The targets are initial hypotheses, set before launch data exists, and will be revised after we have a baseline.**
 
-| Metric | Definition | Status |
+### The thesis: one place for everything
+
+People need income, spending, investments, debt, money lent and several currencies **in one place**. The headline metric tests that, not just activity.
+
+| Metric | Definition | Initial target |
 |---|---|---|
-| **DAU** | Distinct users who record at least one transaction on a given day | Now |
-| **WAU** | Distinct users who record at least one transaction in a 7-day window | Now |
-| **Churned users** | Users who recorded transactions before and have recorded none for 7 days | Now |
-| **Paid conversion** | Subscribed users divided by active users, and divided by registered users | Later: once a payment gateway (Xendit for Indonesia, Stripe for international customers) is integrated |
+| **Activation (headline)** | Share of new users who, within their first 7 days, set up at least **two kinds of things beyond spending**: an investment, a loan, money lent, or an account in a second currency | Above 40% |
 
-DAU/WAU shows the habit (a finance tracker only works if entries keep coming); churn shows where it breaks; paid conversion comes only when there is something to pay for. Targets will be set after we have a baseline from real usage.
+If it is high, the thesis holds. If almost everyone only logs expenses, we have built a budgeting app with extras, which is just as valuable to know.
 
-### Performance metrics
+### Engagement and retention
 
-| Metric | What it measures | Notes |
+| Metric | Definition | Initial target |
 |---|---|---|
-| **Data freshness** | Time from submitting a transaction until it is saved and visible, on this device and (with household access) on another person's device | Household v1 target: other members see a change within about 30 seconds or when they return to the app |
-| **App speed** | How fast the app loads and responds: load time, and time from tapping save to the confirmation | Measured on phone-size screens, the main way it is used |
-| **Save reliability** (proposed) | Share of saves that succeed without an error or reload | A failed save is the worst thing a money app can do |
-| **Price freshness** (proposed) | Age of the live prices and exchange rates used in net worth | Net worth is only as good as its latest prices |
-| **Recurring accuracy** (proposed) | Recurring entries created on the right day without duplicates | They are created when the app is opened |
+| **WAU** (lead) | Distinct users who record at least one transaction in a 7-day window | Tracked weekly |
+| **Stickiness** | WAU divided by MAU | Tracked monthly |
+| **DAU** (secondary) | Distinct users who record at least one transaction on a day; many people log in batches every few days | Tracked |
+| **Cohort retention** | Share of each week's sign-ups still active in week 1, week 4 and week 8 | Week 4 above 25% |
+| **Churned users** | Users with no record for 30 days, counted **from their last record**: a transaction or an account change (balance, new account) | Reported by cohort |
+
+Tuning notes: a person can check net worth or budgets without recording anything, so the headline engagement metric is WAU, not DAU; a 7-day churn window would wrongly count someone who logs every Sunday and skips a week.
+
+### Revenue (later)
+
+Paid conversion: subscribed users divided by active users. Starts when pricing and a payment gateway exist (Xendit for Indonesia, Stripe for international customers).
+
+### Performance (guardrail metrics)
+
+These must stay healthy while the product metrics grow.
+
+| Metric | What it measures | Initial target |
+|---|---|---|
+| **Data freshness** | Time from submitting a transaction until it is saved and visible, here and on another household member's device | Other members see a change within about 30 seconds or when they return to the app |
+| **App speed** | Load time and time from tapping save to confirmation, tested on a mid-range Android phone over 4G (Android dominates Indonesia) as well as iPhone | Load under about 3 seconds |
+| **Save reliability** | Share of saves that succeed without an error or reload | 99.9% or higher |
+| **Price freshness** | Age of live prices and exchange rates used in net worth | No older than 15 minutes during market hours |
+| **Recurring accuracy** | Recurring entries created on the right day | Zero missed or duplicated entries |
 
 ## Deliberately not building (yet)
 

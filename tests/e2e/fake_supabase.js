@@ -18,7 +18,7 @@
   window.__seedNewUser();
   class Q {
     constructor(t) { this.t = t; this.op = 'select'; this.f = []; }
-    select() { return this; } order() { return this; } range(a, b) { this.r = [a, b]; return this; } single() { this.one = true; return this; }
+    select() { return this; } order() { return this; } range(a, b) { this.r = [a, b]; return this; } single() { this.one = true; return this; } maybeSingle() { this.one = true; return this; }
     eq(k, v) { this.f.push((r) => r[k] === v); this.fl = (this.fl || []).concat([[k, v]]); return this; }
     in(k, vs) { this.f.push((r) => vs.includes(r[k])); this.fl = (this.fl || []).concat([[k, vs]]); return this; }
     upsert(rows, o) { this.op = 'upsert'; this.rows = rows; this.o = o || {}; return this; }

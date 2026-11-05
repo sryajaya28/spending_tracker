@@ -21,6 +21,7 @@ jobs:
         id: tier
         run: |
           node tests/path_tier.test.js
+          node tests/invite_email.test.mjs
           node tools/path_tier.js origin/${{ github.base_ref }} HEAD
           echo "tier=$(node tools/path_tier.js origin/${{ github.base_ref }} HEAD --json | node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(0,"utf8")).tier))')" >> "$GITHUB_OUTPUT"
       - name: label the PR with its minimum tier

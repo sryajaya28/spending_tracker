@@ -1,0 +1,38 @@
+do $$ begin create role anon nologin; exception when duplicate_object then null; end $$; do $$ begin create role authenticated nologin; exception when duplicate_object then null; end $$; do $$ begin create role service_role nologin bypassrls; exception when duplicate_object then null; end $$;
+create extension if not exists pgcrypto; create extension if not exists citext;
+create schema auth; create schema extensions;
+create table auth.users (id uuid primary key default gen_random_uuid(), email text, encrypted_password text, raw_user_meta_data jsonb default '{}', raw_app_meta_data jsonb default '{}', email_confirmed_at timestamptz, created_at timestamptz default now(), is_anonymous boolean default false);
+create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users(id) on delete cascade, created_at timestamptz default now(), not_after timestamptz);
+create table auth.refresh_tokens (id bigserial primary key, user_id text, session_id uuid references auth.sessions(id) on delete cascade);
+create table auth.identities (id uuid primary key default gen_random_uuid(), user_id uuid references auth.users(id) on delete cascade);
+create table auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid references auth.users(id) on delete cascade, status text);
+create function auth.uid() returns uuid language sql stable as $$ select (nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub')::uuid $$;
+create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb $$;
+create function auth.role() returns text language sql stable as $$ select auth.jwt() ->> 'role' $$;
+grant usage on schema auth, extensions to anon, authenticated, service_role;
+grant usage on schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+-- minimal pgTAP shim (invoker functions, so role switches inside tests still apply)
+create schema tap; 
+create function plan(int) returns text language sql as $$ select '1..'||$1 $$;
+create function ok(boolean, text default '') returns text language plpgsql as $$ begin if $1 is true then raise notice 'ok - %', $2; return 'ok'; else raise notice 'NOT OK - %', $2; return 'not ok'; end if; end $$;
+create function is(anyelement, anyelement, text default '') returns text language plpgsql as $$ begin if $1 is not distinct from $2 then raise notice 'ok - %', $3; return 'ok'; else raise notice 'NOT OK - % (got %, want %)', $3, $1, $2; return 'not ok'; end if; end $$;
+create function cmp_ok(anyelement, text, anyelement, text default '') returns text language plpgsql as $$ declare r boolean; begin execute format('select $1 %s $2', $2) into r using $1, $3; return ok(r, $4); end $$;
+create function lives_ok(text, text default '') returns text language plpgsql as $$ begin execute $1; raise notice 'ok - %', $2; return 'ok'; exception when others then raise notice 'NOT OK - % (threw % %)', $2, sqlstate, sqlerrm; return 'not ok'; end $$;
+create function throws_ok(text, text, text, text default '') returns text language plpgsql as $$ begin execute $1; raise notice 'NOT OK - % (did not throw)', $4; return 'not ok';
+ exception when others then if sqlstate = $2 and sqlerrm = $3 then raise notice 'ok - %', $4; return 'ok'; else raise notice 'NOT OK - % (got % "%", want % "%")', $4, sqlstate, sqlerrm, $2, $3; return 'not ok'; end if; end $$;
+create function col_is_null(text, text, text, text default '') returns text language plpgsql as $$ declare n boolean; begin select not a.attnotnull into n from pg_attribute a where a.attrelid = format('%I.%I', $1, $2)::regclass and a.attname = $3; return ok(coalesce(n, false), $4); end $$;
+create function finish() returns setof text language sql as $$ select 'done'::text $$;
+grant usage on schema tap to public; grant execute on all functions in schema public to public;
+create schema storage;
+create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects (id uuid default gen_random_uuid() primary key, bucket_id text, name text, owner uuid);
+alter table storage.objects enable row level security;
+create function storage.foldername(name text) returns text[] language sql as $$ select string_to_array(name, '/') $$;
+-- columns that the household functions read from auth tables (added after the first local run)
+alter table auth.users add column if not exists email_change text default '', add column if not exists phone text, add column if not exists phone_change text default '', add column if not exists banned_until timestamptz;
+alter table auth.identities add column if not exists provider text default 'email';
+alter table auth.mfa_factors add column if not exists factor_type text, add column if not exists created_at timestamptz default now(), add column if not exists updated_at timestamptz default now();
+create or replace function throws_ok(text, text, text, text default '') returns text language plpgsql as $$ begin execute $1; raise notice 'NOT OK - % (did not throw)', $4; return 'not ok'; exception when others then if ($2 is null or sqlstate = $2) and ($3 is null or sqlerrm = $3) then raise notice 'ok - %', $4; return 'ok'; else raise notice 'NOT OK - % (got % "%", want % "%")', $4, sqlstate, sqlerrm, $2, $3; return 'not ok'; end if; end $$;

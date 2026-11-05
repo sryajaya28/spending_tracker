@@ -982,3 +982,23 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .pw-wrap input { padding-right: 46px; }
 .pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; display: grid; place-items: center; background: none; border: 0; color: var(--muted); cursor: pointer; border-radius: 10px; }
 .pw-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* household card (Figma frames 1-4) */
+.hh-intro { margin: 0 0 6px; }
+.hh-row.tap { cursor: pointer; }
+.hh-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.hh-who .avatar { width: 32px; height: 32px; font-size: 13px; flex: 0 0 auto; }
+.hh-who .avatar.pending { background: var(--line); color: var(--muted); }
+.hh-who > div { min-width: 0; }
+.hh-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.hh-pend-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 6px 0 4px; }
+.hh-invite { width: 100%; margin-top: 12px; }
+.hh-foot { display: block; margin-top: 10px; }
+
+/* join page (Figma frames 5, 6) */
+.join-head { display: flex; justify-content: space-between; align-items: center; margin: 0 0 14px; width: min(440px, 100%); gap: 12px; }
+.join-lang { display: flex; gap: 6px; }
+.join-lang .chip.on { background: var(--brand); color: #fff; }
+.join-card { display: flex; flex-direction: column; gap: 14px; }
+
+.hh-who-line { font-size: 13px; margin: 4px 0 10px; }

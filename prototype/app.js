@@ -759,7 +759,7 @@ function archivedWallets() {
   const open = state.ui.archOpen;
   return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>${__('Archived accounts ({n})', { n: list.length })}</b></button>
     ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
-      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small></div>
+      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small>${byLine(w)}</div>
         <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">${__('Restore')}</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">${__('Delete')}</button></div></div>`; }).join('') : ''}</div>`;
 }
 /* every list on Portfolio is sorted from the highest amount (compared in one currency) */
@@ -791,7 +791,7 @@ function loanCard(l, vc, kind = 'loan') {
   const planText = plan ? `<b>${shown(plan.amount)}</b> ${wk ? __('every week') : __('every month')}` : '';
   const leftText = left ? (wk ? (left === 1 ? __('1 week left') : __('{n} weeks left', { n: left })) : (left === 1 ? __('1 month left') : __('{n} months left', { n: left }))) : '';
   const debtMeta = l.rate ? `${l.rate}% ${l.flat ? __('flat') : 'APR'}` : '';
-  return `<section class="card${leftText ? ' has-tab' : ''}">${leftText ? `<span class="loan-tab">${leftText}</span>` : ''}<div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>
+  return `<section class="card${leftText ? ' has-tab' : ''}">${leftText ? `<span class="loan-tab">${leftText}</span>` : ''}<div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>${byLine(l)}
       <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn secondary" data-act="history-${kind}" data-id="${l.id}">${__('Details')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
     ${lent ? `<div class="bar"><i style="width:${pct}%;background:#1fa971"></i></div>
@@ -817,7 +817,7 @@ function viewAsset(h) {
 /* flags for the currency lists (emoji: they show in the list, the chosen value stays the plain code) */
 const CCY_FLAG = { IDR: '🇮🇩', USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', SGD: '🇸🇬', AUD: '🇦🇺', JPY: '🇯🇵', HKD: '🇭🇰', CNY: '🇨🇳', INR: '🇮🇳', PHP: '🇵🇭' };
 const flagLabel = (c) => (CCY_FLAG[c] ? `${CCY_FLAG[c]}  ${c}` : c);
-const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>`;
+const heroCurrency = (base) => `<label class="hero-cur"><select data-setting="currency" ${hhLocked()} aria-label="${__('Preferred currency')}">${Object.keys(RATES).map((c) => `<option ${c === base ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label>`;
 /* realized profit and loss from selling assets, one entry per sale (computed from the trades, so sales made before the separate profit/loss records existed are included;
    assets whose cost is unknown are left out). Amounts are in the reporting currency. */
 function realizedPnl() {
@@ -912,7 +912,7 @@ function viewPortfolio() {
       ${pnlSection(rm, vc)}
       <div class="stack" style="margin-top:20px">${[...activeAccounts()].sort(byValue((a) => portfolioUSD(months[5], a.id))).map((a) => {
         const hs = [...holdingsOf(a.id)].sort(byValue((h) => holdingUSD(h, months[5]))), total = portfolioUSD(months[5], a.id);
-        return `<section class="card"><div class="card-head acct-head"><div><h2>${esc(a.name)}</h2><div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
+        return `<section class="card"><div class="card-head acct-head"><div><h2>${esc(a.name)}</h2>${byLine(a)}<div class="big num" style="font-size:26px;margin-top:4px">${m(total)}</div></div>
           <div class="tools"><button class="btn secondary" data-act="edit-account" data-id="${a.id}">${__('Edit')}</button><button class="btn secondary" data-act="add-holding" data-account="${a.id}" data-type="cash">${__('+ Cash')}</button><button class="btn" data-act="add-holding" data-account="${a.id}">${__('+ Asset')}</button></div></div>
           <div class="list">${hs.map((h) => holdingRow(h, vc, total)).join('') || ('<div class="empty">' + __('No assets yet. Add one to start tracking.') + '</div>')}</div></section>`;
       }).join('')}</div>`;
@@ -1318,7 +1318,7 @@ function txnRow(t) {
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
     <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
-    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}</div></div>
+    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}${hhMulti() && t.by ? ` · ${esc(hhName(t.by) || '')}` : ''}${hhMulti() && Cloud.household.role === 'editor' && !canEditRec(t) ? ` · ${__('read-only')}` : ''}</div></div>
     <div class="amt-col"><div class="amt num ${t.type}">${sign}${coinOf(t) ? coinAmount(coinOf(t), t.amount_minor) : money(t.amount_minor, t.currency)}</div><div class="sub">${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
 }
 function filteredTxns(upcoming = false) {
@@ -1467,12 +1467,13 @@ function viewSettings() {
   ${recurringCard()}
   <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
     <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
-    <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></div></div>
-    <div class="form-row"><div>${__('Budget period starts on')}</div><div class="field"><select data-setting="period" aria-label="${__('Budget period starts on')}">${Array.from({ length: 28 }, (_, n) => `<option value="${n + 1}" ${n + 1 === periodDay() ? 'selected' : ''}>${n === 0 ? __('Day 1 (calendar month)') : __('Day {n}', { n: n + 1 })}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" ${hhLocked()} aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></div></div>
+    <div class="form-row"><div>${__('Budget period starts on')}</div><div class="field"><select data-setting="period" ${hhLocked()} aria-label="${__('Budget period starts on')}">${Array.from({ length: 28 }, (_, n) => `<option value="${n + 1}" ${n + 1 === periodDay() ? 'selected' : ''}>${n === 0 ? __('Day 1 (calendar month)') : __('Day {n}', { n: n + 1 })}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Language')}</div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Appearance')}</div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div></section>
   <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
     <div class="form-row"><div>${__('AI category suggestions')}</div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
+  ${householdCard()}
   <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
     <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div>
     <div class="form-row"><div>${__('Sign out')}</div><button class="btn secondary" data-act="signout">${__('Sign out')}</button></div>
@@ -1645,7 +1646,7 @@ function viewAuth() {
     ${pwField(__('New password'), `required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"`)}
     <button class="btn lg" type="submit">${__('Save password')}</button></form>`;
   else if (v === 'sent') body = `<div class="card">${logo}
-    <div><h2 style="font-size:24px">${__('Check your email')}</h2><p class="muted">${__('We sent a link to {email}. Open it to confirm your address, then sign in. If you already have an account, just sign in.', { email: '<b>' + esc(a.email) + '</b>' })}</p></div>
+    <div><h2 style="font-size:24px">${__('Check your email')}</h2><p class="muted">${__('We sent a link to {email}. Open it to confirm your address, then sign in. If you already have an account, just sign in.', { email: '<b>' + esc(a.email) + '</b>' })}</p><p class="muted" data-invite-hint>${__('If you were invited to a household, use the link in your invite email.')}</p></div>
     ${authMsg(a)}<p class="hint" role="status">${__('Waiting for you to confirm. Open the link on any device, and this page signs you in on its own.')}</p>
     ${captchaBox()}<button class="btn lg" data-act="auth-check">${__('I\'ve confirmed my email')}</button><button class="btn secondary lg" data-act="auth-resend">${__('Resend the email')}</button>
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></div>`;
@@ -1669,14 +1670,192 @@ const viewSplash = (msg) => `<div class="onboard"><div class="splash" role="stat
   <div class="splash-msg"><span>${esc(__(msg))}</span><span>${__('Counting your coins…')}</span><span>${__('Lining up your budgets…')}</span><span>${__('Almost there…')}</span></div>
   <div class="splash-bar"><i></i></div></div></div>`;
 
+/* ---------- household (design 7, 16): who may write, what to say when the database refuses, the page for people without access ---------- */
+const canWrite = () => !!state.real || Cloud.canWrite();   // sample data is local only, so anyone may play with it
+const WRITE_ACT = /^(add-|edit-|delete-(?!my-login)|archive-|unarchive-|restore-|rec-del$|rec-toggle$|rec-manage$|transfer$|transfer-dialog$|invest$|trade$|set-cost$|manual-asset$|loan-payment$|lent-repayment$|quick-cat-add$|remove-sample$|congrats-add$|pick-asset$|shot-del$)/;
+const hhFirst = (id) => { const p = (Cloud.household.people || []).find((x) => x.user_id === id || x.member_id === id); return p ? String(p.display_name || '').trim().split(/\s+/)[0] : ''; };
+const viewNoAccess = () => `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
+  <h1>${__('You no longer have access')}</h1><p class="muted">${__("You no longer have access to this household. Your earlier entries stay in it under your name.")}</p>
+  <button class="btn secondary lg" data-act="signout">${__('Sign out')}</button>
+  <button class="btn danger lg" data-act="delete-my-login">${__('Delete my login')}</button></div></div>`;
+/* the error contract (Cloud.classify): tell the person what happened in words, then show the server's truth again */
+let hhLastDel = '';   // name of the item the person last deleted, so a database guard can say which one it refused
+function householdSaveError(err) {
+  const c = Cloud.classify(err);
+  if (c.kind === 'stale') return __('Someone else changed this just now. Please check it and redo your change.');
+  if (c.kind === 'gone') return __('Someone else already deleted this. Showing the latest.');
+  if (c.kind === 'guard') return hhLastDel ? __("Can't delete '{name}'. '{name}' holds {n} transactions added by others. Ask the owner.", { name: hhLastDel, n: c.n }) : __("Can't delete this: it is used by {n} entries added by others. Ask the owner.", { n: c.n });
+  if (c.kind === 'rls') return Cloud.household.role === 'editor' ? __('Only the person who added this, or the owner, can change it.') : __('Your access changed.');
+  return '';
+}
+/* refresh when someone else changed the household: every 30 s while the page is visible, and when you come back to it */
+let hhTimer = null, hhSeen = false;   // hhSeen: the first load of this session has happened, so a later difference in role is news
+async function hhRefresh() {
+  if (!state.data || state.real || document.hidden || !Cloud.household.hasMembers) return;
+  try { if (await Cloud.pollChanged()) loadUserData(); } catch { /* offline: try again next time */ }
+}
+function hhStartPolling() { if (hhTimer) clearInterval(hhTimer); hhTimer = setInterval(hhRefresh, 30000); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) hhRefresh(); });
+
+/* ---------- Settings > Household (Figma frames 1-4, 24): members, pending invites, invite dialog, role/remove/leave ---------- */
+const hhState = { invites: [] };
+const HH_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, HH_CAP = 5;
+const roleLabel = (r) => ({ owner: __('Owner'), editor: __('Editor'), viewer: __('Viewer') }[r] || r);
+const hhShort = (iso) => new Date(iso).toLocaleDateString(LANG === 'id' ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short' });
+const hhLocked = () => (Cloud.household.status === 'member' ? 'disabled title="' + __('Set by the household owner') + '"' : '');   // currency and period day belong to the owner
+const hhPeople = () => (Cloud.household.people || []).filter((p) => !p.former);
+const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+/* who did it (PRD 22-26, 33-37): labels only show when the household has other people; a removed member's entries keep their name */
+const hhMulti = () => !state.real && Cloud.household.hasMembers;
+/* in a household a delete names what goes (PRD 27): other people can see and rely on it */
+const hhOk = (name) => { hhLastDel = name; return !hhMulti() || confirm(__('Delete "{name}"? This can\'t be undone.', { name })) };
+const byLine = (r) => (hhMulti() && r && r.by ? `<small class="muted hh-by">${whoLine(r).replace('<br>', ' · ')}</small>` : '');
+const hhName = (id) => { const x = (Cloud.household.people || []).find((p) => p.user_id === id); return hhFirstName(x && x.display_name) || ''; };
+const hhWhen = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+/* an Editor changes only what they created; the owner changes everything; a Viewer nothing. A row not yet saved has no creator and is the viewer-of-it's own. */
+const canEditRec = (r) => state.real || Cloud.household.status === 'owner' || (Cloud.canWrite() && (!r.by || r.by === state.auth.uid));
+const whoLine = (r) => (r.by ? __('Added by {name}, {when}', { name: esc(hhName(r.by) || '?'), when: r.created_at ? esc(hhWhen(r.created_at)) : '' }).replace(/, $/, '') : '') + (r.edBy ? '<br>' + __('Edited by {name}, {when}', { name: esc(hhName(r.edBy) || '?'), when: esc(hhWhen(r.edAt)) }) : '');
+function txnReadDialog(t) {
+  const c = catOf(t.category_id), row = (k, v) => (v ? `<div class="form-row"><div>${k}</div><b>${v}</b></div>` : '');
+  open(`<h2>${esc(t.note || c?.name || __('Transaction'))}</h2>
+    ${row(__('Amount'), `<span class="num">${t.type === 'income' ? '+' : '−'}${money(t.amount_minor, t.currency)}</span>`)}${row(__('Category'), esc(c ? c.name : __('No category')))}${row(__('Account'), esc(txnWhere(t)))}${row(__('Date'), esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })))}${row(__('Note'), esc(t.note || ''))}
+    ${hhMulti() ? `<p class="muted hh-who-line">${whoLine(t)}</p>` : ''}
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
+}
+async function hhLoadInvites() {
+  if (Cloud.household.status !== 'owner' || state.real || !Cloud.configured) { hhState.invites = []; return; }
+  try { hhState.invites = await Cloud.listInvites(); } catch { hhState.invites = []; }
+  if (route() === 'settings') render();
+}
+function householdCard() {
+  if (state.real || !Cloud.configured || !state.auth.uid) return '';
+  const h = Cloud.household, me = state.auth.uid, isOwner = h.status === 'owner', live = hhPeople();
+  const list = live.length ? live : [{ user_id: me, display_name: D().profile.name, role: 'owner', email: state.auth.email }];
+  const pending = isOwner ? hhState.invites : [], full = list.length + pending.length >= HH_CAP;
+  const ownerP = list.find((x) => x.role === 'owner'), ownerFirst = hhFirstName(ownerP && ownerP.display_name) || __('The owner');
+  const initial = (x) => esc((String(x || '?').trim()[0] || '?').toUpperCase());
+  const row = (x) => `<div class="form-row hh-row${isOwner && x.role !== 'owner' ? ' tap' : ''}" ${isOwner && x.role !== 'owner' ? `data-act="hh-member" data-id="${x.user_id}" tabindex="0" role="button"` : ''}>
+    <div class="hh-who"><span class="avatar" aria-hidden="true">${initial(x.display_name || x.email)}</span><div><span class="hh-name">${esc(x.display_name || (x.email || '').split('@')[0])}${x.user_id === me ? ' ' + __('(you)') : ''}</span><small>${esc(x.email || '')}</small></div></div><span class="badge">${roleLabel(x.role)}</span></div>`;
+  const pend = (i) => `<div class="form-row hh-row"><div class="hh-who"><span class="avatar pending" aria-hidden="true">✉</span><div><span class="hh-name">${esc(i.email)}</span><small>${__('Invited {date} · as {role}', { date: hhShort(i.created_at), role: roleLabel(i.role) })}</small></div></div><span class="badge warning">${__('Pending')}</span></div>
+    <div class="hh-pend-actions"><button class="btn secondary" data-act="hh-resend" data-id="${i.id}">${__('Resend')}</button><button class="btn secondary" data-act="hh-revoke" data-id="${i.id}">${__('Revoke')}</button></div>`;
+  const intro = isOwner ? __('Everyone here sees the same accounts and transactions.') : h.role === 'editor' ? __('{owner} manages this household. You can add and change entries, but not household settings or people.', { owner: ownerFirst }) : __('{owner} manages this household. You can see everything but not change it.', { owner: ownerFirst });
+  return `<section class="card hh-card"><div class="card-head"><h2>${__('Household')}</h2><span class="badge">${roleLabel(h.status === 'member' ? h.role : 'owner')}</span></div>
+    <p class="muted hh-intro">${intro}</p>${list.map(row).join('')}${pending.map(pend).join('')}
+    ${isOwner ? `<button class="btn lg hh-invite" data-act="hh-invite" ${full ? 'disabled' : ''}>${__('Invite someone')}</button>${full ? `<small class="muted">${__('Household is full ({n})', { n: HH_CAP })}</small>` : ''}${live.length > 1 ? `<small class="muted hh-foot">${__('Tap a person to change their role or remove them.')}</small>` : ''}`
+      : `<button class="btn secondary lg hh-invite" data-act="hh-leave">${__('Leave household')}</button><small class="muted hh-foot">${__('Currency and period day are set by the owner, so they are read-only here.')}</small>`}</section>`;
+}
+function inviteDialog(prefill = '') {
+  open(`<h2>${__('Invite someone')}</h2><form data-form="invite" style="display:contents" novalidate>
+    <label class="field">${__('Email')}<input name="email" type="email" inputmode="email" autocomplete="off" autocapitalize="off" maxlength="254" required value="${esc(prefill)}"></label>
+    <p class="auth-err" id="inv-msg" role="alert" hidden></p>
+    <div class="field">${__('Role')}<div class="seg"><label><input type="radio" name="role" value="editor" checked>${__('Editor')}</label><label><input type="radio" name="role" value="viewer">${__('Viewer')}</label></div></div>
+    <small class="muted">${__('Editor: adds and changes everything except household settings. Viewer: sees everything, changes nothing.')}</small>
+    <p class="hint">${__('They will see all your data, including notes and the names of other members.')}</p>
+    <div class="actions" id="inv-actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button class="btn" type="submit" data-send>${__('Send invite')}</button></div></form>`);
+}
+function hhMsg(f, text, resendId) {
+  const m = $('#inv-msg', f); m.hidden = !text; m.textContent = text || '';
+  const a = $('#inv-actions', f), old = $('[data-act="hh-resend"]', a); if (old) old.remove();
+  if (resendId) a.insertAdjacentHTML('afterbegin', `<button type="button" class="btn secondary" data-act="hh-resend" data-id="${resendId}">${__('Resend')}</button>`);
+}
+async function hhInviteSubmit(f, v) {
+  const email = String(v.email || '').trim().toLowerCase(), role = v.role === 'viewer' ? 'viewer' : 'editor', btn = $('[data-send]', f);
+  if (!HH_EMAIL.test(email)) { hhMsg(f, __('Enter a valid email address.')); return; }
+  btn.disabled = true; btn.textContent = __('Sending…');
+  const r = await Cloud.inviteMember(email, role).catch(() => ({ error: 'network' }));
+  btn.disabled = false; btn.textContent = __('Send invite');
+  if (r && r.result === 'ok') { Analytics.track('invite_sent', { role }); close(); toast(__('Invite sent')); hhLoadInvites(); return; }
+  const mine = hhState.invites.find((i) => i.email === email);
+  hhMsg(f, r && r.result === 'cannot_invite' ? __("This email can't be invited. If they already use Stiver, they need to use a different email address.")
+    : r && r.result === 'already_invited' ? __('Already invited. Resend sends a fresh email and the old link stops working.')
+    : r && r.result === 'full' ? __('Household is full ({n}). Revoke a pending invite or remove someone to invite more.', { n: HH_CAP })
+    : r && r.result === 'rate_limited' ? __('Too many invites. Please try again later.')
+    : r && r.result === 'invalid' ? __('Enter a valid email address.') : __("Couldn't send the invite. Please try again."), r && r.result === 'already_invited' && mine ? mine.id : '');
+}
+async function hhInviteAction(act, id) {
+  const r = await Cloud.manageInvite(act, id).catch(() => ({ error: 'network' }));
+  if (r && r.result === 'ok') { Analytics.track(act === 'resend' ? 'invite_resent' : 'invite_revoked'); if (dlg().open) close(); toast(act === 'resend' ? __('Invite sent again') : __('Invite revoked')); hhLoadInvites(); return; }
+  toast(r && r.result === 'rate_limited' ? __('Too many invites. Please try again later.') : r && r.result === 'not_found' ? __('This invite no longer exists.') : __("Couldn't do that. Please try again."));
+  hhLoadInvites();
+}
+function memberDialog(id) {
+  const x = hhPeople().find((p) => p.user_id === id); if (!x || x.role === 'owner') return;
+  open(`<h2>${esc(x.display_name || x.email || '')}</h2><p class="muted">${esc(x.email || '')}</p>
+    <form data-form="member-role" data-id="${id}" style="display:contents"><div class="field">${__('Role')}<div class="seg"><label><input type="radio" name="role" value="editor" ${x.role === 'editor' ? 'checked' : ''}>${__('Editor')}</label><label><input type="radio" name="role" value="viewer" ${x.role === 'viewer' ? 'checked' : ''}>${__('Viewer')}</label></div></div>
+    <div class="actions"><button type="button" class="btn danger" data-act="hh-remove" data-id="${id}">${__('Remove')}</button><button class="btn" type="submit" data-send>${__('Save')}</button></div></form>`);
+}
+function hhConfirm(act, id, title, body, go) {
+  open(`<h2>${title}</h2><p class="muted">${body}</p><div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Cancel')}</button><button type="button" class="btn danger" data-act="${act}" data-id="${id || ''}">${go}</button></div>`);
+}
+async function hhDo(fn, ev, ok) {
+  try { await fn(); Analytics.track(ev); close(); toast(ok); loadUserData(); } catch (e) { toast(__("Couldn't do that. Please try again.")); }
+}
+
+/* ---------- Join page (Figma frames 5, 6): /join#t=<token>. The token lives only in memory; the fragment is removed from the address at once ---------- */
+let joinState = null;   // { status: 'loading' | 'ready' | 'invalid' | 'busy', token, owner, role, error }
+const joinBytesOk = (pw) => pw.length >= 8 && new TextEncoder().encode(pw).length <= 72;
+function joinBoot() {
+  if (location.pathname.replace(/\/$/, '') !== '/join') return;
+  const m = /(?:^#|&)t=([A-Za-z0-9_-]{20,64})/.exec(location.hash);
+  history.replaceState(null, '', '/join');   // the secret never stays in the address bar, history or a shared screenshot
+  joinState = { status: m ? 'loading' : 'invalid', token: m ? m[1] : '' };
+  render();
+  if (!m) return;
+  Cloud.joinPreview(joinState.token).then((r) => {
+    if (!joinState) return;
+    if (r && r.owner_name) Object.assign(joinState, { status: 'ready', owner: r.owner_name, role: r.role });
+    else joinState.status = 'invalid';
+    render();
+  }).catch(() => { if (joinState) { joinState.status = 'invalid'; render(); } });
+}
+function joinExit(to = '/') { joinState = null; history.replaceState(null, '', to); render(); }
+function viewJoin() {
+  const j = joinState, a = state.auth, who = hhFirstName(j.owner) || __('the owner');
+  const head = `<div class="join-head"><span class="logo"><img src="icon.svg" alt="">Stiver</span><span class="join-lang"><button type="button" class="chip${LANG === 'en' ? ' on' : ''}" data-act="join-lang" data-lang="en">EN</button><button type="button" class="chip${LANG === 'id' ? ' on' : ''}" data-act="join-lang" data-lang="id">ID</button></span></div>`;
+  const card = (inner) => `<div class="onboard">${head}<div class="card join-card">${inner}</div></div>`;
+  if (j.status === 'loading') return viewSplash('Checking your invitation…');
+  if (j.joining) return viewSplash('Joining the household…');
+  if (j.status === 'invalid') return card(`<h2>${__('This link no longer works')}</h2><p class="muted">${j.owner ? __('This invitation was already used or has expired. Ask {owner} to send a new one.', { owner: esc(who) }) : __('This invitation was already used or has expired. Ask the person who invited you to send a new one.')}</p><button class="btn lg" data-act="join-exit">${__('Go to Stiver')}</button>`);
+  if (a.status === 'in') return card(`<h2>${__('Sign out to join')}</h2><p class="muted">${__("You're signed in as {name}. Sign out to join {owner}'s household.", { name: esc(hhFirstName(D() && D().profile.name) || a.email || ''), owner: esc(who) })}</p><button class="btn lg" data-act="join-signout">${__('Sign out')}</button><button class="btn secondary lg" data-act="join-exit">${__('Stay signed in')}</button>`);
+  const legal = (href, t) => `<a href="${href}" target="_blank" rel="noopener">${__(t)}</a>`;
+  return card(`<form data-form="join" style="display:contents" novalidate><h2>${__("Join {owner}'s household", { owner: esc(who) })}</h2>
+    <p class="muted">${__('{owner} invited you to join their household as {role}.', { owner: esc(who), role: roleLabel(j.role) })}</p>
+    <label class="field">${__('Display name')}<input name="name" required maxlength="60" autocomplete="name" placeholder="${__('Ari Nolan')}"></label>
+    <label class="field">${__('Password')}<span class="pw-wrap"><input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"><button type="button" class="pw-toggle" data-act="toggle-password" aria-pressed="false" aria-label="${__('Show password')}">${icon('eye')}</button></span></label>
+    <label class="consent"><input type="checkbox" name="agree"><span>${__('I agree to the {privacy} and the {terms}', { privacy: legal('privacy.html', 'Privacy Policy'), terms: legal('terms.html', 'Terms of Service') })}</span></label>
+    <p class="auth-err" id="join-msg" role="alert" hidden></p>
+    <button class="btn lg" type="submit" data-send disabled>${__('Join household')}</button>
+    <p class="muted">${__('After joining you are signed in and see the same accounts and transactions as {owner}.', { owner: esc(who) })}</p></form>`);
+}
+function joinValidate(f) {
+  const v = Object.fromEntries(new FormData(f));
+  $('[data-send]', f).disabled = !(String(v.name || '').trim() && joinBytesOk(String(v.password || '')) && v.agree);
+}
+async function joinSubmit(f, v) {
+  const btn = $('[data-send]', f), msg = $('#join-msg', f), name = String(v.name || '').trim();
+  if (!name || !joinBytesOk(String(v.password || '')) || !v.agree) { joinValidate(f); return; }
+  btn.disabled = true; btn.textContent = __('Joining…'); msg.hidden = true;   // disabled after the first tap: one submit per attempt
+  joinState.joining = true;
+  const r = await Cloud.joinHousehold(joinState.token, String(v.password), name).catch(() => ({ error: 'network' }));
+  if (joinState) joinState.joining = false;
+  if (r && r.result === 'ok') { Analytics.track('invite_accepted', { role: joinState.role }); joinExit('/#/overview'); return; }
+  if (r && r.result === 'joined_sign_in') { joinState = null; history.replaceState(null, '', '/'); Object.assign(state.auth, { status: 'out', view: 'signin', notice: 'You joined the household. Sign in with your new password.', error: '' }); render(); return; }
+  const text = r && r.error === 'invalid_input' ? __('Check your name and password (8 to 72 characters).') : r && r.error === 'password_failed' ? __("Couldn't set your password. Please try again.")
+    : r && r._status === 409 ? __('This link is being used right now. Try again in a minute.') : r && r.error === 'network' ? __("Couldn't reach Stiver. Check your connection and try again.") : '';
+  if (!text) { joinState.status = 'invalid'; render(); return; }   // the link is dead (used, expired, revoked): one generic page
+  render(); const f2 = $('[data-form=join]'); if (f2) { const m2 = $('#join-msg', f2); m2.textContent = text; m2.hidden = false; f2.elements.name.value = name; }
+}
+
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
   const a = state.auth;
+  if (joinState) { app.innerHTML = viewJoin(); return; }   // /join works signed out, and signed in as someone else
   if (a.status === 'loading') { app.innerHTML = viewSplash('Waking up Stiver…'); return; }
   if (a.status === 'out' && a.view === 'landing') { app.innerHTML = viewLanding(); return; }
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
+  if (!D() && a.noAccess) { app.innerHTML = viewNoAccess(); return; }
   if (!D()) {
     app.innerHTML = a.loadError
       ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="auth-err" role="alert">${__("Couldn't load your data: {error}", { error: esc(a.loadError) })}</p><button class="btn lg" data-act="retry-load">${__('Try again')}</button><button class="btn secondary lg" data-act="signout">${__('Sign out')}</button></div></div>`
@@ -1913,7 +2092,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
   const tcoin = coinOf(t);
   const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = tcoin ? 'any' : expOf(c) ? '0.01' : '1';
   const unit = tcoin ? assetInfo(tcoin.symbol).symbol : c;
-  open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
+  open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>${t && hhMulti() && t.by ? `<p class="muted hh-who-line">${whoLine(t)}</p>` : ''}
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
     <label class="field">${__('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? (t.loan_id ? 'l:' + t.loan_id : t.wallet_id) : (recallAcct(type, acctOptions(type, '')) || (ws.find((w) => w.currency === cur()) || ws[0]).id))}</select></label>
@@ -1937,7 +2116,7 @@ function budgetDialog(b, preset) {
   const used = new Set(D().budgets.map((x) => x.category_id));
   const opts = [{ id: '', name: '' }, ...catTree('expense').filter((c) => !c.parent_id).map((c) => ({ id: c.id }))];
   const pick = !b && preset === 'category' ? (opts.find((o) => o.id && !used.has(o.id)) || { id: '' }).id : '';   // the "By category" Add button starts on a category without a budget yet
-  open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2><form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
+  open(`<h2>${b ? __('Edit budget') : __('Add budget')}</h2>${b && hhMulti() && b.by ? `<p class="muted hh-who-line">${whoLine(b)}</p>` : ''}<form data-form="budget" data-id="${b?.id || ''}" style="display:contents">
     <label class="field">${__('Applies to')}<select name="category" data-search data-empty="${__('Category not found')}" data-prev="${b ? b.category_id || '' : pick}" ${b ? 'disabled' : ''}>${b ? budgetCatOptions(b.category_id || '', new Set(), false) : budgetCatOptions(pick, used)}</select></label>
     ${b ? '' : `<div class="quick-cat" hidden>
       <div class="two"><label class="field">${__('Name')}<input name="qc_name" maxlength="40" placeholder="${__('e.g. Gym, or Snacks')}" autocomplete="off"></label>
@@ -2563,7 +2742,7 @@ function linkFirstEntries() {
 }
 let relinked = false;   // runRecurring just repaired an upcoming entry (the screen needs a redraw)
 function runRecurring() {
-  const d = state.data; if (!d || state.real || !(d.recurring || []).length) return 0;
+  const d = state.data; if (!d || state.real || !canWrite() || !(d.recurring || []).length) return 0;   // a Viewer's app never generates entries (the database would refuse them)
   const today = isoDate(new Date()); let n = 0; const linked = linkFirstEntries(); relinked = linked;
   d.recurring.forEach((r) => {
     if (r.active === false) return;
@@ -2628,6 +2807,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el) { if (state.ui.walletMenu || state.ui.infoOpen) { state.ui.walletMenu = null; state.ui.infoOpen = null; render(); } return; }
   const { act, id, type, date } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
+  if (WRITE_ACT.test(act) && act !== 'edit-txn' && !canWrite()) { toast(__('You can view everything here, but not change it.')); return; }
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
   if (act !== 'toggle-info') state.ui.infoOpen = null;
   if (act === 'close') close();
@@ -2643,10 +2823,10 @@ document.addEventListener('click', (e) => {
   else if (act === 'transfer') transferDialog();
   else if (act === 'view-transfer') transferDialog(null, id);
   else if (act === 'delete-transfer') { if (!removeTransferGroup(id)) { toast(__("Can't delete: the cash has already been spent")); return; } Analytics.track('delete_transfer'); save(); close(); render(); toast('Transfer deleted'); }
-  else if (act === 'edit-txn') { const tx = find(D().transactions); if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
+  else if (act === 'edit-txn') { const tx = find(D().transactions); if (!canEditRec(tx)) { txnReadDialog(tx); return; } if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
-  else if (act === 'rec-del') { close(); D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
+  else if (act === 'rec-del') { close(); hhLastDel = find(D().recurring)?.note || find(D().recurring)?.name || ''; D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
   else if (act === 'add-budget') budgetDialog(null, el.dataset.preset);
   else if (act === 'edit-budget') budgetDialog(budgetStatus(state.ui.month).find((b) => b.id === id));
   else if (act === 'toggle-cat') { const o = state.ui.openCats; if (o.has(id)) o.delete(id); else o.add(id); render(); }
@@ -2661,7 +2841,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'add-occasion-txn') txnDialog(null, 'expense', occasionOf(id));
   else if (act === 'edit-occasion') occasionDialog(occasionStatus().find((o) => o.id === id));
   else if (act === 'archive-occasion') { const o = occasionOf(id); o.archived = !o.archived; save(); close(); render(); toast(o.archived ? 'Occasion archived' : 'Occasion reopened'); }
-  else if (act === 'delete-occasion') { D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
+  else if (act === 'delete-occasion') { if (!hhOk(find(D().occasions)?.name || '')) return; D().occasions = D().occasions.filter((o) => o.id !== id); D().transactions.forEach((t) => { if (t.occasion_id === id) delete t.occasion_id; }); save(); close(); render(); toast('Occasion deleted. Its expenses were kept.'); }
   else if (act === 'view-occasion') { state.ui.occ = id; state.ui.q = ''; state.ui.cat = ''; state.ui.wallet = ''; const o = occasionOf(id); const view = occasionView(o); state.ui.month = view.month; state.ui.allPeriods = view.all; if (el.closest('#dlg')) close(); forgetScroll('#/transactions'); location.hash = '#/transactions'; render(); }
   else if (act === 'pf-tab') { state.ui.pfTab = el.dataset.tab; render(); }
   else if (act === 'add-loan') loanDialog();
@@ -2700,7 +2880,7 @@ document.addEventListener('click', (e) => {
     if (!removeTrade(h, tr)) { toast("Can't remove this: it would leave a negative holding (part of it was sold or spent since)"); return; }
     save(); render(); if (routeArg() !== h.id) holdingDialog(h); toast('Trade removed and balances restored');
   }
-  else if (act === 'delete-holding') { D().holdings = D().holdings.filter((x) => x.id !== id); save(); close(); render(); toast('Asset removed'); }
+  else if (act === 'delete-holding') { if (!hhOk(assetInfo(find(D().holdings)?.symbol).name || '')) return; D().holdings = D().holdings.filter((x) => x.id !== id); save(); close(); render(); toast('Asset removed'); }
   else if (act === 'breakdown') breakdownDialog(id);
   else if (act === 'add-cat') catDialog(null, el.dataset.parent);
   else if (act === 'edit-cat') catDialog(catOf(id));
@@ -2729,17 +2909,18 @@ document.addEventListener('click', (e) => {
     const w = walletOf(id), n = D().transactions.filter((t) => t.wallet_id === id).length;
     if (n) { toast(__(n === 1 ? "Can't delete: {n} transaction uses this account. Restore it instead." : "Can't delete: {n} transactions use this account. Restore it instead.", { n })); return; }
     if (!confirm(__('Delete "{name}" permanently? This can\'t be undone.', { name: w.name }))) return;
-    D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Account deleted');
+    hhLastDel = w.name; D().wallets = D().wallets.filter((x) => x.id !== id); save(); render(); toast('Account deleted');
   }
   else if (act === 'archive-wallet') { find(D().wallets).archived = true; save(); close(); render(); toast('Account archived'); }
   else if (act === 'delete-txn') {
     const tx = find(D().transactions), coin = coinOf(tx);
+    if (!hhOk(`${tx.note || catOf(tx.category_id)?.name || __('Transaction')} (${money(tx.amount_minor, tx.currency)})`)) return;
     if (coin) { if (!removeTrade(coin, coin.trades.find((x) => x.id === tx.trade_id))) { toast(__("Can't delete: the {symbol} has already been spent", { symbol: assetInfo(coin.symbol).symbol })); return; } }
     else { D().transactions = D().transactions.filter((t) => t.id !== id); D().loans.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); D().lent.forEach((l) => { l.payments = l.payments.filter((p) => p.txn_id !== id); }); }   // a loan charge or a repayment made from this account goes with it
     Analytics.track('delete_transaction', { type: tx.type });
     save(); close(); render(); toast('Transaction deleted');
   }
-  else if (act === 'delete-budget') { Analytics.track('delete_budget'); D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
+  else if (act === 'delete-budget') { if (!hhOk(catOf(find(D().budgets)?.category_id)?.name || __('Budget'))) return; Analytics.track('delete_budget'); D().budgets = D().budgets.filter((b) => b.id !== id); save(); close(); render(); toast('Budget deleted'); }
   else if (act === 'signout') Cloud.idle().then(() => Cloud.signOut()).then(() => { state.data = null; state.real = null; resetSessionView(); state.auth = { status: 'out', view: 'landing', email: '', notice: '', error: '' }; render(); window.scrollTo(0, 0); });
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
@@ -2755,6 +2936,17 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-google' && state.auth.view === 'signup' && !state.auth.agree) { /* the agreement is not ticked yet */ }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
+  else if (act === 'join-exit') joinExit('/');
+  else if (act === 'join-signout') Cloud.idle().then(() => Cloud.signOut()).then(() => render());
+  else if (act === 'join-lang') { setLang(el.dataset.lang); render(); }
+  else if (act === 'hh-invite') inviteDialog();
+  else if (act === 'hh-member') memberDialog(id);
+  else if (act === 'hh-resend' || act === 'hh-revoke') hhInviteAction(act === 'hh-resend' ? 'resend' : 'revoke', id);
+  else if (act === 'hh-remove') { const x = hhPeople().find((p) => p.user_id === id); hhConfirm('hh-remove-go', id, __('Remove {name}?', { name: esc(hhFirstName(x && x.display_name) || __('this person')) }), __('They lose access right away. What they entered stays, under their name.'), __('Remove')); }
+  else if (act === 'hh-remove-go') hhDo(() => Cloud.removeMember(id), 'member_removed', __('Removed from the household'));
+  else if (act === 'hh-leave') hhConfirm('hh-leave-go', '', __('Leave this household?'), __('You will lose access to its accounts and transactions. What you entered stays, under your name. You can only come back if the owner invites you again.'), __('Leave household'));
+  else if (act === 'hh-leave-go') hhDo(() => Cloud.leaveHousehold(), 'household_left', __('You left the household'));
+  else if (act === 'delete-my-login') { Cloud.deleteMyLogin().then((r) => { if (r && r.error) { toast(__("Couldn't delete your login. Try again.")); return; } Analytics.track('login_deleted'); Cloud.signOut().then(() => { state.auth.noAccess = false; }); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
   else if (act === 'demo-off') { Analytics.track('demo_off', {}, true); setDemo(false); }
   else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
@@ -2891,6 +3083,13 @@ function applySetting(el) {
   save(); render();
 }
 
+document.addEventListener('input', (e) => { const jf = e.target.form; if (jf && jf.dataset.form === 'join') joinValidate(jf); });
+document.addEventListener('change', (e) => { const jf = e.target.form; if (jf && jf.dataset.form === 'join') joinValidate(jf); });
+document.addEventListener('input', (e) => {
+  const f = e.target.form; if (!f || f.dataset.form !== 'invite' || e.target.name !== 'email') return;
+  const val = e.target.value.trim(), bad = val && !HH_EMAIL.test(val.toLowerCase());
+  hhMsg(f, bad ? __('Enter a valid email address.') : ''); $('[data-send]', f).disabled = !!bad;
+});
 document.addEventListener('submit', async (e) => {
   const f = e.target, kind = f.dataset.form; if (!kind) return;
   e.preventDefault();
@@ -3095,6 +3294,13 @@ document.addEventListener('submit', async (e) => {
     else D().investments.push({ id: uid(), name, archived: false });
     save(); close(); render(); toast('Account saved');
   }
+  if (kind === 'join') { joinSubmit(f, v); return; }
+  if (kind === 'invite') { hhInviteSubmit(f, v); return; }
+  if (kind === 'member-role') {
+    const role = v.role === 'viewer' ? 'viewer' : 'editor';
+    try { await Cloud.setRole(f.dataset.id, role); Analytics.track('member_role_changed', { role }); close(); toast(__('Role updated')); loadUserData(); } catch { toast(__("Couldn't do that. Please try again.")); }
+    return;
+  }
   if (kind === 'support') {
     const msg = (v.message || '').trim(), btn = $('[data-send]', f);
     if (!msg) { toast(__('Write a few words first')); return; }
@@ -3274,13 +3480,13 @@ const resetPeriodView = () => { state.ui.allPeriods = false; state.ui.monthSrc =
    The hash is replaced (not assigned) so the browser does not run a second render. */
 function resetSessionView() {
   resetPeriodView(); state.ui.onbSkipped = undefined; state.ui.onbSeen = false; state.ui.congrats = false; Object.keys(scrollPos).forEach((k) => delete scrollPos[k]);
-  history.replaceState(null, '', '#/overview'); lastKey = '#/overview';
+  if (!joinState) { history.replaceState(null, '', '#/overview'); lastKey = '#/overview'; }   // the Join page keeps its own address
   window.scrollTo(0, 0);
 }
 async function onAuth(event, session) {
   const a = state.auth;
   if (event === 'PASSWORD_RECOVERY') { Object.assign(a, { status: 'in', view: 'recovery', error: '', notice: '' }); render(); return; }
-  if (!session) { Analytics.reset(); Analytics.page(); state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
+  if (!session) { hhSeen = false; Analytics.reset(); Analytics.page(); state.data = null; state.real = null; resetSessionView(); Cloud.forget(); Object.assign(a, { status: 'out', uid: null }); if (a.view === 'recovery') a.view = 'signin'; render(); window.scrollTo(0, 0); return; }
   stopPolling(); a.email = session.user.email || a.email;
   Analytics.identify(session.user.id); Analytics.page();
   if (a.uid === session.user.id && state.data) return;   // token refresh or tab refocus: nothing to reload
@@ -3293,8 +3499,14 @@ async function loadUserData() {
   const mine = ++loadSeq;   // a reload can start twice (sign-in events arrive in pairs); only the newest one may apply its result
   try {
     state.real = null;   // leave demo mode while reloading; it is switched back on below if you had it on
+    const before = hhSeen ? `${Cloud.household.status}:${Cloud.household.role}` : '';
     const loaded = await Cloud.load();
     if (mine !== loadSeq) return;   // a newer load took over
+    const nowAcc = `${Cloud.household.status}:${Cloud.household.role}`;
+    if (before && before !== nowAcc && loaded) toast(__('Your access changed.'));   // the owner changed your role while the app was open
+    hhSeen = true;
+    state.auth.noAccess = !loaded;   // removed, never joined, or the household was deleted: the "no longer have access" page
+    if (!loaded) { state.data = null; render(); return; }
     state.real = null; state.data = loaded;
     state.data.livePrices = loadPrices();
     const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(), addedSales = backfillSaleRecords(), addedCash = convertCashTrades(); if (addedCats || addedFee || addedSales || addedCash) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
@@ -3302,6 +3514,7 @@ async function loadUserData() {
     Analytics.person(state.data.profile);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
+    hhStartPolling(); hhLoadInvites();
     if (demoWanted()) await setDemo(true);
     else setTimeout(recurringNow, 300);
   } catch (err) { state.auth.loadError = err.message || 'network error'; }
@@ -3310,7 +3523,7 @@ async function loadUserData() {
 /* a failed save leaves the screen ahead of the database, so show the server's truth again */
 function onSaveError(err) {
   console.error(err);
-  toast(__("Couldn't save your last change ({error}). Showing your saved data.", { error: String(err.message || err).slice(0, 80) }));
+  toast(householdSaveError(err) || __("Couldn't save your last change ({error}). Showing your saved data.", { error: String(err.message || err).slice(0, 80) }));
   loadUserData();
 }
 /* ---------- sample data: a demo mode, not saved data ----------
@@ -3354,6 +3567,7 @@ setLang(initialLang()); applyTheme(initialTheme());
 if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);
 else { Object.assign(state.auth, { status: 'out', error: 'The app is not connected to Supabase (missing config).' }); render(); }
 consumeHandoffFromUrl();
+joinBoot();
 /* live fiat rates replace the demo ones (works without a Finnhub key; falls back silently) */
 getJSON(`/api/fx?currencies=${Object.keys(RATES).join(',')}`).then((fx) => {
   Object.assign(RATES, fx.rates); api.fx = { source: fx.source, date: fx.date };

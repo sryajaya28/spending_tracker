@@ -27,7 +27,7 @@ const assert = require('assert');
   await page.click('button[type=submit]');
   await page.waitForSelector('text=Check your email');
   const su = await page.evaluate(() => window.__signUp);
-  assert.equal(su.options.data.full_name, 'Ari'); assert.equal(su.options.data.currency, 'IDR');
+  assert.match(await page.textContent('[data-invite-hint]'), /invited to a household/); assert.equal(su.options.data.full_name, 'Ari'); assert.equal(su.options.data.currency, 'IDR');
   await page.click('[data-act=auth-resend]'); await page.waitForSelector('text=Email sent again');
   // google
   await page.click('[data-view=signin]'); await page.click('[data-act=auth-google]');

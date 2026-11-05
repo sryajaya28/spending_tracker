@@ -1,5 +1,7 @@
 # Household Edge Functions: deploy settings (a pinned list, not a config.toml, so no CLI project is implied)
 
+**Deploys now run in CI:** `.github/workflows/deploy.yml` applies migrations (`tools/migrate.js`, each file in one transaction, tracked in `public._repo_migrations`) and deploys these six functions with the settings below. Staging runs on every push to `staging` that touches `supabase/`; production is started by hand (Actions > deploy > Run workflow > production) and waits for the owner's approval on the `production` environment. Secrets: `SUPABASE_ACCESS_TOKEN`, `DB_URL_STAGING`, `DB_URL_PROD` (GitHub Actions secrets, never in the repo). The first run on each database needs the baseline input (last migration already applied by hand: `20261105000031`).
+
 | Function | verify_jwt | Why |
 |---|---|---|
 | invite-member | true | the caller is an owner signed in |

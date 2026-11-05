@@ -1,0 +1,54 @@
+# Applies migrations and deploys the Edge Functions. No agent pastes SQL or function source any more.
+#  - staging: automatically when supabase/ changes on the staging branch
+#  - production: run by hand (Actions > deploy > Run workflow > production); the `production` environment waits for the owner's approval click.
+# Order for a release: run this for production FIRST (migrations before the app code), then merge staging into main.
+name: deploy
+on:
+  push:
+    branches: [staging]
+    paths: ['supabase/**', 'tools/migrate.js', '.github/workflows/deploy.yml']
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Where to deploy'
+        type: choice
+        options: [staging, production]
+        default: staging
+      baseline_through:
+        description: 'First run on a hand-migrated database only: last migration version already applied (e.g. 20261105000031). Leave empty otherwise.'
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: deploy-${{ github.event.inputs.target || 'staging' }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.target == 'production' && 'production' || 'staging' }}
+    env:
+      TARGET: ${{ github.event.inputs.target || 'staging' }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      DB_URL: ${{ github.event.inputs.target == 'production' && secrets.DB_URL_PROD || secrets.DB_URL_STAGING }}
+      PROJECT_REF: ${{ github.event.inputs.target == 'production' && 'ukoxkwxmkwtlihbutryc' || 'cujmgyacxbcmltxfjkxo' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: plan (dry run)
+        run: node tools/migrate.js --dry-run ${{ github.event.inputs.baseline_through && format('--baseline-through {0}', github.event.inputs.baseline_through) || '' }}
+      - name: apply migrations
+        run: node tools/migrate.js ${{ github.event.inputs.baseline_through && format('--baseline-through {0}', github.event.inputs.baseline_through) || '' }}
+      - name: deploy Edge Functions
+        run: |
+          supabase init --force >/dev/null 2>&1 || true
+          for f in invite-member manage-invite delete-my-login; do supabase functions deploy "$f" --project-ref "$PROJECT_REF"; done
+          for f in join-household signup-gate invite-sweep; do supabase functions deploy "$f" --project-ref "$PROJECT_REF" --no-verify-jwt; done
+      - name: check the functions answer
+        run: |
+          B="https://$PROJECT_REF.supabase.co/functions/v1"
+          code() { curl -s -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -d "$2" "$B/$1"; }
+          [ "$(code signup-gate '{"x":1}')" = 400 ] && [ "$(code join-household '{"token":"short"}')" = 400 ] && [ "$(code invite-sweep '{}')" = 403 ] \
+            && [ "$(code invite-member '{}')" = 401 ] && [ "$(code manage-invite '{}')" = 401 ] && [ "$(code delete-my-login '{}')" = 401 ] && echo "all six functions answer as expected"

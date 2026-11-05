@@ -43,7 +43,7 @@ Read ONLY this. `context.md` and `learning.md` are read by section: search the h
 ## Registry (session ids, update when a session is replaced)
 | Role | Session id |
 |---|---|
-| Full-stack engineer | session_01JJfLhrQSd1XVht9Kuu2E5t |
+| Full-stack engineer (fresh session from 2026-11-05, token-limit handoff in docs/handoff/fullstack.md) | session_01JJfLhqqw1xUxNNto9qQsKa (replaces session_01JJfLhrQSd1XVht9Kuu2E5t) |
 | Tech-Lead (integrator, fresh session from 2026-11-05) | session_01JJfLhpN6BVJt5435nPyDvh (replaces session_01JJfLhsnC5r5ZtEKaKwccW2) |
 | Product Manager | session_01JJfLhsEphniXYziB3hR1sg |
 | Designer | session_01JJfLhsxXTKmJzUn51SEBrW |

@@ -1,0 +1,1 @@
+2026-11-05: **Case study draft (docs only).** docs/CASE_STUDY.md: problem, thesis and activation metric, how it is built and by whom, seven key decisions with rejected alternatives, what went wrong, what is next. For the owner's review; it will move to the public showcase repo. Branch docs/case-study.

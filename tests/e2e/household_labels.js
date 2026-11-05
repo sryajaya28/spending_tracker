@@ -77,5 +77,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { __log.length = 0; D().profile.name = D().profile.name + 'x'; Cloud.save(state.data); return Cloud.idle(); });
   assert.doesNotMatch(await p.evaluate(() => document.querySelector('#toast').textContent), /id' column/, 'no manual_prices id error toast');
   assert.equal(await p.evaluate(() => __log.some((x) => x.table === 'manual_prices')), false, 'a household manual price is not re-sent on every save');
+  // HH-20: a member removed while the app is open reaches the no-access page within one poll (the state row stops being readable)
+  assert.equal(await p.evaluate(() => Cloud.pollChanged()), false, 'a normal poll with no change returns false');
+  await p.evaluate(() => { __T.household_members = []; __T.household_state = []; __T.profiles[0].household_status = 'former_member'; return hhRefresh(); });
+  await p.waitForFunction(() => /no longer have access/i.test(document.body.textContent), null, { timeout: 5000 });
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

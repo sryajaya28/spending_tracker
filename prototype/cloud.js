@@ -285,7 +285,8 @@ const Cloud = (() => {
     async pollChanged() {   // true when someone else changed the household and nothing of ours is waiting to be saved
       if (!userId || !synced || !hh.hasMembers || pending) return false;
       const st = must(await client.from('household_state').select('rev').eq('owner_id', hh.ownerId).maybeSingle());
-      return !!st && st.rev !== hh.rev;
+      if (!st) return hh.status === 'member';   // a member who can no longer read the household's state row has been removed: reload, which shows the no-access page
+      return st.rev !== hh.rev;
     },
     classify(e) {   // the error contract (design 16): guards carry a prefix, plain RLS has none
       const m = String((e && e.message) || '');

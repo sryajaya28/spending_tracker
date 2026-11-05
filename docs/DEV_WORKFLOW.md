@@ -143,3 +143,6 @@ Several assistants (or sessions) can work on one project if they do not edit the
 | Rollback method | Vercel "Instant Rollback" to the previous production deployment (a database migration is not rolled back; migrations must be backwards compatible) |
 | Migration folder and how it is applied | `supabase/migrations/`; applied to staging first, then production, with the Supabase `apply_migration` tool; never edit an applied migration |
 | Production addresses (must be in `PRODUCTION_HOSTS`, `prototype/config.js`) | `stiver.io`, `www.stiver.io`, the old `*.vercel.app` aliases |
+
+## Release report (owner, 2026-11-05)
+The release message to the owner shows the **exact contents**, never a summary: commits, files by area, plain-words changelog lines, what a user can see, migrations (applied to staging / production), tests and smoke results, known gaps and the main commit. Generate it with `node tools/release_contents.js` (printed by `tools/release.js`), post it to the Workspace (channel releases, to owner) and append it to `docs/RELEASES.md`.

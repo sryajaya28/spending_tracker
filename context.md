@@ -139,6 +139,7 @@ supabase/tests/     pgTAP tests (first migrations only)
 tests/e2e/          Playwright browser tests with a fake Supabase; run_all.sh; record_demo_tour.js
 docs/NEXT_STEPS.md  roadmap, rules, known gaps            vercel.json  hosting, rewrites, security headers
 regression_scenario.md  manual regression scenarios per feature + automated coverage map (keep current)
+tools/release_contents.js, docs/RELEASES.md  exact release contents (never a summary)
 docs/WORKSPACE.md  Workspace artifact: shared feed + Needs-you tray (URL, schema, rules)
 docs/WORKFLOW.md  agent-to-agent workflow, diagram, hand-off formats
 docs/roles/, docs/PRD_TEMPLATE.md  agent team (PM, Designer, QA, developers): flow, hand-offs, registry

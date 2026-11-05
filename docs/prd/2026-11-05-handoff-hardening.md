@@ -1,6 +1,6 @@
 # PRD: Harden the sign-in handoff functions   (backlog item b-handoff-hardening, from the security review 2026-11-04)
 
-Status: `PRD v1 | owner approved: pending (gate 1) | Figma: not needed unless the owner declines fast lane for one message | Branch: prd/handoff-hardening | QA report: pending`
+Status: `PRD v1 | owner approved: 2026-11-05 on the Workspace page ("Approve with the defaults") | Figma: not needed unless the owner declines fast lane for one message | Branch: prd/handoff-hardening | QA report: pending`
 
 ## 1. Problem and goal
 The handoff lets someone who is signed in on one browser type a short code on another (for example Safari to the Home Screen app) and be signed in there. The independent security review found three weaknesses: the two database functions (`create_handoff`, `claim_handoff`) do not pin their search path; `claim_handoff` can be called by anyone without signing in and has no limit on wrong guesses (the code is 10 characters, valid 15 minutes, single use); and the sign-in token kept for the handoff is stored in plain text. Not urgent. Goal: guessing a code or reading the table gives an attacker nothing, and the feature works exactly as before for real users.
@@ -40,4 +40,4 @@ One text message on the existing code entry screen, reusing the current error st
 3. Timing: default after the household release, so the two do not collide in review.
 
 ## 10. Release plan
-Lane: feature, high-risk (sign-in, database): Developer 2 builds and the other model reviews; no peer-reviewing your own change. Migration to staging first, regression and staging sign-off by the owner, production migration only on the owner's release message. Success is read from PostHog 7 days after release.
+Lane: feature, high-risk (sign-in, database): Developer 1 builds (after the household release); Developer 2 chooses the miss count and lock time and reviews it; a different-model review of the code too. Nobody reviews their own change. Migration to staging first, regression and staging sign-off by the owner, production migration only on the owner's release message. Success is read from PostHog 7 days after release.

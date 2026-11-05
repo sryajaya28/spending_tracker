@@ -141,6 +141,11 @@ const Cloud = (() => {
       return o;
     });
     d.loans = debts('owed'); d.lent = debts('lent');
+    /* who made and last changed each record (labels in a household; not part of what is saved back): by = creator, edBy/edAt = last editor and time (only when changed after creation) */
+    const meta = (o, r) => { if (r && r.created_by) { o.by = r.created_by; if (r.updated_by && r.updated_at && r.created_at && new Date(r.updated_at) - new Date(r.created_at) > 2000) { o.edBy = r.updated_by; o.edAt = new Date(r.updated_at).toISOString(); } } return o; };
+    const attach = (list, rows) => { const m = new Map(rows.map((r) => [r.id, r])); list.forEach((o) => meta(o, m.get(o.id))); };
+    attach(d.transactions, S.transactions); attach(d.wallets, S.wallets); attach(d.investments, S.investment_accounts); attach(d.budgets, S.budgets);
+    attach(d.loans, S.debts); attach(d.lent, S.debts); attach(d.categories, S.categories); attach(d.occasions, S.occasions);
     return d;
   }
 

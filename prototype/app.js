@@ -1669,6 +1669,32 @@ const viewSplash = (msg) => `<div class="onboard"><div class="splash" role="stat
   <div class="splash-msg"><span>${esc(__(msg))}</span><span>${__('Counting your coins…')}</span><span>${__('Lining up your budgets…')}</span><span>${__('Almost there…')}</span></div>
   <div class="splash-bar"><i></i></div></div></div>`;
 
+/* ---------- household (design 7, 16): who may write, what to say when the database refuses, the page for people without access ---------- */
+const canWrite = () => !!state.real || Cloud.canWrite();   // sample data is local only, so anyone may play with it
+const WRITE_ACT = /^(add-|edit-|delete-(?!my-login)|archive-|unarchive-|restore-|rec-del$|rec-toggle$|rec-manage$|transfer$|transfer-dialog$|invest$|trade$|set-cost$|manual-asset$|loan-payment$|lent-repayment$|quick-cat-add$|remove-sample$|congrats-add$|pick-asset$|shot-del$)/;
+const hhFirst = (id) => { const p = (Cloud.household.people || []).find((x) => x.user_id === id || x.member_id === id); return p ? String(p.display_name || '').trim().split(/\s+/)[0] : ''; };
+const viewNoAccess = () => `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
+  <h1>${__('You no longer have access')}</h1><p class="muted">${__("You no longer have access to this household. Your earlier entries stay in it under your name.")}</p>
+  <button class="btn secondary lg" data-act="signout">${__('Sign out')}</button>
+  <button class="btn danger lg" data-act="delete-my-login">${__('Delete my login')}</button></div></div>`;
+/* the error contract (Cloud.classify): tell the person what happened in words, then show the server's truth again */
+function householdSaveError(err) {
+  const c = Cloud.classify(err);
+  if (c.kind === 'stale') return __('Someone else changed this just now. Please check it and redo your change.');
+  if (c.kind === 'gone') return __('Someone else already deleted this. Showing the latest.');
+  if (c.kind === 'guard') return __("Can't delete this: it is used by {n} entries added by others. Ask the owner.", { n: c.n });
+  if (c.kind === 'rls') return __('Your access changed.');
+  return '';
+}
+/* refresh when someone else changed the household: every 30 s while the page is visible, and when you come back to it */
+let hhTimer = null;
+async function hhRefresh() {
+  if (!state.data || state.real || document.hidden || !Cloud.household.hasMembers) return;
+  try { if (await Cloud.pollChanged()) loadUserData(); } catch { /* offline: try again next time */ }
+}
+function hhStartPolling() { if (hhTimer) clearInterval(hhTimer); hhTimer = setInterval(hhRefresh, 30000); }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) hhRefresh(); });
+
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
@@ -1677,6 +1703,7 @@ function render() {
   if (a.status === 'loading') { app.innerHTML = viewSplash('Waking up Stiver…'); return; }
   if (a.status === 'out' && a.view === 'landing') { app.innerHTML = viewLanding(); return; }
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
+  if (!D() && a.noAccess) { app.innerHTML = viewNoAccess(); return; }
   if (!D()) {
     app.innerHTML = a.loadError
       ? `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div><p class="auth-err" role="alert">${__("Couldn't load your data: {error}", { error: esc(a.loadError) })}</p><button class="btn lg" data-act="retry-load">${__('Try again')}</button><button class="btn secondary lg" data-act="signout">${__('Sign out')}</button></div></div>`
@@ -2628,6 +2655,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el) { if (state.ui.walletMenu || state.ui.infoOpen) { state.ui.walletMenu = null; state.ui.infoOpen = null; render(); } return; }
   const { act, id, type, date } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
+  if (WRITE_ACT.test(act) && !canWrite()) { toast(__('You can view everything here, but not change it.')); return; }
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
   if (act !== 'toggle-info') state.ui.infoOpen = null;
   if (act === 'close') close();
@@ -2755,6 +2783,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-google' && state.auth.view === 'signup' && !state.auth.agree) { /* the agreement is not ticked yet */ }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
+  else if (act === 'delete-my-login') { Cloud.deleteMyLogin().then((r) => { if (r && r.error) { toast(__("Couldn't delete your login. Try again.")); return; } Analytics.track('login_deleted'); Cloud.signOut().then(() => { state.auth.noAccess = false; }); }); }
   else if (act === 'retry-load') { state.auth.loadError = ''; render(); loadUserData(); }
   else if (act === 'demo-off') { Analytics.track('demo_off', {}, true); setDemo(false); }
   else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
@@ -3295,6 +3324,8 @@ async function loadUserData() {
     state.real = null;   // leave demo mode while reloading; it is switched back on below if you had it on
     const loaded = await Cloud.load();
     if (mine !== loadSeq) return;   // a newer load took over
+    state.auth.noAccess = !loaded;   // removed, never joined, or the household was deleted: the "no longer have access" page
+    if (!loaded) { state.data = null; render(); return; }
     state.real = null; state.data = loaded;
     state.data.livePrices = loadPrices();
     const addedCats = ensureDefaultCategories(), addedFee = ensureFeeCategory(), addedSales = backfillSaleRecords(), addedCash = convertCashTrades(); if (addedCats || addedFee || addedSales || addedCash) save();   // every account has the default categories (see above) and Fee; earlier transfer fees get Fee
@@ -3302,6 +3333,7 @@ async function loadUserData() {
     Analytics.person(state.data.profile);
     if (state.data.profile.theme && THEMES.includes(state.data.profile.theme)) applyTheme(state.data.profile.theme);
     if (state.data.profile.language && LANGS[state.data.profile.language]) { setLang(state.data.profile.language); render(); }   // your saved choice wins over this device's
+    hhStartPolling();
     if (demoWanted()) await setDemo(true);
     else setTimeout(recurringNow, 300);
   } catch (err) { state.auth.loadError = err.message || 'network error'; }
@@ -3310,7 +3342,7 @@ async function loadUserData() {
 /* a failed save leaves the screen ahead of the database, so show the server's truth again */
 function onSaveError(err) {
   console.error(err);
-  toast(__("Couldn't save your last change ({error}). Showing your saved data.", { error: String(err.message || err).slice(0, 80) }));
+  toast(householdSaveError(err) || __("Couldn't save your last change ({error}). Showing your saved data.", { error: String(err.message || err).slice(0, 80) }));
   loadUserData();
 }
 /* ---------- sample data: a demo mode, not saved data ----------

@@ -30,7 +30,7 @@ only worked after a detour. Keep each item short and say what to do instead.
   (`https://supabase.com/dashboard/project/ukoxkwxmkwtlihbutryc/sql/new`), then verify with a read-only query afterwards.
 - Reads (`select`) work without approval; deletes and DDL do not. Before any destructive statement: look at the rows first,
   delete by exact id with extra guards (`user_id`, `note`), and confirm identity when an email differs from the signed-in
-  user's (the owner once typed `suryajaya.378@` instead of `suryajaya378@`; check both with `ilike` before acting).
+  user's (the owner once mistyped their own address by one character; check close variants with `ilike` before acting).
 - **Upsert order must follow foreign keys.** `debts` before `transactions` (an expense can point at a loan) and `debt_payments`
   after `transactions` (a charge points at its expense). Deletes run in reverse. Update `STAGES` in `cloud.js` when adding links.
 - Server-side defaults and triggers, not the client, must set identity columns (`user_id`, `email`) for anything the user submits.

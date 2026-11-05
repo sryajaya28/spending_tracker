@@ -1,0 +1,1 @@
+2026-11-05: **Contact email set (small change).** prototype/config.js CONTACT_EMAIL = support@stiver.io (forwards to the owner through ImprovMX; verified delivered), so the privacy and terms pages show it; learning.md no longer contains a personal address fragment. Branch docs/contact-email; ships after the household release.

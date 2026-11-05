@@ -15,7 +15,7 @@ window.STIVER = {
   // on the old *.vercel.app address. Must also be allowed under Supabase > Authentication > URL Configuration.
   SITE_URL: PROD ? 'https://stiver.io' : location.origin,
   // Public contact address shown on the privacy policy and terms pages. Leave empty to show a generic line.
-  CONTACT_EMAIL: '',
+  CONTACT_EMAIL: 'support@stiver.io',
   // PostHog Cloud EU project token (public by design, like the Supabase anon key). Events go through our own /ingest rewrite (vercel.json).
   POSTHOG_KEY: 'phc_vn3JVcm3krGACtE3b7ReFTVT8NLyp9D3Nn2LLo9AXvgq',
   POSTHOG_HOST: '/ingest',

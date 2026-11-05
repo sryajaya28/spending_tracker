@@ -205,15 +205,23 @@ begin
   return jsonb_build_object('result', 'ok', 'invited_user_id', v_user, 'deletable', v_user is not null and public.can_delete_invited_user(v_user));
 end $$;
 
--- expiry: marks old pending invites expired and clears their tokens; returns the logins that may be deleted
-create or replace function public.household_expire_invites() returns table (invited_user_id uuid)
+-- expiry: marks old pending invites expired and clears their tokens; returns how many
+create or replace function public.household_expire_invites() returns int
 language plpgsql security definer set search_path = '' as $$
+declare n int;
 begin
-  return query
-    with e as (update public.household_invites set status = 'expired', token_hash = null
-                where status = 'pending' and expires_at < now() returning household_invites.invited_user_id)
-    select e.invited_user_id from e where e.invited_user_id is not null and public.can_delete_invited_user(e.invited_user_id);
+  with e as (update public.household_invites set status = 'expired', token_hash = null
+              where status = 'pending' and expires_at < now() returning 1)
+  select count(*) into n from e;
+  return n;
 end $$;
+
+-- logins awaiting deletion: revoked or expired invites whose invited login the database still allows to delete (retried every sweep, E11)
+create or replace function public.household_logins_to_delete() returns table (invited_user_id uuid)
+language sql stable security definer set search_path = '' as $$
+  select distinct i.invited_user_id from public.household_invites i
+   where i.status in ('revoked', 'expired') and i.invited_user_id is not null and public.can_delete_invited_user(i.invited_user_id)
+$$;
 
 -- does an account with this address exist? (signup-gate: one generic answer for fresh / existing / pending-invite addresses)
 create or replace function public.email_exists(p_email text) returns boolean
@@ -227,27 +235,40 @@ language sql security definer set search_path = '' as $$
   delete from auth.sessions where user_id = p_user
 $$;
 
--- join: checks the target account and creates the membership in ONE transaction (design 5.2 steps 3 and 7). The Edge Function has
--- already verified the token, set the password and revoked sessions; here the account is checked and the rows are written.
-create or replace function public.join_household_apply(p_invite uuid, p_user uuid, p_display_name text) returns jsonb
-language plpgsql security definer set search_path = '' as $$
-declare i record; u record; v_bad text;
+-- join, step 1 (read-only, E1): the reason the invited account may not join, or 'ok'. No writes.
+create or replace function public.join_household_check(p_invite uuid, p_user uuid) returns text
+language plpgsql stable security definer set search_path = '' as $$
+declare i record; u record;
 begin
-  select * into i from public.household_invites where id = p_invite and status = 'pending' and expires_at > now() for update;
-  if not found or i.invited_user_id is distinct from p_user then return jsonb_build_object('result', 'invalid'); end if;
+  select * into i from public.household_invites where id = p_invite and status = 'pending' and expires_at > now();
+  if not found or i.invited_user_id is distinct from p_user then return 'invalid'; end if;
   select * into u from auth.users where id = p_user;
-  v_bad := case
+  return case
     when u.id is null then 'missing_user'
     when lower(u.email) is distinct from i.email then 'email_changed'
     when coalesce(u.email_change, '') <> '' then 'pending_email_change'
     when coalesce(u.phone, '') <> '' then 'phone'
     when coalesce(u.phone_change, '') <> '' then 'phone_change'
+    when u.banned_until is not null and u.banned_until > now() then 'banned'
+    when coalesce(u.is_anonymous, false) then 'anonymous'
     when exists (select 1 from auth.identities x where x.user_id = p_user and x.provider <> 'email') then 'extra_identity'
     when exists (select 1 from auth.mfa_factors f where f.user_id = p_user) then 'mfa_factor'
     when (select pr.household_status from public.profiles pr where pr.id = p_user) is distinct from 'invited' then 'not_invited'
     when not public.can_delete_invited_user_rows(p_user) then 'owns_rows'
-    else null end;
-  if v_bad is not null then
+    else 'ok' end;
+end $$;
+
+-- join, step 4 (E1): called AFTER the Edge Function has set the password and confirmed the email. Re-runs the checks, writes the membership,
+-- and ends every session of the login in the same transaction, so no session created earlier survives and, with the password set, nobody else
+-- can sign in. A refusal revokes the invite and records a security event.
+create or replace function public.join_household_apply(p_invite uuid, p_user uuid, p_display_name text) returns jsonb
+language plpgsql security definer set search_path = '' as $$
+declare i record; v_bad text;
+begin
+  select * into i from public.household_invites where id = p_invite and status = 'pending' and expires_at > now() for update;
+  if not found or i.invited_user_id is distinct from p_user then return jsonb_build_object('result', 'invalid'); end if;
+  v_bad := public.join_household_check(p_invite, p_user);
+  if v_bad <> 'ok' then
     update public.household_invites set status = 'revoked', token_hash = null where id = p_invite;
     insert into public.security_events (owner_id, kind, detail) values (i.owner_id, 'join_refused', jsonb_build_object('reason', v_bad));
     return jsonb_build_object('result', 'refused');
@@ -255,6 +276,7 @@ begin
   insert into public.household_members (owner_id, member_id, role) values (i.owner_id, p_user, i.role);
   update public.profiles set household_status = 'member', display_name = coalesce(nullif(trim(p_display_name), ''), display_name) where id = p_user;
   update public.household_invites set status = 'accepted', token_hash = null where id = p_invite;
+  delete from auth.sessions where user_id = p_user;
   perform public.household_touch(i.owner_id);
   return jsonb_build_object('result', 'ok', 'owner_id', i.owner_id, 'role', i.role);
 end $$;
@@ -300,10 +322,10 @@ create trigger household_owner_deleting before delete on auth.users for each row
 revoke execute on function public.household_profile(), public.household_people(), public.household_touch(uuid), public.set_member_role(uuid, text),
   public.household_detach(uuid, uuid), public.remove_member(uuid), public.leave_household(),
   public.create_invite(uuid, text, text, text, timestamptz), public.resend_invite(uuid, uuid, text, timestamptz),
-  public.can_delete_invited_user(uuid), public.can_delete_invited_user_rows(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(),
+  public.can_delete_invited_user(uuid), public.can_delete_invited_user_rows(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(), public.household_logins_to_delete(), public.join_household_check(uuid, uuid),
   public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text), public.household_owner_deleting(), public.email_exists(text) from public, anon, authenticated;
 grant execute on function public.household_profile(), public.household_people(), public.set_member_role(uuid, text),
   public.remove_member(uuid), public.leave_household() to authenticated;
 grant execute on function public.create_invite(uuid, text, text, text, timestamptz), public.resend_invite(uuid, uuid, text, timestamptz),
-  public.can_delete_invited_user(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(),
+  public.can_delete_invited_user(uuid), public.revoke_invite(uuid, uuid), public.household_expire_invites(), public.household_logins_to_delete(), public.join_household_check(uuid, uuid),
   public.delete_user_sessions(uuid), public.join_household_apply(uuid, uuid, text), public.email_exists(text) to service_role;

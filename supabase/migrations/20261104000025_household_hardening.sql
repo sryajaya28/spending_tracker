@@ -52,3 +52,13 @@ create trigger household_status_guard before update of household_status on publi
 -- 5. indexes the delete guards use (Opus 13)
 create index if not exists holdings_account_idx on public.holdings (account_id);
 create index if not exists holding_events_holding_idx on public.holding_events (holding_id);
+
+-- 6. invite sends: one row per invite that was really created or resent (per-email cap across owners, E3). Attempts keep only the per-owner hourly limit.
+create table public.invite_sends (
+  id         bigint generated always as identity primary key,
+  email_hash text not null,
+  at         timestamptz not null default now()
+);
+create index invite_sends_email_idx on public.invite_sends (email_hash, at);
+alter table public.invite_sends enable row level security;
+revoke all on public.invite_sends from anon, authenticated;

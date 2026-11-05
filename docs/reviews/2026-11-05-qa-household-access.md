@@ -33,6 +33,9 @@ Stopped at the first failure, as the Tech-Lead asked. Staging only. Owner = smok
 Live-app role change and removal (HH-19 notice within 30 s, HH-20 no-access page, HH-35 Delete my login, HH-38 "read-only" marker in the browser), dark/390 px proof beyond the join page (`docs/reviews/img/qa-join-dark-390.png`), HH-31 spoofed sign-up, HH-05 cap, rate limit (11th invite), revoke/expiry link (needs 1 email), HH-36 re-invite (needs 1 email), resend, Indonesian text and email, invite-sweep with the service key.
 From reading the code only (not seen in the UI): the no-access page says "this household" not "<owner>'s household" (PRD 20), and `delete-my-login` has no confirmation step (HH-35 expected one).
 
+## Process note
+I read the PM's "Mailinator addresses only, no more Gmail +aliases" instruction after I had already sent my one invite to `suryajaya378+hh3@gmail.com` (so Gmail +alias emails are 5 of the owner's approved ~6, not 4). No further Gmail invites were sent; any remaining test (revoke link, re-invite) will use Mailinator.
+
 ## State left on staging
 Owner data back to baseline (0 transactions, 1 wallet, 77 categories, 0 of every other test table; verified). One login of mine remains, a Viewer member (`+hh3`, name "QA Editor"), kept so the Viewer fix can be retested without another email. No pending invites. The earlier mailinator logins were not touched.
 

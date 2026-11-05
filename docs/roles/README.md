@@ -44,7 +44,7 @@ Read ONLY this. `context.md` and `learning.md` are read by section: search the h
 | Role | Session id |
 |---|---|
 | Full-stack engineer (fresh session from 2026-11-05, token-limit handoff in docs/handoff/fullstack.md) | session_01JJfLhqqw1xUxNNto9qQsKa (replaces session_01JJfLhrQSd1XVht9Kuu2E5t) |
-| Tech-Lead (integrator, fresh session from 2026-11-05) | session_01JJfLhpN6BVJt5435nPyDvh (replaces session_01JJfLhsnC5r5ZtEKaKwccW2) |
+| Tech-Lead (integrator, fresh session from 2026-11-05 11:21 UTC) | session_01JJfLhpsAuFysuHmKe5YETw (replaces session_01JJfLhpN6BVJt5435nPyDvh, retired at ~410k tokens) |
 | Product Manager (fresh session from 2026-11-05 11:20 UTC; replaces session_01JJfLhsEphniXYziB3hR1sg, retired at 585k tokens) | session_01JJfLhrfmrRhBbeoGxi2Jp6 |
 | Designer | session_01JJfLhsxXTKmJzUn51SEBrW |
 | QA | session_01JJfLhprXxKbPwErGNHC3SK |

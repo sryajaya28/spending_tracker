@@ -42,12 +42,19 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('[data-act=hh-member]'); await p.waitForSelector('[data-act=hh-remove]'); await p.click('[data-act=hh-remove]'); await p.waitForSelector('[data-act=hh-remove-go]'); await p.click('[data-act=hh-remove-go]'); await p.waitForTimeout(400);
   await p.evaluate(() => { Cloud.household.status = 'member'; Cloud.household.role = 'editor'; render(); });
   await p.click('[data-act=hh-leave]'); await p.waitForSelector('[data-act=hh-leave-go]'); await p.click('[data-act=hh-leave-go]'); await p.waitForTimeout(400);
-  const hh = await p.evaluate(() => window.__phEvents), hhNames = ['invite_sent', 'invite_resent', 'invite_revoked', 'member_role_changed', 'member_removed', 'household_left'];
+  // invite_accepted (role only) and login_deleted (nothing): drive the real handlers with the network calls stubbed
+  await p.evaluate(async () => {
+    Cloud.joinHousehold = async () => ({ result: 'ok' }); joinExit = () => {}; joinState = { token: 'T', role: 'viewer' };
+    const f = document.createElement('form'); f.innerHTML = '<button data-send></button><p id="join-msg"></p>'; await joinSubmit(f, { name: 'Budi', password: 'longenough1', agree: 'on' }); joinState = null; render();
+    const so = Cloud.signOut; Cloud.deleteMyLogin = async () => ({}); Cloud.signOut = async () => {};
+    document.body.insertAdjacentHTML('beforeend', '<button id="dml" data-act="delete-my-login"></button>'); document.getElementById('dml').click(); await new Promise((r) => setTimeout(r, 100)); Cloud.signOut = so; document.getElementById('dml').remove();
+  }); await p.waitForTimeout(300);
+  const hh = await p.evaluate(() => window.__phEvents), hhNames = ['invite_sent', 'invite_resent', 'invite_revoked', 'member_role_changed', 'member_removed', 'household_left', 'invite_accepted', 'login_deleted'];
   hhNames.forEach((n) => assert(hh.some((e) => e.event === n), 'household event ' + n));
   assert.equal(hh.find((e) => e.event === 'invite_sent').properties.role, 'viewer'); assert.equal(hh.find((e) => e.event === 'member_role_changed').properties.role, 'viewer');
   assert(!/secret\.person|@example|@x\.co|Member One/.test(JSON.stringify(hh)), 'no email or name in any event');
   const base = new Set(Object.keys(hh.find((e) => e.event === 'invite_revoked').properties));   // invite_revoked carries no custom property: its keys are the standard ones
-  hh.filter((e) => hhNames.includes(e.event)).forEach((e) => assert.deepEqual(Object.keys(e.properties).filter((k) => !base.has(k)), e.event === 'invite_sent' || e.event === 'member_role_changed' ? ['role'] : [], 'household event ' + e.event + ' carries the role only'));
+  hh.filter((e) => hhNames.includes(e.event)).forEach((e) => assert.deepEqual(Object.keys(e.properties).filter((k) => !base.has(k)), ['invite_sent', 'member_role_changed', 'invite_accepted'].includes(e.event) ? ['role'] : [], 'household event ' + e.event + ' carries the role only'));
   const blob = JSON.stringify(all);
   for (const bad of ['Secret coffee', '12345', 'a@b.co', 'SECRET', 'access_token', 'code=ABC']) assert(!blob.includes(bad), 'leaked: ' + bad);
   assert(all.every((e) => !e.properties.$current_url || !/[?#]/.test(e.properties.$current_url)), 'addresses are cut at ? and #');

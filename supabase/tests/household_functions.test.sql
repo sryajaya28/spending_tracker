@@ -1,6 +1,6 @@
 -- pgTAP tests for household migration 4 (functions). Run with: supabase test db. (First run: staging dry-run, before anything is applied.)
 begin;
-select plan(37);
+select plan(41);
 
 -- owner O, a normal confirmed user X (cannot be invited), people for the invite flow ---------------------------------------------
 insert into auth.users (id, email, email_confirmed_at) values
@@ -41,8 +41,12 @@ select is(public.can_delete_invited_user('00000000-0000-0000-0000-0000000000a9')
 -- join_household_apply: ok, and the account checks refuse tampered accounts ---------------------------------------------------------------
 insert into public.household_invites (id, owner_id, email, role, invited_by, invited_user_id, token_hash, expires_at)
 values ('00000000-0000-0000-0000-00000000aa02', '00000000-0000-0000-0000-0000000000a1', 'inv1@test.dev', 'editor', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b1', 'j1', now() + interval '7 days');
+insert into auth.sessions (id, user_id) values ('00000000-0000-0000-0000-00000000f0b0', '00000000-0000-0000-0000-0000000000b1');
+select is(public.join_household_check('00000000-0000-0000-0000-00000000aa02', '00000000-0000-0000-0000-0000000000b1'), 'ok', 'the read-only join check passes for a clean invited account');
+select is((select status from public.household_invites where id = '00000000-0000-0000-0000-00000000aa02'), 'pending', 'and the check changed nothing');
 select is(public.join_household_apply('00000000-0000-0000-0000-00000000aa02', '00000000-0000-0000-0000-0000000000b1', 'Rina Sari') ->> 'result', 'ok', 'a clean invited account joins');
 select is((select household_status from public.profiles where id = '00000000-0000-0000-0000-0000000000b1'), 'member', 'the profile becomes member');
+select is((select count(*)::int from auth.sessions where user_id = '00000000-0000-0000-0000-0000000000b1'), 0, 'joining ends every session of the login in the same transaction');
 select is((select has_members from public.household_state where owner_id = '00000000-0000-0000-0000-0000000000a1'), true, 'household_state says the household has members');
 select is((select token_hash from public.household_invites where id = '00000000-0000-0000-0000-00000000aa02'), null, 'the used invite no longer holds a token');
 
@@ -51,6 +55,7 @@ insert into public.household_invites (id, owner_id, email, role, invited_by, inv
 values ('00000000-0000-0000-0000-00000000aa03', '00000000-0000-0000-0000-0000000000a1', 'phone@test.dev', 'viewer', '00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-0000000000b2', 'j2', now() + interval '7 days');
 update public.profiles set household_status = 'invited' where id = '00000000-0000-0000-0000-0000000000b2';
 update auth.users set phone = '+620000000' where id = '00000000-0000-0000-0000-0000000000b2';
+select is(public.join_household_check('00000000-0000-0000-0000-00000000aa03', '00000000-0000-0000-0000-0000000000b2'), 'phone', 'the read-only check names the reason for an account that gained a phone number');
 select is(public.join_household_apply('00000000-0000-0000-0000-00000000aa03', '00000000-0000-0000-0000-0000000000b2', 'P') ->> 'result', 'refused', 'an account that gained a phone number is refused');
 select is((select detail ->> 'reason' from public.security_events order by id desc limit 1), 'phone', 'and the reason is recorded');
 

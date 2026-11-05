@@ -445,6 +445,8 @@ DICT.id = {
  "Resend invite": "Kirim ulang undangan",
  "Revoke invite": "Batalkan undangan",
  "{name} will lose access to {owner}'s household. Things {name} added keep {name}'s name.": "{name} akan kehilangan akses ke rumah tangga {owner}. Yang ditambahkan {name} tetap memakai nama {name}.",
+ "Delete your login?": "Hapus login Anda?",
+ "This permanently deletes your Stiver login. What you entered stays in the household under your name.": "Ini menghapus login Stiver Anda secara permanen. Yang Anda catat tetap ada di rumah tangga dengan nama Anda.",
  "Check your email": "Periksa email Anda",
  "If you were invited to a household, use the link in your invite email.": "Jika Anda diundang ke sebuah rumah tangga, gunakan tautan di email undangan Anda.",
  "Check your email and password (at least 8 characters).": "Periksa email dan kata sandi Anda (minimal 8 karakter).",

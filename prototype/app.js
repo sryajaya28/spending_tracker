@@ -1679,7 +1679,7 @@ const hhFirst = (id) => { const p = (Cloud.household.people || []).find((x) => x
 const viewNoAccess = () => `<div class="onboard"><div class="card"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
   <h1>${__('You no longer have access')}</h1><p class="muted">${__("You no longer have access to this household. Your earlier entries stay in it under your name.")}</p>
   <button class="btn secondary lg" data-act="signout">${__('Sign out')}</button>
-  <button class="btn danger lg" data-act="delete-my-login">${__('Delete my login')}</button></div></div>`;
+  <button class="btn danger lg" data-act="delete-my-login-ask">${__('Delete my login')}</button></div></div>`;
 /* the error contract (Cloud.classify): tell the person what happened in words, then show the server's truth again */
 let hhLastDel = '';   // name of the item the person last deleted, so a database guard can say which one it refused
 function householdSaveError(err) {
@@ -2997,6 +2997,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'join-signout') Cloud.idle().then(() => Cloud.signOut()).then(() => render());
   else if (act === 'join-lang') { setLang(el.dataset.lang); render(); }
   else if (act === 'hh-invite') inviteDialog();
+  else if (act === 'delete-my-login-ask') hhConfirm('delete-my-login', '', __('Delete your login?'), __('This permanently deletes your Stiver login. What you entered stays in the household under your name.'), __('Delete my login'));
   else if (act === 'act-who') { actState.who = el.dataset.id || ''; render(); }
   else if (act === 'act-type') { actState.type = el.dataset.type; render(); }
   else if (act === 'act-retry') { actState.rows = null; actState.error = ''; render(); }

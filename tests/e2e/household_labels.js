@@ -81,5 +81,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.evaluate(() => Cloud.pollChanged()), false, 'a normal poll with no change returns false');
   await p.evaluate(() => { __T.household_members = []; __T.household_state = []; __T.profiles[0].household_status = 'former_member'; return hhRefresh(); });
   await p.waitForFunction(() => /no longer have access/i.test(document.body.textContent), null, { timeout: 5000 });
+  // Delete my login asks first (QA FYI): Cancel does nothing, the confirm button deletes
+  await p.evaluate(() => { window.__dml = 0; Cloud.deleteMyLogin = async () => { window.__dml++; return {}; }; Cloud.signOut = async () => {}; });
+  await p.click('[data-act=delete-my-login-ask]'); await p.waitForSelector('#dlg[open] [data-act=delete-my-login]'); assert.match(await p.textContent('#dlg'), /Delete your login\?/);
+  await p.click('#dlg [data-act=close]:not(.dlg-x)').catch(() => p.click('#dlg .dlg-x')); await p.waitForTimeout(200); assert.equal(await p.evaluate(() => window.__dml), 0, 'Cancel deletes nothing');
+  await p.click('[data-act=delete-my-login-ask]'); await p.click('#dlg [data-act=delete-my-login]'); await p.waitForFunction(() => window.__dml === 1); 
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

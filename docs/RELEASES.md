@@ -2,6 +2,95 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 12 contents (main 8c6e642)
+
+**Items in this release**
+Docs/process:
+- Release reports start with a high-level item list [chore/release-items]
+- Token-use rules [chore/cost-rules]
+- Workspace: Approvals tab [chore/approvals-tab]
+- No agent asks the owner anything directly [chore/no-direct-asks]
+- Developer 1 and 2 renamed [chore/rename-roles]
+- Security involvement limited to major authentication and database changes [chore/security-scope]
+- Release contents shown exactly [chore/release-contents]
+- The owner does not repeat anything [chore/owner-input]
+- Workspace: decisions and actions are separate [chore/workspace-needs]
+- Workspace: phone layout and PM backlog [chore/workspace-mobile]
+- Workspace: chat view and 3D office [chore/workspace-chat]
+- Stiver Workspace [chore/workspace]
+- Figma Library: Avatar and Chip components (household design) [chore/decisions-figma-lib]
+
+**Exact detail.** Range: 631cb8b..0f44c00. 36 commits, 19 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-05: Release reports start with a high-level item list (owner request). `tools/release_contents.js` now puts "Items in this release" first (Features, Fixes, Docs/process, Tooling; one plain line per changelog entry with its branch, no files or hashes), then the exact detail; `docs/RELEASES.md` rewritten for releases 8 to 11; `docs/WORKSPACE.md` updated. Docs and tooling only; branch `chore/release-items`.
+- 2026-11-05: Token-use rules (owner: "it's too expensive now"). Measured from the run logs: cost is context size times number of tool calls (Full-stack engineer about 185k tokens per call over 5 days, Tech-Lead about 658k, PM small), not messages. `docs/AGENTS.md` rule 15: no acknowledgements (`No reply needed.`), long findings in `docs/reviews/`, few big calls and no whole-file/event-log dumps, reviewers read the diff (different model only for auth/database), fresh sessions with a handoff note past about 200k tokens, per-role reading lists (`docs/roles/README.md`), milestone-only Workspace posts and no presence timer (`docs/WORKSPACE.md`), event-driven PM backlog and pointer relays (`docs/roles/pm.md`). Docs only; branch `chore/cost-rules`.
+- 2026-11-05: Workspace: Approvals tab (owner request). The Needs-you area has a fourth tab, Approvals (collection `approvals`): formal yes/no sign-offs on finished work (gate 1 PRD, gate 2 design, staging sign-off, release request) with links, what it covers and does not cover, evidence and one recommendation; Approve / Request changes with an optional note; a release approval is recorded as intent and still needs a chat message. Also fixed on the page: action and decision cards map old labels like "Developer 2" to the new role names, and the numbered step badges no longer overlap the checkboxes on the phone. `docs/WORKSPACE.md`, `docs/roles/pm.md`. Docs and page only; branch `chore/approvals-tab`.
+- 2026-11-05: No agent asks the owner anything directly (owner feedback). `docs/AGENTS.md` rule 14: asks go to the PM and appear on the Workspace as a decision or action; emergencies use a Workspace message to the owner plus a copy to the PM; an owner contact is reported to the PM at once; no plan mode or question prompts for owner approvals; tool-permission prompts are announced to the PM first. `.claude/settings.json` now denies AskUserQuestion, EnterPlanMode and ExitPlanMode. Ready report and review replies carry `Owner-bound asks: all on the Workspace (yes/no)`; `docs/WORKFLOW.md`, `docs/roles/pm.md` updated. Trigger: the Full-stack engineer's session was in plan mode and the harness showed the owner a plan-approval prompt that was not on the Workspace. Docs and settings only; branch `chore/no-direct-asks`.
+- 2026-11-05: Developer 1 and 2 renamed (owner request). Developer 1 is now the Full-stack engineer (builds), Developer 2 the Tech-Lead (reviews, integrates, releases, owns the workflow) in CLAUDE.md, context.md, docs/AGENTS.md, docs/WORKFLOW.md, docs/WORKSPACE.md, docs/DEV_WORKFLOW.md, docs/roles/*, and on the Workspace page (a name map; the keys dev1/dev2, session ids and branches are unchanged; history entries keep the old names). Docs and page only; branch `chore/rename-roles`.
+- 2026-11-05: Security involvement limited to major authentication and database changes (owner request, to keep token use low). `docs/AGENTS.md` rule 9 high-risk lane and review item 3, `docs/WORKFLOW.md`, `docs/roles/pm.md`, `docs/roles/README.md`: the different-model security review, real-system check and plain-words risk summary apply only to major changes that update authentication (sign-in, sessions, handoff, invites, tokens, passwords) or the database (migrations, RLS, functions, triggers); every other change gets normal peer review and QA with no security step. The household and handoff-hardening work stay in the lane. Docs only; branch `chore/security-scope`.
+- 2026-11-05: Release contents shown exactly (owner request). `tools/release_contents.js` lists a release's commits, files by area, plain-words changelog lines, what a user can see, migrations, tests/smoke and gaps; `tools/release.js` prints it (dry run and after a release); `docs/RELEASES.md` holds it for releases 8 to 11 (new rule: every release, exact contents, never a summary); the PM sees the owner's Workspace messages first and relays them in detail (`docs/AGENTS.md` rule 13, `docs/WORKSPACE.md`, `docs/roles/pm.md`). Docs and tooling only; branch `chore/release-contents`.
+- 2026-11-05: The owner does not repeat anything (owner request). Page answers on the Workspace count as the owner's approval for gates 1 and 2 and all decisions and actions (release and production migrations still need a chat message); every agent reads the Workspace for the owner's input; chat statements are mirrored to the Workspace as quoted messages. `docs/WORKSPACE.md`, `docs/AGENTS.md` rule 12, `docs/roles/pm.md`, `docs/DECISIONS.md`. Docs only; branch `chore/owner-input`.
+- 2026-11-05: Workspace: decisions and actions are separate (owner request). The Needs-you area has Decisions (each option shows pros, cons, a Recommended tag and a recommendation) and Actions (numbered steps with checkboxes, exact page links, time estimate, what to do afterwards; "I did this" / "Not now"), plus a Log. New `actions` collection; rules in `docs/WORKSPACE.md` and `docs/roles/pm.md`. Docs only; branch `chore/workspace-needs`.
+- 2026-11-05: Workspace: phone layout and PM backlog (owner request). The Workspace page now follows a team chat app on the phone: bottom bar Home / DMs / Backlog / Office, decisions as a banner on Home, channels and DM threads full screen. New `backlog` collection the owner adds to and the PM works through continuously (`docs/WORKSPACE.md`, backlog loop in `docs/roles/pm.md`). Docs only; branch `chore/workspace-mobile`.
+- 2026-11-04: Workspace: chat view and 3D office (owner request). The Stiver Workspace page now shows agent-to-agent conversation with quoted replies and live "working on" status, plus a 3D office tab (desks, speech bubbles, glowing screens, a ringing bell for decisions). `docs/WORKSPACE.md` adds `replyTo`, the `presence` collection and the rule to mirror every inter-agent message. Docs only; branch `chore/workspace-chat`.
+- 2026-11-04: Stiver Workspace (owner request). A Claude artifact with a Slack-like feed of all agent messages and a pinned "Needs you" tray for decisions the owner must make (answers saved on the page, relayed by the PM). `docs/WORKSPACE.md` (URL, message and decision schema, who posts, how answers are used and the limit that release/production migrations still need a chat message), `docs/AGENTS.md` rule 11, `docs/roles/pm.md`. Docs only; branch `chore/workspace`.
+- 2026-11-04: Figma Library: Avatar and Chip components (household design). `docs/FIGMA.md` components table now lists Avatar (`Initial`) and Chip (`Text`, `Selected`) added by the Designer for the household feature; decision log merged from the PM's branches. Docs only; branch `chore/decisions-figma-lib`.
+
+**What a user can see change**
+Nothing: docs, tooling and settings only. The app and its data are untouched.
+
+**Commits**
+- 0f44c00 Fold release-items change file
+- 4a22a96 Release reports start with a high-level item list; releases 8-11 rewritten
+- 291889f Fold cost-rules change file
+- 5fcd095 Token-use rules: AGENTS rule 15, reading lists, milestone-only posts, event-driven PM
+- 98b1ea0 Fold approvals-tab change file
+- 3d80db3 Workspace docs: approvals tab and collection
+- 58dc63a Fold no-direct-asks change file
+- 274de16 No agent asks the owner directly: rule 14, deny question and plan tools, report check line
+- 1ad0845 Log Full-stack engineer plan approval
+- 726775a Fold rename-roles change file
+- 2a73b18 Rename Developer 1 and 2: Full-stack engineer and Tech-Lead (display names only)
+- e720b7a Log handoff message approval and owner process rules
+- 1080c33 Fold security-scope change file
+- 9087ded Security review only for major authentication and database changes
+- 0e35082 learning: Workspace decision card overflow and unclear selection
+- 36e1f4e Release contents: no truncation of changelog lines; docs/RELEASES.md regenerated
+- ae29a7c Fold release-contents change file
+- 8b97551 Exact release contents (tool, docs/RELEASES.md); PM sees owner messages first
+- 309322e Fold owner-input change file
+- d6789b2 Owner input: page answers count for gates 1 and 2; agents read the Workspace; chat mirrored
+- e519b74 Log handoff PRD approval and Workspace approval rule
+- e2bbd8a Workspace docs: presence heartbeat; trim learning log to the doc budget
+- de20855 Fold workspace-needs change file
+- d2b35cc Workspace docs: decisions with pros and cons, actions with steps and links
+- 27f51b5 learning: frozen db documents in the Workspace page
+- bfd3cb5 Fold workspace-mobile change file
+- 53a5e66 Workspace docs: phone layout and PM backlog loop
+- d93fc8c Fold workspace-chat change file
+- 557bfb3 Workspace docs: chat replies, presence, 3D office
+- 7c1978e Fold workspace change file
+- 59fb141 Add Stiver Workspace docs (shared feed and needs-you tray)
+- 244c6d7 Fold figma avatar/chip change file
+- 5d8008b FIGMA.md: Avatar and Chip components
+- 1196005 Log remaining household owner decisions
+- 6b1c85d Decision log: household design approved (gate 2)
+- 57c5de4 Decision log: editor edits only own transactions
+
+**Files by area**
+- Tooling (2): tools/release.js, tools/release_contents.js
+- Docs and rules (16): CLAUDE.md, context.md, docs/AGENTS.md, docs/CHANGELOG.md, docs/DECISIONS.md, docs/DEV_WORKFLOW.md, docs/FIGMA.md, docs/READY_REPORT.md, docs/RELEASES.md, docs/WORKFLOW.md, docs/WORKSPACE.md, docs/learning-archive.md, docs/reviews/README.md, docs/roles/README.md, docs/roles/pm.md, learning.md
+- Assistant settings (1): .claude/settings.json
+
+**Database migrations**
+None.
+
+**Tests and smoke:** browser suite, regression and production smoke skipped by rule (docs, tooling and settings only). Production serves stiver-shell-8c6e642191 (checked). PR 17
+**Known gaps:** none
+
+---
+
 ## Release 11 contents (main 631cb8b)
 
 **Items in this release**

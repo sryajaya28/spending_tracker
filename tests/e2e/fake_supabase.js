@@ -79,6 +79,7 @@
       resend: async (a) => { window.__resend = a; return { error: null }; },
       resetPasswordForEmail: async (e, o) => { window.__reset = [e, o]; return { error: null }; },
       updateUser: async (a) => { window.__upd = a; return { error: null }; },
+      setSession: async (t) => { window.__setSession = t; session = mkSession(window.__joinEmail || 'invitee@test.dev'); setTimeout(() => cb('SIGNED_IN', session), 0); return { data: { session }, error: null }; },
       signOut: async (o) => { window.__signOut = o; if (!o || o.scope !== 'others') { session = null; setTimeout(() => cb('SIGNED_OUT', null), 0); } return { error: null }; },
       getSession: async () => ({ data: { session: session && { ...session, refresh_token: 'rt-1' } }, error: null }),
       refreshSession: async ({ refresh_token }) => { if (!refresh_token) return { error: { message: 'no token' } }; session = mkSession('a@b.co'); setTimeout(() => cb('SIGNED_IN', session), 0); return { data: { session }, error: null }; },

@@ -3461,7 +3461,7 @@ const resetPeriodView = () => { state.ui.allPeriods = false; state.ui.monthSrc =
    The hash is replaced (not assigned) so the browser does not run a second render. */
 function resetSessionView() {
   resetPeriodView(); state.ui.onbSkipped = undefined; state.ui.onbSeen = false; state.ui.congrats = false; Object.keys(scrollPos).forEach((k) => delete scrollPos[k]);
-  history.replaceState(null, '', '#/overview'); lastKey = '#/overview';
+  if (!joinState) { history.replaceState(null, '', '#/overview'); lastKey = '#/overview'; }   // the Join page keeps its own address
   window.scrollTo(0, 0);
 }
 async function onAuth(event, session) {

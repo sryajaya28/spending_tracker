@@ -44,9 +44,28 @@ Stiver is the net worth tracker I wanted: built from those pain points, for indi
 
 A family should be able to run its money together. The owner invites people by email as **Editor** (read and write) or **Viewer** (read only); everyone sees the same data and **every record shows who created or changed it**, so everyone knows who did what with the money. Editors can only change transactions they created; the owner can change anything. An email that already has a Stiver account cannot be invited in the first version.
 
+## Built by an AI product team
+
+Stiver is designed, built and run by a team of AI agents (Claude): a **Product Manager**, a **Designer**, a **Full-stack engineer**, a **Tech-Lead** (reviews, integrates and releases) and **QA**. Each has a written role (`docs/roles/`), and work moves through defined hand-offs, review rules and a test and release process (`docs/WORKFLOW.md`, `docs/AGENTS.md`). There is one human, the owner, who sets the brief and approves at three gates: the requirements, the design and the release. Nothing ships to production without the owner's explicit release.
+
 ## Current status
 
-Live and used with real sign-ups. Next up: household access, then hardening the sign-in handoff. Priorities and known gaps are in `docs/NEXT_STEPS.md`.
+Live at https://stiver.io with early users. Next up: household access, then hardening the sign-in handoff. Priorities and known gaps are in `docs/NEXT_STEPS.md`.
+
+## Deliberately not building (yet)
+
+- **Bank syncing: not now.** Bank API coverage in Indonesia is uneven, and holding bank credentials or tokens is a serious security responsibility. The end goal is unchanged, though: **fewer manual entries and more automated records**, through other routes than bank or exchange syncing.
+- **Tax filing or advice:** out of scope.
+- **Trading through the app:** Stiver tracks investments; it does not place trades.
+- **Investment recommendations:** not yet.
+- **Native iOS and Android apps:** later. Today it is a web app you can add to your Home Screen.
+
+## Known limits (we will improve these)
+
+- Entries are still mostly manual.
+- Indonesian stocks and commodities use Yahoo Finance's unofficial endpoints, which can break or be blocked; a typed-in price always works.
+- US stocks and crypto prices use Finnhub's free plan, which is for personal use; a public product needs a suitable plan or another source.
+- Recurring entries are created when you open the app, not by a background job.
 
 ## Under the hood
 
@@ -91,10 +110,14 @@ Pushing to `main` deploys to production on Vercel, and it only happens by pull r
 
 Supabase settings the app relies on: Email provider with **Confirm email** on (production), Google provider enabled, URL Configuration (Site URL `https://stiver.io`, redirect URLs include `https://stiver.io/**` and `http://localhost:5173/**`), custom SMTP (Resend, sender on `stiver.io`), and the templates in `supabase/templates/`.
 
-## Before wider release
+## Before opening to the public
 
-- Finnhub's free plan is for personal use. A public product needs a suitable plan or another data source.
-- Turn on CAPTCHA (Turnstile): set `TURNSTILE_SITE_KEY` in `prototype/config.js` and enable it in Supabase together.
-- Set a minimum password length of 8 in Supabase and turn on two-factor sign-in on your Supabase, Vercel, GitHub and Google accounts.
-- Add a license, and set `CONTACT_EMAIL` in `prototype/config.js` for the privacy and terms pages.
-- Never commit secrets. Only the public Supabase key and Turnstile *site* key belong in this repo.
+Planned hardening, tracked on the team's backlog and not done yet:
+
+- [ ] CAPTCHA (Cloudflare Turnstile): set `TURNSTILE_SITE_KEY` in `prototype/config.js` and enable it in Supabase together.
+- [ ] Minimum password length of 8 in Supabase.
+- [ ] Two-factor sign-in on the Supabase, Vercel, GitHub and Google accounts.
+- [ ] A license, and `CONTACT_EMAIL` in `prototype/config.js` for the privacy and terms pages.
+- [ ] A suitable price-data plan (see Known limits).
+
+Never commit secrets. Only the public Supabase key and Turnstile *site* key belong in this repo.

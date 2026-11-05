@@ -372,6 +372,7 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 - Owner invites an Editor and a Viewer from Settings > Household; Pending rows show Resend/Revoke; the Join link (`/join#t=...`) asks for name and password, signs in and lands in the household; the token never stays in the address bar.
 - Editor: can add everything, edits only own transactions (others show "read-only" and "Added by <name>"); Viewer: no Add/Edit/Delete anywhere. Deleting an item used by others' entries shows "Can't delete '<name>'. '<name>' holds <n> transactions added by others. Ask the owner."
 - Removed member sees "You no longer have access" with Sign out / Delete my login. Create account with a pending-invite address shows the same "Check your email" screen as any address.
+- Household card: each member row except yours has a Manage button (role + Remove; Remove asks "Remove <name>?" naming the person); badge after the name; a Pending row has Resend and Revoke on one line (icons on a phone), long emails end with an ellipsis; no grey "Tap a person" hint.
 - Activity (Settings > Household > Activity): rows grouped by day (Today, Yesterday, dates) with who did what; filter by person and by All/Added/Edited/Deleted/Balance; an edit shows "was <old amount>", a balance change "old -> new"; empty and filtered-empty messages; a Viewer sees "Viewers can read Activity". A solo ledger has no Household activity.
 - Covered by `household_join`, `household_labels`, `household_activity`, `analytics`, `run`, and `bash tools/sql_local_test.sh`.
 

@@ -985,7 +985,6 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 
 /* household card (Figma frames 1-4) */
 .hh-intro { margin: 0 0 6px; }
-.hh-row.tap { cursor: pointer; }
 .hh-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .hh-who .avatar { width: 32px; height: 32px; font-size: 13px; flex: 0 0 auto; }
 .hh-who .avatar.pending { background: var(--line); color: var(--muted); }
@@ -1012,5 +1011,20 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .act-row:last-child { border-bottom: 0; }
 .act-row .avatar { width: 32px; height: 32px; font-size: 13px; flex: 0 0 auto; }
 .act-row > div { min-width: 0; } .act-row b { display: block; overflow-wrap: anywhere; } .act-row small { display: block; }
-.hh-activity { width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); font: inherit; color: inherit; padding: 12px 0; display: flex; justify-content: space-between; align-items: center; }
+.hh-activity { width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); font: inherit; color: inherit; padding: 14px 0 0; margin-top: 14px; display: flex; justify-content: space-between; align-items: center; }
 .hh-activity small { display: block; }
+
+/* Household card rework (Figma 48:5, 48:272, 51:563, 73:745) */
+.hh-row { gap: 12px; }
+.hh-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.hh-line .hh-name { display: block; max-width: 130px; flex: 0 1 auto; }
+.hh-line.pend .hh-name { max-width: 100px; }
+.hh-line .badge { flex: 0 0 auto; }
+.hh-who { flex: 1 1 auto; }
+.hh-manage { flex: 0 0 auto; padding: 10px 16px; }
+.hh-pend-actions { padding: 0; justify-content: flex-end; flex: 0 0 auto; gap: 8px; }
+.hh-pa { flex: 0 0 auto; padding: 10px 14px; }
+.hh-pa .pa-ico { display: none; } .hh-pa .pa-ico svg { width: 18px; height: 18px; display: block; }
+.hh-card .form-row { align-items: center; }
+@media (max-width: 600px) { .hh-pa { padding: 10px; border-radius: 999px; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; } .hh-pa .pa-txt { display: none; } .hh-pa .pa-ico { display: inline-flex; } }
+@media (min-width: 601px) { .hh-line .hh-name { max-width: 260px; } .hh-line.pend .hh-name { max-width: 240px; } }

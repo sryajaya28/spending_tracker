@@ -1,0 +1,1 @@
+2026-11-05: **README rewritten (docs only).** Now opens with the problem and the questions Stiver answers (multi-currency net worth, savings, investments, debt to zero, lent), marks household access as in development, drops stale text (staging 'to do', 13 migrations, design export), points to the workflow docs. Branch docs/readme-rewrite.

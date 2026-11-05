@@ -40,3 +40,42 @@ I read the PM's "Mailinator addresses only, no more Gmail +aliases" instruction 
 Owner data back to baseline (0 transactions, 1 wallet, 77 categories, 0 of every other test table; verified). One login of mine remains, a Viewer member (`+hh3`, name "QA Editor"), kept so the Viewer fix can be retested without another email. No pending invites. The earlier mailinator logins were not touched.
 
 Owner-bound asks: all on the Workspace (yes/no): no, via the PM.
+
+---
+# Round 2: retest on staging 0f8283a (served app.js verified identical to the commit)
+
+## Bugs from round 1
+| Bug | Result |
+|---|---|
+| 1 Viewer sees write controls | FIXED. Overview, Transactions, Budgets, Portfolio at 390 px, light and dark: no visible write control; the raised Add button is `visibility:hidden` + `aria-hidden` and a tap at its centre lands on the nav; the Viewer app sends no write calls; the transaction detail has no Edit/Delete and shows "Added by SMOKE, <time>"; `#/add` opens no add form (no read-only message was seen either; PRD 17 asks for one: not confirmed) |
+| 2 error toast when a manual price exists | FIXED (light and dark): no toast, no manual_prices write |
+
+## New bugs
+**3. Cosmetic, owner request: the bottom bar keeps an empty slot for a Viewer.** The hidden Add button still takes its space, leaving a gap in the middle of the bar (`docs/reviews/img/qa-viewer-budgets-fixed-390.png`). The owner asked (told to QA directly) that the bar be rebalanced without the empty slot. For the Full-stack engineer; QA does not edit app code.
+**4. MAJOR (PRD check 20, design: the 30 s refresh routes a removed person): removal while the app is open never reaches the no-access page.** Steps: member signed in and idle -> owner calls `remove_member` -> wait. Actual: still the normal screen after 55 s (role changes arrived in 34 s and 28 s). Cause, from `cloud.js:285-288`: `pollChanged()` returns `!!st && st.rev !== hh.rev`; once removed, RLS hides `household_state`, so `st` is null and the poll answers "no change" forever. The page appears only on reload or a new sign-in (verified). Data is not exposed (RLS returns nothing); the person sees a stale screen and their next save fails. Suggested fix: treat an unreadable state for a member as "changed" so the app reloads. Not tested: what a save from the stale screen shows.
+**Observations (not bugs in the PRD's words):** Delete my login deletes the login in one tap with no confirmation (I had planned a confirm); the no-access page says "this household", not "<owner>'s household".
+
+## Verified in round 2
+| Check | Result |
+|---|---|
+| HH-19 role change in the open app | PASS Viewer to Editor in 34 s and back in 28 s; "Your access changed." shown |
+| HH-38 / HH-22 | PASS Editor sees "read-only" on the owner's row (text marker), not on their own; rows carry first names (SMOKE / QA); owner transaction detail has no Edit/Delete for an Editor |
+| HH-20 fresh sign-in as a removed member | PASS light and dark: no-access page with only Sign out and Delete my login; never an empty ledger |
+| HH-35 Delete my login | PASS the login no longer signs in (400); no confirmation step (see observations) |
+| HH-31 spoofed sign-up | PASS 11 checks: metadata claiming the household gave a normal empty account; cannot read any owner row, cannot write (403), no membership, owner household unchanged |
+| HH-02 / HH-04 | PASS existing address in 3 letter-case/space variants gets the same generic answer, nothing sent; bad email and bad role 400 |
+| HH-21 revoke | PASS 4 pending invites listed, revoked, gone from the list, their invited logins removed |
+| HH-30 hourly limit | PASS rate_limited (429) after about 10 invite calls in an hour |
+
+## Still NOT verified
+- **HH-05 member cap: not verified.** My 5th invite was answered 429 rate_limited (the hourly limit), not the cap; my first assertion only checked "not 200" and wrongly passed. Needs the limit window to clear, then 4 pending invites + owner.
+- Expired and revoked LINKS, re-invite after Delete my login (HH-36), resend (HH-03): all need an invite email to be read. Mailinator is not reachable from this sandbox (egress refused `www.mailinator.com`), and Gmail +aliases are off-limits per the PM. Needs either the host allowed or one more alias.
+- Indonesian text and the Indonesian invite email, the Settings > Household card (owner view) at 390 px and in dark, HH-26 former member's name on rows, UI conflict message (HH-29, covered by the Full-stack engineer's 409 spike only), invite-sweep with the service key.
+
+## State left on staging
+All my test logins deleted (0 left), no pending invites, no members, owner data at baseline (0 transactions, 1 wallet, 77 categories). 4 invite emails went to Mailinator addresses (unread, revoked). The smoke owner is invite-rate-limited for up to one hour from now.
+
+## Verdict round 2
+Not fully green. Bugs 1 and 2 are fixed. Bug 4 is major (stale screen after removal; data safe) and bug 3 is cosmetic; I recommend fixing both, or the owner accepting 4 plus the unverified list above (cap, link expiry, Indonesian, owner card). 
+
+Owner-bound asks: all on the Workspace (yes/no): no.

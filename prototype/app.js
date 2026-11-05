@@ -1646,7 +1646,7 @@ function viewAuth() {
     ${pwField(__('New password'), `required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"`)}
     <button class="btn lg" type="submit">${__('Save password')}</button></form>`;
   else if (v === 'sent') body = `<div class="card">${logo}
-    <div><h2 style="font-size:24px">${__('Check your email')}</h2><p class="muted">${__('We sent a link to {email}. Open it to confirm your address, then sign in. If you already have an account, just sign in.', { email: '<b>' + esc(a.email) + '</b>' })}</p></div>
+    <div><h2 style="font-size:24px">${__('Check your email')}</h2><p class="muted">${__('We sent a link to {email}. Open it to confirm your address, then sign in. If you already have an account, just sign in.', { email: '<b>' + esc(a.email) + '</b>' })}</p><p class="muted" data-invite-hint>${__('If you were invited to a household, use the link in your invite email.')}</p></div>
     ${authMsg(a)}<p class="hint" role="status">${__('Waiting for you to confirm. Open the link on any device, and this page signs you in on its own.')}</p>
     ${captchaBox()}<button class="btn lg" data-act="auth-check">${__('I\'ve confirmed my email')}</button><button class="btn secondary lg" data-act="auth-resend">${__('Resend the email')}</button>
     <p class="muted" style="text-align:center">${authLink('signin', 'Back to sign in')}</p></div>`;

@@ -341,7 +341,13 @@ const Cloud = (() => {
     /* auth */
     redirect: () => appUrl(), appUrl,
     getSession: async () => must(await client.auth.getSession()).session,
-    signUp: (email, password, name, currency, captchaToken) => client.auth.signUp({ email, password, options: { data: { full_name: name, currency }, emailRedirectTo: appUrl(), captchaToken } }),
+    /* sign-up goes through the signup-gate function: a fresh address, an existing account and a pending-invite address all get the same answer, so the screen never reveals which (design 5.5) */
+    async signUp(email, password, name, currency, captchaToken) {
+      const { data, error } = await client.functions.invoke('signup-gate', { body: { email, password, full_name: name, currency, captchaToken } });
+      let j = data; if (error) { try { j = await error.context.json(); } catch (e) { return { data: null, error }; } }
+      if (j && j.result === 'check_email') return { data: { session: null }, error: null };
+      return { data: null, error: { message: j && j.error === 'invalid_input' ? 'Check your email and password (at least 8 characters).' : j && j.error === 'rate_limited' ? 'Too many attempts. Try again in a little while.' : 'Something went wrong. Try again.' } };
+    },
     signIn: (email, password, captchaToken) => client.auth.signInWithPassword({ email, password, options: { captchaToken } }),
     google: () => client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: appUrl() } }),
     resend: (email, captchaToken) => client.auth.resend({ type: 'signup', email, options: { emailRedirectTo: appUrl(), captchaToken } }),

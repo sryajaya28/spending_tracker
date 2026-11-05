@@ -69,6 +69,11 @@
     from: (t) => new Q(t),
     storage: { from: (bucket) => ({ upload: async (path, file, o) => { if (window.__failUpload) return { data: null, error: { message: 'upload failed' } }; (window.__uploads = window.__uploads || []).push({ bucket, path, size: file.size, type: o && o.contentType }); return { data: { path }, error: null }; } }) },
     rpc,
+    functions: { invoke: async (name, o) => {   // only the sign-up gate is faked here (the household tests replace Cloud.fn themselves)
+      const b = (o && o.body) || {};
+      if (name === 'signup-gate') { window.__signUp = { email: b.email, password: b.password, options: { data: { full_name: b.full_name, currency: b.currency }, captchaToken: b.captchaToken } }; window.__signUpOpts = window.__signUp.options; return { data: { result: window.__gateReply || 'check_email' }, error: null }; }
+      return { data: null, error: { message: 'unknown function' } };
+    } },
     auth: {
       onAuthStateChange: (f) => { cb = f; setTimeout(() => f('INITIAL_SESSION', session), 0); return { data: { subscription: {} } }; },
       signInWithPassword: async ({ email, password, options }) => {

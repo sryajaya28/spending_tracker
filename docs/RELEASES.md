@@ -2,6 +2,73 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 16 contents (main 2dba369)
+
+**Items in this release**
+Fixes:
+- CI fix
+Docs/process:
+- Strict e2e fake
+- Risk-tiered workflow
+- README rewritten (docs only)
+- README: success and performance metrics (docs only)
+- Path rule and CI
+- 2026-11-05 · docs/AGENTS.md rule 16 (message economy, hand off at 400k tokens, n
+- learning.md split by area
+- Household: Edge Function code written (not deployed)
+- Deploy job
+- Contact email set (small change)
+- Household: account-delete guard and category rule; design gate 2 approved
+- Household slice 1: migration 1 applied to STAGING; migrations 2 and 3 written (not applied)
+- Household access, slice 1 started: migration 1 (additive) with SQL tests
+
+**Exact detail.** Range: 35c97ed..3cf39b8. 11 commits, 39 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-05: Strict e2e fake. tests/e2e/fake_supabase.js now carries the real column lists (SCHEMA) and refuses an insert, update or upsert with an unknown column like the database does (the manual_prices.id bug would now fail an e2e); tools/check_fake_schema.js compares SCHEMA with the real database. Tests/tooling only; full e2e passes, a removed column makes cashacct fail (checked). Branch feature/strict-fake.
+- 2026-11-05: Risk-tiered workflow. New docs/workflows/ (README, TIER_1-3) and AGENTS.md rule 17: three tiers chosen by a path rule (agents can raise, never lower), intake note and routing, owner gates per tier, hotfix lane, batching, short task-scoped agents, context lists per tier. Documented; CI automation (path-rule label, e2e on PRs, migration/function deploy job, strict test fake) still to build, tracked in NEXT_STEPS. Docs only; branch staging.
+- 2026-11-05: README rewritten (docs only). Now opens with the problem and the questions Stiver answers (multi-currency net worth, savings, investments, debt to zero, lent), marks household access as in development, drops stale text (staging 'to do', 13 migrations, design export), points to the workflow docs. Branch docs/readme-rewrite. 2026-11-05: README feedback applied (docs only). New section 'Built by an AI product team' (Claude agents, one human owner, three gates), 'Deliberately not building (yet)' (bank sync not now: Indonesian bank API coverage and security, goal stays fewer manual entries; tax, trading, recommendations, native apps), 'Known limits', and 'Before opening to the public' as an unchecked list tracked on the backlog. Branch docs/readme-rewrite.
+- 2026-11-05: README: success and performance metrics (docs only). DAU/WAU (users recording transactions), churn (no transaction for 7 days), paid conversion later (Xendit/Stripe), plus performance metrics: data freshness, app speed and proposed save reliability, price freshness, recurring accuracy. Branch docs/readme-metrics. 2026-11-05: README success metrics revised (docs only). Added activation (two kinds of things beyond spending in 7 days) as the headline, WAU lead and DAU secondary, stickiness, cohort retention, churn from last record (transaction or account) over 30 days, initial targets marked as hypotheses, performance as guardrail metrics with concrete targets, exclusions for team and test traffic. Branch docs/readme-metrics.
+- 2026-11-05: Path rule and CI. tools/path_tier.js (+ tests/path_tier.test.js) computes the minimum tier of a change from its files; .github/workflows/ci.yml labels every PR to staging or main with tier-N and runs the e2e suite. Not yet seen running on GitHub (first PR will show); branch protection is the owner's setting. Branch staging.
+- 2026-11-05 · docs/AGENTS.md rule 16 (message economy, hand off at 400k tokens, no repeated pastes) from the session usage review; docs only.
+- 2026-11-05: learning.md split by area. learning.md is now an index with a load table (which area files each kind of task needs) plus the Session log; the rules moved verbatim into docs/learning/ (release, data, code, ui, testing, owner). Nothing was dropped (checked line by line); CLAUDE.md rule 0 updated. Docs only; branch staging.
+- 2026-11-05: Household: Edge Function code written (not deployed). `supabase/functions/`: invite-member, manage-invite (revoke/resend), join-household (unauthenticated, own token, token on every call), signup-gate (one generic answer), delete-my-login, invite-sweep, shared helpers (restrictive CORS, attempt-counted rate limits, our own sender, sanitised names). Migration 28 gains `email_exists()` for signup-gate. For Developer 2 code review before any deploy; owner actions still needed (staging Confirm email, RESEND_API_KEY, MAIL_FROM, SITE_URL secrets). Branch `feature/household`.
+- 2026-11-05: Deploy job. tools/migrate.js applies supabase/migrations through psql, each file in one transaction with its row in public._repo_migrations (tested on a local Postgres: baseline, apply, rerun, rollback of a failing file); .github/workflows/deploy.yml runs it plus the six Edge Function deploys and the answer checks: staging on every push to staging that touches supabase/, production by hand behind the owner's approval on the production environment. Needs the owner's secrets (SUPABASE_ACCESS_TOKEN, DB_URL_STAGING, DB_URL_PROD) and first-run baseline; not yet run against a real project. Branch staging.
+- 2026-11-05: CI fix. tests/e2e/csp.js read vercel.json from a hardcoded /home/user path, so it failed on the GitHub runner (the other 58 e2e passed there); it now uses a path relative to the test. Test only; branch staging.
+- 2026-11-05: Contact email set (small change). prototype/config.js CONTACT_EMAIL = support@stiver.io (forwards to the owner through ImprovMX; verified delivered), so the privacy and terms pages show it; learning.md no longer contains a personal address fragment. Branch docs/contact-email; ships after the household release.
+- 2026-11-04: Household: account-delete guard and category rule (owner decisions via PM); design gate 2 approved. PRD check 38 and check 33 subline; technical design 4a gains the database guard on account/category delete (HH001 with count), the list of write paths and the extended SQL tests. Docs only. Branch `docs/household-prd`.
+- 2026-11-04: Household slice 1: migration 1 applied to STAGING; migrations 2 and 3 written (not applied). Migration 1 (approved by Developer 2) is applied on the staging database and verified (11 creator columns, no missing creators, 7 new tables, 2 functions; staging smoke 15/15). `20261104000025_household_hardening.sql` (household_state policy via household_owner(), membership guard trigger, recurring_rule_id note), `20261104000026_household_rls.sql` (all policies replaced, Editors change only their own transactions, linked-row rules, profile column grants) with a down script, and `20261104000027_household_triggers.sql` (second backfill, stamps, stale-edit check for households with members, recurring attribution, poll counter, delete guards), with `supabase/tests/household_*.test.sql`. Waiting for Developer 2 to review the text and for a staging dry-run (the SQL tool asks the owner to confirm DROP statements). Branch `feature/household`.
+- 2026-11-04: Household access, slice 1 started: migration 1 (additive) with SQL tests. `20261104000024_household_tables.sql` adds profiles.household_status, the household tables, created_by/updated_by/rev on 11 tables (existing rows backfilled to their owner with triggers off), recurring_rule_id, and the `household_owner()`/`is_writer()` functions (members need a live session; fail closed). No policy changes: owners and solo users are unaffected. `supabase/tests/household_tables.test.sql`; dry-run on the staging database inside a transaction rolled back OK. NOT applied to staging yet (waiting for Developer 2's review). Feature test FT-008 added. Branch `feature/household`.
+
+**What a user can see change**
+Nothing: docs, tooling and settings only. The app and its data are untouched.
+
+**Commits**
+- 3cf39b8 CI: skip e2e for Tier 1 PRs; release hygiene order
+- 09bf133 Path rule: docs inside supabase/ are Tier 1; CI also runs on ready_for_review
+- 5b3c52f Fold change files into the changelog for Release 16
+- c0d5674 Split learning.md into area files with an index and load table
+- e2443b6 Deploy: confirm function deploys non-interactively (--yes)
+- 34e9e12 Deploy: print the shape of the DB_URL secret (no password) to debug login failures
+- 81135a6 Deploy job: tools/migrate.js and deploy.yml (migrations and Edge Functions from CI)
+- ecedd9f csp test: find vercel.json relative to the test, not a hardcoded path (fails on CI)
+- 5351492 Next steps: record what is built; change file for path rule and CI
+- 55895a3 Path rule (tools/path_tier.js + test) and CI workflow: tier label and e2e on every PR
+- bde9f1c Strict e2e fake: refuse unknown columns like the real database; schema check tool
+
+**Files by area**
+- Edge Functions (1): supabase/functions/DEPLOY.md
+- Tests (4): tests/e2e/README.md, tests/e2e/csp.js, tests/e2e/fake_supabase.js, tests/path_tier.test.js
+- Tooling (4): tools/check_fake_schema.js, tools/db_url_check.js, tools/migrate.js, tools/path_tier.js
+- Docs and rules (28): CLAUDE.md, docs/CHANGELOG.md, docs/NEXT_STEPS.md, docs/changes/2026-11-04-household-migration-1.md, docs/changes/2026-11-04-household-migration-2-3.md, docs/changes/2026-11-04-household-prd.md, docs/changes/2026-11-05-contact-email.md, docs/changes/2026-11-05-faster-releases.md, docs/changes/2026-11-05-household-activity.md, docs/changes/2026-11-05-household-card-rework.md, docs/changes/2026-11-05-household-edge-functions.md, docs/changes/2026-11-05-household-local-sql-check.md, docs/changes/2026-11-05-household-people-email.md, docs/changes/2026-11-05-household-slice1-client.md, docs/changes/2026-11-05-household-viewer-controls-manual-prices.md, docs/changes/2026-11-05-message-economy.md, docs/changes/2026-11-05-path-rule-supabase-docs.md, docs/changes/2026-11-05-readme-metrics.md, docs/changes/2026-11-05-readme-rewrite.md, docs/changes/2026-11-05-risk-tiered-workflow.md, docs/learning/code.md, docs/learning/data.md, docs/learning/owner.md, docs/learning/release.md, docs/learning/testing.md, docs/learning/ui.md, docs/workflows/README.md, learning.md
+- Other (2): .github/workflows/ci.yml, .github/workflows/deploy.yml
+
+**Database migrations**
+None.
+
+**Tests and smoke:** tools/regression.js 4/4 on staging (browser suite, staging smoke, real-database create and cleanup); CI on the PR: tier and e2e (59 tests) green on 3cf39b8. production smoke 15/15 on https://stiver.io (main 2dba369, stiver-shell-2dba369e14); no migrations; staging and production databases tracked in public._repo_migrations through the deploy workflow (runs 7 and 8)
+**Known gaps:** the first CI e2e run hung on the Playwright install step (GitHub side); the deploy workflow's push trigger and Tier 1 e2e skip are untested until the next qualifying PR; Supabase CI token expires in the period the owner chose; branch protection requires e2e and tier on main only
+
 ## Release 15 contents (main 52b656e)
 
 **Items in this release**

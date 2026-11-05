@@ -1,4 +1,4 @@
-/* One-command regression of staging. Skips itself when the change since production is docs/tooling only (tools/gates.js).
+/* One-command regression of staging. Skips itself when the change since production is docs/tooling only or a Tier 1 batch (tools/gates.js).
  *
  *   node tools/regression.js [--force]       needs SMOKE_STAGING_PASSWORD in the environment
  *
@@ -7,9 +7,9 @@
 const { spawnSync } = require('child_process'), g = require('./gates');
 const force = process.argv.includes('--force'), STG = 'https://staging.stiver.io';
 g.sh('git fetch -q origin main staging');
-const c = g.classify(g.changedFiles('origin/main', 'origin/staging'));
+const c = g.classify(g.changedFiles('origin/main', 'origin/staging'), ['origin/main', 'origin/staging']);
 if (!c.files.length) { console.log('REGRESSION SKIPPED: staging has no changes against main.'); process.exit(0); }
-if (c.docsOnly && !force) { console.log(`REGRESSION SKIPPED: docs/tooling only (${c.files.length} files, no app code). Use --force to run anyway.`); process.exit(0); }
+if (c.skipTests && !force) { console.log(c.docsOnly ? `REGRESSION SKIPPED: docs/tooling only (${c.files.length} files, no app code). Use --force to run anyway.` : `REGRESSION SKIPPED: Tier 1 batch (every app change is listed in docs/workflows/tier1-approved.txt; CI e2e and the owner's screenshot review are the gates). Use --force to run anyway.`); process.exit(0); }
 if (!process.env.SMOKE_STAGING_PASSWORD) { console.log('SMOKE_STAGING_PASSWORD is not set'); process.exit(2); }
 const env = { ...process.env, SMOKE_EMAIL: 'smoke.staging@stiver.io', SMOKE_PASSWORD: process.env.SMOKE_STAGING_PASSWORD };
 const steps = [

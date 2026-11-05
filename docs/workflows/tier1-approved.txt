@@ -1,0 +1,5 @@
+# Commits the owner approved as Tier 1 although the path rule says Tier 2 (an app.js change that is only an icon, copy or spacing).
+# tools/gates.js skips regression and the production smoke test for a release whose non-docs changes all come from commits listed here.
+# One per line: short sha first, then the date and the owner's words. Only the Tech-Lead adds a line, and only when the owner says so.
+f83d663 2026-11-05 Portfolio nav icon becomes the wallet icon (owner: "First tier 1 improvement. Update the logo for portfolio to 'Wallet' icon")
+c745faf 2026-11-05 wallet icon 20% larger (owner: "The wallet icon is too small, make it a bit bigger"; "Looks good")

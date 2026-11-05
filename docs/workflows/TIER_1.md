@@ -16,3 +16,7 @@
 **Gap:** the Tech-Lead reviews its own work. Acceptable only because Tier 1 cannot touch data or money, CI catches breakage and the owner sees the result. If e2e coverage of an area is thin, add tests before using Tier 1 there.
 
 **Docs:** a change file only. Event tracking (CLAUDE.md rule 5b) still applies to anything that adds a button or form (then it is not Tier 1).
+
+**Releasing a Tier 1 batch (owner, 2026-11-05):** no regression run and no production smoke test. CI's e2e run and the owner's review of the preview screenshots are the gates (they replace the regression and smoke passes). After the owner says "Release": merge `staging` into `main`, then only check that the site answers 200 and serves the new build stamp.
+
+**How the tools know (tools/gates.js):** a release skips regression and the production smoke test when its only non-docs changes come from commits listed in `docs/workflows/tier1-approved.txt` (short sha, then the owner's words; the Tech-Lead adds a line only when the owner says so, because the path rule calls every `app.js` change Tier 2) and no changed file is Tier 3 (database, sync, config, functions). Docs- and tooling-only releases skip them as before. `node tools/regression.js` prints `REGRESSION SKIPPED` and `node tools/release.js` skips the smoke test in those cases; `--force` runs regression anyway. Test: `node tools/gates.test.js`.

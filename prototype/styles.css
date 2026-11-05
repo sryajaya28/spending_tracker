@@ -1000,3 +1000,5 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .join-lang { display: flex; gap: 6px; }
 .join-lang .chip.on { background: var(--brand); color: #fff; }
 .join-card { display: flex; flex-direction: column; gap: 14px; }
+
+.hh-who-line { font-size: 13px; margin: 4px 0 10px; }

@@ -60,6 +60,9 @@
     const h = handoffs();
     if (fn === 'create_handoff') { if (!session) return { data: null, error: { message: 'not signed in' } }; const code = 'AB' + String(Object.keys(h).length + 1).padStart(2, '0') + 'XYZK' + 'K2'; h[code] = args.p_refresh_token || 'rt'; localStorage.setItem('__handoffs', JSON.stringify(h)); return { data: code, error: null }; }
     if (fn === 'claim_handoff') { const code = String(args.p_code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); const t = h[code] || null; delete h[code]; localStorage.setItem('__handoffs', JSON.stringify(h)); return { data: t, error: null }; }
+    if (fn === 'household_people') return { data: window.__hhPeople || [], error: null };
+    if (fn === 'household_profile') return { data: [{ default_currency: 'IDR', period_day: 1, sample_ids: null }], error: null };
+    if (['set_member_role', 'remove_member', 'leave_household'].includes(fn)) { (window.__hhCalls = window.__hhCalls || []).push([fn, args]); return { data: null, error: null }; }
     return { data: null, error: { message: 'unknown rpc' } };
   };
   window.supabase = { createClient: () => ({

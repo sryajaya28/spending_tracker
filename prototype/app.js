@@ -1318,7 +1318,7 @@ function txnRow(t) {
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
     <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
-    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}</div></div>
+    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}${hhMulti() && t.by ? ` · ${esc(hhName(t.by) || '')}` : ''}${hhMulti() && Cloud.household.role === 'editor' && !canEditRec(t) ? ` · ${__('read-only')}` : ''}</div></div>
     <div class="amt-col"><div class="amt num ${t.type}">${sign}${coinOf(t) ? coinAmount(coinOf(t), t.amount_minor) : money(t.amount_minor, t.currency)}</div><div class="sub">${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
 }
 function filteredTxns(upcoming = false) {
@@ -1684,7 +1684,7 @@ function householdSaveError(err) {
   if (c.kind === 'stale') return __('Someone else changed this just now. Please check it and redo your change.');
   if (c.kind === 'gone') return __('Someone else already deleted this. Showing the latest.');
   if (c.kind === 'guard') return __("Can't delete this: it is used by {n} entries added by others. Ask the owner.", { n: c.n });
-  if (c.kind === 'rls') return __('Your access changed.');
+  if (c.kind === 'rls') return Cloud.household.role === 'editor' ? __('Only the person who added this, or the owner, can change it.') : __('Your access changed.');
   return '';
 }
 /* refresh when someone else changed the household: every 30 s while the page is visible, and when you come back to it */
@@ -1704,6 +1704,20 @@ const hhShort = (iso) => new Date(iso).toLocaleDateString(LANG === 'id' ? 'id-ID
 const hhLocked = () => (Cloud.household.status === 'member' ? 'disabled title="' + __('Set by the household owner') + '"' : '');   // currency and period day belong to the owner
 const hhPeople = () => (Cloud.household.people || []).filter((p) => !p.former);
 const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+/* who did it (PRD 22-26, 33-37): labels only show when the household has other people; a removed member's entries keep their name */
+const hhMulti = () => !state.real && Cloud.household.hasMembers;
+const hhName = (id) => { const x = (Cloud.household.people || []).find((p) => p.user_id === id); return hhFirstName(x && x.display_name) || ''; };
+const hhWhen = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+/* an Editor changes only what they created; the owner changes everything; a Viewer nothing. A row not yet saved has no creator and is the viewer-of-it's own. */
+const canEditRec = (r) => state.real || Cloud.household.status === 'owner' || (Cloud.canWrite() && (!r.by || r.by === state.auth.uid));
+const whoLine = (r) => (r.by ? __('Added by {name}, {when}', { name: esc(hhName(r.by) || '?'), when: r.created_at ? esc(hhWhen(r.created_at)) : '' }).replace(/, $/, '') : '') + (r.edBy ? '<br>' + __('Edited by {name}, {when}', { name: esc(hhName(r.edBy) || '?'), when: esc(hhWhen(r.edAt)) }) : '');
+function txnReadDialog(t) {
+  const c = catOf(t.category_id), row = (k, v) => (v ? `<div class="form-row"><div>${k}</div><b>${v}</b></div>` : '');
+  open(`<h2>${esc(t.note || c?.name || __('Transaction'))}</h2>
+    ${row(__('Amount'), `<span class="num">${t.type === 'income' ? '+' : '−'}${money(t.amount_minor, t.currency)}</span>`)}${row(__('Category'), esc(c ? c.name : __('No category')))}${row(__('Account'), esc(txnWhere(t)))}${row(__('Date'), esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' })))}${row(__('Note'), esc(t.note || ''))}
+    ${hhMulti() ? `<p class="muted hh-who-line">${whoLine(t)}</p>` : ''}
+    <div class="actions"><button type="button" class="btn secondary" data-act="close">${__('Close')}</button></div>`);
+}
 async function hhLoadInvites() {
   if (Cloud.household.status !== 'owner' || state.real || !Cloud.configured) { hhState.invites = []; return; }
   try { hhState.invites = await Cloud.listInvites(); } catch { hhState.invites = []; }
@@ -2074,7 +2088,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
   const tcoin = coinOf(t);
   const c = t ? t.currency : (ws.find((w) => w.currency === cur()) || ws[0]).currency, step = tcoin ? 'any' : expOf(c) ? '0.01' : '1';
   const unit = tcoin ? assetInfo(tcoin.symbol).symbol : c;
-  open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>
+  open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>${t && hhMulti() && t.by ? `<p class="muted hh-who-line">${whoLine(t)}</p>` : ''}
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
     <label class="field">${__('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? (t.loan_id ? 'l:' + t.loan_id : t.wallet_id) : (recallAcct(type, acctOptions(type, '')) || (ws.find((w) => w.currency === cur()) || ws[0]).id))}</select></label>
@@ -2789,7 +2803,7 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el) { if (state.ui.walletMenu || state.ui.infoOpen) { state.ui.walletMenu = null; state.ui.infoOpen = null; render(); } return; }
   const { act, id, type, date } = el.dataset, find = (arr) => arr.find((x) => x.id === id);
-  if (WRITE_ACT.test(act) && !canWrite()) { toast(__('You can view everything here, but not change it.')); return; }
+  if (WRITE_ACT.test(act) && act !== 'edit-txn' && !canWrite()) { toast(__('You can view everything here, but not change it.')); return; }
   if (act !== 'wallet-menu') state.ui.walletMenu = null;
   if (act !== 'toggle-info') state.ui.infoOpen = null;
   if (act === 'close') close();
@@ -2805,7 +2819,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'transfer') transferDialog();
   else if (act === 'view-transfer') transferDialog(null, id);
   else if (act === 'delete-transfer') { if (!removeTransferGroup(id)) { toast(__("Can't delete: the cash has already been spent")); return; } Analytics.track('delete_transfer'); save(); close(); render(); toast('Transfer deleted'); }
-  else if (act === 'edit-txn') { const tx = find(D().transactions); if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
+  else if (act === 'edit-txn') { const tx = find(D().transactions); if (!canEditRec(tx)) { txnReadDialog(tx); return; } if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
   else if (act === 'rec-del') { close(); D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }

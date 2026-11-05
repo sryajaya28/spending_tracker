@@ -75,6 +75,7 @@ const lastMonths = (n) => { const c = currentPeriod(), t = new Date(+c.slice(0, 
 /* ---------- icons ---------- */
 const ICON = {
   x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  redo: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   'eye-off': '<path d="M3 3l18 18"/><path d="M10.6 6.1A10 10 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.9M6.6 7.6C3.9 9.3 2 12 2 12s3.6 6 10 6c1.5 0 2.8-.3 4-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   transfer: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',   /* circular arrows */
@@ -1734,16 +1735,15 @@ function householdCard() {
   const pending = isOwner ? hhState.invites : [], full = list.length + pending.length >= HH_CAP;
   const ownerP = list.find((x) => x.role === 'owner'), ownerFirst = hhFirstName(ownerP && ownerP.display_name) || __('The owner');
   const initial = (x) => esc((String(x || '?').trim()[0] || '?').toUpperCase());
-  const row = (x) => `<div class="form-row hh-row${isOwner && x.role !== 'owner' ? ' tap' : ''}" ${isOwner && x.role !== 'owner' ? `data-act="hh-member" data-id="${x.user_id}" tabindex="0" role="button"` : ''}>
-    <div class="hh-who"><span class="avatar" aria-hidden="true">${initial(x.display_name || x.email)}</span><div><span class="hh-name">${esc(x.display_name || (x.email || '').split('@')[0])}${x.user_id === me ? ' ' + __('(you)') : ''}</span><small>${esc(x.email || '')}</small></div></div><span class="badge">${roleLabel(x.role)}</span></div>`;
-  const pend = (i) => `<div class="form-row hh-row"><div class="hh-who"><span class="avatar pending" aria-hidden="true">✉</span><div><span class="hh-name">${esc(i.email)}</span><small>${__('Invited {date} · as {role}', { date: hhShort(i.created_at), role: roleLabel(i.role) })}</small></div></div><span class="badge warning">${__('Pending')}</span></div>
-    <div class="hh-pend-actions"><button class="btn secondary" data-act="hh-resend" data-id="${i.id}">${__('Resend')}</button><button class="btn secondary" data-act="hh-revoke" data-id="${i.id}">${__('Revoke')}</button></div>`;
+  const row = (x) => `<div class="form-row hh-row"><div class="hh-who"><span class="avatar" aria-hidden="true">${initial(x.display_name || x.email)}</span><div><span class="hh-line"><span class="hh-name">${esc(x.display_name || (x.email || '').split('@')[0])}${x.user_id === me ? ' ' + __('(you)') : ''}</span><span class="badge">${roleLabel(x.role)}</span></span><small>${esc(x.email || '')}</small></div></div>${isOwner && x.role !== 'owner' ? `<button type="button" class="btn secondary hh-manage" data-act="hh-member" data-id="${x.user_id}">${__('Manage')}</button>` : ''}</div>`;
+  const pend = (i) => `<div class="form-row hh-row"><div class="hh-who"><span class="avatar pending" aria-hidden="true">✉</span><div><span class="hh-line pend"><span class="hh-name" title="${esc(i.email)}">${esc(i.email)}</span><span class="badge warning">${__('Pending')}</span></span><small>${__('Invited {date} · as {role}', { date: hhShort(i.created_at), role: roleLabel(i.role) })}</small></div></div>
+    <div class="hh-pend-actions"><button type="button" class="btn secondary hh-pa" data-act="hh-resend" data-id="${i.id}" aria-label="${__('Resend invite')}" title="${esc(i.email)}"><span class="pa-txt">${__('Resend')}</span><span class="pa-ico">${icon('redo')}</span></button><button type="button" class="btn danger hh-pa" data-act="hh-revoke" data-id="${i.id}" aria-label="${__('Revoke invite')}" title="${esc(i.email)}"><span class="pa-txt">${__('Revoke')}</span><span class="pa-ico">${icon('x')}</span></button></div></div>`;
   const intro = isOwner ? __('Everyone here sees the same accounts and transactions.') : h.role === 'editor' ? __('{owner} manages this household. You can add and change entries, but not household settings or people.', { owner: ownerFirst }) : __('{owner} manages this household. You can see everything but not change it.', { owner: ownerFirst });
   return `<section class="card hh-card"><div class="card-head"><h2>${__('Household')}</h2><span class="badge">${roleLabel(h.status === 'member' ? h.role : 'owner')}</span></div>
     <p class="muted hh-intro">${intro}</p>${list.map(row).join('')}${pending.map(pend).join('')}
-    <button type="button" class="form-row hh-row tap hh-activity" data-act="goto" data-route="activity"><div><b>${__('Activity')}</b><small class="muted">${__('Who added, edited or deleted what')}</small></div><span aria-hidden="true">›</span></button>
-    ${isOwner ? `<button class="btn lg hh-invite" data-act="hh-invite" ${full ? 'disabled' : ''}>${__('Invite someone')}</button>${full ? `<small class="muted">${__('Household is full ({n})', { n: HH_CAP })}</small>` : ''}${live.length > 1 ? `<small class="muted hh-foot">${__('Tap a person to change their role or remove them.')}</small>` : ''}`
-      : `<button class="btn secondary lg hh-invite" data-act="hh-leave">${__('Leave household')}</button><small class="muted hh-foot">${__('Currency and period day are set by the owner, so they are read-only here.')}</small>`}</section>`;
+    ${isOwner ? `<button class="btn lg hh-invite" data-act="hh-invite" ${full ? 'disabled' : ''}>${__('Invite someone')}</button>${full ? `<small class="muted">${__('Household is full ({n})', { n: HH_CAP })}</small>` : ''}`
+      : `<button class="btn secondary lg hh-invite" data-act="hh-leave">${__('Leave household')}</button><small class="muted hh-foot">${__('Currency and period day are set by the owner, so they are read-only here.')}</small>`}
+    <button type="button" class="form-row hh-row tap hh-activity" data-act="goto" data-route="activity"><div><b>${__('Activity')}</b><small class="muted">${__('Who added, edited or deleted what')}</small></div><span aria-hidden="true">›</span></button></section>`;
 }
 function inviteDialog(prefill = '') {
   open(`<h2>${__('Invite someone')}</h2><form data-form="invite" style="display:contents" novalidate>
@@ -1781,7 +1781,7 @@ async function hhInviteAction(act, id) {
 }
 function memberDialog(id) {
   const x = hhPeople().find((p) => p.user_id === id); if (!x || x.role === 'owner') return;
-  open(`<h2>${esc(x.display_name || x.email || '')}</h2><p class="muted">${esc(x.email || '')}</p>
+  open(`<h2>${esc(hhFirstName(x.display_name) || x.email || '')}</h2><p class="muted">${esc(x.email || '')}</p>
     <form data-form="member-role" data-id="${id}" style="display:contents"><div class="field">${__('Role')}<div class="seg"><label><input type="radio" name="role" value="editor" ${x.role === 'editor' ? 'checked' : ''}>${__('Editor')}</label><label><input type="radio" name="role" value="viewer" ${x.role === 'viewer' ? 'checked' : ''}>${__('Viewer')}</label></div></div>
     <div class="actions"><button type="button" class="btn danger" data-act="hh-remove" data-id="${id}">${__('Remove')}</button><button class="btn" type="submit" data-send>${__('Save')}</button></div></form>`);
 }
@@ -2991,7 +2991,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'act-retry') { actState.rows = null; actState.error = ''; render(); }
   else if (act === 'hh-member') memberDialog(id);
   else if (act === 'hh-resend' || act === 'hh-revoke') hhInviteAction(act === 'hh-resend' ? 'resend' : 'revoke', id);
-  else if (act === 'hh-remove') { const x = hhPeople().find((p) => p.user_id === id); hhConfirm('hh-remove-go', id, __('Remove {name}?', { name: esc(hhFirstName(x && x.display_name) || __('this person')) }), __('They lose access right away. What they entered stays, under their name.'), __('Remove')); }
+  else if (act === 'hh-remove') { const x = hhPeople().find((p) => p.user_id === id); { const nm = esc(hhFirstName(x && x.display_name) || __('this person')), ow = esc(hhFirstName(((Cloud.household.people || []).find((q) => q.role === 'owner') || {}).display_name) || __('the owner')); hhConfirm('hh-remove-go', id, __('Remove {name}?', { name: nm }), __("{name} will lose access to {owner}'s household. Things {name} added keep {name}'s name.", { name: nm, owner: ow }), __('Remove')); } }
   else if (act === 'hh-remove-go') hhDo(() => Cloud.removeMember(id), 'member_removed', __('Removed from the household'));
   else if (act === 'hh-leave') hhConfirm('hh-leave-go', '', __('Leave this household?'), __('You will lose access to its accounts and transactions. What you entered stays, under your name. You can only come back if the owner invites you again.'), __('Leave household'));
   else if (act === 'hh-leave-go') hhDo(() => Cloud.leaveHousehold(), 'household_left', __('You left the household'));

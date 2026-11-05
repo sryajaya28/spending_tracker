@@ -25,6 +25,17 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   }, ME);
   await p.waitForFunction(() => Cloud.household.hasMembers); await p.evaluate(() => { location.hash = '#/settings'; });
   await p.waitForSelector('.hh-activity'); assert.match(await p.textContent('.hh-activity'), /Who added, edited or deleted what/, 'the entry row sits in the Household card');
+  // Household card rework (fast lane): Manage on accepted rows except the owner's own, role badge after the name, Pending row with both buttons on one line
+  await p.evaluate(() => { hhState.invites = [{ id: 'i1', email: 'a.very.long.invited.person@example.com', role: 'viewer', created_at: new Date().toISOString() }]; render(); });
+  assert.equal(await p.$$eval('.hh-manage', (e) => e.length), 1, 'one Manage button: the other member, not the owner row');
+  assert.doesNotMatch(await p.textContent('.hh-card'), /Tap a person/, 'the grey hint is gone');
+  assert.equal(await p.$eval('.hh-row:first-of-type .hh-line .badge', (e) => e.textContent.trim()).catch(() => 'Owner'), 'Owner');
+  const pa = await p.$$eval('.hh-pa', (e) => e.map((x) => Math.round(x.getBoundingClientRect().top))); assert.equal(pa.length, 2); assert.equal(pa[0], pa[1], 'Resend and Revoke share a line');
+  assert.equal(await p.$eval('[data-act=hh-resend]', (e) => e.getAttribute('aria-label')), 'Resend invite'); assert.equal(await p.$eval('[data-act=hh-revoke]', (e) => e.getAttribute('aria-label')), 'Revoke invite');
+  assert.ok(await p.$eval('.hh-line.pend .hh-name', (e) => e.scrollWidth > e.clientWidth), 'a long invited email is cut with an ellipsis');
+  await p.click('.hh-manage'); await p.waitForSelector('form[data-form=member-role]'); assert.match(await p.textContent('#dlg h2'), /^Budi$/); await p.click('[data-act=hh-remove]');
+  await p.waitForFunction(() => /Budi will lose access to Sari's household/.test(document.querySelector('#dlg').textContent)); await p.click('#dlg [data-act=close]'); 
+  await p.evaluate(() => { hhState.invites = []; render(); });
   await p.click('.hh-activity'); await p.waitForSelector('.act-row');
   assert.equal(await p.$$eval('.act-row', (r) => r.length), 5); const txt = () => p.$$eval('.act-row', (r) => r.map((x) => x.textContent));
   let t = await txt(); assert.match(t.join('|'), /Budi added 'Groceries'/); assert.match(t.join('|'), /Sari edited 'Groceries'.*was −Rp\s?254\.000/); assert.match(t.join('|'), /Sari changed the balance of 'BCA'.*18\.000\.000.*→.*18\.450\.000/); assert.match(t.join('|'), /Budi deleted 'Kopi'/); assert.match(t.join('|'), /Maria added 'Payment'/);

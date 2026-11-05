@@ -2,6 +2,34 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 14 contents (main e64e5e9)
+
+**Items in this release**
+- Docs/process (branch staging): Release 13 recorded; Tech-Lead handoff note and registry; decision log entry (owner approved Releases 12-13 after the fact; docs-only bundling)
+
+**Exact detail.** Range: 6761bfe..68c67bd. 4 commits, 4 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- (no changelog line added)
+
+**What a user can see change**
+Nothing: docs, tooling and settings only. The app and its data are untouched.
+
+**Commits**
+- 68c67bd Record owner approval of Releases 12-13 and bundling decision
+- 3ad2d20 Registry: fresh Tech-Lead session
+- 025d9eb Tech-Lead handoff note
+- 2278959 Record Release 13
+
+**Files by area**
+- Docs and rules (4): docs/DECISIONS.md, docs/RELEASES.md, docs/handoff/techlead.md, docs/roles/README.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** skipped (docs only). skipped (docs only); shell check: production serves stiver-shell-e64e5e9988 (10-char sha, verify-only expected 7 chars, so it reported FAIL on a length mismatch only)
+**Known gaps:** tools/release.js --verify-only compares a 7-char sha with the 10-char stamp
+
 ## Release 13 contents (main 6761bfe)
 
 **Items in this release**

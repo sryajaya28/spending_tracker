@@ -312,7 +312,7 @@ const Cloud = (() => {
     /* the join page: no session yet, so a plain call that always carries the token (design 5.2) */
     async joinCall(body, fnName = 'join-household') {
       const r = await fetch(`${cfg.SUPABASE_URL}/functions/v1/${fnName}`, { method: 'POST', headers: { 'content-type': 'application/json', apikey: cfg.SUPABASE_ANON_KEY }, body: JSON.stringify(body) });
-      return r.json().catch(() => ({ error: 'invalid_link' }));
+      const j = await r.json().catch(() => ({ error: 'invalid_link' })); return { ...j, _status: r.status };
     },
     joinPreview: (token) => Cloud.joinCall({ action: 'preview', token }),
     async joinHousehold(token, password, displayName) {

@@ -1773,11 +1773,67 @@ async function hhDo(fn, ev, ok) {
   try { await fn(); Analytics.track(ev); close(); toast(ok); loadUserData(); } catch (e) { toast(__("Couldn't do that. Please try again.")); }
 }
 
+/* ---------- Join page (Figma frames 5, 6): /join#t=<token>. The token lives only in memory; the fragment is removed from the address at once ---------- */
+let joinState = null;   // { status: 'loading' | 'ready' | 'invalid' | 'busy', token, owner, role, error }
+const joinBytesOk = (pw) => pw.length >= 8 && new TextEncoder().encode(pw).length <= 72;
+function joinBoot() {
+  if (location.pathname.replace(/\/$/, '') !== '/join') return;
+  const m = /(?:^#|&)t=([A-Za-z0-9_-]{20,64})/.exec(location.hash);
+  history.replaceState(null, '', '/join');   // the secret never stays in the address bar, history or a shared screenshot
+  joinState = { status: m ? 'loading' : 'invalid', token: m ? m[1] : '' };
+  render();
+  if (!m) return;
+  Cloud.joinPreview(joinState.token).then((r) => {
+    if (!joinState) return;
+    if (r && r.owner_name) Object.assign(joinState, { status: 'ready', owner: r.owner_name, role: r.role });
+    else joinState.status = 'invalid';
+    render();
+  }).catch(() => { if (joinState) { joinState.status = 'invalid'; render(); } });
+}
+function joinExit(to = '/') { joinState = null; history.replaceState(null, '', to); render(); }
+function viewJoin() {
+  const j = joinState, a = state.auth, who = hhFirstName(j.owner) || __('the owner');
+  const head = `<div class="join-head"><span class="logo"><img src="icon.svg" alt="">Stiver</span><span class="join-lang"><button type="button" class="chip${LANG === 'en' ? ' on' : ''}" data-act="join-lang" data-lang="en">EN</button><button type="button" class="chip${LANG === 'id' ? ' on' : ''}" data-act="join-lang" data-lang="id">ID</button></span></div>`;
+  const card = (inner) => `<div class="onboard">${head}<div class="card join-card">${inner}</div></div>`;
+  if (j.status === 'loading') return viewSplash('Checking your invitation…');
+  if (j.joining) return viewSplash('Joining the household…');
+  if (j.status === 'invalid') return card(`<h2>${__('This link no longer works')}</h2><p class="muted">${j.owner ? __('This invitation was already used or has expired. Ask {owner} to send a new one.', { owner: esc(who) }) : __('This invitation was already used or has expired. Ask the person who invited you to send a new one.')}</p><button class="btn lg" data-act="join-exit">${__('Go to Stiver')}</button>`);
+  if (a.status === 'in') return card(`<h2>${__('Sign out to join')}</h2><p class="muted">${__("You're signed in as {name}. Sign out to join {owner}'s household.", { name: esc(hhFirstName(D() && D().profile.name) || a.email || ''), owner: esc(who) })}</p><button class="btn lg" data-act="join-signout">${__('Sign out')}</button><button class="btn secondary lg" data-act="join-exit">${__('Stay signed in')}</button>`);
+  const legal = (href, t) => `<a href="${href}" target="_blank" rel="noopener">${__(t)}</a>`;
+  return card(`<form data-form="join" style="display:contents" novalidate><h2>${__("Join {owner}'s household", { owner: esc(who) })}</h2>
+    <p class="muted">${__('{owner} invited you to join their household as {role}.', { owner: esc(who), role: roleLabel(j.role) })}</p>
+    <label class="field">${__('Display name')}<input name="name" required maxlength="60" autocomplete="name" placeholder="${__('Ari Nolan')}"></label>
+    <label class="field">${__('Password')}<span class="pw-wrap"><input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="${__('At least 8 characters')}"><button type="button" class="pw-toggle" data-act="toggle-password" aria-pressed="false" aria-label="${__('Show password')}">${icon('eye')}</button></span></label>
+    <label class="consent"><input type="checkbox" name="agree"><span>${__('I agree to the {privacy} and the {terms}', { privacy: legal('privacy.html', 'Privacy Policy'), terms: legal('terms.html', 'Terms of Service') })}</span></label>
+    <p class="auth-err" id="join-msg" role="alert" hidden></p>
+    <button class="btn lg" type="submit" data-send disabled>${__('Join household')}</button>
+    <p class="muted">${__('After joining you are signed in and see the same accounts and transactions as {owner}.', { owner: esc(who) })}</p></form>`);
+}
+function joinValidate(f) {
+  const v = Object.fromEntries(new FormData(f));
+  $('[data-send]', f).disabled = !(String(v.name || '').trim() && joinBytesOk(String(v.password || '')) && v.agree);
+}
+async function joinSubmit(f, v) {
+  const btn = $('[data-send]', f), msg = $('#join-msg', f), name = String(v.name || '').trim();
+  if (!name || !joinBytesOk(String(v.password || '')) || !v.agree) { joinValidate(f); return; }
+  btn.disabled = true; btn.textContent = __('Joining…'); msg.hidden = true;   // disabled after the first tap: one submit per attempt
+  joinState.joining = true;
+  const r = await Cloud.joinHousehold(joinState.token, String(v.password), name).catch(() => ({ error: 'network' }));
+  if (joinState) joinState.joining = false;
+  if (r && r.result === 'ok') { Analytics.track('invite_accepted', { role: joinState.role }); joinExit('/#/overview'); return; }
+  if (r && r.result === 'joined_sign_in') { joinState = null; history.replaceState(null, '', '/'); Object.assign(state.auth, { status: 'out', view: 'signin', notice: 'You joined the household. Sign in with your new password.', error: '' }); render(); return; }
+  const text = r && r.error === 'invalid_input' ? __('Check your name and password (8 to 72 characters).') : r && r.error === 'password_failed' ? __("Couldn't set your password. Please try again.")
+    : r && r._status === 409 ? __('This link is being used right now. Try again in a minute.') : r && r.error === 'network' ? __("Couldn't reach Stiver. Check your connection and try again.") : '';
+  if (!text) { joinState.status = 'invalid'; render(); return; }   // the link is dead (used, expired, revoked): one generic page
+  render(); const f2 = $('[data-form=join]'); if (f2) { const m2 = $('#join-msg', f2); m2.textContent = text; m2.hidden = false; f2.elements.name.value = name; }
+}
+
 /* ---------- render ---------- */
 const VIEWS = { overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
   const a = state.auth;
+  if (joinState) { app.innerHTML = viewJoin(); return; }   // /join works signed out, and signed in as someone else
   if (a.status === 'loading') { app.innerHTML = viewSplash('Waking up Stiver…'); return; }
   if (a.status === 'out' && a.view === 'landing') { app.innerHTML = viewLanding(); return; }
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
@@ -2861,6 +2917,9 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-google' && state.auth.view === 'signup' && !state.auth.agree) { /* the agreement is not ticked yet */ }
   else if (act === 'auth-google') Cloud.google().then(({ error }) => { if (error) { state.auth.error = error.message; render(); } });
   else if (act === 'auth-resend') { if (CAPTCHA_KEY && !captchaToken) { state.auth.error = 'Please complete the verification first.'; render(); return; } Cloud.resend(state.auth.email, captchaToken || undefined).then(({ error }) => { Object.assign(state.auth, error ? { error: error.message, notice: '' } : { error: '', notice: 'Email sent again. Check your inbox and spam folder.' }); render(); }); }
+  else if (act === 'join-exit') joinExit('/');
+  else if (act === 'join-signout') Cloud.idle().then(() => Cloud.signOut()).then(() => render());
+  else if (act === 'join-lang') { setLang(el.dataset.lang); render(); }
   else if (act === 'hh-invite') inviteDialog();
   else if (act === 'hh-member') memberDialog(id);
   else if (act === 'hh-resend' || act === 'hh-revoke') hhInviteAction(act === 'hh-resend' ? 'resend' : 'revoke', id);
@@ -3005,6 +3064,8 @@ function applySetting(el) {
   save(); render();
 }
 
+document.addEventListener('input', (e) => { const jf = e.target.form; if (jf && jf.dataset.form === 'join') joinValidate(jf); });
+document.addEventListener('change', (e) => { const jf = e.target.form; if (jf && jf.dataset.form === 'join') joinValidate(jf); });
 document.addEventListener('input', (e) => {
   const f = e.target.form; if (!f || f.dataset.form !== 'invite' || e.target.name !== 'email') return;
   const val = e.target.value.trim(), bad = val && !HH_EMAIL.test(val.toLowerCase());
@@ -3214,6 +3275,7 @@ document.addEventListener('submit', async (e) => {
     else D().investments.push({ id: uid(), name, archived: false });
     save(); close(); render(); toast('Account saved');
   }
+  if (kind === 'join') { joinSubmit(f, v); return; }
   if (kind === 'invite') { hhInviteSubmit(f, v); return; }
   if (kind === 'member-role') {
     const role = v.role === 'viewer' ? 'viewer' : 'editor';
@@ -3482,6 +3544,7 @@ setLang(initialLang()); applyTheme(initialTheme());
 if (Cloud.configured) Cloud.init(onAuth, new Map(CATALOG.map((c) => [c[0], [c[1], c[2]]])), onSaveError);
 else { Object.assign(state.auth, { status: 'out', error: 'The app is not connected to Supabase (missing config).' }); render(); }
 consumeHandoffFromUrl();
+joinBoot();
 /* live fiat rates replace the demo ones (works without a Finnhub key; falls back silently) */
 getJSON(`/api/fx?currencies=${Object.keys(RATES).join(',')}`).then((fx) => {
   Object.assign(RATES, fx.rates); api.fx = { source: fx.source, date: fx.date };

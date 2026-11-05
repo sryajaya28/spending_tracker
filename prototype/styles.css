@@ -994,3 +994,9 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .hh-pend-actions { display: flex; gap: 10px; justify-content: flex-end; padding: 6px 0 4px; }
 .hh-invite { width: 100%; margin-top: 12px; }
 .hh-foot { display: block; margin-top: 10px; }
+
+/* join page (Figma frames 5, 6) */
+.join-head { display: flex; justify-content: space-between; align-items: center; margin: 0 0 14px; }
+.join-lang { display: flex; gap: 6px; }
+.join-lang .chip.on { background: var(--brand); color: #fff; }
+.join-card { display: flex; flex-direction: column; gap: 14px; }

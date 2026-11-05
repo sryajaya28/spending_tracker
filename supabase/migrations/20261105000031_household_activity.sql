@@ -13,7 +13,7 @@ create table public.activity_log (
   entity      text not null,                       -- table name
   entity_id   uuid not null,
   action      text not null check (action in ('create', 'update', 'delete')),
-  summary     jsonb not null default '{}'::jsonb,  -- {name, amount_minor, currency, type, was_amount_minor, balance_minor, was_balance_minor}
+  summary     jsonb not null default '{}'::jsonb,  -- {name, amount_minor, currency, type, balance_minor}
   at          timestamptz not null default now()
 );
 create index activity_log_owner_at on public.activity_log (owner_id, at desc);
@@ -35,12 +35,9 @@ begin
   end if;
   nm := left(coalesce(nullif(r ->> 'name', ''), nullif(r ->> 'note', ''), nullif(r ->> 'symbol', ''), nullif(r ->> 'kind', '')), 80);
   s := jsonb_strip_nulls(jsonb_build_object('name', nm, 'amount_minor', coalesce(r -> 'amount_minor', r -> 'original_minor'), 'currency', r -> 'currency', 'type', r -> 'type'));
-  -- an edit that changed the amount keeps the old one ("was ..."); a balance change: an account whose starting balance was edited
-  if tg_op = 'UPDATE' and coalesce(o -> 'amount_minor', o -> 'original_minor') is distinct from coalesce(r -> 'amount_minor', r -> 'original_minor') then
-    s := s || jsonb_strip_nulls(jsonb_build_object('was_amount_minor', coalesce(o -> 'amount_minor', o -> 'original_minor')));
-  end if;
+  -- a balance change: an account whose starting balance was edited
   if tg_table_name = 'wallets' and tg_op = 'UPDATE' and (o -> 'opening_balance_minor') is distinct from (r -> 'opening_balance_minor') then
-    s := s || jsonb_build_object('balance_minor', r -> 'opening_balance_minor', 'was_balance_minor', o -> 'opening_balance_minor');
+    s := s || jsonb_build_object('balance_minor', r -> 'opening_balance_minor');
   end if;
   insert into public.activity_log (owner_id, actor_id, actor_name, entity, entity_id, action, summary)
   values ((r ->> 'user_id')::uuid, auth.uid(),

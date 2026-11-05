@@ -13,7 +13,7 @@ Owner brief -> PM: PRD + acceptance checks          [gate 1: owner approves PRD]
             -> owner release approval                 [gate 3]
             -> integrator releases (tools/release.js) -> QA smoke on production
             -> PM reads PostHog after release and reports the result to the owner
-(Security agent: later. Until then Developers check privacy/security in peer review.)
+(Security review: only for major authentication or database changes, `docs/AGENTS.md` rule 9; never involved in other changes, owner 2026-11-05.)
 ```
 
 | Role | Owns | Does not |

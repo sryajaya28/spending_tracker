@@ -13,6 +13,7 @@ Differences from the design: <none | list>
 Reviewed by: <other developer> approved <commit>   (production code outside the fast lane; "exempt: <why>" otherwise)
 Not verified: <real phone, real third-party service, production data ...>
 Decisions needed: <none | question + recommendation>
+Owner-bound asks: all on the Workspace (yes/no)
 Migrations: <none | file names, backwards compatible?>
 Steps to try: 1. ... 2. ...
 Changelog file: docs/changes/<date>-<name>.md

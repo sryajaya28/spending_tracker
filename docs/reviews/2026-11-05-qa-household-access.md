@@ -108,3 +108,41 @@ One test login `qa-hh-ui2-a25aa8@mailinator.com` (status "invited", clean accoun
 Release only if the Tech-Lead and owner accept: bug 4 proven by e2e and code read but not live, the Delete-my-login confirm path unrun, and the never-run list above. Otherwise: allow Mailinator (or approve one Gmail alias) and I finish in about 30 minutes.
 
 Owner-bound asks: all on the Workspace (yes/no): yes (a-allow-mailinator is still open; the leftover-login cleanup approval).
+
+---
+# Round 4: real members on staging ac59ab6 (Mailinator inboxes now reachable)
+
+## VERDICT: GREEN, with accepted gaps (listed). All four earlier bugs are fixed and verified live with real members; regression green.
+Real invite emails were read from Mailinator; every member joined through the real Join page. 7 invite emails to Mailinator addresses (no Gmail).
+
+| Check | Result |
+|---|---|
+| Bug 1 Viewer write controls | FIXED live: real Viewer, 4 screens, no visible write control (`.../qa-r3-viewer-budgets-dark-390.png`) |
+| Bug 2 manual price toast | FIXED live: no toast, no write from the Viewer app |
+| Bug 3 bottom bar | FIXED live: real Viewer bar = four equal 95 px tabs, no empty slot; Editor bar back to five slots with the raised Add without a reload |
+| Bug 4 removal while the app is open | FIXED live: removed member's open, idle app reached the no-access page after 29 s with no reload (`.../qa-r3-noaccess-dark-390.png`) |
+| HH-35 Delete my login | PASS: asks first naming what is deleted; Cancel deletes nothing (login still signs in); confirming deletes it (sign-in 400); lands on the sign-in page (`.../qa-r3-confirm-dark-390.png`) |
+| HH-36 | PASS: departed email refused (`cannot_invite`) until the login is deleted, then invitable again |
+| HH-05 cap | PASS: owner + 1 member + 3 pending = 5; the 6th invite answers `{"result":"full"}` (not the hourly limit), nothing created; the card shows "Household is full (5)" with Invite disabled (`.../qa-r3-owner-card-dark-390.png`) |
+| HH-03 duplicate and resend | PASS: duplicate answers "already invited"; Resend sends a new email with a different link; the old link is dead, the new one previews |
+| HH-10 / HH-21 revoked and expired links | PASS: both give the same generic dead-link page (no form), join attempts refused; revoked invite leaves the list |
+| HH-08 invite emails | PASS English (inviter, role, one Accept link, "works once, expires in 7 days") and Indonesian (subject "Anda diundang ke rumah tangga di Stiver", owner language id) |
+| HH-19 / HH-38 / HH-22 / HH-12 / HH-13 | PASS: role change reaches the open app in 34 s with "Your access changed."; "read-only" marker on the owner row only; first-name labels; join lands in the household; sign-in again works |
+| HH-16 sign-up with an invited address | PASS for the app path (`signup-gate` answers the same generic "check email", no password set); direct GoTrue sign-up: see observation 4 |
+| HH-26 | PARTIAL: the member's transaction and name (household_people "former") are kept; see observation 1 |
+| Regression `tools/regression.js` | PASS 4/4 on ac59ab6 (round 3) |
+
+## Observations for the PM (not blockers)
+1. **PRD 25 vs 26:** once the only member is gone the household is the owner alone, so no names show at all, including on that member's old entries (data keeps the name). Decide which rule wins.
+2. **Wording:** dead-link page says "Ask the person who invited you" and the no-access page says "this household" (PRD copy names the owner); by design generic, flagging only.
+3. **Deep link `#/add` as Viewer** opens no form but shows no read-only message (PRD 17 asks for one).
+4. **Direct GoTrue sign-up with an invited, unconfirmed address returns a live session** for that login (design: GoTrue sign-up stays reachable). The session is inert: reads 0 rows everywhere, cannot change its household_status (403), cannot write to the owner household or create its own ledger (403), and no usable password is set (sign-in 400). Real join later ends all sessions.
+5. **Expired invites:** revoking an expired invite leaves its invited login behind until the invite sweep runs (not scheduled on staging).
+
+## NOT verified (accepted gaps)
+HH-14 forgot-password for a member, HH-15 join page while signed in as someone else, HH-28/29 two-session freshness and conflict message in the UI (409 covered by the Full-stack engineer's spike and e2e), HH-42/43/45 live (transfers, stablecoin, recurring-generated entries, category merge), Indonesian Join page and owner card, invite-sweep with the service key.
+
+## State left on staging
+One orphan test login: `qa-hh-m4-a8cd6@mailinator.com` (never joined, status invited, inert; my delete timed out waiting for an approval; it needs removing by the Tech-Lead). Everything else removed: 0 members, 0 pending invites, owner data at baseline (0 transactions, 1 wallet, 77 categories), owner language en. The smoke owner is at the 10-per-hour invite limit until it clears.
+
+Owner-bound asks: all on the Workspace (yes/no): no.

@@ -1,0 +1,1 @@
+Real-account household access checks (QA), STAGING only. Needs the owner login in `SMOKE_STAGING_PASSWORD` and a member login whose password is in `pw_hh3.txt` (created by joining a real invite to a +alias inbox). `python3 access_matrix.py` stops at the first failure and tags its test rows `QA-HH` (clean them as the owner). Never run against production.

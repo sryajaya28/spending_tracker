@@ -37,6 +37,8 @@ jobs:
         with: { node-version: 22 }
       - uses: supabase/setup-cli@v1
         with: { version: latest }
+      - name: check the DB_URL secret shape (never prints the password)
+        run: node tools/db_url_check.js
       - name: plan (dry run)
         run: node tools/migrate.js --dry-run ${{ github.event.inputs.baseline_through && format('--baseline-through {0}', github.event.inputs.baseline_through) || '' }}
       - name: apply migrations

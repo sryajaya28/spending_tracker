@@ -1,0 +1,1 @@
+2026-11-05: **CI fix.** tests/e2e/csp.js read vercel.json from a hardcoded /home/user path, so it failed on the GitHub runner (the other 58 e2e passed there); it now uses a path relative to the test. Test only; branch staging.

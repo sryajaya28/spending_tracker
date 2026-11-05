@@ -46,8 +46,8 @@ jobs:
       - name: deploy Edge Functions
         run: |
           supabase init --force >/dev/null 2>&1 || true
-          for f in invite-member manage-invite delete-my-login; do supabase functions deploy "$f" --project-ref "$PROJECT_REF"; done
-          for f in join-household signup-gate invite-sweep; do supabase functions deploy "$f" --project-ref "$PROJECT_REF" --no-verify-jwt; done
+          for f in invite-member manage-invite delete-my-login; do supabase functions deploy "$f" --project-ref "$PROJECT_REF" --yes; done
+          for f in join-household signup-gate invite-sweep; do supabase functions deploy "$f" --project-ref "$PROJECT_REF" --no-verify-jwt --yes; done
       - name: check the functions answer
         run: |
           B="https://$PROJECT_REF.supabase.co/functions/v1"

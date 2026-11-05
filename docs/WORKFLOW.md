@@ -55,7 +55,7 @@ Every message starts with the tag and names the branch or path. The receiver rep
 | PM -> owner | `Result: <metric> before/after, next step` (5 lines) |
 
 ## Review standard
-Reviews follow `docs/AGENTS.md` rule 9: findings carry evidence, the reviewer lists expected risks before reading the diff, risky changes (auth, RLS, migrations, payments, deletion) use a different-model reviewer, a real-system check and the owner informed, and escaped defects are logged in `learning.md`.
+Reviews follow `docs/AGENTS.md` rule 9: findings carry evidence, the reviewer lists expected risks before reading the diff, tests prove themselves, and escaped defects are logged in `learning.md`. **Security review (a different-model reviewer, a real-system check, the owner informed in plain words) applies ONLY to major changes to authentication or the database; every other change gets normal peer review and QA and no security step** (owner, 2026-11-05, to keep token use low).
 
 ## Rules of the road
 - Owner approval comes only from the owner's own messages. No agent approves its own work; no agent skips a gate.

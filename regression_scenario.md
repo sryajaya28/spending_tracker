@@ -383,6 +383,29 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 - Amount above the account's balance: the red "BCA doesn't have enough balance (Rp ... available)" line shows and Save is off. Editing amount, account, date or name keeps the transaction in step; an older lent record (no account) shows "Not set (older record)" and can be edited without one. A repayment still arrives as a transfer in with the Lent Repayment chip.
 - Household: an Editor editing someone else's lent record can change only the due date and note. Indonesian: "Tambah uang yang dipinjamkan", "Dari rekening", chip "Dipinjamkan".
 
+## 18. Money lent comes out of an account (PRD `docs/prd/2026-11-06-lent-from-account.md`, checks 1-10)
+
+Written from the PRD only. **E** = automated e2e, **DB** = real staging database run with the smoke account (`tests/staging/lent.js`, planned: record balances and net worth before and after, clean up), **M** = manual. Numbers are always read before and after (account balance, Lent tab, net worth, spending totals), never assumed.
+
+| ID | PRD | Scenario | Expected |
+|---|---|---|---|
+| LF-01 | 1 | Open Add money lent **(E, M)** | Required "From account" lists savings-type accounts only (cash, bank, e-wallet), not cards, not investment cash balances, not archived; the last-used account is preselected; with no eligible account the form explains it and cannot save |
+| LF-02 | 2 | Save Rp 500.000 from BCA **(DB, E)** | BCA balance drops by exactly 500.000; Lent tab shows 500.000 owed to me; **net worth unchanged** (assets down, receivable up, same total); same after a reload |
+| LF-03 | 3 | Open Transactions after LF-02 **(DB, E)** | One transfer out on BCA, note "<name>", category **Lent**, dated the lent date; not counted as spending: Overview spent, budgets, Money Flow and category charts unchanged; detail reads "managed from Money lent" and is read-only (no Edit/Delete) |
+| LF-04 | 4 | Amount above the balance, equal to the balance, balance + 1 **(E, DB)** | Above: the same "doesn't have enough balance" message as loan payments, nothing saved (no lent record, no transaction); exactly the balance is allowed; a card-type account is never offered |
+| LF-05 | 5 | Account in USD, then IDR; change the account in the form **(E, M)** | Currency field follows and is locked to the account's currency; changing the account changes it; amounts keep the right decimals (IDR none); a cross-currency lent never mixes currencies in the balance |
+| LF-06 | 6 | Edit amount, account, date and name of a lent record; then delete it **(DB, E)** | The linked transaction changes with it; moving to another account restores the old balance and reduces the new one; raising the amount above the balance is refused like LF-04; delete removes the linked transaction and restores the balance; behaviour when repayments exist is observed and reported |
+| LF-07 | 7 | A lent record created before this change (no account) **(DB, E)** | Still shows as before, no transaction, can be edited (name, due date, note) without being forced to pick an account; balances unchanged; migration leaves old rows untouched (row counts before and after) |
+| LF-08 | 8 | Repay in part, repay in full, repay to a different account **(DB, E)** | Transfer in with category Lent Repayment, linked to the lent record; lend 500.000 and repay 500.000 to the same account returns the balance to the start; remaining owed correct |
+| LF-09 | 9 | Viewer, Editor, owner with the household **(DB, M)** | Viewer sees no add/edit controls on Lent; an Editor edits and deletes a lent record created by the owner and the linked transaction follows end to end (both rows saved, no "only the person who added this" error, no half-saved state); a direct REST edit of the linked transaction by an Editor who did not create it is still refused; the linked row is read-only in Transactions for everyone |
+| LF-10 | 10 | Bahasa Indonesia, dark mode, 390 px **(M, E)** | The form, the category name "Lent" and the chip read correctly in Indonesian; light and dark screenshots viewed; long names ellipsize |
+| LF-11 | edge 1 | Lent date today, a past date, a future date **(E)** | Today is the default; a past date is allowed and the transaction takes it; a future date is refused like payments |
+| LF-12 | edge 3 | Archive the account that holds a lent transaction; delete it **(DB, E)** | Archived: the loan and its transaction stay; delete follows the existing delete guard with a clear message; nothing orphaned |
+| LF-13 | edge 4 | One save writes both rows; interrupt the network during the save **(DB, M)** | After a reload either both the lent record and its transaction exist or neither; never one without the other |
+| LF-14 | 6 (data) | New default category "Lent" **(DB)** | Exists for new users and for the existing smoke account after the migration, in English and Indonesian; a user who already has a category named Lent gets no duplicate or unique-name error and no changed old data |
+| LF-15 | 7 (analytics) | Add a lent record **(E)** | `add_lent` carries `has_account: true`; no new event; no name, amount or account in any payload; `update_lent` and delete unchanged |
+| LF-16 | data safety | Real-database regression and sample data **(DB, E)** | `tools/regression.js` passes unchanged; sample data keeps every lent consistent with an account and a transaction, no negative account (`samplelocal`); migration applied to staging first, existing rows and totals identical before and after |
+
 ## Automated coverage map
 
 | Test (`tests/e2e/…`) | Main areas |
@@ -425,6 +448,7 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 | `dropdown` | app-styled dropdown lists: open, choose, Esc, outside tap, keyboard, groups, inside dialogs |
 | `analytics` | PostHog events, privacy scrubbing, demo mode silence, sign-out reset, `/ingest` path |
 | `ios`, `confirm`, `csp`, `landshot`, `langsave`, `darkshots`, `idcrawl` | phone rendering, email confirmation flow, CSP, landing, language and dark mode |
+| `lent` (planned, QA), `tests/staging/lent.js` (planned) | money lent from an account LF-01..LF-16: form, balance, net worth, linked transfer, edit/delete, repayments, roles, Indonesian |
 | `tests/test_yahoo.py` | Yahoo price/search parsing and unit conversion (stubbed) |
 
 ## Not covered by automation (always check manually)
@@ -434,6 +458,7 @@ on a real phone keyboard, and anything that depends on the current date being a 
 
 ## Change log of this file
 
+- 2026-11-06: Section 18 LF-01..LF-16 (money lent from an account, from the PRD).
 - 2026-11-04: RC-14..RC-17 (Edit debt: Repeat payment block).
 - 2026-11-04: RC-09..RC-12 (repeating debt payments; simple debt cards without percentages).
 - 2026-11-04: Loan/paylater account filter signs and day total (spending is always minus).

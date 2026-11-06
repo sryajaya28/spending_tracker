@@ -59,6 +59,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'archive-loan') { find(D().loans).archived = true; save(); close(); render(); toast('Debt archived'); }
   else if (act === 'add-lent') lentDialog();
   else if (act === 'edit-lent') lentDialog(find(D().lent));
+  else if (act === 'lent-origin') { const l = find(D().lent), t = D().transactions.find((x) => x.id === el.dataset.tid); if (l && t) lentOriginDialog(l, t); }
   else if (act === 'pay-lent') paymentDialog(find(D().lent), 'lent');
   else if (act === 'archive-lent') { find(D().lent).archived = true; save(); close(); render(); toast('Archived'); }
   else if (act === 'delete-payment') { const l = find(el.dataset.kind === 'lent' ? D().lent : D().loans), gone = l.payments.find((p) => p.id === el.dataset.pid); if (gone && gone.txn_id && gone.kind !== 'charge') D().transactions = D().transactions.filter((t) => t.id !== gone.txn_id); l.payments = l.payments.filter((p) => p.id !== el.dataset.pid); save(); render(); toast('Removed'); if (el.dataset.close) close(); else if (el.closest('#dlg')) loanHistoryDialog(l, el.dataset.kind); }

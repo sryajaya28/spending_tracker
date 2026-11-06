@@ -122,6 +122,9 @@ function seed(name, cur) {
     txns.push(t); p.txn_id = t.id;
   });
   const lent = [{ id: uid(), name: P.lent[0], currency: cur, original_minor: A(P.lent[1]), note: P.lent[3], due: isoDate(new Date(today.getFullYear(), today.getMonth() + 3, 1)), since: monthKey(new Date(today.getFullYear(), today.getMonth() - 3, 1)), archived: false, payments: [{ id: uid(), date: isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 10)), amount_minor: A(P.lent[2]) }] }];
+  // the money lent went out of the first bank account: a single transfer out there (category Lent), linked to the record by txn_id
+  { const d0 = `${lent[0].since}-01`, t = { id: uid(), type: 'transfer', flow: 'out', amount_minor: lent[0].original_minor, currency: cur, occurred_at: d0, wallet_id: b1.id, note: lent[0].name, category_id: catId['Lent'], category_source: 'user', ai_confidence: null };
+    if (t.category_id) { txns.push(t); lent[0].txn_id = t.id; } }
   // a second repayment arrived in the first bank account: a single transfer-in there (category Lent Repayment), linked to the repayment
   { const half = Math.round(A(P.lent[2]) / 2), d2 = isoDate(new Date(today.getFullYear(), today.getMonth() - 1, 24)), t = { id: uid(), type: 'transfer', flow: 'in', amount_minor: half, currency: cur, occurred_at: d2, wallet_id: b1.id, note: `${lent[0].name} Repayment`, category_id: catId['Lent Repayment'], category_source: 'user', ai_confidence: null };
     txns.push(t); lent[0].payments.push({ id: uid(), date: d2, amount_minor: half, txn_id: t.id }); }

@@ -224,10 +224,14 @@ const transferTitle = (t) => String(t.note || '').split(' · ')[0];
 const transferNote = (t) => String(t.note || '').split(' · ').slice(1).join(' · ');
 function txnRow(t) {
   if (t.type === 'loan_payment') return `<div class="row" data-act="loan-payment" data-id="${t.loan_id}" data-pid="${String(t.id).replace('pay:', '')}" tabindex="0"><span class="tile" style="--c:#4A44C6">🏦</span><div><div class="title">${esc(t.note)}</div><div class="sub">${esc(D().loans.find((l) => l.id === t.loan_id)?.name || '')}</div></div><div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+  const lo = t.type === 'transfer' && !t.transfer_id && lentOfTxn(t.id);
+  if (lo) return `<div class="row" data-act="lent-origin" data-id="${lo.id}" data-tid="${t.id}" tabindex="0"><span class="tile" style="--c:#F59E0B">💸</span>
+    <div><div class="title">${esc(t.note)}</div><div class="sub">${__('Transfer out')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div><span class="badge">${esc(__(catOf(t.category_id)?.name || 'Lent'))}</span></div>
+    <div class="amt-col"><div class="amt num">−${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   const lr = t.type === 'transfer' && !t.transfer_id && lentRepaymentOf(t.id);
   if (lr) return `<div class="row" data-act="lent-repayment" data-id="${lr.lent.id}" data-pid="${lr.payment.id}" tabindex="0"><span class="tile" style="--c:#0EA5A4">🤝</span>
-    <div><div class="title">${esc(t.note)}</div><div class="sub">${esc(catOf(t.category_id)?.name || __('Lent Repayment'))} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
-    <div class="amt-col"><div class="amt num"><span class="xfer-ico">${icon('transfer')}</span>${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+    <div><div class="title">${esc(t.note)}</div><div class="sub">${__('Transfer in')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div><span class="badge">${esc(__(catOf(t.category_id)?.name || 'Lent Repayment'))}</span></div>
+    <div class="amt-col"><div class="amt num income">+${money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;

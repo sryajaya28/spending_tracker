@@ -375,7 +375,13 @@ Automated: `tests/e2e/analytics.js` (events, scrubbing, demo, reset, `/ingest`).
 - Household card: each member row except yours has a Manage button (role + Remove; Remove asks "Remove <name>?" naming the person); badge after the name; a Pending row has Resend and Revoke on one line (icons on a phone), long emails end with an ellipsis; no grey "Tap a person" hint.
 - Viewer: no Add/Edit/+ Budget/+ Account/Transfer/Invest buttons on Overview, Transactions, Budgets, Portfolio, Settings; the bottom bar has four equal tabs and no raised Add (no empty slot); rows still open read-only details. A household with a hand-typed asset price saves without an error toast.
 - Activity (Settings > Household > Activity): rows grouped by day (Today, Yesterday, dates) with who did what; filter by person and by All/Added/Edited/Deleted/Balance; an edit shows "was <old amount>", a balance change "old -> new"; empty and filtered-empty messages; a Viewer sees "Viewers can read Activity". A solo ledger has no Household activity.
-- Covered by `household_join`, `household_labels`, `household_activity`, `analytics`, `run`, and `bash tools/sql_local_test.sh`.
+- Covered by `household_join`, `lent`, `household_labels`, `household_activity`, `analytics`, `run`, and `bash tools/sql_local_test.sh`.
+
+## Money lent comes out of an account (PRD 2026-11-06)
+- Portfolio > Lent > Add: required "From account" (savings accounts only, no cards; last used preselected), the Currency follows the account, "Date lent" (no future date), due date and note are optional.
+- Save Rp 500.000 from BCA: BCA drops by Rp 500.000, the Lent tab shows Rp 500.000 owed to you, net worth is unchanged; Transactions shows one "Transfer out · BCA" row with the Lent chip, not counted as spending in budgets, Money Flow or category charts. The row opens a read-only detail ("Managed from Money lent") with "Open in Money lent".
+- Amount above the account's balance: the red "BCA doesn't have enough balance (Rp ... available)" line shows and Save is off. Editing amount, account, date or name keeps the transaction in step; an older lent record (no account) shows "Not set (older record)" and can be edited without one. A repayment still arrives as a transfer in with the Lent Repayment chip.
+- Household: an Editor editing someone else's lent record can change only the due date and note. Indonesian: "Tambah uang yang dipinjamkan", "Dari rekening", chip "Dipinjamkan".
 
 ## Automated coverage map
 

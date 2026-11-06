@@ -44,5 +44,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm install -g playwright && npx playwright install --with-deps chromium
+      # pinned: an unpinned install picked up a newer Chrome on 2026-11-06 and tests/e2e/occnobudget.js failed on a computed-style value (the app was unchanged). Bump on purpose, with a local run.
+      - run: npm install -g playwright@1.63.0 && npx playwright@1.63.0 install --with-deps chromium
       - run: bash tests/e2e/run_all.sh | tee e2e.log; ! grep -q '^FAIL' e2e.log

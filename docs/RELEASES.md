@@ -2,6 +2,42 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 17 contents (main 8f4a1ec)
+
+**Items in this release**
+- Tier 1 change (branch feature/portfolio-wallet-icon): the Portfolio entry in the bottom bar and desktop sidebar uses the wallet icon, drawn 20% larger so it matches the other tabs (owner request and approval).
+- Tooling/process (branch staging): the release tools know Tier 1 (tools/gates.js, docs/workflows/tier1-approved.txt, tools/gates.test.js): no regression and no production smoke test for a docs/tooling-only release or an owner-approved Tier 1 batch; `release.js --verify-only` compares 7-, 10- and 40-character shas with the build stamp; Tier 1 release steps and the owner's correction recorded.
+
+**Exact detail.** Range: 2dba369..c7d01cc. 5 commits, 13 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-05: Tier 1 release steps. docs/workflows/TIER_1.md now says a Tier 1 batch release needs no regression run and no production smoke test (CI e2e and the owner's screenshot review replace them); after the owner's Release only the site answer and build stamp are checked. Owner correction recorded in docs/learning/release.md. Docs only; branch staging.
+- 2026-11-05: Release tools know Tier 1. tools/gates.js skips regression and the production smoke test for a docs/tooling-only release or a Tier 1 batch (every non-docs change comes from a commit listed in docs/workflows/tier1-approved.txt, never a Tier 3 file); regression.js and release.js print and act on it; release.js --verify-only now compares a 7-, 10- or 40-character sha with the 10-character build stamp (the old length bug). tools/gates.test.js. Tooling and docs only; branch staging.
+- 2026-11-05: Portfolio icon. The Portfolio entry in the bottom bar and the desktop sidebar now uses the wallet icon (drawn 20% larger so it matches the other tabs) instead of the trend arrow (owner request, first Tier 1 change; no logic, data or access change). Affected tests pass. Branch feature/portfolio-wallet-icon.
+- 2026-11-05: Path rule fix. Documentation under supabase/ (for example supabase/functions/DEPLOY.md) is Tier 1, not Tier 3; CI also runs when a draft PR is marked ready for review. Tooling only; branch staging.
+- 2026-11-05: Faster releases. CI skips the browser suite (e2e job) for Tier 1 PRs (docs, CSS, translations, tooling), where the path rule says nothing in app behaviour can change; docs/workflows/README.md gains a Release hygiene order (fold changelog, regression, open the PR, no further commits) and docs/learning/release.md a matching rule. Tooling/docs only; branch staging.
+
+**What a user can see change**
+Yes: 1 app files changed (prototype/app.js).
+
+**Commits**
+- c7d01cc Release tools know Tier 1: skip regression and production smoke test for owner-approved Tier 1 batches; fold changelog
+- c31bb94 Tier 1 release steps: no regression or production smoke test; record the correction
+- c745faf Portfolio nav wallet icon 20% larger
+- f83d663 Portfolio nav icon: wallet instead of trend arrow
+- 77cdbbb Record Release 16 (main 2dba369)
+
+**Files by area**
+- App (what users see) (1): prototype/app.js
+- Tooling (4): tools/gates.js, tools/gates.test.js, tools/regression.js, tools/release.js
+- Docs and rules (8): docs/CHANGELOG.md, docs/NEXT_STEPS.md, docs/RELEASES.md, docs/changes/2026-11-05-faster-releases.md, docs/changes/2026-11-05-path-rule-supabase-docs.md, docs/learning/release.md, docs/workflows/TIER_1.md, docs/workflows/tier1-approved.txt
+
+**Database migrations**
+None.
+
+**Tests and smoke:** CI on PR #23 and PR #24: tier and e2e green; regression and production smoke test skipped on purpose (Tier 1 batch, owner: "Release and update the workflows to skip regression and smoke for tier 1 improvement"). no smoke test (Tier 1 batch); production answers 200 and serves stiver-shell-8f4a1ec204 (main 8f4a1ec); no migrations
+**Known gaps:** Vercel did not build the main merge for about 17 minutes (it received GitHub events about 30 minutes late today); the deployment was started by hand through the Vercel connection at the owner's request; Indonesian text and a real phone not checked (icon only)
+
 ## Release 16 contents (main 2dba369)
 
 **Items in this release**

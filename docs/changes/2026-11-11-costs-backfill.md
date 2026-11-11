@@ -1,0 +1,1 @@
+2026-11-11: **COSTS.md backfilled with real session prices.** Added the Sonnet 5.5 rates and the `total_cost_usd` method, replaced every "not priced" cell (A4, B1, B2, B4, D1 task 1 measured; B3 computed), added rows for A4, B2 and C2 (C2 still to price). Docs only; branch claude/dazzling-noether-wmzitl.

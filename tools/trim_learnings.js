@@ -3,7 +3,7 @@
  *
  *   node tools/trim_learnings.js [keep]     keep = how many newest entries stay in the log (default 4); entries are bullets that start with "- "
  *   node tools/trim_learnings.js --check    print sizes only
- * The integrating agent runs it at merge time (docs/AGENTS.md). Entries are taken in file order: new ones are appended at the end. */
+ * The integrating agent runs it at merge time (docs/archive/AGENTS.md, retired). Entries are taken in file order: new ones are appended at the end. */
 const fs = require('fs'), path = require('path');
 const lf = path.join(__dirname, '..', 'learning.md'), af = path.join(__dirname, '..', 'docs', 'learning-archive.md');
 const text = fs.readFileSync(lf, 'utf8'), i = text.indexOf('\n## Session log');

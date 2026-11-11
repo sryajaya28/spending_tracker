@@ -1,24 +1,34 @@
-# Instructions for assistants working on Stiver
+# Stiver: instructions for the coding session (workflow v2)
 
-0. **Read `learning.md` before every coding session:** it is an index of the mistakes made on this project; load only the area files in `docs/learning/` your task needs (its table says which; a Tier 1 change needs two). Add a line to it whenever you make a mistake or the owner corrects you, and **at the end of every coding session append your learnings to its Session log** (even if it is "no new mistakes"; older entries are in `docs/learning-archive.md`).
-1. **Read `context.md` before doing anything.** It is the source of truth for the project's architecture, services,
-   decisions and open items. If it disagrees with the code, trust the code and fix the file.
-2. **After doing anything, update `context.md` in the same commit** (change the affected sections and add your changelog entry as **its own file** `docs/changes/YYYY-MM-DD-short-name.md` (see `docs/changes/README.md`); never edit `docs/CHANGELOG.md` directly, the integrating agent folds the files in). Also update `README.md` when the change affects what it describes, and `docs/NEXT_STEPS.md` when
-   priorities or known gaps change.
-3. Never commit secrets. `context.md` and the README say where secrets live, never what they are.
-4. **Keep `regression_scenario.md` current:** when a feature is added or changed, add or edit the matching manual test
-   scenarios (and the automated-coverage map) in the same commit.
-5. Run `bash tests/e2e/run_all.sh` before pushing UI or data-layer changes. While building run only the affected tests: `node tools/affected_tests.js` prints the command (a hint from `tests/e2e/affects.json`; when in doubt run everything); run the whole suite (`bash tests/e2e/run_all.sh`, parallel, about a minute) once before pushing. Figma is the only home of the design: do not maintain `design/` or run `tools/design/export.js` (the script is deleted; see rule 6). Pushing to `main` deploys to production, so **do not push to `main` yourself** (it arrives by pull request after the owner approves the regression summary, rule 6b). `staging` is merged by the integrator (rule 6c) once the Figma design is approved (rule 6) and the tests pass; without an approved design, only after the owner approves a preview.
-5b. **Event tracking is part of every feature:** each new page, button, feature or interaction ships with its PostHog tracking (a `data-act` on every button, a `data-form` on every form, a named `Analytics.track(...)` event for each new outcome, snake_case, no private data), a matching assertion in `tests/e2e/analytics.js`, and an update to the catalog in `docs/ANALYTICS.md`. Follow its checklist; do not call a feature done without it.
-6. **Design first:** for any UI change, create the design in Figma first (file "Stiver", https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW), send the owner the link and a screenshot, and build only after the owner approves the design. **Fast lane** (the owner opts in per request by saying "fast lane"): for a small change post the Figma link and start building at once; one reply from the owner then covers both the design and the staging sign-off, and a rejected design is reworked. Figma is the only home of the design: keep no design files or exports in the repository. The design always includes **dark-mode and phone-width screens**; build it from the Figma Library components and variables (`docs/FIGMA.md`), where dark is just a variable mode. Once the design is approved there is **no separate local/preview review**: build and test on your branch, then the integrator merges it into `staging` (rule 6c) and the owner signs off on staging.
-6c. **Several agents: one integrator (`docs/AGENTS.md`).** Unless the owner tells you otherwise, only the designated integrating agent (**Tech-Lead**) merges into `staging` and releases; **Full-stack engineer** (and any other agent) builds on a feature branch; every other agent works on its own feature branch, rebases on the latest `staging`, and reports "ready: <branch>, tests pass" to the owner. Never bump a service-worker version by hand (it is stamped at deploy, `tools/stamp_sw.js`).
-6d. **Review (`docs/AGENTS.md` rules 5, 8 and 9: review standard; Full-stack engineer builds, Tech-Lead reviews).** Production-code changes that are not in the fast lane are reviewed by the other developer before they reach `staging` (docs- and tooling-only changes and owner hotfixes are exempt). Never approve your own change.
-7. **Quality gates (fewer round trips).** Before building: restate the request as 2-5 acceptance checks (use the owner's "Done when" if given, `docs/REQUEST_TEMPLATE.md`), ask **one batched question** for anything undecided or any edge case with a recommended default (never several separate rounds), and add the feature test entry to `docs/FEATURE_TESTS.md` first. When done: send a ready report in the format of `docs/READY_REPORT.md` with every acceptance check marked verified (how) or not checked (why), and for UI changes real-browser proof in phone width and dark mode (`node tools/staging_shot.js`, see its header) in addition to the automated tests. Never claim a check passed that was not run.
-6b. **Follow `docs/DEV_WORKFLOW.md` (local -> staging -> production; the shared source of truth is the repo `sryajaya28/dev-workflow`):**
-   - Work on a feature branch and push only that branch; after the design is approved and tests pass, report it ready (the integrator merges it into `staging`; you may merge yourself only if you are the integrator or the owner says so) and send the owner the **staging link**, screenshots and steps to try it (a Vercel preview link only if the owner asks, or when there was no approved design: then wait for approval before merging). Wait for the owner's sign-off on staging.
-   - **Owner contact goes through the Product Manager** (`docs/AGENTS.md` rule 10): send decisions, links, summaries and approval requests to the PM, who talks to the owner; an approval counts only as the owner's quoted words relayed by the PM.
-   - Test every feature (`docs/FEATURE_TESTS.md`; the owner may add entries). Fix review comments on the same branch and merge again.
-   - **Tooling:** `node tools/regression.js` runs the whole regression and prints the summary; `node tools/release.js` (dry run, then `--go` after the owner says release) opens/merges the PR and verifies the build and production smoke test. Every release report shows the **exact contents** (`node tools/release_contents.js`, appended to `docs/RELEASES.md`), never a summary. **Docs/tooling-only changes (docs/, tools/, .claude/, root *.md) skip regression and the production smoke test** (`tools/gates.js`); the owner may also waive regression for a release by saying so.
-   - Run regression on staging **only when the owner asks**, then write the summary and **stop until the owner approves** it. Never release on your own.
-   - To release: apply migrations first (staging database before production), merge `staging` into `main`, then run the production smoke test (`docs/SMOKE_TEST.md`, `tests/smoke/smoke.js`, credentials in the environment secrets `SMOKE_PROD_PASSWORD` / `SMOKE_STAGING_PASSWORD`). If anything fails, fix it at once and release the fix (roll back first if data is affected), then smoke test again.
-   - A new production address must be added to `PRODUCTION_HOSTS` in `prototype/config.js`, or it will use the staging database.
+One session works on one task. The owner talks to you directly in this chat. There are no PM, Tech-Lead, QA or Designer sessions any more (archived in `docs/archive/`): never message other sessions, never create sessions or subagents.
+
+## How a task runs (v2 rules, `docs/workflows/V2_PLAN.md` section 2)
+1. **One task = one fresh session = one branch = one PR.** Branch off `staging`; never push to `main` or `staging` yourself.
+2. **Context budget 120k tokens.** Near it, stop and report; a task that does not fit is split. Hand-over = the PR description plus a task file `docs/tasks/<date>-<name>.md` (template: `docs/tasks/TEMPLATE.md`, at most 15 lines).
+3. **Never go back to an old session; never switch model mid-session.** Follow-up work starts a new session from the task file.
+4. **Lean start.** Read only this file and the task. Read `context.md` (source of truth; trust the code if they disagree) and the `learning.md` rows for your area (load only the `docs/learning/` files it points to) when the task touches code.
+5. **Lean tools.** GitHub and Supabase only; Figma only for design work.
+6. **Scripts wait, not you.** One command per wait (`tools/ci_wait.js <pr>`, `tools/ship.js`, once they exist); no "check CI" turns.
+7. **Review.** Tier 1: CI only. Tier 2: CI plus the automated PR reviewer. Tier 3: that plus one fresh diff-only review session and the owner's staging check.
+8. **QA is tests.** Every task ships its tests; the owner checks staging by hand for Tier 2 and 3.
+9. **Model by job.** Sonnet 5.5 builds; Haiku 5.5 for mechanical work; Opus or Fable only for Tier 3 design and review, in small fresh sessions.
+10. **Cost is a release metric.** Record the session cost, turns and send-backs in `docs/COSTS.md` when the task ends. Targets: Tier 1 under $0.30, Tier 2 under $2, Tier 3 under $8.
+
+## Non-negotiables
+- **Never commit secrets.** `context.md` and the README say where they live, never what they are.
+- **Tier first.** The tier table lives in `docs/workflows/README.md`; run `node tools/path_tier.js` for the floor. You may raise a tier, never lower it. Load only your tier file (`docs/workflows/TIER_N.md`).
+- **Tests.** Run the affected tests before every push (`node tools/affected_tests.js` prints the command; when in doubt run all). Run the whole suite (`bash tests/e2e/run_all.sh`) before a release.
+- **Production only on the owner's word in this chat** ("Release"). Migrations go to staging before production. Production is deployed by merging `staging` into `main`; follow `docs/DEV_WORKFLOW.md` and `docs/SMOKE_TEST.md`. Never claim a check passed that you did not run.
+- **Ask once.** Restate the request as 2 to 5 done-when checks; put every open question, with a recommended default, in ONE message.
+
+## Keep these current in the same PR
+- `context.md` (affected sections) and a change file `docs/changes/YYYY-MM-DD-name.md` (never edit `docs/CHANGELOG.md`).
+- `regression_scenario.md` and `docs/FEATURE_TESTS.md` when a feature is added or changed; `README.md` and `docs/NEXT_STEPS.md` when they are affected.
+- **Event tracking** for every new button, form or outcome (`data-act`, `data-form`, `Analytics.track`, an assertion in `tests/e2e/analytics.js`, the catalog in `docs/ANALYTICS.md`).
+- `learning.md`: add a line when you make a mistake or the owner corrects you, and a Session log entry at the end (even "no new mistakes").
+
+## UI changes
+Design in Figma first (file "Stiver", https://www.figma.com/design/DnfE4wtwMDGQyOW76MkVRW, see `docs/FIGMA.md`), including dark mode and phone width; build after the owner approves ("fast lane" = post the link and build at once). Before reporting ready, show phone-width and dark-mode proof (`node tools/staging_shot.js`) and end with the report in `docs/READY_REPORT.md` format.
+
+## Pointers
+Tiers: `docs/workflows/README.md` · Plan and cost: `docs/workflows/V2_PLAN.md`, `COST_PLAN.md` · Costs: `docs/COSTS.md` · Old multi-agent docs: `docs/archive/` (do not follow).

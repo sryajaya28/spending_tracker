@@ -3,7 +3,7 @@
 Stiver is a personal and household spending tracker: a static web app (`prototype/`), Supabase (Postgres with row-level security, Edge Functions in `supabase/`) and a Vercel deploy. Review the diff, not the whole repo. Say nothing when you have nothing to flag; do not praise or restate the diff.
 
 ## Flag, in this order
-1. **Secrets and keys.** Any token, password, service-role key or DB URL in code, tests, docs or config. Docs say where secrets live, never what they are.
+1. **Secrets and keys.** Any secret credential (password, service-role key, DB URL, access token, private key) in code, tests, docs or config. Docs say where secrets live, never what they are. Not a finding: the public browser values committed on purpose in `prototype/config.js` (Supabase URL and publishable anon key, PostHog project token, Turnstile site key).
 2. **Money correctness.** Net worth, balances, currency conversion, recurring entries, imports. Look for rounding, sign errors, wrong currency or date handling, and anything that could change the value of an existing record.
 3. **Who sees and does what.** Owner, Editor, Viewer and former member. Flag a write control, request or RLS policy a Viewer or former member could reach, including UI that is hidden but still callable.
 4. **Database changes.** Applied migrations in `supabase/migrations/` must never be edited, only added to. Check new tables have RLS, policies match the roles above, and columns the code reads or writes exist.

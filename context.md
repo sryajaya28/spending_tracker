@@ -103,7 +103,7 @@ Supabase (Auth + PostgREST + Postgres, RLS on every table)        Resend (SMTP f
 ```
 
 - **Static app, no build.** Scripts load in this order (see `prototype/index.html`): `vendor/supabase.js`, `config.js`,
-  `cloud.js`, `i18n.js`, `i18n-id.js`, `app.js`. CSP forbids inline scripts and external scripts (except Cloudflare
+  `cloud.js`, `i18n.js`, `i18n-id.js`, then the files in `prototype/app/` and last `app.js` (the split of the old single `app.js` is in progress; map in `docs/MAP.md`). CSP forbids inline scripts and external scripts (except Cloudflare
   Turnstile), so everything is a file.
 - **State:** one in-memory object `state.data` (profile, categories, wallets, transactions, budgets, occasions,
   investments, holdings, loans, lent, customAssets, livePrices). The UI renders from it with template strings
@@ -129,7 +129,7 @@ Supabase (Auth + PostgREST + Postgres, RLS on every table)        Resend (SMTP f
 ## 5. Repo map
 
 ```
-prototype/          the app: index.html, app.js (UI, ~1.7k lines), dropdown.js (custom select lists), cloud.js (auth + sync), config.js (public config),
+prototype/          the app: index.html, app.js (views, dialogs, events; being split, see docs/MAP.md) and app/ (utils, state, selectors, calculations, loaded before app.js), dropdown.js (custom select lists), cloud.js (auth + sync), config.js (public config),
                     i18n.js, i18n-id.js, styles.css, sw.js, manifest, icon.svg, privacy.html, terms.html, legal.js,
                     brand/ (logo svg/png 120+512), media/ (demo video mp4+webm, poster), vendor/supabase.js (v2.45.4)
 api/index.py        Vercel function for /api/* (Finnhub proxy, FX)

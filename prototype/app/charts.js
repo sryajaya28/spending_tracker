@@ -91,7 +91,7 @@ function valueChart(months, usd, vc, o = {}) {
   const min = o.neg ? lo - pad : Math.max(0, lo - pad), max = hi + pad;
   const x = (i) => pl + ((W - pl - pr) * i) / (months.length - 1);
   const y = (v) => pt + (H - pt - pb) * (1 - (v - min) / (max - min));
-  const cmp = (v) => new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+  const cmp = (v) => (hideBal() ? '•••' : new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(v));
   const line = vals.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
   const ticks = [0, 1, 2, 3].map((i) => min + ((max - min) * i) / 3);
   return `<div class="chart-wrap" id="${id}"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${__('Portfolio value by month')}">
@@ -111,7 +111,7 @@ function bindValue(months, usd, vc, o = {}) {
     const cx = pl + ((W - pl - pr) * i) / (months.length - 1);
     cursor.setAttribute('x1', cx); cursor.setAttribute('x2', cx); cursor.setAttribute('opacity', 1);
     const mom = i && usd[i - 1] > 0 ? ((usd[i] - usd[i - 1]) / usd[i - 1]) * 100 : null, mon = new Date(+months[i].slice(0, 4), +months[i].slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' });
-    tip.textContent = o.neg ? `${mon}: ${usd[i] >= 0 ? '+' : '−'}${money(usdToMinor(Math.abs(usd[i]), vc), vc)}` : `${mon}: ${money(usdToMinor(usd[i], vc), vc)} (${pctFmt(mom)} MoM)`;
+    tip.textContent = o.neg ? `${mon}: ${usd[i] >= 0 ? '+' : '−'}${moneyP(usdToMinor(Math.abs(usd[i]), vc), vc)}` : `${mon}: ${moneyP(usdToMinor(usd[i], vc), vc)} (${pctFmt(mom)} MoM)`;
     tip.style.left = `${(cx / W) * r.width}px`; tip.style.top = `${r.height * 0.3}px`; tip.style.opacity = 1;
   });
   svg.addEventListener('pointerleave', () => { tip.style.opacity = 0; cursor.setAttribute('opacity', 0); });
@@ -122,7 +122,7 @@ function holdingRow(h, vc, accTotal) {
   // name and "quantity SYMBOL"; value and share on the right. The price and actions are in the detail (tap a row).
   return `<div class="row holding-row" data-act="edit-holding" data-id="${h.id}" tabindex="0"><span class="tile sym" style="--c:${TYPE_COLOR[info.type]}">${esc(info.symbol.slice(0, 4))}</span>
     <div class="h-main"><div class="title h-name">${esc(info.name)}</div><div class="sub num">${qtyFmt(heldNow(h), h)} ${esc(info.symbol)}</div></div>
-    <div class="amt num${info.cash ? ' amt-mid' : ''}">${money(usdToMinor(value, vc), vc)}${info.cash ? '' : `<div class="sub">${rowTail(h, value, accTotal)}</div>`}</div></div>`;
+    <div class="amt num${info.cash ? ' amt-mid' : ''}">${moneyP(usdToMinor(value, vc), vc)}${info.cash ? '' : `<div class="sub">${rowTail(h, value, accTotal)}</div>`}</div></div>`;
 }
 /* under the value: profit or loss against your cost when it is known, otherwise the share of the account */
 function rowTail(h, value, accTotal) {
@@ -137,7 +137,7 @@ function archivedWallets() {
   const open = state.ui.archOpen;
   return `<div style="margin-top:18px"><button type="button" class="legend-btn card-toggle" data-act="toggle-arch" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span><b>${__('Archived accounts ({n})', { n: list.length })}</b></button>
     ${open ? list.map((w) => { const n = D().transactions.filter((t) => t.wallet_id === w.id).length;
-      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${money(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small>${byLine(w)}</div>
+      return `<div class="brow wrap">${tile({ icon: '👛', color: '#94A3B8' })}<div><b>${esc(w.name)}</b> <span class="badge">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span><br><small class="muted">${moneyP(walletBalance(w), w.currency)} · ${n} transaction${n === 1 ? '' : 's'}</small>${byLine(w)}</div>
         <div class="tools"><button class="btn secondary" data-act="restore-wallet" data-id="${w.id}">${__('Restore')}</button><button class="btn danger" data-act="delete-wallet" data-id="${w.id}">${__('Delete')}</button></div></div>`; }).join('') : ''}</div>`;
 }
 /* every list on Portfolio is sorted from the highest amount (compared in one currency) */
@@ -147,7 +147,7 @@ const walletCard = (w) => {
   return `<div class="wallet"><div class="wtop"><div class="wtitle"><b class="wname">${esc(w.name)}</b><span class="kind">${esc(typeLabel(w.type))} · ${esc(w.currency)}</span></div>
     <div class="menu-wrap"><button type="button" class="dots" data-act="wallet-menu" data-id="${w.id}" aria-label="${__('More actions')}" aria-haspopup="menu" aria-expanded="${open}">⋯</button>
       ${open ? `<div class="menu" role="menu"><button type="button" role="menuitem" data-act="edit-wallet" data-id="${w.id}">${__('Edit')}</button><button type="button" role="menuitem" class="warn" data-act="archive-wallet" data-id="${w.id}">${__('Archive')}</button></div>` : ''}</div></div>
-    <b class="num bal">${money(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${money(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}</div>`;
+    <b class="num bal">${moneyP(walletBalance(w), w.currency)}</b>${w.currency !== cur() ? `<small class="muted num">≈ ${moneyP(convert(walletBalance(w), w.currency, cur()), cur())}</small>` : ''}</div>`;
 };
 /* the biggest 3 accounts show first; See more / Show less toggles the rest */
 const walletCards = () => {
@@ -161,7 +161,7 @@ const walletCards = () => {
 function loanCard(l, vc, kind = 'loan') {
   const lent = kind === 'lent', coll = lent ? D().lent : D().loans;
   const bal = loanBalance(l), cyc = loanCycle(l), paid = cyc.paid, total = cyc.total, pct = total ? Math.min(100, Math.round((paid / total) * 100)) : 0;   // paid / total are for the current cycle (see loanCycle)
-  const shown = (m) => money(convert(m, l.currency, vc), vc);
+  const shown = (m) => moneyP(convert(m, l.currency, vc), vc);
   const word = lent ? __('repayment') : __('payment');
   const meta = lent ? `${l.due ? __('Due {date}', { date: new Date(l.due + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric', year: 'numeric' }) }) : __('No due date')}${l.note ? ` · ${esc(l.note)}` : ''}` : '';
   // a debt card is kept simple: the recurring payment (or the monthly payment set on the debt) and how long until it is paid off
@@ -170,7 +170,7 @@ function loanCard(l, vc, kind = 'loan') {
   const leftText = left ? (wk ? (left === 1 ? __('1 week left') : __('{n} weeks left', { n: left })) : (left === 1 ? __('1 month left') : __('{n} months left', { n: left }))) : '';
   const debtMeta = l.rate ? `${l.rate}% ${l.flat ? __('flat') : 'APR'}` : '';
   return `<section class="card${leftText ? ' has-tab' : ''}">${leftText ? `<span class="loan-tab">${leftText}</span>` : ''}<div class="card-head"><div><h2>${esc(l.name)} <span class="badge">${lent ? __('Lent') : esc(__(LOAN_TYPES[l.type] || 'Debt'))}</span></h2>${byLine(l)}
-      <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${money(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
+      <div class="big num" style="font-size:26px;margin-top:4px">${shown(bal)}</div>${l.currency !== vc ? `<small class="muted num">${moneyP(bal, l.currency)} ${esc(l.currency)}</small>` : ''}</div>
       <div class="tools"><button class="btn secondary" data-act="edit-${kind}" data-id="${l.id}">${__('Edit')}</button><button class="btn secondary" data-act="history-${kind}" data-id="${l.id}">${__('Details')}</button><button class="btn" data-act="pay-${kind}" data-id="${l.id}">+ ${lent ? __('Repayment') : __('Payment')}</button></div></div>
     ${lent ? `<div class="bar"><i style="width:${pct}%;background:#1fa971"></i></div>
     <div class="loan-meta"><span>${__('{pct}% repaid · {paid} of {total}', { pct, paid: shown(paid), total: shown(total) })}</span><span>${meta}</span></div>`
@@ -181,6 +181,11 @@ function loanCard(l, vc, kind = 'loan') {
 
 /* an (i) button with a small popover: tap/click toggles it, hover shows it on desktop, tapping elsewhere closes it */
 const infoTip = (id, text) => `<span class="info-wrap${state.ui.infoOpen === id ? ' open' : ''}"><button type="button" class="info-btn" data-act="toggle-info" data-id="${id}" aria-expanded="${state.ui.infoOpen === id}" aria-label="${__('Info')}">i</button><span class="info-pop" role="tooltip">${esc(text)}</span></span>`;
+/* The label row of a hero card. With a tip the label itself is the underlined, tappable text that opens the tooltip (no (i) icon); the eye button after it hides or shows every balance (hideBal in util.js). */
+const eyeBtn = () => { const h = hideBal(); return `<button type="button" class="eye-btn" data-act="toggle-hide-balance" aria-pressed="${h}" aria-label="${h ? __('Show balance') : __('Hide balance')}">${icon(h ? 'eye-off' : 'eye')}</button>`; };
+const heroLabel = (label, tipId, tipText) => `<div class="label">${tipId ? `<span class="info-wrap lbl${state.ui.infoOpen === tipId ? ' open' : ''}"><button type="button" class="lbl-link" data-act="toggle-info" data-id="${tipId}" aria-expanded="${state.ui.infoOpen === tipId}">${label}</button><span class="info-pop" role="tooltip">${esc(tipText)}</span></span>` : label}${eyeBtn()}</div>`;
+/* the change pill under a hero amount: red when the figure fell, green when it grew, the neutral yellow when there is nothing to compare; nothing at all while balances are hidden (it would give the balance away) */
+const deltaPill = (p) => `<b class="${p === null ? '' : p < 0 ? 'down' : 'up'}">${pctFmt(p)}</b>`;
 /* the full history page of one asset: summary, Buy/Sell (Deposit/Withdraw for cash), and every trade, transfer and income/expense in coins */
 function viewAsset(h) {
   const info = assetInfo(h.symbol), acc = accountName(h.account_id);
@@ -218,17 +223,17 @@ function pnlDays(list) {
     <div class="amt num">${pnlText(es.reduce((a, e) => a + e.pnl, 0))}</div><span class="day-chev" aria-hidden="true">›</span></div>
     <div class="day-body">${es.map(ent).join('')}</div></div>`; }).join('');
 }
-const pnlText = (v) => (v === 0 ? `<span class="pl">${money(0, cur())}</span>` : `<span class="pl ${v > 0 ? 'up' : 'down'}">${v > 0 ? '+' : '−'}${money(Math.abs(v), cur())}</span>`);
+const pnlText = (v) => (v === 0 ? `<span class="pl">${moneyP(0, cur())}</span>` : `<span class="pl ${v > 0 ? 'up' : 'down'}">${v > 0 ? '+' : '−'}${moneyP(Math.abs(v), cur())}</span>`);
 /* the Realized profit & loss section of the Investment tab: the same component as "Investment growth month over month" (range, chart, month rows, See more),
    with the net profit or loss of each month on the right (green +, red −); tapping a month opens its page (viewPnlMonth) with the days */
 function pnlSection(rm, vc) {
-  const all = realizedPnl(), m = (usd) => `${usd >= 0 ? '+' : '−'}${money(usdToMinor(Math.abs(usd), vc), vc)}`;
+  const all = realizedPnl(), m = (usd) => `${usd >= 0 ? '+' : '−'}${moneyP(usdToMinor(Math.abs(usd), vc), vc)}`;
   const series = rm.map((k) => all.filter((e) => inPeriod(e.date, k)).reduce((a, e) => a + e.usd, 0));
   const head = `<div class="card-head"><h2>${__('Realized P&L')}</h2>${pfRangeSelect()}</div>`;
   state.chart2 = null;
   if (!all.length) return `<section class="card" style="margin-top:20px">${head}<div class="empty sm">${__('No sales yet. Profit and loss appear here when you sell an asset.')}</div></section>`;
   state.chart2 = { months: rm, series, vc };
-  const rows = rm.map((k, i) => `<div class="mrow tap-row" data-act="pnl-month" data-k="${k}" tabindex="0" role="link"><span class="mname">${esc(new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }))}</span><div class="mval"><b class="num pl ${usdToMinor(series[i], vc) === 0 ? '' : series[i] > 0 ? 'up' : 'down'}">${usdToMinor(series[i], vc) === 0 ? money(0, vc) : m(series[i])}</b></div></div>`).reverse();
+  const rows = rm.map((k, i) => `<div class="mrow tap-row" data-act="pnl-month" data-k="${k}" tabindex="0" role="link"><span class="mname">${esc(new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString(locale(), { month: 'short', year: 'numeric' }))}</span><div class="mval"><b class="num pl ${usdToMinor(series[i], vc) === 0 ? '' : series[i] > 0 ? 'up' : 'down'}">${usdToMinor(series[i], vc) === 0 ? moneyP(0, vc) : m(series[i])}</b></div></div>`).reverse();
   const more = !!state.ui.pnlhistMore, rest = rows.length - 3;
   const html = rows.map((r, i) => (i >= 3 ? r.replace('<div class="mrow tap-row"', '<div class="mrow tap-row more-item"') : r)).join('')
     + (rest > 0 ? `<button type="button" class="see-more" data-act="toggle-more" data-key="pnlhist" aria-expanded="${more}">${more ? __('Show less') : __('See more ({n})', { n: rest })}<span class="chev" aria-hidden="true">${more ? '⌃' : '⌄'}</span></button>` : '');
@@ -251,7 +256,7 @@ function viewPortfolio() {
   const S = months.map(savingsUSD), I = months.map((k) => portfolioUSD(k)), L = months.map(loanUSD), LT = months.map(lentUSD);
   const N = months.map((_, i) => S[i] + I[i] + LT[i] - L[i]);
   const now = N[5], prev = N[4], mom = prev > 0 ? ((now - prev) / prev) * 100 : null;
-  const m = (usd) => money(usdToMinor(usd, vc), vc);
+  const m = (usd) => moneyP(usdToMinor(usd, vc), vc);   // masked while balances are hidden
   const assets = S[5] + I[5] + LT[5];
   const share = (v) => (assets > 0 ? Math.round((v / assets) * 100) : 0);
   const rm = pfMonths(), series = rm.map({ savings: savingsUSD, investment: (k) => portfolioUSD(k), lent: lentUSD, loan: loanUSD }[tab]);
@@ -307,9 +312,9 @@ function viewPortfolio() {
   const tabBtn = (id, label) => `<button class="tab ${tab === id ? 'on' : ''}" data-act="pf-tab" data-tab="${id}">${__(label)}</button>`;
   return `${topbar('Portfolio', __('Net worth across savings, investments and debts · shown in {cur}', { cur: vc }))}
   <div class="grid">
-    <section class="card hero"><div class="label">${__('Net worth')}</div>
-      <div class="amount-line"><div class="amount num" style="--len:${m(now).length + 6}">${moneyHtml(usdToMinor(now, vc), vc)}</div>${heroCurrency(base)}</div>
-      <div class="delta"><b>${pctFmt(mom)}</b><span>${__('vs last month')}</span></div></section>
+    <section class="card hero">${heroLabel(__('Net worth'))}
+      <div class="amount-line"><div class="amount num" style="--len:${m(now).length + 6}">${moneyHtmlP(usdToMinor(now, vc), vc)}</div>${heroCurrency(base)}</div>
+      ${hideBal() ? '' : `<div class="delta">${deltaPill(mom)}<span>${__('vs last month')}</span></div>`}</section>
     <section class="card"><div class="card-head"><h2>${__('Breakdown')}</h2></div>
       <div class="alloc-legend">
         <div><span class="key"><i style="background:#4A44C6"></i>${__('Savings')}</span><b class="num">${m(S[5])}</b><span class="muted">${share(S[5])}%</span></div>

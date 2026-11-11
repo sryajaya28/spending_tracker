@@ -61,7 +61,7 @@ Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| OV-01 | Hero card | **Total Balance = savings accounts + investments** (money lent and loans are **not** included; Portfolio > Net worth covers them), so with no investments it equals Portfolio > Savings. A small **(i)** next to "Total Balance" shows "Savings + investments" (tap/hover; light icon on the blue card). Shows the period's change in amount and as a **% of the balance it started with** (e.g. `−0.8%` next to `−IDR 680,886 this month`; both always have the same sign; `—` when the starting balance is zero or negative). No "N accounts" label. No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
+| OV-01 | Hero card | **Total Balance = savings accounts + investments** (money lent and loans are **not** included; Portfolio > Net worth covers them), so with no investments it equals Portfolio > Savings. The words "Total Balance" are **underlined and tappable**: tap (or hover on desktop) shows "Savings + investments"; there is no (i) icon. A small **eye** button follows them (OV-08). Shows the period's change in amount and as a **% of the balance it started with** (e.g. `−0.8%` next to `−IDR 680,886 this month`; both always have the same sign; `—` when the starting balance is zero or negative). The % **pill is red when the figure fell, green when it grew**, yellow when there is nothing to compare (same on Portfolio > Net worth). No "N accounts" label. No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
 | OV-01b | Sample-data offer on an empty account | When the total balance is **under 1 USD** (a new or empty account) and sample mode is off, the **yellow banner** (same look as the sample-mode banner) "Just looking around? · Test Stiver now with sample data" (description next to the question) and a short **Try** button (not a toggle) appears at the very top of Overview. Tapping the button shows the demo account and the sample banner (the card disappears; "Back to my data" restores the own data and the card). With a real balance of 1 USD or more the card is not shown. Settings > Account > Use sample data still works. |
 | OV-02 | Desktop layout | Hero spans the full width; below it a two-column grid: Money Flow and Spending, then Budgets and Recent transactions side by side with no empty cell. Phone: single column. |
 | OV-03 | Money Flow | Six periods of income and spending; hover/tap on the chart shows a tooltip with the period, Income, Spending and Net. Saved shows income minus spending of the selected period. |
@@ -69,8 +69,9 @@ Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
 | OV-05 | Budgets card | Shows **only the overall budget** ("All spending": spent / budget · %, empty bar at 0%): no category budgets and no special occasions on Overview. The button says **Details**; tapping the button or anywhere on the card (except the month picker) opens the Budgets page. The period dropdown on the card also changes the Spending card (shared period). Without an overall budget it says "No monthly budget". |
 | OV-06 | Recent transactions | Latest rows, "View all" goes to Activity. Each row: title and amount on the **same line**, `Category · Account` below the title and the **date below the amount** (right aligned); there is **no "Uncategorized" tag** (an uncategorized row just says "No category"); for a sub-category only the sub-category name is shown ("Public transit", not "Transport › Public transit"). |
 | OV-07 | Add/Edit through any entry point | After saving, numbers on the page refresh immediately. |
+| OV-08 | Hide balance | The small eye button after "Total Balance" hides the total (`Rp ••••••••`, the % pill and the "this month" line disappear); tap again shows them. Budgets, Money Flow, Spending and Recent transactions are **never** masked. The same setting drives Portfolio (PF-08) and is remembered on this device, so a new session opens the way it was left. First use: shown. |
 
-Automated: `donut`, `ovocc`, `budgetbar`, `run`.
+Automated: `donut`, `ovocc`, `budgetbar`, `run`, `hidebal`.
 
 ## 4. Transactions (Activity)
 
@@ -175,6 +176,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 | PF-05 | Phone: more than 3 accounts | Shows the top 3 and **See more (n)** / **Show less**. Desktop: all accounts, no button. |
 | PF-06 | Investment / Lent / Loan lists | Sorted from the highest value. |
 | PF-07 | Tabs | Savings, Investment, Lent, Loan all fit without sideways page scroll. |
+| PF-08 | Hide balance | The eye button on the Net worth card is the same switch as on Overview (OV-08). While hidden: Net worth, every Breakdown amount (the % shares stay), each tab's total, every account, debt, lent and holding balance, the Realized P&L amounts, the history list values and the chart axis/tooltip values show dots; the change pill is gone. Transactions are untouched. Switching it on either screen changes both. |
 
 ### 9.2 History chart and list
 
@@ -275,7 +277,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 | LN-02 | Record a payment / repayment | Balance reduces; **not** counted as income or spending. Payments dated in the future do not reduce the balance yet. |
 | LN-03 | Fully paid | Hint to archive; archived ones leave the lists and totals. |
 
-Automated: `pfrange`, `wallet`, `arch`, `curdd`, `idx`, `run`, `ios`.
+Automated: `pfrange`, `wallet`, `arch`, `curdd`, `idx`, `run`, `ios`, `hidebal`.
 
 ## 10. Settings
 
@@ -434,6 +436,7 @@ Written from the PRD only. **E** = automated e2e, **DB** = real staging database
 | `idx` | IDX and commodity assets (stubbed prices) |
 | `samplelocal` | localized sample data for all nine currencies and the USD fallback |
 | `lastacct` | add dialog preselects the last account used per expense / income / investment |
+| `hidebal` | hide balance: one eye button on Overview and Portfolio, masks totals and Portfolio balances, remembered on the device, red/green change pill |
 | `modalscroll` | page behind a modal is pinned; scroll position restored on close |
 | `recedit` (also RC-LINK: unlinked upcoming entry repaired, Manage edit follows into it) | recurring: next date for a later first payment, Manage dialog, edit amount/date without touching history |
 | `support` | support button placement, 250 chars, 5 images / 1 MB, shrink, insert with type, failure keeps form, sample mode |

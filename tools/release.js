@@ -13,9 +13,9 @@ async function verify(sha, skipSmoke) {
   let live = '';  // the stamp holds a 10-character sha; compare whatever length of sha we were given (7 or 10 or 40)
   for (let i = 0; i < 40; i++) {
     live = g.sh(`curl -s "${PROD}/sw.js?_=${Date.now()}"`).match(/stiver-shell-[0-9a-f]+/)?.[0] || '';
-    if (live && live.slice(12).startsWith(sha.slice(0, live.length - 12))) break; await sleep(15);
+    if (live && live.slice(13).startsWith(sha.slice(0, live.length - 13))) break; await sleep(15);
   }
-  if (!(live && live.slice(12).startsWith(sha.slice(0, live.length - 12)))) { console.log(`FAIL  production still serves ${live || 'no build'}, expected stiver-shell-${sha.slice(0, 10)}`); process.exit(1); }
+  if (!(live && live.slice(13).startsWith(sha.slice(0, live.length - 13)))) { console.log(`FAIL  production still serves ${live || 'no build'}, expected stiver-shell-${sha.slice(0, 10)}`); process.exit(1); }
   console.log(`PASS  production serves ${live}`);
   if (skipSmoke) { console.log('SKIPPED production smoke test: docs/tooling only or a Tier 1 batch (the site answers and serves the new build; that is the check).'); return; }
   if (!process.env.SMOKE_PROD_PASSWORD) { console.log('SMOKE_PROD_PASSWORD is not set'); process.exit(2); }

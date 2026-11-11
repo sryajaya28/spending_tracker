@@ -51,7 +51,8 @@ const SALT = await sha256("household-ip:" + SVC);
 export const ipBucketHash = (req: Request, bucket: string) => sha256(`${SALT}:${bucket}:${clientIp(req)}`);
 
 // text that ends up in an email: markup, URL-like text and control characters stripped, length limited (E14)
-export const cleanName = (s: unknown, max = 40) => String(s ?? "").replace(/<[^>]*>/g, "").replace(/(https?:\/\/|www\.)\S+/gi, "").replace(/[\u0000-\u001f<>&"']/g, "").trim().slice(0, max);
+import { cleanName, buildInviteEmail } from "./invite_email.ts";
+export { cleanName };
 // a STORED display name keeps apostrophes and ampersands (O'Brien); only control characters and angle brackets go; output is escaped where shown (E13)
 export const storedName = (s: unknown, max = 60) => String(s ?? "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, max);
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -108,28 +109,14 @@ export async function cleanupInvite(ownerId: string, inviteId: string): Promise<
   if (data?.result === "ok" && data.deletable && data.invited_user_id) await admin.auth.admin.deleteUser(data.invited_user_id);
 }
 
-const COPY = {
-  en: { subject: "You're invited to a household on Stiver", hello: "invited you to share a household on Stiver as", editor: "an Editor (can add and change entries)", viewer: "a Viewer (read only)", cta: "Accept invitation", note: "The link works once and expires in 7 days. If you were not expecting this, ignore this email.", see: "You will see all of the household's data." },
-  id: { subject: "Anda diundang ke rumah tangga di Stiver", hello: "mengundang Anda berbagi rumah tangga di Stiver sebagai", editor: "Editor (dapat menambah dan mengubah catatan)", viewer: "Pembaca (hanya melihat)", cta: "Terima undangan", note: "Tautan hanya berlaku sekali dan kedaluwarsa dalam 7 hari. Abaikan email ini jika Anda tidak mengharapkannya.", see: "Anda akan melihat semua data rumah tangga." },
-} as const;
-
-// our own sender (the join token never goes through GoTrue). Fixed wording; the inviter's EMAIL comes first, then the cleaned name.
-// Result: 'sent' (2xx), 'failed' (4xx: certainly not sent), 'unknown' (timeout or 5xx: the mail may have gone out, so the caller keeps the
-// invite pending instead of revoking, E6). Only status codes are logged.
 export async function sendInviteEmail(o: { to: string; inviterName: string; inviterEmail: string; role: string; token: string; lang: string }): Promise<"sent" | "failed" | "unknown"> {
   const key = Deno.env.get("RESEND_API_KEY"), from = Deno.env.get("MAIL_FROM");
   if (!key || !from || !SITE_URL) return "failed";
-  const c = COPY[o.lang === "id" ? "id" : "en"], link = `${SITE_URL}/join#t=${o.token}`;
-  const role = o.role === "editor" ? c.editor : c.viewer;
-  const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:480px;margin:auto;color:#1b1a4b">
-<h2 style="margin:0 0 12px">Stiver</h2>
-<p><b>${cleanName(o.inviterEmail, 80)}</b> (${cleanName(o.inviterName)}) ${c.hello} ${role}.</p>
-<p><a href="${link}" style="display:inline-block;background:#1e1b4b;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:600">${c.cta}</a></p>
-<p style="color:#6b6f8f;font-size:13px">${c.see}<br>${c.note}</p></div>`;
+  const m = buildInviteEmail({ inviterName: o.inviterName, inviterEmail: o.inviterEmail, role: o.role, token: o.token, lang: o.lang, siteUrl: SITE_URL });
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-      body: JSON.stringify({ from, to: [o.to], subject: c.subject, html }), signal: AbortSignal.timeout(10000),
+      body: JSON.stringify({ from, to: [o.to], subject: m.subject, html: m.html, text: m.text }), signal: AbortSignal.timeout(10000),
     });
     if (r.ok) return "sent";
     console.log("resend status", r.status);

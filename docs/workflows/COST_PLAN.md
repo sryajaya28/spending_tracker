@@ -34,7 +34,7 @@ New output in all nine sessions together: 5.0M tokens, 0.19% of the total. The e
 
 ## Step C: make the code cheap to read (expected: a further 3 to 5%, and fewer mistakes)
 - [x] **C1 (done 2026-11-11, owner: "Sure"). Owner decides:** split `prototype/app.js` (393 KB, one file) into feature modules. No user-visible change; guarded by the 59 e2e tests; done as three or four PRs, each released separately. Reply "C1 yes" or "C1 later".
-- [ ] **C2. New sessions (one per PR), after C1:** the split, plus `docs/MAP.md` (feature, file, function). Done when no source file is over 600 lines and a typical change reads under 5k tokens of code.
+- [ ] **C2 (PR 1 of about 4 done 2026-11-11: lines 1-626 moved to `prototype/app/`, `docs/MAP.md` started; next steps in `docs/tasks/2026-11-11-app-split.md`). New sessions (one per PR), after C1:** the split, plus `docs/MAP.md` (feature, file, function). Done when no source file is over 600 lines and a typical change reads under 5k tokens of code.
 
 ## Step D: prove it
 - [ ] **D1. Pilot (five tasks under v2):** finish "Lent from account" (Tier 3, the open review bug first), then four small changes the owner picks. Each task writes its session cost into `docs/COSTS.md`.

@@ -13,7 +13,7 @@ const RULES = [
   [3, /^api\//, 'server API'],
   [3, /^(vercel\.json|prototype\/config\.js)$/, 'security posture'],
   [3, /^prototype\/(auth|signin|login)[^/]*\.js$/, 'sign-in'],
-  [2, /^prototype\/app\.js$/, 'app logic or markup (not told apart reliably: Tier 2)'],
+  [2, /^prototype\/app(\.js|\/[^/]+\.js)$/, 'app logic or markup (not told apart reliably: Tier 2)'],
   [1, /^prototype\/(.*\.css|i18n[^/]*\.js|.*\.(png|jpg|jpeg|svg|webp|ico|gif|mp4|webm))$/, 'presentation'],
   [2, /^prototype\/(sw\.js|index\.html|[^/]+\.html|[^/]+\.js)$/, 'shipped script or page'],
   [2, /^(tests|\.github)\//, 'tests or CI (can weaken protection)'],

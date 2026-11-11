@@ -128,7 +128,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(tr.some((e) => e.event === 'cash_withdrawn' && e.properties.has_fee === false), 'cash_withdrawn');
   assert(tr.some((e) => e.event === 'transfer_recorded' && e.properties.involves_investment_cash === false), 'transfer_recorded'); assert(tr.some((e) => e.event === 'transfer_edited'), 'transfer_edited'); assert(tr.some((e) => e.event === 'delete_transfer'), 'delete_transfer');
   assert(tr.some((e) => e.event === 'dialog_opened' && e.properties.form === 'cashx'), 'the Cash pop-up is tracked as a dialog');
-  assert(!JSON.stringify(tr).match(/777777|1234\b|55555|66666|Zzz Broker|Zzz Bank/), 'no amounts or names from transfers leaked');
+  // random ids and timestamps are removed first: a UUID or a millisecond time can contain "1234" or "55555" by chance (seen as a rare failure)
+  const trBlob = JSON.stringify(tr).replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID').replace(/"\$?(time|timestamp|\$session_id|\$window_id|\$insert_id|\$device_id|distinct_id|\$pageview_id|\$sdk_debug[a-z_]*)":("[^"]*"|[\d.]+)/g, '');
+  const leak = trBlob.match(/777777|1234\b|55555|66666|Zzz Broker|Zzz Bank/); assert(!leak, 'no amounts or names from transfers leaked: ' + (leak && trBlob.slice(Math.max(0, leak.index - 80), leak.index + 40)));
   // sign-out resets the person
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-act=signout]');
   await p.click('[data-act=signout]'); await p.waitForSelector('.land'); await p.waitForTimeout(400);

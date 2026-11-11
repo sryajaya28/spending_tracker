@@ -570,13 +570,13 @@ function loanRepaymentCategory() {
 const lentRepaymentOf = (txnId) => { for (const l of D().lent) { const p = l.payments.find((x) => x.txn_id === txnId); if (p) return { lent: l, payment: p }; } return null; };
 /* money lent goes out of an account as a single transfer out (not spending), category Lent, linked to the lent record by lent.txn_id */
 function lentCategory() {
-  const d = D(); let c = d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent');
+  const d = D(); let c = d.categories.find((x) => x.id === defaultCatId('Lent')) || d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent');   // by id first: a renamed category is still the one (never a second row with the same id)
   if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Lent'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); }
   return c;
 }
 const lentOfTxn = (txnId) => D().lent.find((l) => l.txn_id === txnId);
 function lentRepaymentCategory() {
-  const d = D(); let c = d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent repayment');
+  const d = D(); let c = d.categories.find((x) => x.id === defaultCatId('Lent Repayment')) || d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent repayment');   // by id first: a renamed category is still the one (never a second row with the same id)
   if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Lent Repayment'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); }
   return c;
 }

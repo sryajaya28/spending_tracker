@@ -2,7 +2,7 @@
 
 Source of truth for "where does X live". Read this first, then open only the file you need (COST_PLAN C2). Update it in the same PR when you move or add a function.
 The app is classic scripts that share one global scope. Load order is the order of the `<script>` tags in `prototype/index.html` (and `SHELL` in `prototype/sw.js`); a file may use anything defined in an earlier file at once, and anything from a later file only inside functions that run later.
-**Split status (C2): PR 1 of about 4 done.** The head of the old `app.js` is now in `prototype/app/`. The rest is still in `prototype/app.js`, listed by section marker (`grep -n "^/\* ----" prototype/app.js`); the next PRs move it out the same way, in order, and update this file.
+**Split status (C2): PR 2 of about 4 done.** The head of the old `app.js` (to the end of the charts section) is now in `prototype/app/`. The rest is still in `prototype/app.js`, listed by section marker (`grep -n "^/\* ----" prototype/app.js`); the next PRs move it out the same way, in order, and update this file.
 
 ## Already split: `prototype/app/` (load order)
 | File | What it holds | Main names |
@@ -18,11 +18,11 @@ The app is classic scripts that share one global scope. Load order is the order 
 | `portfolio-calc.js` | investments: holdings, average cost, profit and loss | `holdingsOf`, `holdingCost`, `pnlOf`, `portfolioUSD`, `pfMonths`, `PF_RANGES` |
 | `loans-calc.js` | savings, loans, lent money, net worth | `loanBalance`, `loanCycle`, `loanRepaymentCategory`, `lentRepaymentCategory`, `toUSD`, `aiTag` |
 | `ui-helpers.js` | toast, month picker, hash routing | `toast`, `tile`, `periodChoices`, `monthSelect`, `route`, `routeArg` |
+| `charts.js` | hand-built SVG charts, plus the wallet and loan cards, asset and portfolio views, P&L section, debt plan maths and the loan payment dialogs that sat in that stretch | `flowChart`, `halfDonut`, `valueChart`, `holdingRow`, `walletCard`, `loanCard`, `viewAsset`, `viewPortfolio`, `viewPnlMonth`, `loanDialog`, `debtPlan`, `loanPaymentDialog`, `lentRepaymentDialog` |
 
 ## Still in `prototype/app.js` (section marker -> feature)
 | Section marker | Feature |
 |---|---|
-| charts (hand-built SVG) | flow chart, donut, bars, line charts, portfolio charts |
 | views | the screen functions: overview, transactions, budgets, wallets, portfolio, savings, loans, settings |
 | support | report a bug or suggest an improvement |
 | category spending trend | stacked bars per period |

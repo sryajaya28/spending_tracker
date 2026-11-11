@@ -1,0 +1,1 @@
+2026-11-11: **B1 release record.** Added the B1 release entry to docs/RELEASES.md and the first per-task row (B1) to docs/COSTS.md (tokens and turns measured from the session's usage record; dollars left unpriced because the repo has no Sonnet 5.5 rate). Docs only; branch docs/b1-release-record.

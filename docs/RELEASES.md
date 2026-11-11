@@ -2,6 +2,40 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 18 contents (main b01c36a)
+
+**Items in this release**
+- Feature (branch feature/invite-email-copy): friendlier household invite email in English and Indonesian with a plain-text part (new subject, "You're invited" heading, role box, "Join the household" button, three steps). Inviter's email stays first, names sanitised, a look-alike display name is replaced by the email in the subject, link unchanged.
+- Tooling/process (branch staging): invite email test in CI; CI pins Playwright 1.63.0; Tech-Lead handoff note.
+
+**Exact detail.** Range: 8f4a1ec..54afecd. 6 commits, 9 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-05: Friendlier invite email. New subject (🏡 <name> saved you a seat in their Stiver household), heading, role box (Viewer or Editor in plain words, plus what the member will see), a "Join the household →" button, three steps and a short footer, in English and Indonesian, with a plain-text part. The email is built by pure functions in supabase/functions/_shared/invite_email.ts (cleanName moved there; util.ts re-exports it); inviter email still first, names sanitised, link unchanged, no images or scripts. tests/invite_email.test.mjs (also in CI). Branch feature/invite-email-copy.
+
+**What a user can see change**
+Nothing: docs, tooling and settings only. The app and its data are untouched.
+
+**Commits**
+- 54afecd CI: pin Playwright 1.63.0 (a newer Chrome failed occnobudget)
+- 2ef7ca0 Tech-Lead handoff: Release 18 (invite email) paused at the production approval
+- 28adc0d Fold change files
+- 17c1735 Invite email review fixes: subject never shows a look-alike display name, token shape check, bidi stripping, Pelihat
+- 8a0a1c1 Invite email: friendlier copy and layout (EN and ID), plain-text part, pure builder with a test
+- 94045eb Record Release 17 (main 8f4a1ec)
+
+**Files by area**
+- Edge Functions (2): supabase/functions/_shared/invite_email.ts, supabase/functions/_shared/util.ts
+- Tests (1): tests/invite_email.test.mjs
+- Docs and rules (5): docs/CHANGELOG.md, docs/RELEASES.md, docs/changes/2026-11-06-ci-pin-playwright.md, docs/handoff/techlead.md, regression_scenario.md
+- Other (1): .github/workflows/ci.yml
+
+**Database migrations**
+None.
+
+**Tests and smoke:** regression on staging 4/4 (browser suite, staging smoke, real-database create and cleanup); CI on PR #25: tier and e2e green with Playwright pinned to 1.63.0; real invite sent on staging and read in a Mailinator inbox. production smoke test waived by the owner (email-only change); production functions deployed by deploy run 10 (owner approved) and curl-checked (400/400/403/401/401/401); stiver.io answers 200 and serves stiver-shell-b01c36a0f5; no migrations
+**Known gaps:** no real invite sent from production; Gmail and Apple Mail dark mode not seen; the Indonesian email only tested in code; e2e occnobudget failed twice on CI with an unpinned newer Chrome (cause not proven, Playwright now pinned)
+
 ## Release 17 contents (main 8f4a1ec)
 
 **Items in this release**

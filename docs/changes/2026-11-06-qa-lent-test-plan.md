@@ -1,1 +1,0 @@
-2026-11-06: **Money lent from an account: test plan (QA).** Added FT-011 and `regression_scenario.md` section 18 (LF-01..LF-16) from PRD `docs/prd/2026-11-06-lent-from-account.md`; docs only, branch `qa/lent-from-account`.

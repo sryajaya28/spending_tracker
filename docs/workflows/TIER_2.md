@@ -11,9 +11,9 @@
 4. **Review:** CI (path-rule label plus the browser suite) and the automated PR reviewer (GitHub Copilot code review, a different vendor and model; decided, install is the owner's step). Fix every valid finding and answer the rest in one reply on the PR. No Tech-Lead or second Claude session. Until the reviewer is installed, say so in the PR and rely on CI plus the owner's staging check.
 5. **QA is tests:** the e2e suite in CI. No QA session. After a fix, re-run only the tests for the delta, then the full suite once on the final commit.
 6. **Staging:** merge to `staging` when CI is green and review is answered. The owner checks staging by hand and signs off in chat; for a UI change show the phone-width and dark-mode proof (`node tools/staging_shot.js`) and end with the report in `docs/READY_REPORT.md` format.
-7. **Release:** batched with other Tier 1 and 2 changes. The owner says "Release" in chat once per batch; follow `docs/DEV_WORKFLOW.md` and `docs/SMOKE_TEST.md` (`node tools/ship.js` once it exists).
+7. **Release:** batched with other Tier 1 and 2 changes. The owner says "Release" in chat once per batch; follow `docs/DEV_WORKFLOW.md` and `docs/SMOKE_TEST.md` (`node tools/ship.js`).
 8. **Close out:** row in `docs/COSTS.md` (cost, turns, send-backs), `learning.md` session-log line, and a `docs/tasks/` file if work is left over.
 
-**Wait with one command** (`node tools/ci_wait.js <pr>` once it exists), not with "check CI" turns.
+**Wait with one command** (`node tools/ci_wait.js <pr>`), not with "check CI" turns.
 
 **Escalate to Tier 3** on any trigger in README (a migration, a permission or role effect, financial values): stop, re-label, restart at the Tier 3 first step.

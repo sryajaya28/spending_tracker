@@ -44,6 +44,7 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `signed_up` / `signed_in` | `confirmed` / none | account created / login |
 | `onboarding_skipped` / `onboarding_completed` | none | first-run flow |
 | `demo_on` / `demo_off` | none | sample data switched |
+| `balance_visibility_changed` | `hidden` (true/false) | the eye button on Overview or Portfolio hides or shows all balances (never an amount) |
 | `expense_recorded` / `income_recorded` | `type`, `payment_source` (account/stablecoin/debt), `has_category`, `has_occasion`, `is_recurring` | a transaction is added |
 | `update_transaction` / `delete_transaction` | same / `type` | edit / delete |
 | `transfer_recorded` / `transfer_edited` | `has_fee`, `is_recurring`, `involves_investment_cash` | transfer between accounts (or with an investment Cash balance), added / edited |

@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await settle(); await log();
   const own = await snap(); assert.equal(own.txns, 1);
   // the (i) next to Total Balance explains what it contains
-  await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.click('.hero .info-btn'); assert((await p.innerText('.hero .info-pop')).includes('Savings + investments'), 'total balance tooltip');
+  await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.click('.hero .lbl-link'); assert((await p.innerText('.hero .info-pop')).includes('Savings + investments'), 'total balance tooltip');
   // an empty account (balance under 1 USD) gets a one-tap sample-data switch on Overview
   await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.waitForSelector('.sample-promo [data-act=demo-on]');
   await p.click('.sample-promo [data-act=demo-on]'); await p.waitForSelector('.demo-bar'); assert.equal(await p.$$('.sample-promo').then((a) => a.length), 0, 'promo disappears in sample mode'); assert.equal(await p.$$('.demo-bar').then((a) => a.length), 1); assert((await snap()).demo);

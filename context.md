@@ -84,6 +84,7 @@ infrastructure names, see section 8).
   Investment (accounts, holdings, buy/sell with a wallet or USDT/USDC counterpart, live prices via Finnhub),
   Lent, Loan (payments reduce balance).
 - **Net worth** with month-over-month change; preferred-currency dropdown (IDR, USD, EUR, GBP, SGD, AUD, JPY).
+- **Hide balance** (2026-11-11): the eye button on the Overview "Total Balance" and Portfolio "Net worth" cards is one switch (`hideBal()`/`setHideBal()` in `util.js`, `data-act="toggle-hide-balance"`, event `balance_visibility_changed`), remembered per device in localStorage `stiver.hidebal.v1` (not synced, no database change). While on, `moneyP()`/`moneyHtmlP()` print `Rp ••••••••` for both totals, Breakdown amounts, tab totals, account/debt/lent/holding balances, P&L, history and chart values; the % pill and "this month" line go. Transactions, budgets and spending are never masked. "Total Balance" is underlined and opens its tooltip (no (i)); the hero pill (`deltaPill()`) is red when negative, green when positive. Test `hidebal`.
 - **Dropdowns:** every `<select>` opens an app-styled popover list (`prototype/dropdown.js`, `.cs-pop`) instead of the OS picker. The native select stays
   as the visible field and value holder (so forms, `change` handlers and tests are unchanged) but gets `pointer-events: none`; the script finds the select under the
   tap, builds the list (optgroups as headings), writes the value and dispatches `input` + `change`. Add `data-native` to a select to keep the OS picker.

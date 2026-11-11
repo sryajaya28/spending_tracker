@@ -36,6 +36,16 @@ function moneyHtml(minor, cur) {
     .map((p) => (p.type === 'fraction' || p.type === 'decimal' ? `<span class="dim">${p.value}</span>` : esc(p.value))).join('').replace(/Rp[\s\u00a0]*(?=\d|<)/g, 'Rp\u00a0');
 }
 
+/* Hide balance (Overview Total Balance, Portfolio Net worth and every balance on the Portfolio tabs). One setting for all of them, remembered on this
+   device (localStorage) so a new session opens the way it was left. Transactions, budgets and spending are never masked. */
+const HIDE_KEY = 'stiver.hidebal.v1';
+function hideBal() { if (state.ui.hideBal === undefined) { try { state.ui.hideBal = localStorage.getItem(HIDE_KEY) === '1'; } catch { state.ui.hideBal = false; } } return state.ui.hideBal; }
+function setHideBal(on) { state.ui.hideBal = !!on; try { localStorage.setItem(HIDE_KEY, on ? '1' : '0'); } catch { /* storage unavailable: applies to this visit only */ } }
+/* the amount written like a real one with the digits replaced by dots: "Rp ••••••••", "$••••••••", "•••••••• €" */
+const maskMoney = (cur) => money(0, cur).replace(/\d[\d.,\u00a0\s]*\d|\d/, '••••••••');
+const moneyP = (minor, cur) => (hideBal() ? maskMoney(cur) : money(minor, cur));
+const moneyHtmlP = (minor, cur) => (hideBal() ? esc(maskMoney(cur)) : moneyHtml(minor, cur));
+
 const pad = (n) => String(n).padStart(2, '0');
 const isoDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const monthKey = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;

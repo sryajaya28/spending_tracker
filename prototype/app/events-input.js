@@ -102,6 +102,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'onb-skip') skipOnboarding();
   else if (act === 'congrats-add') { endCongrats(); txnDialog(null, 'expense'); }   // on to the normal Overview, with the Add transaction pop-up open
   else if (act === 'toggle-info') { state.ui.infoOpen = state.ui.infoOpen === id ? null : id; render(); }
+  else if (act === 'toggle-hide-balance') { setHideBal(!hideBal()); Analytics.track('balance_visibility_changed', { hidden: hideBal() }); render(); }
   else if (act === 'toggle-arch') { state.ui.archOpen = !state.ui.archOpen; render(); }
   else if (act === 'restore-wallet') { walletOf(id).archived = false; save(); render(); toast('Account restored'); }
   else if (act === 'delete-wallet') {

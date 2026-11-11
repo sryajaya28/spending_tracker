@@ -1,6 +1,8 @@
 'use strict';
 /* Bahasa Indonesia. English text is the key; see i18n.js. */
 DICT.id = {
+ "Hide balance": "Sembunyikan saldo",
+ "Show balance": "Tampilkan saldo",
  "See {name} transactions": "Lihat transaksi {name}",
  "Reset filters": "Atur ulang filter",
  "Next month": "Bulan berikutnya",

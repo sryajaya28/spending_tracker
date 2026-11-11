@@ -195,9 +195,9 @@ function viewOverview() {
   const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}${setupStrip(st)}
   <div class="grid">
-    <section class="card hero"><div class="label">${__('Total Balance')}${infoTip('ov-total', __('Savings + investments'))}</div>
-      <div class="amount-line"><div class="amount num" style="--len:${money(totalBalance(), cur()).length + 6}">${moneyHtml(totalBalance(), cur())}</div>${heroCurrency(cur())}</div>
-      <div class="delta"><b>${pctFmt(balChange)}</b><span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>
+    <section class="card hero">${heroLabel(__('Total Balance'), 'ov-total', __('Savings + investments'))}
+      <div class="amount-line"><div class="amount num" style="--len:${moneyP(totalBalance(), cur()).length + 6}">${moneyHtmlP(totalBalance(), cur())}</div>${heroCurrency(cur())}</div>
+      ${hideBal() ? '' : `<div class="delta">${deltaPill(balChange)}<span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>`}
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     ${installBtn('ov-install')}

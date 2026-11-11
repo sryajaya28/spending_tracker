@@ -26,7 +26,7 @@ New output in all nine sessions together: 5.0M tokens, 0.19% of the total. The e
 - [ ] **A5. Owner approves A4** by reading the new `CLAUDE.md` (one page) and saying "A5 ok". It is then released like any docs change.
 
 ## Step B: remove turns that only wait or repeat (expected: a further 5 to 10%)
-- [ ] **B1. New session (one task):** `tools/ci_wait.js <pr>`: waits for the PR's checks and prints one line (green, or the failing test names). Replaces every "check CI" turn.
+- [x] **B1 (done 2026-11-11, PR to staging). New session (one task):** `tools/ci_wait.js <pr>`: waits for the PR's checks and prints one line (green, or the failing test names). Replaces every "check CI" turn.
 - [ ] **B2. New session (same task):** `tools/ship.js`: after the owner's "Release", one command waits for the production build, checks the site and build stamp, runs the smoke test when the tier needs it, and writes the release record. A release becomes about 4 model turns.
 - [ ] **B3 (decided 2026-11-11: GitHub Copilot code review; needs a paid Copilot plan, Pro is about $10 a month per third-party sources, check github.com/features/copilot/plans; install still open). Owner decides and installs:** an automated PR reviewer from another vendor, GitHub Copilot code review or CodeRabbit (replaces the second-agent review for Tier 2; Tier 3 keeps one small fresh review session). Reply "B3 Copilot" or "B3 CodeRabbit"; installing the GitHub app is the owner's click (link given at that step).
 - [ ] **B4. New session:** update `docs/workflows/TIER_1.md`, `TIER_2.md`, `TIER_3.md` to v2 (no PM, QA or Designer sessions; tests in CI; reviewer bot; owner checks staging).

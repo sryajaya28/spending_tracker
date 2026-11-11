@@ -167,13 +167,25 @@ document.addEventListener('submit', async (e) => {
     state.ui.pfTab = 'loan'; save(); close(); render(); toast('Debt saved'); return;
   }
   if (kind === 'lent') {
-    const existing = f.dataset.id && D().lent.find((x) => x.id === f.dataset.id), c = existing ? existing.currency : v.currency;
-    const amount = toMinor(parseFloat(v.amount), c);
-    if (!(amount > 0) || !v.name.trim()) { toast('Enter a name and an amount above zero'); return; }
-    const fields = { name: v.name.trim(), original_minor: amount, due: v.due || '', note: v.note.trim() };
-    if (existing) Object.assign(existing, fields);
-    else D().lent.push({ id: uid(), currency: c, since: monthKey(new Date()), archived: false, payments: [], ...fields });
-    Analytics.track(existing ? 'update_lent' : 'add_lent', { has_due_date: !!v.due });
+    const existing = f.dataset.id && D().lent.find((x) => x.id === f.dataset.id), tx = existing && existing.txn_id && D().transactions.find((x) => x.id === existing.txn_id);
+    if (tx && !canEditRec(tx)) { Object.assign(existing, { due: v.due || '', note: (v.note || '').trim() }); Analytics.track('update_lent', { has_due_date: !!v.due, has_account: true }); save(); close(); render(); toast('Saved'); return; }   // someone else's: only the due date and note
+    const acct = v.account ? walletOf(v.account) : null, older = !!existing && !tx;
+    if (!older && !acct) { toast('Choose the account the money comes from'); return; }
+    const c = older ? existing.currency : acct.currency, amount = toMinor(parseFloat(v.amount), c), name = (v.name || '').trim(), date = older ? '' : (v.date || todayIso());
+    if (!(amount > 0) || !name) { toast('Enter a name and an amount above zero'); return; }
+    const repaid = existing ? existing.payments.reduce((s, p) => s + p.amount_minor, 0) : 0;   // repayments recorded or scheduled: the principal cannot drop below them (the transfer would refund more than is owed)
+    if (repaid > amount) { toast(__("The amount can't be less than what has been repaid ({amount})", { amount: money(repaid, c) })); return; }
+    if (!older && date > todayIso()) { toast("The date can't be in the future"); return; }
+    if (!older && date <= todayIso()) { const back = tx && tx.wallet_id === acct.id && tx.occurred_at <= todayIso() ? tx.amount_minor : 0, avail = walletBalance(acct) + back; if (amount > avail) { toast(__("{name} doesn't have enough balance ({amount} available)", { name: acct.name, amount: money(Math.max(0, avail), acct.currency) })); return; } }
+    const fields = { name, original_minor: amount, due: v.due || '', note: (v.note || '').trim() };
+    if (older) Object.assign(existing, fields);
+    else if (tx) { Object.assign(tx, { amount_minor: amount, currency: c, occurred_at: date, wallet_id: acct.id, note: name }); Object.assign(existing, fields, { currency: c, since: monthKey(new Date(date + 'T00:00')) }); sortTxns(); }
+    else {
+      const t = { id: uid(), type: 'transfer', flow: 'out', amount_minor: amount, currency: c, occurred_at: date, wallet_id: acct.id, note: name, category_id: lentCategory().id, category_source: 'user', ai_confidence: null };
+      D().transactions.push(t); sortTxns(); rememberAcct('lentfrom', acct.id);
+      D().lent.push({ id: uid(), currency: c, since: monthKey(new Date(date + 'T00:00')), archived: false, payments: [], txn_id: t.id, ...fields });
+    }
+    Analytics.track(existing ? 'update_lent' : 'add_lent', { has_due_date: !!v.due, has_account: !older });
     state.ui.pfTab = 'lent'; save(); close(); render(); toast('Saved'); return;
   }
   if (kind === 'payment') {

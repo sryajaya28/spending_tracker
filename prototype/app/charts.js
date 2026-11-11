@@ -424,14 +424,58 @@ function archivedLoansDialog() {
   <div class="list up-list">${list.map((l) => `<div class="brow cat-row"><span class="tile" style="--c:#4A44C6">🏦</span><div class="cat-main"><b class="cat-name">${esc(l.name)}</b><small class="muted">${esc(__(LOAN_TYPES[l.type] || l.type))} · ${money(loanBalance(l), l.currency)} ${__('remaining')}</small></div><div class="tools"><button class="btn secondary" data-act="unarchive-loan" data-id="${l.id}">${__('Reopen')}</button></div></div>`).join('') || ('<div class="empty">' + __('No archived debts.') + '</div>')}</div>
   <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
+const lentAccounts = () => D().wallets.filter((w) => !w.archived && w.type !== 'card');   // savings accounts only: no credit cards, investments are separate
 function lentDialog(l) {
+  const tx = l && l.txn_id && D().transactions.find((x) => x.id === l.txn_id), older = !!l && !tx;   // an older record has no account and no transaction
+  const locked = !!tx && !canEditRec(tx);   // in a household, someone else's lent transaction changes only by its creator or the owner
+  let ws = lentAccounts(); if (l && l.payments.length) ws = ws.filter((w) => w.currency === l.currency);   // a lent record with repayments keeps its currency
+  { const home = tx && walletOf(tx.wallet_id); if (home && !ws.some((w) => w.id === home.id)) ws = [home, ...ws]; }   // the account it was lent from stays an option even if archived: otherwise saving a note would move the debit to another account
+  const opts = ws.map((w) => `<option value="${w.id}">${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('');
+  const pick = tx ? tx.wallet_id : recallAcct('lentfrom', opts) || (ws[0] ? ws[0].id : '');
+  const dis = older || locked ? 'disabled' : '', curr = tx ? tx.currency : l ? l.currency : (walletOf(pick) || {}).currency || cur();
+  const date = tx ? tx.occurred_at : older ? `${l.since}-01` : isoDate(new Date());
   open(`<h2>${l ? __('Edit money lent') : __('Add money lent')}</h2><form data-form="lent" data-id="${l?.id || ''}" style="display:contents">
-    <label class="field">${__('Who borrowed it')}<input name="name" required maxlength="40" value="${esc(l?.name || '')}" placeholder="${__('e.g. Budi')}"></label>
-    <div class="two"><label class="field">${__('Amount lent')}<input name="amount" type="number" inputmode="decimal" min="1" step="any" required value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
-      <label class="field">${__('Currency')}<select name="currency" ${l ? 'disabled' : ''}>${Object.keys(RATES).map((c) => `<option ${c === (l?.currency || cur()) ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
-    <div class="two"><label class="field">${__('Due date (optional)')}<input name="due" type="date" value="${esc(l?.due || '')}"></label>
-      <label class="field">${__('Note (optional)')}<input name="note" maxlength="60" value="${esc(l?.note || '')}" placeholder="${__('e.g. Laptop repair')}"></label></div>
-    <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-lent" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);
+    <label class="field">${__('Who borrowed it')}<input name="name" required maxlength="40" ${locked ? 'disabled' : ''} value="${esc(l?.name || '')}" placeholder="${__('e.g. Budi')}"></label>
+    <label class="field">${__('From account')}<select name="account" ${older ? '' : 'required'} ${dis}>${older ? `<option value="">${__('Not set (older record)')}</option>` : ws.map((w) => `<option value="${w.id}" ${w.id === pick ? 'selected' : ''}>${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('')}</select></label>
+    <p class="auth-err" id="lent-err" role="alert" hidden></p>
+    <div class="two"><label class="field">${__('Amount lent')}<input name="amount" type="number" inputmode="decimal" min="1" step="any" required ${locked ? 'disabled' : ''} value="${l ? toMajor(l.original_minor, l.currency) : ''}"></label>
+      <label class="field">${__('Currency')}<select name="currency" disabled>${Object.keys(RATES).map((c) => `<option ${c === curr ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></label></div>
+    ${older ? '' : `<small class="muted">${__('Currency follows the account.')}</small>`}
+    <div class="two"><label class="field">${__('Date lent')}<input name="date" type="date" max="${isoDate(new Date())}" required ${dis} value="${esc(date)}"></label>
+      <label class="field">${__('Due date (optional)')}<input name="due" type="date" value="${esc(l?.due || '')}"></label></div>
+    <label class="field">${__('Note (optional)')}<input name="note" maxlength="60" value="${esc(l?.note || '')}" placeholder="${__('e.g. Laptop repair')}"></label>
+    ${older ? `<p class="hint">${__('This loan was added before accounts were tracked. It has no transaction and you do not need to pick an account.')}</p>` : ''}
+    ${locked ? `<p class="hint">${__('The amount, account and date can be changed by the person who added this, or the owner.')}</p>` : ''}
+    ${!l && !ws.length ? `<p class="auth-err" role="alert">${__('Add a savings account first: the money you lend comes out of one.')}</p>` : ''}
+    <div class="actions">${l ? `<button type="button" class="btn danger" data-act="archive-lent" data-id="${l.id}">${__('Archive')}</button>` : ''}<button class="btn" type="submit" data-send ${!l && !ws.length ? 'disabled' : ''}>${__('Save')}</button></div></form>`);
+  const f = $('form[data-form=lent]'); if (f) lentCheck(f);
+}
+/* the live check of the Add money lent form: the currency follows the account, and the account must hold the amount (the same message as a loan payment) */
+function lentCheck(f) {
+  const sel = f.elements.account, a = sel && sel.value ? walletOf(sel.value) : null, msg = $('#lent-err', f), btn = $('[data-send]', f);
+  if (a && f.elements.currency) f.elements.currency.value = a.currency;
+  const existing = f.dataset.id && D().lent.find((x) => x.id === f.dataset.id), tx = existing && existing.txn_id && D().transactions.find((x) => x.id === existing.txn_id);
+  let bad = '';
+  if (a && !sel.disabled && f.elements.amount && f.elements.date) {
+    const amt = toMinor(parseFloat(f.elements.amount.value), a.currency), back = tx && tx.wallet_id === a.id && tx.occurred_at <= todayIso() ? tx.amount_minor : 0, avail = walletBalance(a) + back;
+    if (amt > 0 && f.elements.date.value <= todayIso() && amt > avail) bad = __("{name} doesn't have enough balance ({amount} available)", { name: a.name, amount: money(Math.max(0, avail), a.currency) });
+  }
+  const repaid = existing ? existing.payments.reduce((s, p) => s + p.amount_minor, 0) : 0, now = f.elements.amount ? toMinor(parseFloat(f.elements.amount.value), existing ? existing.currency : (a ? a.currency : cur())) : 0;
+  if (!bad && repaid > 0 && now > 0 && now < repaid) bad = __("The amount can't be less than what has been repaid ({amount})", { amount: money(repaid, existing.currency) });
+  if (msg) { msg.hidden = !bad; msg.textContent = bad; }
+  if (btn) btn.disabled = !!bad;
+  return bad;
+}
+document.addEventListener('input', (e) => { const f = e.target.form; if (f && f.dataset.form === 'lent') lentCheck(f); });
+document.addEventListener('change', (e) => { const f = e.target.form; if (f && f.dataset.form === 'lent') lentCheck(f); });
+/* the transfer out of an account that a lent record made: read-only here, changed from Money lent (PRD rule 2) */
+function lentOriginDialog(l, t) {
+  const fmt = new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
+  open(`<h2>${esc(t.note || l.name)}</h2><div class="hold-sum"><div class="hs-row" style="font-size:22px"><b class="num">−${money(t.amount_minor, t.currency)}</b></div>
+    <div class="hs-row"><span>${__('Type')}</span><b>${__('Transfer out')}</b></div><div class="hs-row"><span>${__('Account')}</span><b>${esc(walletOf(t.wallet_id)?.name || '')}</b></div>
+    <div class="hs-row"><span>${__('Category')}</span><b>${esc(__(catOf(t.category_id)?.name || 'Lent'))}</b></div><div class="hs-row"><span>${__('Date')}</span><b>${esc(fmt)}</b></div></div>
+    <p class="hint">${__('Managed from Money lent. Change or delete it there.')}</p>
+    <div class="actions">${canWrite() ? `<button type="button" class="btn" data-act="edit-lent" data-id="${l.id}">${__('Open in Money lent')}</button>` : `<button type="button" class="btn" data-act="close">${__('Close')}</button>`}</div>`);
 }
 /* every repayment and, for a loan account, every charge (an expense paid with it), newest first */
 function loanHistoryDialog(l, kind = 'loan') {

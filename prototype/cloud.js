@@ -61,7 +61,7 @@ const Cloud = (() => {
       l.payments.forEach((p) => R.debt_payments.push({ id: p.id, debt_id: l.id, paid_on: p.date, amount_minor: p.amount_minor, kind: p.kind === 'charge' ? 'charge' : 'payment', transaction_id: p.txn_id && d.transactions.some((t) => t.id === p.txn_id) ? p.txn_id : null }));   // a charge, or a payment made from an account, points at its expense
     });
     d.lent.forEach((l) => {
-      R.debts.push({ id: l.id, direction: 'lent', name: l.name, type: null, currency: l.currency, original_minor: l.original_minor, monthly_minor: 0, interest_rate: null, due_date: l.due || null, note: l.note || null, start_month: `${l.since}-01`, archived: !!l.archived });
+      R.debts.push({ id: l.id, direction: 'lent', name: l.name, type: null, currency: l.currency, original_minor: l.original_minor, monthly_minor: 0, interest_rate: null, due_date: l.due || null, note: l.note || null, start_month: `${l.since}-01`, archived: !!l.archived, lent_transaction_id: l.txn_id && d.transactions.some((t) => t.id === l.txn_id) ? l.txn_id : null });
       l.payments.forEach((p) => R.debt_payments.push({ id: p.id, debt_id: l.id, paid_on: p.date, amount_minor: p.amount_minor, transaction_id: p.txn_id && d.transactions.some((t) => t.id === p.txn_id) ? p.txn_id : null }));   // a repayment received into an account points at its transfer
     });
     // prices typed in by hand for assets no feed covers (one row per symbol)
@@ -137,7 +137,7 @@ const Cloud = (() => {
       const o = { id: x.id, name: x.name, currency: x.currency, original_minor: +x.original_minor, since: x.start_month.slice(0, 7), archived: x.archived,
         payments: S.debt_payments.filter((y) => y.debt_id === x.id).sort((a, b) => a.paid_on.localeCompare(b.paid_on)).map((y) => ({ id: y.id, date: y.paid_on, amount_minor: +y.amount_minor, ...(y.kind === 'charge' ? { kind: 'charge' } : {}), ...(y.transaction_id ? { txn_id: y.transaction_id } : {}) })) };
       if (dir === 'owed') Object.assign(o, { type: x.type || 'other', monthly_minor: +x.monthly_minor, rate: x.interest_rate == null ? 0 : +x.interest_rate, flat: !!x.interest_flat });
-      else Object.assign(o, { due: x.due_date || '', note: x.note || '' });
+      else Object.assign(o, { due: x.due_date || '', note: x.note || '', ...(x.lent_transaction_id ? { txn_id: x.lent_transaction_id } : {}) });
       return o;
     });
     d.loans = debts('owed'); d.lent = debts('lent');

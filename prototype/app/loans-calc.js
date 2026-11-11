@@ -17,8 +17,15 @@ function loanRepaymentCategory() {
 }
 /* money lent that comes back into a savings account: a single "transfer in" on that account (not income), category Lent Repayment, linked to the repayment by payment.txn_id */
 const lentRepaymentOf = (txnId) => { for (const l of D().lent) { const p = l.payments.find((x) => x.txn_id === txnId); if (p) return { lent: l, payment: p }; } return null; };
+/* money lent goes out of an account as a single transfer out (not spending), category Lent, linked to the lent record by lent.txn_id */
+function lentCategory() {
+  const d = D(); let c = d.categories.find((x) => x.id === defaultCatId('Lent')) || d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent');   // by id first: a renamed category is still the one (never a second row with the same id)
+  if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Lent'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); }
+  return c;
+}
+const lentOfTxn = (txnId) => D().lent.find((l) => l.txn_id === txnId);
 function lentRepaymentCategory() {
-  const d = D(); let c = d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent repayment');
+  const d = D(); let c = d.categories.find((x) => x.id === defaultCatId('Lent Repayment')) || d.categories.find((x) => !x.parent_id && x.name.trim().toLowerCase() === 'lent repayment');   // by id first: a renamed category is still the one (never a second row with the same id)
   if (!c) { const [n, type, icon, color] = CATS.find((x) => x[0] === 'Lent Repayment'); c = { id: defaultCatId(n), parent_id: null, name: n, type, icon, color, archived: false }; d.categories.push(c); }
   return c;
 }
@@ -39,7 +46,8 @@ const loanBalance = (l, upto) => Math.max(0, l.original_minor + chargedOf(l, upt
 const loanUSD = (k) => activeLoans().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
 /* money you lent out: shares the loan shape (original amount + payments received) but counts as an asset */
 const activeLent = () => D().lent.filter((l) => !l.archived);
-const lentUSD = (k) => activeLent().reduce((a, l) => (!liveIn(l.since, k) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency)), 0);
+/* a lent record with a transfer counts from that transfer's exact date (the account balance drops that day), an older one from its month: with a period start day the month alone would count the receivable a period early */
+const lentUSD = (k) => activeLent().reduce((a, l) => { const t = l.txn_id && D().transactions.find((x) => x.id === l.txn_id); return (t ? t.occurred_at > periodEnd(k) : !liveIn(l.since, k)) ? a : a + toUSD(loanBalance(l, [periodEnd(k), todayIso()].sort()[0]), l.currency); }, 0);
 const typeLabel = (t) => __({ cash: 'Cash', bank: 'Bank', ewallet: 'E-wallet', card: 'Card', expense: 'Expense', income: 'Income', crypto: 'Crypto', stablecoin: 'Stablecoin', stock: 'Stock', etf: 'ETF', commodity: 'Commodity', cash: 'Cash', manual: 'Other' }[t] || t);
 const LOAN_TYPES = { mortgage: 'Mortgage', car: 'Vehicle loan', bank: 'Bank Loan', card: 'Credit card', paylater: 'Paylater', personal: 'Personal loan', other: 'Other' };
 

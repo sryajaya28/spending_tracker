@@ -3,6 +3,7 @@
 Moved out of `context.md` to keep that file small. New changes are added as files in `docs/changes/` and folded in here (newest first, at the top) by the integrating agent with `node tools/fold_changes.js`.
 
 
+- 2026-11-11: **Copilot review guidance.** Added `.github/copilot-instructions.md`: what GitHub Copilot code review should flag in this repo (secret credentials, money correctness, roles and RLS, migrations, auth, tests, event tracking, keep-current docs) and what to skip (public browser keys in `prototype/config.js`). Guidance text only, no app change; branch `claude/cost-plan-b3-copilot-review`.
 - 2026-11-11: **Workflow README cleaned for v2.** docs/workflows/README.md no longer describes the PM and Tech-Lead intake, role models or AGENTS.md rules; it now says the owner talks to the one session that does the task. Docs only.
 - 2026-11-11: **Copilot reviewer lines updated.** TIER_2.md and workflows/README.md now say the Copilot code review ruleset is installed (advisory; CI is the gate) instead of decided-but-not-installed. Docs only.
 - 2026-11-11: **B4 release record.** Added the Release B4 entry to docs/RELEASES.md and the B4 row to docs/COSTS.md. Docs only.

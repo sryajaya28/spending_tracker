@@ -4,7 +4,7 @@
 -- when the record has a link to an existing transaction and the caller is neither the household owner nor that transaction's creator, the
 -- fields that the transaction mirrors (direction, name, original_minor, currency, lent_transaction_id, start_month) cannot change. Due date,
 -- note and archive stay open to every Editor, like the client. Rows without a link (older records) and calls without a JWT are unaffected.
--- Additive: a function and a trigger only. Down: drop trigger lent_link_guard on public.debts; drop function public.lent_link_guard().
+-- Additive: a function and a trigger only (CREATE OR REPLACE, no DROP, so the agent database tool can apply it). Down: drop trigger lent_link_guard on public.debts; drop function public.lent_link_guard().
 create or replace function public.lent_link_guard() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare c uuid;
@@ -21,5 +21,4 @@ begin
   end if;
   return new;
 end $$;
-drop trigger if exists lent_link_guard on public.debts;
-create trigger lent_link_guard before update on public.debts for each row execute function public.lent_link_guard();
+create or replace trigger lent_link_guard before update on public.debts for each row execute function public.lent_link_guard();

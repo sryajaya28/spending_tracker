@@ -21,3 +21,4 @@ The eight role sessions since 4 Nov shipped Releases 15 to 18 for $193.74: about
 |---|---|---|---|---|---|
 | 2026-11-11 | COST_PLAN B1: tools/ci_wait.js, built and released (PRs 30, 32) | 1 | not priced: no Sonnet 5.5 rate in the repo; 4.03M cache-read, 0.14M cache-write, 16k output tokens | 33 model calls | 0 |
 | 2026-11-11 | COST_PLAN B4: TIER_1/2/3 rewritten for v2, released (PRs 36, 37, 38) | 1 | not priced: no Sonnet 5.5 rate in the repo; 3.60M cache-read, 0.14M cache-write, 14k output tokens | 30 model calls | 0 |
+| 2026-11-11 | COST_PLAN B3: Copilot review guidance, built and released (PRs 42, 45, 46) | 2 | not priced: no Sonnet 5.5 rate in the repo; 10.2M cache-read, 0.14M cache-write, 25k output tokens (measured when the record was written; a few more turns followed) | 66 model calls | 1 (Copilot finding on the first draft, fixed; PR conflict with staging, merged) |

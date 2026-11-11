@@ -115,7 +115,7 @@ A static web app (plain HTML, CSS and JavaScript, no build step) hosted on Verce
 
 | Part | Where |
 |---|---|
-| App | `prototype/` (`app.js` screens, `cloud.js` sign-in and data sync, `i18n*.js` translations and theme) |
+| App | `prototype/` (`app.js` screens and `app/` helpers and calculations (map: `docs/MAP.md`), `cloud.js` sign-in and data sync, `i18n*.js` translations and theme) |
 | Landing page, privacy policy, terms | `prototype/app.js` (landing), `prototype/privacy.html`, `prototype/terms.html` |
 | Hosted API for live prices and exchange rates | `api/index.py` (Vercel function reusing `tools/dev_server.py`) |
 | Hosting config and security headers | `vercel.json` |

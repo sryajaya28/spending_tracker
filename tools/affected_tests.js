@@ -11,7 +11,7 @@ const root = path.join(__dirname, '..'), cfg = JSON.parse(fs.readFileSync(path.j
 const sh = (c) => execSync(c, { cwd: root, encoding: 'utf8', maxBuffer: 1 << 26, stdio: ['ignore', 'pipe', 'ignore'] });
 const allTests = ((/&& tests=\(([^)]*)\)/.exec(fs.readFileSync(path.join(root, 'tests/e2e/run_all.sh'), 'utf8')) || [])[1] || '').split(/\s+/).filter(Boolean);
 if (!allTests.length) { console.log('cannot read the test list from tests/e2e/run_all.sh'); process.exit(2); }
-const APP = /^(prototype\/(app|sample|dropdown|datepicker|analytics|i18n(-id)?)\.js|prototype\/styles\.css)$/;
+const APP = /^(prototype\/(app|app\/[\w-]+|sample|dropdown|datepicker|analytics|i18n(-id)?)\.js|prototype\/styles\.css)$/;
 function plan(files0, diffText) {
   // a change that only bumps the service-worker cache name (older commits did this by hand) is not a shared-file change
   const swBump = /^[+-]const CACHE =/m.test(diffText || '') && !/^[+-]const SHELL/m.test(diffText || ''), files = swBump ? files0.filter((f) => f !== 'prototype/sw.js') : files0;
@@ -33,7 +33,7 @@ function plan(files0, diffText) {
 }
 const arg = process.argv.slice(2);
 // only the app files' changed lines are searched for words (docs, tests and design files would match almost every rule)
-const DIFF_PATHS = 'prototype/app.js prototype/sample.js prototype/dropdown.js prototype/datepicker.js prototype/analytics.js prototype/i18n.js prototype/i18n-id.js prototype/styles.css prototype/sw.js';
+const DIFF_PATHS = 'prototype/app.js prototype/app/ prototype/sample.js prototype/dropdown.js prototype/datepicker.js prototype/analytics.js prototype/i18n.js prototype/i18n-id.js prototype/styles.css prototype/sw.js';
 function fromGit(args) { const names = sh(`git diff --name-only ${args}`).split('\n').filter(Boolean); return { files: names, diff: sh(`git diff -U0 ${args} -- ${DIFF_PATHS}`) }; }
 if (arg[0] === '--verify') {
   const n = +arg[1] || 60, shas = sh("git log --no-merges --format=%H -n 600").split('\n').filter(Boolean); let seen = 0, ok = 0, over = 0; const miss = [], sizes = [];

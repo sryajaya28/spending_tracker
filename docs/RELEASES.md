@@ -2,6 +2,35 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release B3 contents (main f7adc9e)
+
+**Items in this release**
+Docs/process:
+- Copilot review guidance [claude/cost-plan-b3-copilot-review]
+
+**Exact detail.** Range: 590d8ea..ccac479. 3 commits, 4 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-11: Copilot review guidance. Added `.github/copilot-instructions.md`: what GitHub Copilot code review should flag in this repo (secret credentials, money correctness, roles and RLS, migrations, auth, tests, event tracking, keep-current docs) and what to skip (public browser keys in `prototype/config.js`). Guidance text only, no app change; branch `claude/cost-plan-b3-copilot-review`.
+
+**What a user can see change**
+Nothing: docs, tooling and settings only. The app and its data are untouched.
+
+**Commits**
+- afaa9fd Fold change files into CHANGELOG (release prep for the Copilot guidance)
+- 7c271ef Exempt public browser keys from the Copilot secrets rule; tick COST_PLAN B3
+- 7c97bfb Prepare Copilot code review (COST_PLAN B3, repo side)
+
+**Files by area**
+- Docs and rules (3): docs/CHANGELOG.md, docs/tasks/2026-11-11-cost-plan-b3.md, learning.md
+- Other (1): .github/copilot-instructions.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** CI green on PRs 42, 45 and 46. Vercel shows the production deployment for f7adc9e as READY (stiver.io itself is not reachable from the cloud session, so the live build stamp and HTTP 200 were NOT checked by script). production smoke test not run: no app code changed (guidance text and docs only) and SMOKE_PROD_PASSWORD is not available in this session
+**Known gaps:** tools/gates.js does not treat .github/copilot-instructions.md as docs-only, so ship.js asks for a smoke test on a guidance-only release; stiver.io was not checked live
+
 ## Release B4 contents (main a87e1a8)
 
 **Items in this release**

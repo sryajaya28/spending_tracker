@@ -2,7 +2,7 @@
 
 Source of truth for "where does X live". Read this first, then open only the file you need (COST_PLAN C2). Update it in the same PR when you move or add a function.
 The app is classic scripts that share one global scope. Load order is the order of the `<script>` tags in `prototype/index.html` (and `SHELL` in `prototype/sw.js`); a file may use anything defined in an earlier file at once, and anything from a later file only inside functions that run later.
-**Split status (C2): PR 5 done, three more to go (trades + recurring, events, auth + sample).** The head of the old `app.js` (to the end of the investment-dialogs section) is now in `prototype/app/`. The rest is still in `prototype/app.js`, listed by section marker (`grep -n "^/\* ----" prototype/app.js`); the next PRs move it out the same way, in order, and update this file.
+**Split status (C2): PR 6 done, two more to go (events, auth + sample).** The head of the old `app.js` (to the end of the recurring section) is now in `prototype/app/`. The rest is still in `prototype/app.js`, listed by section marker (`grep -n "^/\* ----" prototype/app.js`); the next PRs move it out the same way, in order, and update this file.
 
 ## Already split: `prototype/app/` (load order)
 | File | What it holds | Main names |
@@ -26,12 +26,12 @@ The app is classic scripts that share one global scope. Load order is the order 
 | `dialogs.js` | the shared dialog helpers and the category, icon and kind pickers | `dlg`, `open`, `close`, `lockScroll`, `catOptions`, `iconField`, `quickAddCategory`, `kindSeg` |
 | `transfers.js` | transfers between wallets, the add/edit transaction, budget, occasion, category, breakdown, wallet and account dialogs, coin-account helpers | `transferDialog`, `saveTransfer`, `removeTransferGroup`, `recordCoinTxn`, `txnDialog`, `budgetDialog`, `occasionDialog`, `catDialog`, `breakdownDialog`, `walletDialog`, `accountDialog` |
 | `invest-dialogs.js` | the investment dialogs: holding summary, buy/sell forms and their sync helpers | `holdingSummary`, `costRows`, `sellAssetDialog`, `holdingDialog`, `syncPickType`, `syncFeeBox`, `syncFund` |
+| `trades.js` | buying and selling investments, trade records, fees and the trade pop-ups | `recordTrade`, `removeTrade`, `tradeList`, `tradeDialog`, `costDialog`, `cashDialog`, `convertCashTrades`, `backfillSaleRecords` |
+| `recurring.js` | recurring rules (weekly or monthly expense, income, transfer or buy) and the catch-up that creates due entries | `addRule`, `generateRecurring`, `runRecurring`, `ruleDialog`, `recurringCard`, `nextAfter` |
 
 ## Still in `prototype/app.js` (section marker -> feature)
 | Section marker | Feature |
 |---|---|
-| trades | the trade pop-ups and their forms |
-| recurring | repeating expenses, income, transfers, buys |
 | events | the delegated click/change/input/submit handlers (`data-act`, `data-form`) |
 | auth + data loading | `onAuth`, loading and saving the user's data |
 | sample data | demo mode, then the boot lines at the very end |

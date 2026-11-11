@@ -5,8 +5,8 @@
 - [x] Review bug fixed (lent categories found by id first): `lent` e2e step 8b.
 - [x] Ported from the old app.js onto the split files; full e2e 58/58, SQL tests ok (household_lent 4/4).
 - [x] Migration 32 applied to staging DB and verified (column exists, nullable uuid); NOT production.
-- [ ] Owner checks staging (Money lent: add from account, edit, Transactions row, dark mode, phone width), then says "Release".
-- [ ] Fresh diff-only review session (Opus 5.5 or Fable 5.2), Tier 3 step 4.
+- [x] Owner asked in chat to merge and deploy; released as main 5673c4d (PRs 59, 60, 61). Staging hand check NOT done.
+- [ ] Fresh diff-only review session (Opus 5.5 or Fable 5.2), Tier 3 step 4: skipped at release, still open.
 **Files:** `prototype/app/{charts,events-submit,events-input,views,loans-calc,categories,seed}.js`, `prototype/cloud.js`, `prototype/i18n-id.js`, migration 32, `tests/e2e/lent.js`, `supabase/tests/household_lent.test.sql`.
 **Branch / PR:** `claude/lent-from-account` / see PR to `staging`.
-**Open / next:** release order: migration 32 to production first, then the client. D1 tasks 2 to 5 (owner picks), then D2, D3.
+**Open / next:** production smoke test (needs SMOKE_PROD_PASSWORD and stiver.io access) and a hand check on stiver.io; the review session; atomic cloud save (separate task). D1 tasks 2 to 5 (owner picks), then D2, D3.

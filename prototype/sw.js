@@ -1,7 +1,7 @@
 // App-shell cache. Never touches non-GET or cross-origin requests, and the prototype
 // has no authenticated API responses to cache (the real app must not cache those).
 const CACHE = 'stiver-shell-__BUILD__';
-const SHELL = ['./', './index.html', './styles.css', './app.js', './app/util.js', './app/periods.js', './app/icons.js', './app/categories.js', './app/catalog.js', './app/seed.js', './app/state.js', './app/selectors.js', './app/portfolio-calc.js', './app/loans-calc.js', './app/ui-helpers.js', './sample.js', './dropdown.js', './datepicker.js', './i18n.js', './i18n-id.js', './cloud.js', './config.js', './analytics.js', './vendor/posthog.js', './vendor/supabase.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+const SHELL = ['./', './index.html', './styles.css', './app.js', './app/util.js', './app/periods.js', './app/icons.js', './app/categories.js', './app/catalog.js', './app/seed.js', './app/state.js', './app/selectors.js', './app/portfolio-calc.js', './app/loans-calc.js', './app/ui-helpers.js', './app/charts.js', './sample.js', './dropdown.js', './datepicker.js', './i18n.js', './i18n-id.js', './cloud.js', './config.js', './analytics.js', './vendor/posthog.js', './vendor/supabase.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

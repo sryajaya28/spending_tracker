@@ -1032,7 +1032,7 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 @media (max-width: 899px) { .bottom-nav.four { grid-template-columns: repeat(4, 1fr); } }
 
 /* Hide balance: the underlined hero label opens its tooltip, the small eye button hides or shows every balance; the change pill is red when the figure fell and green when it grew */
-.hero .lbl-link { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; letter-spacing: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.hero .lbl-link { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; letter-spacing: inherit; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 4px; cursor: pointer; }   /* a thin dotted underline: a hint that the text opens a tooltip */
 .hero .label .info-wrap.lbl { margin-left: 0; }
 .hero .label .info-wrap.lbl .info-pop { left: 0; top: 28px; }
 .eye-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 16px; height: 16px; padding: 0; border: 0; background: none; color: #fff; opacity: .85; cursor: pointer; }

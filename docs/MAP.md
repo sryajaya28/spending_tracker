@@ -2,7 +2,7 @@
 
 Source of truth for "where does X live". Read this first, then open only the file you need (COST_PLAN C2). Update it in the same PR when you move or add a function.
 The app is classic scripts that share one global scope. Load order is the order of the `<script>` tags in `prototype/index.html` (and `SHELL` in `prototype/sw.js`); a file may use anything defined in an earlier file at once, and anything from a later file only inside functions that run later.
-**Split status (C2): PR 3 of about 4 done.** The head of the old `app.js` (to the end of the install-as-an-app section) is now in `prototype/app/`. The rest is still in `prototype/app.js`, listed by section marker (`grep -n "^/\* ----" prototype/app.js`); the next PRs move it out the same way, in order, and update this file.
+**Split status (C2): PR 4 done, one or two more to go.** The head of the old `app.js` (to the end of the install-as-an-app section) is now in `prototype/app/`. The rest is still in `prototype/app.js`, listed by section marker (`grep -n "^/\* ----" prototype/app.js`); the next PRs move it out the same way, in order, and update this file.
 
 ## Already split: `prototype/app/` (load order)
 | File | What it holds | Main names |
@@ -21,14 +21,14 @@ The app is classic scripts that share one global scope. Load order is the order 
 | `charts.js` | hand-built SVG charts, plus the wallet and loan cards, asset and portfolio views, P&L section, debt plan maths and the loan payment dialogs that sat in that stretch | `flowChart`, `halfDonut`, `valueChart`, `holdingRow`, `walletCard`, `loanCard`, `viewAsset`, `viewPortfolio`, `viewPnlMonth`, `loanDialog`, `debtPlan`, `loanPaymentDialog`, `lentRepaymentDialog` |
 | `views.js` | the screen functions (overview, transactions, budgets, settings, onboarding), the support dialog and the category spending trend | `sidebar`, `bottomNav`, `topbar`, `supportDialog`, `trendCard`, `trendDialog`, `viewOverview`, `viewDay`, `viewTransactions`, `viewBudgets`, `viewSettings`, `onboardingView`, `categoriesCard` |
 | `landing.js` | signed-out landing, sign-in page, splash, add-to-home-screen hints and the web-to-app hand-off | `viewLanding`, `viewAuth`, `viewSplash`, `installBtn`, `installGuide`, `installDialog`, `handoffDialog`, `claimHandoff` |
+| `household.js` | who may write, household settings (members, invites, role changes) and the `/join` page | `canWrite`, `viewNoAccess`, `householdCard`, `inviteDialog`, `memberDialog`, `viewJoin`, `joinBoot`, `hhRefresh` |
+| `activity.js` | `render()`, the `VIEWS` table and the Activity screen | `render`, `VIEWS`, `viewActivity`, `actLoad` |
+| `dialogs.js` | the shared dialog helpers and the category, icon and kind pickers | `dlg`, `open`, `close`, `lockScroll`, `catOptions`, `iconField`, `quickAddCategory`, `kindSeg` |
 
 ## Still in `prototype/app.js` (section marker -> feature)
 | Section marker | Feature |
 |---|---|
-| household, Settings > Household, Join page | roles, invites, `/join` page |
-| render | `render()` rebuilds `#app` |
-| Activity | who added, edited or deleted what |
-| dialogs, transfers, investment dialogs, trades | the pop-ups and their forms |
+| transfers, investment dialogs, trades | the pop-ups and their forms |
 | recurring | repeating expenses, income, transfers, buys |
 | events | the delegated click/change/input/submit handlers (`data-act`, `data-form`) |
 | auth + data loading | `onAuth`, loading and saving the user's data |

@@ -48,6 +48,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.evaluate(() => window.__phEvents.filter((e) => e.event === 'update_lent').pop().properties.has_account), false);
   // 8. a lent date in the future is not allowed
   assert.equal(await p.evaluate(() => { lentDialog(); return $('form[data-form=lent] input[name=date]').max === isoDate(new Date()); }), true, 'future dates are blocked by the field');
+  // 8b. a renamed Lent category stays the one: lending again makes no duplicate id and keeps the new name (review finding)
+  await p.evaluate(() => { close(); lentCategory().name = 'Loans given'; save(); return Cloud.idle(); });
+  await p.evaluate(() => lentDialog()); await p.waitForSelector('form[data-form=lent]'); await p.fill('[name=name]', 'Citra'); await p.fill('[name=amount]', '100000'); await p.click('[data-send]'); await settle();
+  const rn = await p.evaluate(() => { const ids = D().categories.map((c) => c.id), l = D().lent.find((x) => x.name === 'Citra'), t = D().transactions.find((x) => x.id === l.txn_id), cid = defaultCatId('Lent'); return { dup: ids.length - new Set(ids).size, db: window.__T.categories.filter((c) => c.id === cid).map((c) => c.name), same: t.category_id === cid, toast: document.querySelector('#toast').textContent }; });
+  assert.equal(rn.dup, 0, 'no duplicate category ids'); assert.deepEqual(rn.db, ['Loans given'], 'the rename survives in the database: ' + JSON.stringify(rn)); assert.equal(rn.same, true, 'the new transaction uses that category');
+  assert.ok(!/Budi|Citra|Ibu K|Laptop/.test(JSON.stringify(await p.evaluate(() => window.__phEvents))), 'no borrower name or note in ANY analytics event');
   // 9. household: someone else's lent transaction cannot be changed by an Editor through the lent screen (only due date and note)
   await p.evaluate(() => { Cloud.household.hasMembers = true; Cloud.household.status = 'member'; Cloud.household.role = 'editor'; D().transactions.find((x) => x.id === D().lent[0].txn_id).by = 'someone-else'; close(); lentDialog(D().lent[0]); });
   await p.waitForSelector('form[data-form=lent]'); assert.deepEqual(await p.$$eval('form[data-form=lent] [name=name], [name=amount], [name=account], [name=date]', (e) => e.map((x) => x.disabled)), [true, true, true, true], 'locked fields'); assert.equal(await p.$eval('[name=due]', (e) => e.disabled), false);

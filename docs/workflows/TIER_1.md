@@ -1,22 +1,21 @@
-# Tier 1: Fast Track (presentation only)
+# Tier 1: Fast Track (presentation only), workflow v2
 
-**Eligible:** text and copy, spacing and styling (CSS), icons and images, translations (`i18n*.js`), docs. Nothing that changes data, logic or what any user can access. `app.js` is never Tier 1.
+**Eligible:** text and copy, spacing and styling (CSS), icons and images, translations (`i18n*.js`), docs, tooling. Nothing that changes data, logic or what any user can access. `app.js` is never Tier 1. Budget: under $0.30 per task.
 
-**Load only:** this file, `docs/workflows/README.md` (routing and escalation), `docs/changes/README.md`. Nothing else.
+**Load only:** `CLAUDE.md`, this file, the "Which tier" table and "Escalation triggers" in `docs/workflows/README.md` (ignore its intake, role and model sections: v2 replaced them), `docs/changes/README.md`.
 
-**Flow**
-1. The Tech-Lead implements on a feature branch and self-tests locally.
-2. Open a PR. CI (when built; until then the Tech-Lead runs `node tools/affected_tests.js`) runs the e2e suite; a red run blocks the merge, no override.
-3. Take screenshots from the **preview deploy** (phone and desktop, light and dark, both languages if text changed), not from local.
-4. State in the PR that no logic, data or access path changed (CI checks this when built: allowed paths only, diff-size cap, no new `data-act` handler). If untrue, it is Tier 2.
-5. Merge to `staging` (no per-change owner wait). The owner reviews the batch of screenshots once and approves one production release per batch (for example weekly, or at 5 to 10 changes).
+**Flow (one session, one branch off `staging`, one PR)**
+1. Restate the request as 2 to 5 done-when checks. Build and self-test locally (`node tools/affected_tests.js`).
+2. Open the PR. CI labels it with its tier; the browser suite is skipped for Tier 1 by design (`ci.yml`), so the other required checks are the gate. A red check blocks the merge, no override.
+3. Wait with one command (`node tools/ci_wait.js <pr>` once it exists); no "check CI" turns.
+4. UI-visible change (CSS, copy, translations): take phone-width and dark-mode screenshots (`node tools/staging_shot.js`) and put them in the PR; both languages if text changed.
+5. Say in the PR that no logic, data or access path changed. If that is untrue, or the diff passes about 50 changed lines or touches `app.js`, stop: it is Tier 2.
+6. Merge to `staging` once CI is green; no per-change owner wait. The owner looks at the batch of screenshots once and says "Release" once per batch.
 
-**Replaces the dropped steps:** smoke agent → screenshots of the real preview; regression agent → e2e in CI; QA agent → owner review of screenshots; separate code review → the path rule keeps the change to presentation files.
+**Review:** CI only. No bot, no second session.
 
-**Gap:** the Tech-Lead reviews its own work. Acceptable only because Tier 1 cannot touch data or money, CI catches breakage and the owner sees the result. If e2e coverage of an area is thin, add tests before using Tier 1 there.
+**Docs in the same PR:** a change file `docs/changes/YYYY-MM-DD-name.md`, a `docs/tasks/` file only if work is left over, a row in `docs/COSTS.md` and a `learning.md` session-log line when the task ends.
 
-**Docs:** a change file only. Event tracking (CLAUDE.md rule 5b) still applies to anything that adds a button or form (then it is not Tier 1).
+**Releasing a Tier 1 batch (after the owner's "Release" in chat):** no regression run and no production smoke test. Merge `staging` into `main`, then check only that the site answers 200 and serves the new build stamp (`node tools/ship.js` once it exists).
 
-**Releasing a Tier 1 batch (owner, 2026-11-05):** no regression run and no production smoke test. CI's e2e run and the owner's review of the preview screenshots are the gates (they replace the regression and smoke passes). After the owner says "Release": merge `staging` into `main`, then only check that the site answers 200 and serves the new build stamp.
-
-**How the tools know (tools/gates.js):** a release skips regression and the production smoke test when its only non-docs changes come from commits listed in `docs/workflows/tier1-approved.txt` (short sha, then the owner's words; the Tech-Lead adds a line only when the owner says so, because the path rule calls every `app.js` change Tier 2) and no changed file is Tier 3 (database, sync, config, functions). Docs- and tooling-only releases skip them as before. `node tools/regression.js` prints `REGRESSION SKIPPED` and `node tools/release.js` skips the smoke test in those cases; `--force` runs regression anyway. Test: `node tools/gates.test.js`.
+**How the tools know (`tools/gates.js`):** a release skips regression and the smoke test when its only non-docs changes come from commits listed in `docs/workflows/tier1-approved.txt` (short sha, then the owner's words; add a line only when the owner says so in chat, because the path rule calls every `app.js` change Tier 2) and no changed file is Tier 3. Docs- and tooling-only releases skip them as before. `--force` runs regression anyway. Test: `node tools/gates.test.js`.

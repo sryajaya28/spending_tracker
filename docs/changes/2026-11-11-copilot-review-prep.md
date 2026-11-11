@@ -1,0 +1,1 @@
+2026-11-11: **Copilot code review prepared (COST_PLAN B3, repo side).** Added `.github/copilot-instructions.md` (review guidance: secrets, money, roles and RLS, migrations, tests, event tracking) and the owner's install steps in `docs/workflows/COST_PLAN.md`; B3 stays open until the owner subscribes and adds the ruleset. Docs only; branch `claude/cost-plan-b3-copilot-review`.

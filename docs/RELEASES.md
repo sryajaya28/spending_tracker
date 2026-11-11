@@ -2,6 +2,27 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release B1 contents (main f731200)
+
+**Items in this release**
+- Tooling (branch tools/ci-wait, PR 30): `tools/ci_wait.js <pr>` waits for a PR's checks and prints one line (GREEN, RED with the failing test names, TIMEOUT, CONFLICT, NOCHECKS, MERGED, CLOSED); offline test `tools/ci_wait.test.js`. COST_PLAN item B1.
+- Docs/process: change file `docs/changes/2026-11-11-ci-wait.md`, COST_PLAN B1 ticked, learning.md entry.
+
+**Exact detail.** Range: 47f625a..dca9764 (release merge PR 32, f731200). 1 commit, 5 files.
+
+**Commits**
+- 2e665f7 Add tools/ci_wait.js: wait for a PR's checks, print one line (COST_PLAN B1)
+
+**Files by area**
+- Tooling (2): tools/ci_wait.js, tools/ci_wait.test.js
+- Docs and rules (3): docs/changes/2026-11-11-ci-wait.md, docs/workflows/COST_PLAN.md, learning.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** `node tools/ci_wait.test.js` passes; CI on PR 30 and PR 32: 3 checks passed, e2e skipped (Tier 1). Regression and production smoke skipped on purpose (docs and tooling only). Vercel production deployment READY and its sw.js serves stiver-shell-f731200a90; stiver.io itself could not be fetched from the cloud session (network policy returns 403), so the live domain was not checked directly.
+**Known gaps:** the RED path of ci_wait.js (failing test names) is covered by the offline test only, not yet seen on a real failing PR. Releases between 18 and this one (PRs 27 and 29, docs and tooling) have no entry here.
+
 ## Release 18 contents (main b01c36a)
 
 **Items in this release**

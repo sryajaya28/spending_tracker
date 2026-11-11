@@ -54,6 +54,19 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const rn = await p.evaluate(() => { const ids = D().categories.map((c) => c.id), l = D().lent.find((x) => x.name === 'Citra'), t = D().transactions.find((x) => x.id === l.txn_id), cid = defaultCatId('Lent'); return { dup: ids.length - new Set(ids).size, db: window.__T.categories.filter((c) => c.id === cid).map((c) => c.name), same: t.category_id === cid, toast: document.querySelector('#toast').textContent }; });
   assert.equal(rn.dup, 0, 'no duplicate category ids'); assert.deepEqual(rn.db, ['Loans given'], 'the rename survives in the database: ' + JSON.stringify(rn)); assert.equal(rn.same, true, 'the new transaction uses that category');
   assert.ok(!/Budi|Citra|Ibu K|Laptop/.test(JSON.stringify(await p.evaluate(() => window.__phEvents))), 'no borrower name or note in ANY analytics event');
+  // 8c. review findings (PR 59). (a) the account a loan came from stays selectable when archived, so saving a note does not move the debit
+  await p.evaluate(() => { close(); D().wallets[0].archived = true; lentDialog(D().lent[0]); }); await p.waitForSelector('form[data-form=lent]');
+  assert.equal(await p.$eval('select[name=account]', (e) => e.value), await p.evaluate(() => D().lent[0].txn_id && D().transactions.find((x) => x.id === D().lent[0].txn_id).wallet_id), 'the archived source account is still the selected one');
+  await p.evaluate(() => { close(); D().wallets[0].archived = false; });
+  // (b) the principal cannot drop below what has been repaid (recorded or scheduled): the form says so and Save is off
+  await p.evaluate(() => { D().lent[0].payments.push({ id: 'pp1', date: isoDate(new Date()), amount_minor: 100000 }); lentDialog(D().lent[0]); }); await p.waitForSelector('form[data-form=lent]');
+  await p.fill('[name=amount]', '50000'); assert.match(await p.textContent('#lent-err'), /can't be less than what has been repaid/); assert.equal(await p.$eval('[data-send]', (e) => e.disabled), true);
+  await p.fill('[name=amount]', '100000'); assert.equal(await p.$eval('[data-send]', (e) => e.disabled), false, 'equal to the repayments is allowed');
+  await p.evaluate(() => { close(); D().lent[0].payments = D().lent[0].payments.filter((x) => x.id !== 'pp1'); });
+  // (c) with a period start day of 25 a loan made on 26 Oct counts from the period that starts 25 Oct, not the one before (the account balance drops on the 26th)
+  const per = await p.evaluate(() => { const all = D().lent, l = all[0], t = D().transactions.find((x) => x.id === l.txn_id), keep = [t.occurred_at, l.since, state.data.profile.period];
+    D().lent = [l]; t.occurred_at = '2026-10-26'; l.since = '2026-10'; state.data.profile.period = 25; const r = [lentUSD('2026-09'), lentUSD('2026-10')]; [t.occurred_at, l.since, state.data.profile.period] = keep; D().lent = all; return r; });
+  assert.equal(per[0], 0, 'not counted in the period that ends 24 Oct'); assert.ok(per[1] > 0, 'counted from the period that starts 25 Oct');
   // 9. household: someone else's lent transaction cannot be changed by an Editor through the lent screen (only due date and note)
   await p.evaluate(() => { Cloud.household.hasMembers = true; Cloud.household.status = 'member'; Cloud.household.role = 'editor'; D().transactions.find((x) => x.id === D().lent[0].txn_id).by = 'someone-else'; close(); lentDialog(D().lent[0]); });
   await p.waitForSelector('form[data-form=lent]'); assert.deepEqual(await p.$$eval('form[data-form=lent] [name=name], [name=amount], [name=account], [name=date]', (e) => e.map((x) => x.disabled)), [true, true, true, true], 'locked fields'); assert.equal(await p.$eval('[name=due]', (e) => e.disabled), false);

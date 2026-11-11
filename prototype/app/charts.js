@@ -429,6 +429,7 @@ function lentDialog(l) {
   const tx = l && l.txn_id && D().transactions.find((x) => x.id === l.txn_id), older = !!l && !tx;   // an older record has no account and no transaction
   const locked = !!tx && !canEditRec(tx);   // in a household, someone else's lent transaction changes only by its creator or the owner
   let ws = lentAccounts(); if (l && l.payments.length) ws = ws.filter((w) => w.currency === l.currency);   // a lent record with repayments keeps its currency
+  { const home = tx && walletOf(tx.wallet_id); if (home && !ws.some((w) => w.id === home.id)) ws = [home, ...ws]; }   // the account it was lent from stays an option even if archived: otherwise saving a note would move the debit to another account
   const opts = ws.map((w) => `<option value="${w.id}">${esc(w.name)} · ${money(walletBalance(w), w.currency)}</option>`).join('');
   const pick = tx ? tx.wallet_id : recallAcct('lentfrom', opts) || (ws[0] ? ws[0].id : '');
   const dis = older || locked ? 'disabled' : '', curr = tx ? tx.currency : l ? l.currency : (walletOf(pick) || {}).currency || cur();
@@ -459,6 +460,8 @@ function lentCheck(f) {
     const amt = toMinor(parseFloat(f.elements.amount.value), a.currency), back = tx && tx.wallet_id === a.id && tx.occurred_at <= todayIso() ? tx.amount_minor : 0, avail = walletBalance(a) + back;
     if (amt > 0 && f.elements.date.value <= todayIso() && amt > avail) bad = __("{name} doesn't have enough balance ({amount} available)", { name: a.name, amount: money(Math.max(0, avail), a.currency) });
   }
+  const repaid = existing ? existing.payments.reduce((s, p) => s + p.amount_minor, 0) : 0, now = f.elements.amount ? toMinor(parseFloat(f.elements.amount.value), existing ? existing.currency : (a ? a.currency : cur())) : 0;
+  if (!bad && repaid > 0 && now > 0 && now < repaid) bad = __("The amount can't be less than what has been repaid ({amount})", { amount: money(repaid, existing.currency) });
   if (msg) { msg.hidden = !bad; msg.textContent = bad; }
   if (btn) btn.disabled = !!bad;
   return bad;

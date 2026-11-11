@@ -460,6 +460,7 @@ DICT.id = {
  "Open in Money lent": "Buka di Uang dipinjamkan",
  "Choose the account the money comes from": "Pilih rekening asal uangnya",
  "The date can't be in the future": "Tanggal tidak boleh di masa depan",
+ "The amount can't be less than what has been repaid ({amount})": "Jumlah tidak boleh kurang dari yang sudah dibayar ({amount})",
  "Check your email": "Periksa email Anda",
  "If you were invited to a household, use the link in your invite email.": "Jika Anda diundang ke sebuah rumah tangga, gunakan tautan di email undangan Anda.",
  "Check your email and password (at least 8 characters).": "Periksa email dan kata sandi Anda (minimal 8 karakter).",

@@ -173,6 +173,8 @@ document.addEventListener('submit', async (e) => {
     if (!older && !acct) { toast('Choose the account the money comes from'); return; }
     const c = older ? existing.currency : acct.currency, amount = toMinor(parseFloat(v.amount), c), name = (v.name || '').trim(), date = older ? '' : (v.date || todayIso());
     if (!(amount > 0) || !name) { toast('Enter a name and an amount above zero'); return; }
+    const repaid = existing ? existing.payments.reduce((s, p) => s + p.amount_minor, 0) : 0;   // repayments recorded or scheduled: the principal cannot drop below them (the transfer would refund more than is owed)
+    if (repaid > amount) { toast(__("The amount can't be less than what has been repaid ({amount})", { amount: money(repaid, c) })); return; }
     if (!older && date > todayIso()) { toast("The date can't be in the future"); return; }
     if (!older && date <= todayIso()) { const back = tx && tx.wallet_id === acct.id && tx.occurred_at <= todayIso() ? tx.amount_minor : 0, avail = walletBalance(acct) + back; if (amount > avail) { toast(__("{name} doesn't have enough balance ({amount} available)", { name: acct.name, amount: money(Math.max(0, avail), acct.currency) })); return; } }
     const fields = { name, original_minor: amount, due: v.due || '', note: (v.note || '').trim() };

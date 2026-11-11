@@ -2,6 +2,50 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release B4 contents (main a87e1a8)
+
+**Items in this release**
+Fixes:
+- Release script verify fix
+Docs/process:
+- Workflow v2: tier files rewritten (COST_PLAN B4)
+- Workflow v2: CLAUDE.md rewritten (COST_PLAN A4)
+- B1 release record
+- CI pins Playwright
+Tooling:
+- tools/ship.js (COST_PLAN B2)
+- tools/ci_wait.js (COST_PLAN B1)
+
+**Exact detail.** Range: 17a4899..b917575. 3 commits, 12 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-11: Workflow v2: tier files rewritten (COST_PLAN B4). TIER_1, TIER_2 and TIER_3 now describe one fresh session per task (no PM, QA, Designer, Tech-Lead or Full-stack sessions), tests in CI, the Copilot PR reviewer for Tier 2 and 3 (install still the owner's step), one small fresh diff-only review session for Tier 3, and the owner's staging check; each lists what to load and the cost target. Docs only; branch docs/v2-tier-files.
+- 2026-11-11: Workflow v2: CLAUDE.md rewritten (COST_PLAN A4). CLAUDE.md is now about 40 lines (the ten v2 rules plus the non-negotiables); docs/AGENTS.md, WORKSPACE.md, WORKFLOW.md, roles/ and the handoff notes moved (the release-15 SQL stays in docs/handoff/ so the change stays Tier 1) to docs/archive/ (retired role sessions); added docs/tasks/TEMPLATE.md and docs/COSTS.md; COST_PLAN A4 ticked. Docs only; branch docs/v2-claude-md.
+- 2026-11-11: tools/ship.js (COST_PLAN B2). One command after the owner's "Release": waits for the staging to main PR to merge, waits for production to serve the new build stamp, checks the site answers 200, runs the production smoke test only when tools/gates.js says the release needs it (app code, not an approved Tier 1 batch), and writes the exact release record into docs/RELEASES.md. One line per step, ends with SHIP OK or one FAIL line (exit 2 when SMOKE_PROD_PASSWORD is missing). It never merges and never touches the database. Offline test tools/ship.test.js. Tooling and docs only; branch feature/ship-script.
+- 2026-11-11: Release script verify fix. tools/release.js sliced the build stamp at 12 characters but `stiver-shell-` is 13, so `--verify-only` reported FAIL on a correct release after waiting 10 minutes (seen on the workflow v2 docs release). Offset corrected to 13. Tooling only; branch fix/release-verify-offset.
+- 2026-11-11: tools/ci_wait.js (COST_PLAN B1). `node tools/ci_wait.js <pr>` waits for a PR's checks and prints one line (`GREEN`, `RED ... failed: <test names>`, `TIMEOUT`, `CONFLICT`, `NOCHECKS`, `MERGED`, `CLOSED`; exit 0 green, 1 red, 2 other); a skipped check counts as passing, a newer push restarts the wait on the new head; uses `gh api` like tools/release.js. Replaces every "check CI" turn. Offline test: `node tools/ci_wait.test.js`. Tooling only; branch tools/ci-wait.
+- 2026-11-11: B1 release record. Added the B1 release entry to docs/RELEASES.md and the first per-task row (B1) to docs/COSTS.md (tokens and turns measured from the session's usage record; dollars left unpriced because the repo has no Sonnet 5.5 rate). Docs only; branch docs/b1-release-record.
+- 2026-11-06: CI pins Playwright. The e2e job now installs playwright@1.63.0 (the version the tests are known to pass with) instead of the latest: an unpinned install fetched a newer Chrome and tests/e2e/occnobudget.js failed on both CI runs of PR #25 while passing locally; the app and the test were unchanged. Bump the version on purpose after a local run. Tooling only; branch staging.
+
+**What a user can see change**
+Nothing: docs, tooling and settings only. The app and its data are untouched.
+
+**Commits**
+- 086b206 Fold change files into CHANGELOG for the release
+- e4f1517 Tier files: ci_wait.js and ship.js now exist
+- 8b97e87 Workflow v2: rewrite TIER_1/2/3 for one-session-per-task (COST_PLAN B4)
+
+**Files by area**
+- Docs and rules (12): docs/CHANGELOG.md, docs/changes/2026-11-06-ci-pin-playwright.md, docs/changes/2026-11-11-b1-release-record.md, docs/changes/2026-11-11-ci-wait.md, docs/changes/2026-11-11-release-verify-offset.md, docs/changes/2026-11-11-ship-script.md, docs/changes/2026-11-11-v2-claude-md.md, docs/workflows/COST_PLAN.md, docs/workflows/TIER_1.md, docs/workflows/TIER_2.md, docs/workflows/TIER_3.md, learning.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** CI on PRs 36, 37 and 38: 3 checks passed, e2e skipped (Tier 1). Regression and production smoke skipped on purpose (docs only).
+**Known gaps:** Tier files name the Copilot reviewer, which is decided but not yet installed. docs/workflows/README.md still carries the old PM/Tech-Lead intake and role sections.
+
+**Production check:** the Vercel deployment status on main a87e1a8 is `success` ("Deployment has completed", read from the GitHub commit status). stiver.io could not be fetched from the cloud session (network policy returns 403), so the live domain, its 200 and its build stamp were not checked directly; `tools/ship.js` stopped at that curl.
+
 ## Release B1 contents (main f731200)
 
 **Items in this release**

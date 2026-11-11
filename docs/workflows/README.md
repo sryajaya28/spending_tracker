@@ -1,6 +1,6 @@
 # Risk-tiered workflow (owner-approved 2026-11-05)
 
-Every change takes the cheapest workflow that is still safe for its risk. This file is the overview; load only the tier file your task needs (`TIER_1.md`, `TIER_2.md`, `TIER_3.md`). It sits on top of `docs/AGENTS.md` and `docs/DEV_WORKFLOW.md`; where they disagree for a Tier 1 or Tier 2 change, this file wins; Tier 3 is today's full process unchanged.
+Every change takes the cheapest workflow that is still safe for its risk. This file is the overview; load only the tier file your task needs (`TIER_1.md`, `TIER_2.md`, `TIER_3.md`). It is part of workflow v2 (`CLAUDE.md`, `docs/workflows/V2_PLAN.md`): one fresh session per task, talking to the owner directly.
 
 ## Principles
 1. **Machines check what machines can.** Tests, path rules and preview deploys cost no tokens. Agents are for judgment.
@@ -8,15 +8,8 @@ Every change takes the cheapest workflow that is still safe for its risk. This f
 3. **Escalate on discovery.** An agent that finds unexpected scope stops, re-labels the task and restarts at the new tier's first step.
 4. **The owner's time is the scarcest resource.** Gates are kept where they change outcomes and batched everywhere else.
 
-## Intake and routing
-The owner may talk to the PM or the Tech-Lead (default front door: the Tech-Lead; go to the PM for new features or anything about data, money or sharing). Whoever receives the request writes an **intake note** (at most 5 lines, cheaper model): what the owner asked in their words; provisional tier and why (files, data/money/access); anything technical already known (migration, `cloud.js`).
-
-| Owner talks to | Provisional tier | What happens |
-|---|---|---|
-| Tech-Lead | 1 | Tech-Lead does it (TIER_1.md). No PM. |
-| Tech-Lead | 2 or 3 | Tech-Lead does not build; hands the intake note to the PM for requirements. |
-| PM | 1 | PM writes no PRD; passes the note to the Tech-Lead. |
-| PM | 2 or 3 | PM writes requirements (may ask the Tech-Lead for a quick risk check). |
+## Intake
+The owner talks to the one session that does the task. It restates the request as 2 to 5 done-when checks, picks the tier (`node tools/path_tier.js` gives the floor; it may raise a tier, never lower it), and asks every open question once, with a recommended default, in one message. No intake note, no PM or Tech-Lead hand-off.
 
 ## Which tier (minimum; several rows = the highest)
 | Changed files | Min tier | Why |
@@ -41,14 +34,13 @@ The owner may talk to the PM or the Tech-Lead (default front door: the Tech-Lead
 Tier 1 screenshots are reviewed **as a batch**, once, not per change; a green change merges to `staging` without waiting. Tier 1 and 2 share one staging run, one regression run and one release approval per batch. Tier 3 always ships alone so a problem can be traced and rolled back.
 
 ## Hotfix lane
-Production is broken or data is at risk: the owner says "hotfix" (or the Tech-Lead proposes it and the PM relays). The Tech-Lead fixes on a branch off `main`, runs the affected tests plus the production smoke test, names the rollback in the PR (previous merge sha on `main`; migrations get a down script before they run), merges after the owner's word, then backports to `staging`. Review follows within the same day (AGENTS.md rule 9 exemption for owner hotfixes stays).
+Production is broken or data is at risk: the owner says "hotfix" (or the session proposes it). The session fixes on a branch off `main`, runs the affected tests plus the production smoke test, names the rollback in the PR (previous merge sha on `main`; migrations get a down script before they run), merges after the owner's word, then backports to `staging`. Review follows within the same day.
 
-## Models, context and messages
-- Cheaper/faster model for Tier 1 and for Tier 2 implementation and QA; strongest model for Tier 3 implementation; a **different** model for the Tier 3 review (AGENTS.md rule 9).
-- **Short task-scoped agents from a handoff file**, not long-lived role sessions: cached re-reads were over 99% of usage and the PM session reached 585k tokens. Start a new session at about 400k.
-- Each tier file lists the docs to load. Load nothing else (a Tier 1 pass does not read the household RLS history). Keep `learning.md` split by area (data/RLS, sync, UI, release, iOS) and load only the area the task needs.
-- Messages carry a file path or commit, not a summary; one message per event; nothing is re-sent (AGENTS.md rule 16).
-- Documentation per change: Tier 1 adds only its change file; Tier 2 and 3 also update `context.md`, `regression_scenario.md`, `docs/ANALYTICS.md` where the rules in CLAUDE.md apply. `learning.md` is appended when a mistake happens.
+## Models, context and docs
+- Sonnet 5.5 builds; Haiku 5.5 for mechanical work; Opus 5.5 or Fable 5.2 only for Tier 3 design and the one fresh diff-only review session (`V2_PLAN.md` rule 9). Never switch model mid-session.
+- One task, one fresh session, a 120k-token budget; the hand-over is the PR description plus `docs/tasks/<date>-<name>.md`.
+- Each tier file lists the docs to load. Load nothing else. Load only the `learning.md` rows for the area touched.
+- Documentation per change: Tier 1 adds its change file; Tier 2 and 3 also update `context.md`, `regression_scenario.md`, `docs/ANALYTICS.md` where the rules in `CLAUDE.md` apply. `learning.md` is appended when a mistake happens.
 
 ## Release hygiene (fewer round trips)
 Every push to a PR restarts its checks (about 2 minutes for the browser suite), so a release is prepared in this order and then left alone:
@@ -61,9 +53,8 @@ Every push to a PR restarts its checks (about 2 minutes for the browser suite), 
 | Metric | Warning sign |
 |---|---|
 | AI cost per task, by tier (baseline first: the last 5 tasks) | Tier 1 not clearly cheaper than Tier 2 |
-| Send-back rate (owner **or** QA rejects) | Tier 1 above about 1 in 5 |
+| Send-back rate (owner or CI/reviewer rejects) | Tier 1 above about 1 in 5 |
 | Production defects, by tier | any Tier 1 change causing a production bug: tighten Tier 1 first |
 
-## Status: what is in force today and what is still to build
-In force now (no tooling needed): intake note and routing, tiers and the path table (the Tech-Lead applies the path rule by hand until CI does), gates, hotfix lane, batching, model and context rules.
-To build (tracked in `docs/NEXT_STEPS.md`): (1) a strict test fake that rejects columns not in the migrations; (2) GitHub Actions: e2e on every PR (blocking), the path-rule check that labels each PR with its minimum tier, Vercel preview on every PR; (3) CI job using the Supabase CLI to apply migrations and deploy Edge Functions (staging on merge, production on the owner's "Release"), so no agent pastes SQL or function source; (4) scheduled CI job for the real-account household scripts in `tests/staging/household/`; (5) split `learning.md` by area; (6) baseline cost measurement; (7) run Tier 1 on the next 10 small changes, then review the three metrics and record cost before and after for the case study.
+## Status
+In force now: the path rule and tier label (CI), tiers and the path table, gates, hotfix lane, batching, and the v2 session, model and context rules. `tools/ci_wait.js` and `tools/ship.js` replace the waiting turns. The Copilot PR reviewer is decided but not installed until the owner turns it on. Open build items are tracked in `docs/NEXT_STEPS.md` and `docs/workflows/COST_PLAN.md`.

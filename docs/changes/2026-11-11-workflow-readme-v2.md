@@ -1,1 +1,0 @@
-2026-11-11: **Workflow README cleaned for v2.** docs/workflows/README.md no longer describes the PM and Tech-Lead intake, role models or AGENTS.md rules; it now says the owner talks to the one session that does the task. Docs only.

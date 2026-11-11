@@ -57,4 +57,4 @@ Every push to a PR restarts its checks (about 2 minutes for the browser suite), 
 | Production defects, by tier | any Tier 1 change causing a production bug: tighten Tier 1 first |
 
 ## Status
-In force now: the path rule and tier label (CI), tiers and the path table, gates, hotfix lane, batching, and the v2 session, model and context rules. `tools/ci_wait.js` and `tools/ship.js` replace the waiting turns. The Copilot PR reviewer is decided but not installed until the owner turns it on. Open build items are tracked in `docs/NEXT_STEPS.md` and `docs/workflows/COST_PLAN.md`.
+In force now: the path rule and tier label (CI), tiers and the path table, gates, hotfix lane, batching, and the v2 session, model and context rules. `tools/ci_wait.js` and `tools/ship.js` replace the waiting turns. The Copilot PR reviewer is installed (a ruleset requests it automatically on PRs into `staging` and `main`; advisory only). Open build items are tracked in `docs/NEXT_STEPS.md` and `docs/workflows/COST_PLAN.md`.

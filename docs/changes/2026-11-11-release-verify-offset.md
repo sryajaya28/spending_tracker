@@ -1,1 +1,0 @@
-2026-11-11: **Release script verify fix.** tools/release.js sliced the build stamp at 12 characters but `stiver-shell-` is 13, so `--verify-only` reported FAIL on a correct release after waiting 10 minutes (seen on the workflow v2 docs release). Offset corrected to 13. Tooling only; branch fix/release-verify-offset.

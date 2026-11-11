@@ -144,6 +144,7 @@ docs/WORKSPACE.md  Workspace artifact: shared feed + Needs-you tray (URL, schema
 docs/WORKFLOW.md  agent-to-agent workflow, diagram, hand-off formats
 docs/roles/, docs/PRD_TEMPLATE.md  agent team (PM, Designer, QA, developers): flow, hand-offs, registry
 tools/regression.js, release.js, gates.js  one-command regression and release; docs/tooling-only diffs skip regression and the prod smoke test
+tools/ship.js        after the owner's "Release": waits for the merge and the new build stamp, checks the site, runs the prod smoke test when the tier needs it, writes the record into docs/RELEASES.md (tools/ship.test.js, offline)
 tests/test_yahoo.py  python check of the Yahoo price source (stubbed)
 .env.example        FINNHUB_API_KEY=                      .claude/launch.json  dev server config
 ```

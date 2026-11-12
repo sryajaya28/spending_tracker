@@ -2,6 +2,39 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 19 contents (main 3652217)
+
+**Items in this release**
+Features:
+- Hide balance
+- Hide balance follow-up
+
+**Exact detail.** Range: 5673c4d..e61b007. 4 commits, 22 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-11: Hide balance. A small eye button on Overview "Total Balance" and Portfolio "Net worth" is one switch that shows or hides every balance: both totals, the Breakdown amounts, each Portfolio tab's total, account, debt, lent and holding balances, Realized P&L, the history list and chart values (dots instead of numbers; transactions, budgets and spending are never hidden). It is remembered on the device (no database change). The "Total Balance" text is now underlined and opens its tooltip instead of the (i) icon, and the change pill is red when the figure fell and green when it grew. New event `balance_visibility_changed`; test `hidebal`. Branch `claude/dazzling-wozniak-47lwa6`.
+- 2026-11-11: Hide balance follow-up. The underline under "Total Balance" is now a thin dotted line (1 px) instead of a solid one. Branch `claude/dazzling-wozniak-47lwa6`.
+
+**What a user can see change**
+Yes: 7 app files changed (prototype/app/charts.js, prototype/app/events-input.js, prototype/app/invest-dialogs.js, prototype/app/util.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css).
+
+**Commits**
+- 5c691f3 Fold change files for the hide-balance release
+- e46e342 Total Balance label: thin dotted underline
+- df562c4 Hide balance: eye button on Overview and Portfolio, red/green change pill
+- ddb178d Release record for Lent from account; cost row and task file updated
+
+**Files by area**
+- App (what users see) (7): prototype/app/charts.js, prototype/app/events-input.js, prototype/app/invest-dialogs.js, prototype/app/util.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css
+- Tests (5): tests/e2e/affects.json, tests/e2e/analytics.js, tests/e2e/hidebal.js, tests/e2e/run_all.sh, tests/e2e/sample.js
+- Docs and rules (10): context.md, docs/ANALYTICS.md, docs/CHANGELOG.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/RELEASES.md, docs/tasks/2026-11-11-hide-balance.md, docs/tasks/2026-11-11-lent-from-account.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** staging regression on e61b007 all passed (browser suite 59, staging smoke test, real-database regression); first run failed one flaky lent assertion, passed on rerun; local full e2e before each push; GitHub CI (e2e, tier) never ran: Actions queue stuck, owner merged the release PR with admin bypass; https://stiver.io answers 200 and serves stiver-shell-3652217e4b. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** GitHub CI checks e2e and tier did not run on PRs 63 to 66 (Actions stuck in Queued); not checked on a real iPhone; staging phone/dark screenshots from the deployed site not taken; Copilot review unavailable (quota)
+
 ## Release Lent-from-account contents (main 5673c4d)
 
 **Items in this release**

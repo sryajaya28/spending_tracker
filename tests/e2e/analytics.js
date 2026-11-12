@@ -22,6 +22,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => txnDialog(null, 'expense')); await p.waitForSelector('#dlg [name=amount]'); await p.fill('#dlg [name=amount]', '12345'); await p.fill('#dlg [name=note]', 'Secret coffee note'); await p.click('#dlg button[type=submit]'); await settle(); await p.waitForTimeout(200);
   await p.evaluate(() => { location.hash = '#/transactions/2026-01-05'; }); await p.waitForTimeout(300);
   await p.evaluate(() => { location.hash = '#/budgets'; }); await p.waitForTimeout(300);
+  // hide balance: one named event with only the new state, never an amount; the button itself is also a button_clicked with its data-act
+  await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero .eye-btn'); await p.click('.hero .eye-btn'); await p.click('.hero .eye-btn');
+  const hb = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'balance_visibility_changed'); assert.deepEqual(hb.map((e) => e.properties.hidden), [true, false], 'balance_visibility_changed carries hidden true then false'); assert(!hb.some((e) => Object.keys(e.properties).some((k) => /amount|balance|value|minor/i.test(k))), 'no amounts in the event');
+  assert((await p.evaluate(() => window.__phEvents)).some((e) => e.event === 'button_clicked' && e.properties.action === 'toggle_hide_balance'), 'the eye button is tracked as a button click');
   const all = await p.evaluate(() => window.__phEvents);
   const tx = all.find((e) => e.event === 'expense_recorded'); assert(tx, 'expense_recorded'); assert.equal(tx.properties.type, 'expense'); assert.equal(tx.properties.payment_source, 'account'); assert.equal(tx.properties.is_recurring, false);
   assert(!all.some((e) => e.event === 'transaction_saved'), 'old event name is gone');

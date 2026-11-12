@@ -461,6 +461,27 @@
     "darkshots",
     "recedit"
    ]
+  },
+  {
+   "name": "hide balance",
+   "diff": [
+    "hideBal",
+    "setHideBal",
+    "moneyP\\b",
+    "moneyHtmlP",
+    "maskMoney",
+    "heroLabel",
+    "deltaPill",
+    "eye-btn",
+    "toggle-hide-balance",
+    "stiver\\.hidebal"
+   ],
+   "tests": [
+    "hidebal",
+    "analytics",
+    "pfrange",
+    "ovbud"
+   ]
   }
  ]
 }

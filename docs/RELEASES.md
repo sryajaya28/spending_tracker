@@ -2,6 +2,30 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release Lent-from-account contents (main 5673c4d)
+
+**Items in this release**
+Features:
+- Money lent comes out of an account, with the Copilot review fixes and an Editor guard in the database [claude/lent-from-account, PR 59]
+Docs/process:
+- Fold the Lent change files into CHANGELOG [claude/release-prep-lent, PR 60]
+
+**What a user can see change**
+Yes. Add money lent has a required From account; saving makes one transfer out (category Lent), so the account balance drops and Transactions shows it. Net worth is unchanged and it is not spending. Repayment rows read "Transfer in" with a green +amount.
+
+**Database migrations**
+32 `debts.lent_transaction_id` and 33 `lent_link_guard` trigger. Applied to staging, then to production BEFORE the merge (both verified read-only: column is a nullable uuid, trigger enabled). Both additive.
+
+**Tests and smoke**
+- Full e2e on the PR branch 58 of 58 (local) and CI green on PRs 59, 60 and 61; SQL tests all ok (`household_lent` 4, `household_lent_guard` 6).
+- Production: Vercel deployment dpl_2QBpgLYdwJ3kdbNnD3UrCoUF6TYt is READY and aliased to stiver.io (commit 5673c4d).
+- NOT run: the production smoke test (`SMOKE_PROD_PASSWORD` not set here and stiver.io is not reachable from the cloud session) and the build-stamp check of `tools/release.js --verify-only`.
+
+**Known gaps**
+- Released at the owner's request in chat without the Tier 3 fresh diff-only review session and without the owner's manual staging check.
+- Cloud saves write debts and transactions in separate requests (all transfers and loan payments today); an all-or-nothing save is a separate task.
+- Run the smoke test and a hand check of Money lent on stiver.io.
+
 ## Release B3 contents (main f7adc9e)
 
 **Items in this release**

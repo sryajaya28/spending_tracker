@@ -1030,3 +1030,14 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 @media (min-width: 601px) { .hh-line .hh-name { max-width: 260px; } .hh-line.pend .hh-name { max-width: 240px; } }
 
 @media (max-width: 899px) { .bottom-nav.four { grid-template-columns: repeat(4, 1fr); } }
+
+/* Hide balance: the underlined hero label opens its tooltip, the small eye button hides or shows every balance; the change pill is red when the figure fell and green when it grew */
+.hero .lbl-link { background: none; border: 0; padding: 0; margin: 0; color: inherit; font: inherit; letter-spacing: inherit; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 4px; cursor: pointer; }   /* a thin dotted underline: a hint that the text opens a tooltip */
+.hero .label .info-wrap.lbl { margin-left: 0; }
+.hero .label .info-wrap.lbl .info-pop { left: 0; top: 28px; }
+.eye-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; width: 16px; height: 16px; padding: 0; border: 0; background: none; color: #fff; opacity: .85; cursor: pointer; }
+.eye-btn::after { content: ""; position: absolute; inset: -12px; }   /* a bigger invisible tap area around the small icon */
+.eye-btn svg { width: 16px; height: 16px; }
+.hero .delta b.up { background: var(--good); color: #1e1b4b; }
+.hero .delta b.down { background: var(--bad); color: #fff; }
+:root[data-theme="dark"] .hero .delta b.down { background: #ff6b70; color: #1e1b4b; }

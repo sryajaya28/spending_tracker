@@ -38,6 +38,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { hhState.invites = []; render(); });
   await p.click('.hh-activity'); await p.waitForSelector('.act-row');
   assert.equal(await p.$$eval('.act-row', (r) => r.length), 5); const txt = () => p.$$eval('.act-row', (r) => r.map((x) => x.textContent));
+  assert.equal(await p.$$eval('.bottom-nav', (e) => e.length), 0, 'Activity has no bottom menu'); assert.equal(await p.$eval('.topbar a.back', (e) => e.getAttribute('href')), '#/settings/household', 'the back arrow leads to Household');
   let t = await txt(); assert.match(t.join('|'), /Budi added 'Groceries'/); assert.match(t.join('|'), /Sari edited 'Groceries'.*was −Rp\s?254\.000/); assert.match(t.join('|'), /Sari changed the balance of 'BCA'.*18\.000\.000.*→.*18\.450\.000/); assert.match(t.join('|'), /Budi deleted 'Kopi'/); assert.match(t.join('|'), /Maria added 'Payment'/);
   assert.deepEqual(await p.$$eval('.act-day', (d) => d.map((x) => x.textContent)), ['Today', 'Yesterday'], 'grouped by day');
   // filters
@@ -47,6 +48,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('[data-act=act-type][data-type=all]'); 
   await p.click(`[data-act=act-who][data-id="${ME}"]`); assert.ok((await txt()).every((x) => /Sari/.test(x)), 'person filter');
   await p.click('[data-act=act-type][data-type=delete]'); await p.waitForSelector('.card h3'); assert.match(await p.textContent('.main'), /Nothing here[\s\S]*Try another person or type/, 'filtered empty state');
+  await p.click('.topbar a.back'); await p.waitForSelector('.hh-activity'); assert.equal(await p.evaluate(() => location.hash), '#/settings/household', 'back returns to Household'); assert.equal(await p.$$eval('.bottom-nav', (e) => e.length), 0, 'Settings pages keep no bottom bar');
+  await p.click('.hh-activity'); await p.waitForSelector('.act-row'); await p.click('[data-act=act-type][data-type=delete]'); await p.click('[data-act=act-type][data-type=all]'); await p.click(`[data-act=act-who][data-id="${ME}"]`); await p.click('[data-act=act-type][data-type=delete]'); await p.waitForSelector('.card h3');
   // no activity at all
   await p.evaluate(() => { __T.activity_log = []; actState.rows = null; actState.who = ''; actState.type = 'all'; render(); }); await p.waitForFunction(() => /No activity yet/.test(document.querySelector('.main').textContent));
   // a Viewer reads it with the note

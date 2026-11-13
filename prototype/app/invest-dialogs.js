@@ -80,7 +80,11 @@ function holdingDialog(h, accId, opts = {}) {
       <div class="two"><label class="field">${__('Type')}<select name="ctype"><option value="crypto">${__('Crypto')}</option><option value="stock">${__('Stock')}</option><option value="etf">${__('ETF')}</option><option value="manual">${__('Other')}</option></select></label><label class="field">${__('Price (USD)')}<input name="cprice" type="number" inputmode="decimal" min="0" step="any"></label></div></div>`}
     ${h ? holdingSummary(h, info, vcOf(h)) + `<div class="hold-actions"><button type="button" class="btn" data-act="trade" data-side="buy" data-id="${h.id}">${info.cash ? __('Deposit') : __('Buy')}</button><button type="button" class="btn secondary sell" data-act="trade" data-side="sell" data-id="${h.id}">${info.cash ? __('Withdraw') : __('Sell')}</button></div>
       <button type="button" class="btn secondary wide" data-act="view-history" data-id="${h.id}">${__('View history')}</button>
-      <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>` : `
+      <label class="field">${__('Move to account')}<select name="account">${accounts.map((a) => `<option value="${a.id}" ${a.id === (h?.account_id || accId) ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select></label>
+      ${isCoinMovable(h) ? `<div data-move-box hidden><div class="two"><label class="field">${__('Quantity')}<input name="mvqty" type="number" inputmode="decimal" min="0" step="any" value="${+heldNow(h).toPrecision(12)}"></label>
+        <label class="field">${__('Network fee ({unit})', { unit: esc(info.symbol) })}<input name="mvfee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label></div>
+        <label class="field">${__('Date')}<input name="mvdate" type="date" value="${isoDate(new Date())}"></label>
+        <p class="hint">${__('The fee is taken from the amount you move: the other account receives the quantity minus the fee. The fee counts as spending; the move itself does not.')}</p></div>` : ''}` : `
     <div class="two"><label class="field">${invest ? __('Pay with') : __('Paid from')}<select name="fund">${invest ? '' : ('<option value="">' + __('Already owned (no payment)') + '</option>')}${sourceOptions('buy', null, invest ? (recallAcct('invest', sourceOptions('buy', null, '')) || (firstW ? 'w:' + firstW.id : '')) : '')}</select></label>
       <label class="field"><span data-fund-amt>${__('Amount paid')}</span><input name="fundamount" type="number" inputmode="decimal" min="0" step="any" ${invest ? 'required' : ''} placeholder="${__('amount')}"></label></div>
  <label class="field" data-fee-box hidden><span data-fee-label>${__('Fee (optional)')}</span><input name="fee" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
@@ -105,6 +109,10 @@ function syncPickType(form) {
   form.assetq.hidden = cash; sel.hidden = !cash;
   if (cash) { pickAsset({ key: 'CASH:' + sel.value, symbol: sel.value, name: `Cash (${sel.value})`, type: 'cash', cash: sel.value }, form, true); $('#asset-results').hidden = true; }
   else if (form.asset.value.startsWith('CASH:')) { form.asset.value = ''; form.assetmeta.value = ''; $('#picked').hidden = true; }
+}
+/* Move to account on a stablecoin or crypto holding: Quantity, Network fee and Date appear once another account is chosen */
+function syncMoveBox(form) {
+  const box = $('[data-move-box]', form), h = D().holdings.find((x) => x.id === form.dataset.id); if (box && h) box.hidden = form.account.value === h.account_id;
 }
 /* a fee is asked only when the other side is a normal account (it is charged to that account, in its currency); not for cash deposits */
 /* a purchase paid from a bank account, or a sale of an asset (received in the investment account itself), can carry the broker's fee */

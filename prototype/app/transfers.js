@@ -97,6 +97,16 @@ function saveTransfer({ from, to, amount, received, fee, date, note, editGid, re
   state.ui.month = periodKeyOf(date) <= currentPeriod() ? periodKeyOf(date) : state.ui.month;
   return { ok: true };
 }
+/* details of a stablecoin / crypto move between investment accounts: what was sent, the network fee, what arrived, with Delete */
+function coinTransferDialog(gid) {
+  const ev = coinEv(gid), at = (id) => { for (const h of D().holdings) { const tr = h.trades.find((x) => x.id === id); if (tr) return { h, tr }; } return null; };
+  const o = at(ev.out), f = at(ev.fee), i = at(ev.inn); if (!o || !i) return;
+  const sym = assetInfo(o.h.symbol).symbol, fee = f ? f.tr.quantity : 0, row = (l, v) => `<div class="hs-row"><span>${l}</span><b class="num">${v}</b></div>`;
+  open(`<h2>${esc(accountName(o.h.account_id))} → ${esc(accountName(i.h.account_id))}</h2>
+    <div class="hold-sum">${row(__('Asset'), esc(assetInfo(o.h.symbol).name))}${row(__('Sent'), `${qtyFmt(r12(o.tr.quantity + fee))} ${esc(sym)}`)}${row(__('Network fee'), `${qtyFmt(fee)} ${esc(sym)}`)}${row(__('Received'), `${qtyFmt(i.tr.quantity)} ${esc(sym)}`)}${row(__('Date'), esc(new Date(o.tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' })))}</div>
+    <p class="hint">${__('The fee counts as spending (category Fee); the move itself does not. To change it, delete it and record it again.')}</p>
+    <div class="actions"><button type="button" class="btn danger" data-act="delete-coin-transfer" data-id="${gid}">${__('Delete')}</button></div>`);
+}
 /* take a saved transfer apart: restore the Cash balance it moved and remove its legs and fee; false when that cash was already spent */
 function removeTransferGroup(gid) {
   const legs = D().transactions.filter((t) => t.transfer_id === gid), undo = new Map();

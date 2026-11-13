@@ -227,6 +227,12 @@ function txnRow(t) {
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
+    if (xfer && isCoinTransfer(t.transfer_id)) {   // a stablecoin / crypto move between investment accounts: one row, opens its details dialog
+      const ch = coinOf(t), tr = ch && ch.trades.find((x) => x.id === t.trade_id);
+      return `<div class="row" data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"><span class="tile" style="--c:#4A44C6">🔁</span>
+    <div><div class="title">${esc(t.note)}</div><div class="sub">${__('Transfer')} · ${esc(ch ? assetInfo(ch.symbol).name : '')}</div></div>
+    <div class="amt-col"><div class="amt num"><span class="xfer-ico">${icon('transfer')}</span>${ch && tr ? `${esc(assetInfo(ch.symbol).symbol)} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 }).format(tr.quantity)}` : money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+    }
     return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
     <div><div class="title">${esc(xfer ? transferTitle(t) : t.note)}</div>
     <div class="sub">${xfer ? __('Transfer') : t.flow === 'out' ? __('Buy Invest') : __('Sell Invest')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>

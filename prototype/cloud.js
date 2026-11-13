@@ -108,7 +108,7 @@ const Cloud = (() => {
       const open = evs.find((e) => e.note === 'opening');
       const trades = evs.filter((e) => e.note !== 'opening').map((e) => {
         const delta = +e.quantity_delta, side = delta > 0 ? 'buy' : 'sell', tr = { id: e.id, date: e.occurred_at, side, quantity: Math.abs(delta) };
-        if (e.note === 'income' || e.note === 'expense') tr.kind = e.note;
+        if (e.note === 'income' || e.note === 'expense' || e.note === 'transfer') tr.kind = e.note;
         if (e.unit_price != null) tr.price = +e.unit_price;
         const pair = e.pair_id && S.holding_events.find((x) => x.pair_id === e.pair_id && x.id !== e.id);
         if (pair) {

@@ -6,7 +6,7 @@ Build nothing. Follow `CLAUDE.md`, `docs/DEV_WORKFLOW.md` and `docs/SMOKE_TEST.m
 1. `node tools/release.js` (dry run: show the owner the exact contents).
 2. `node tools/regression.js` (regression of staging; it skips itself for a docs-only or approved Tier 1 batch).
 3. List the migrations in this release and whether each is applied to staging.
-4. List the PRs in this release that got no Copilot review, and do a diff-only review of those.
+4. List the PRs in this release labelled `review-owed` (Copilot did not review them; also check any PR with no Copilot review) and do one diff-only review of their combined diff. Fix or report each finding before recommending release.
 5. Post the regression summary with a release or do-not-release recommendation, then STOP and wait for the owner's "Release".
 
 After the owner's "Release":

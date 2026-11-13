@@ -103,7 +103,7 @@ Changes that touch no screen, flow or text (typo, calculation bug, backend only)
 
 Several assistants (or sessions) can work on one project if they do not edit the same things at the same time (details: `docs/AGENTS.md`).
 
-1. **One integrator: Tech-Lead** (Full-stack engineer and other agents build on feature branches). Only the integrator merges into `staging`, folds the changelog (`node tools/fold_changes.js`) and releases.
+1. **Workflow v2 (since 2026-11-11): no standing integrator.** Each task is one fresh session on its own branch and PR; it merges its own PR into `staging` when CI is green (and, for Tier 2 and 3, the review rules in `docs/workflows/` are met). Releases are done by a separate fresh release session (`docs/tasks/RELEASE.md`) after the owner says "Release"; building sessions never release. The changelog is folded with `node tools/fold_changes.js`. (The Tech-Lead role in the text below is the pre-v2 wording.)
    Every other agent works on its own `feature/<name>` branch, rebases on the latest `staging`, runs the tests, and tells the owner
    "ready: <branch>, tests pass, design link, steps". Explicit owner instructions (including a hotfix) go before this rule; whoever acts tells the other agent.
 2. **No shared edit hotspots:** the service-worker cache name is stamped at deploy (never bumped by hand); each change adds its own changelog

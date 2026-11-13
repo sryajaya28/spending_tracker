@@ -18,7 +18,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // ---- Overview: today's entries, then the missing days. Oldest entry 10 days ago; filled: today (2), -1, -4, -6, -7 ; empty: -2, -3, -5
   await p.evaluate(() => { try { localStorage.clear(); } catch (e) { /* ignore */ } });
   await seed({ '-10': 1, '-7': 1, '-6': 1, '-4': 1, '-1': 1, 0: 2 });
-  assert.deepEqual(await h2s(), ['Today', '3 days with nothing recorded'], 'Overview is the hero, today, missing days: ' + await h2s());
+  assert.deepEqual(await h2s('.main .grid >'), ['Today', '3 days with nothing recorded'], 'Overview is the hero, today, missing days: ' + await h2s('.main .grid >'));   // direct children: the desktop-only side column (.ov-side) is checked in desklayout.js
+  assert.deepEqual(await h2s('.main .ov-side'), ['Money Flow', 'By category'], 'the desktop-only side column holds two Report sections');
   assert.equal(await p.$$eval('.hero-chip', (e) => e.length), 0, 'no Balance chip'); assert.equal(await p.$$eval('.hero-bud', (e) => e.length), 1, 'the budget line stays');
   assert.equal(await p.$$eval('.grid > section:nth-of-type(2) .list .row, .grid > section:nth-of-type(1) .list .row', (r) => r.length), 2, 'both of today\'s entries are listed');
   assert((await p.innerText('.main')).includes('2 transactions'));
@@ -44,10 +45,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
 
   // nothing today: one prompt; a new account (first entry today) is not nagged about the days before it
   await seed({ '-10': 1, '-7': 1, '-6': 1, '-5': 1, '-4': 1, '-3': 1, '-2': 1, '-1': 1 });
-  assert.deepEqual(await h2s(), ['Nothing recorded today yet'], 'one prompt, no missing days: ' + await h2s()); assert.equal(await p.$$eval('.gap-prompt [data-act=add-txn]', (e) => e.length), 1);
-  await seed({ 0: 1 }); assert.deepEqual(await h2s(), ['Today'], 'first entry is today: no missing-days card');
-  await seed({ '-3': 1, 0: 1 }); assert.deepEqual(await h2s(), ['Today', '2 days with nothing recorded'], 'days after the first entry are missed: ' + await h2s());
-  await seed({ '-5': 1 }); assert.equal((await h2s())[1], '4 days with nothing recorded', 'only days from the first entry on count: ' + await h2s());
+  assert.deepEqual(await h2s('.main .grid >'), ['Nothing recorded today yet'], 'one prompt, no missing days: ' + await h2s('.main .grid >')); assert.equal(await p.$$eval('.gap-prompt [data-act=add-txn]', (e) => e.length), 1);
+  await seed({ 0: 1 }); assert.deepEqual(await h2s('.main .grid >'), ['Today'], 'first entry is today: no missing-days card');
+  await seed({ '-3': 1, 0: 1 }); assert.deepEqual(await h2s('.main .grid >'), ['Today', '2 days with nothing recorded'], 'days after the first entry are missed: ' + await h2s('.main .grid >'));
+  await seed({ '-5': 1 }); assert.equal((await h2s('.main .grid >'))[1], '4 days with nothing recorded', 'only days from the first entry on count: ' + await h2s('.main .grid >'));
 
   // ---- Report: bottom bar, two pages, the old route still works
   await p.evaluate(() => { location.hash = '#/overview'; render(); });

@@ -134,6 +134,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'auth-check') checkConfirmed(true);
   else if (act === 'auth-view') { stopPolling(); Object.assign(state.auth, { view: el.dataset.view, error: '', notice: '' }); render(); }
   else if (act === 'install-app') installDialog();
+  else if (act === 'phone-tutorial') phoneTutorialDialog();
   else if (act === 'support') supportDialog();
   else if (act === 'shot-del') { supportShots.splice(+el.dataset.i, 1); $('#shots').innerHTML = supportShotsHtml(); }
   else if (act === 'trend-detail') trendDialog(el.dataset.k);

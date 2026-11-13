@@ -48,7 +48,7 @@ No email, name or any financial value is ever stored on the person.
 | Area | Values |
 |---|---|
 | Sign-in and session | `auth_view` (with `view` = landing/signin/signup/forgot/sent), `auth_google`, `auth_check`, `auth_resend`, `signout`, `revoke` (sign out other devices), `retry_load` |
-| App chrome | `theme_toggle`, `install_app`, `support`, `guide_tab`, `toggle_info`, `toggle_more`, `goto` (card that opens a page, with `route`), `settings_open` (Settings hub tile or row that opens a Settings page, with `route` = categories / occasions / recurring / household / preferences / profile / legal), `close` |
+| App chrome | `theme_toggle`, `install_app`, `phone_tutorial` (landing card button), `support`, `guide_tab`, `toggle_info`, `toggle_more`, `goto` (card that opens a page, with `route`), `settings_open` (Settings hub tile or row that opens a Settings page, with `route` = categories / occasions / recurring / household / preferences / profile / legal), `close` |
 | First run and demo | `onb_skip`, `congrats_add`, `demo_on`, `demo_off`, `remove_sample` |
 | Transactions | `add_txn` (with `type` = expense/income), `edit_txn`, `delete_txn`, `open_day`, `toggle_day`, `days_all`, `days_none`, `cat_txns`, `reset_filters`, `see_upcoming`, `view_history` |
 | Transfers | `transfer`, `transfer_dialog`, `view_transfer`, `delete_transfer` |

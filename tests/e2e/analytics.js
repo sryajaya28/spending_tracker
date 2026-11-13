@@ -14,6 +14,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/#access_token=SECRET&code=ABC'); await p.waitForSelector('.land'); await p.waitForTimeout(300);
   assert(await p.evaluate(() => Analytics.enabled), 'analytics is on (forced for the test)');
   assert((await evs()).includes('$pageview'), 'landing page view');
+  // the landing "better experience on your phone" button opens the tutorial and is tracked as a button click (no personal data)
+  await p.click('[data-act=phone-tutorial]'); await p.waitForSelector('.install-guide');
+  assert((await p.evaluate(() => window.__phEvents)).some((e) => e.event === 'button_clicked' && e.properties.action === 'phone_tutorial'), 'phone tutorial button is tracked');
+  await p.click('#dlg [data-act=close]');
   await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell'); await p.waitForTimeout(500);
   assert((await evs()).includes('signed_in'), 'signed_in event');

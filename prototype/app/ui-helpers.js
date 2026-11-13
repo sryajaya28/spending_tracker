@@ -6,6 +6,10 @@ function toast(msg) {
   el.textContent = __(msg); el.classList.add('show');
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 2600);
 }
+/* a dropdown with more than SEARCH_OVER real choices (the blank "All ..." / "None" entry does not count) gets the search box on top: add searchAttr(optionsHtml, msg) to the <select> tag, or syncSearch(select, msg) after its options were replaced. The search matches the option's data-s (the name) when it has one. */
+const SEARCH_OVER = 5;
+const searchAttr = (optionsHtml, msg) => ((optionsHtml.match(/<option value="[^"]/g) || []).length > SEARCH_OVER ? ` data-search data-empty="${__(msg)}"` : '');
+const syncSearch = (sel, msg) => { sel.toggleAttribute('data-search', [...sel.options].filter((o) => o.value).length > SEARCH_OVER); sel.dataset.empty = __(msg); };
 const tile = (c, sm) => `<span class="tile ${sm ? 'sm' : ''}" style="--c:${c ? c.color : '#94A3B8'}">${c ? c.icon : '❔'}</span>`;
 /* the periods the pickers offer: from the one holding the first transaction up to the current one (at least the last 6) */
 function periodChoices() {

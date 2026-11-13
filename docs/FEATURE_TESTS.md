@@ -41,3 +41,4 @@ How to fill an entry:
 | FT-103 | Debt form: installments remaining, interest, flat or declining | `tests/e2e/debtcalc.js` | pass (2026-11-03, local) |
 | FT-104 | Loan renamed Debt; Vehicle loan; tab order Savings, Debt, Investment, Lent | `tests/e2e/loanpay.js`, `repay.js`, `onboarding.js` | pass (2026-11-03, local) |
 | FT-105 | Smoke test passes on staging and production | `tests/smoke/smoke.js` | pass (2026-11-03, staging and production) |
+| FT-106 | Moving an asset to another investment account combines it with the same asset already there (one holding per account + asset) | Account A holds 2 BTC, account B holds 3 BTC: open A's BTC, Move to account B, Save | One BTC row in B with the summed quantity, earliest start, blended starting price; no error on save; a move to an account without BTC is a plain move | `tests/e2e/movehold.js` | pass locally (2026-11-13); not yet tried on staging with the real database |

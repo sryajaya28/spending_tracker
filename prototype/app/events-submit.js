@@ -292,7 +292,7 @@ document.addEventListener('submit', async (e) => {
   if (kind === 'holding') {
     if (f.dataset.id) {
       const h = D().holdings.find((x) => x.id === f.dataset.id);
-      h.account_id = v.account; save(); close(); render(); toast('Saved'); return;
+      const merged = moveHolding(h, v.account); save(); close(); render(); toast(merged !== h ? __('Moved and combined with the {name} already in that account', { name: assetInfo(merged.symbol).name }) : 'Saved'); return;
     }
     const qty = parseFloat(v.quantity);
     if (!(qty > 0)) { toast('Enter a quantity'); return; }

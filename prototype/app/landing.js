@@ -98,9 +98,11 @@ function viewLanding() {
   const feat = (ic, title, text) => `<div class="feat"><span class="feat-ic" aria-hidden="true">${ic}</span><h3>${__(title)}</h3><p>${__(text)}</p></div>`;
   const step = (n, text) => `<li><span class="step-n">${n}</span><span>${__(text)}</span></li>`;
   return `<div class="land">
+  <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
   <header class="land-nav"><a class="logo" href="#"><img src="icon.svg" alt="">Stiver</a>
     <div class="land-nav-r">${langSelect()}<button type="button" class="theme-btn" data-act="theme-toggle" aria-label="${__('Switch between light and dark')}">${effectiveTheme() === 'dark' ? '☀️' : '🌙'}</button><button class="btn secondary" data-act="auth-view" data-view="signin">${__('Sign in')}</button><button class="btn" data-act="auth-view" data-view="signup">${__('Get started')}</button></div></header>
   <section class="land-hero">
+    <div class="hero-chips" aria-hidden="true"><span class="hchip c1">☕ −Rp 85.000</span><span class="hchip c2">🎯 72%</span><span class="hchip c3">🌱 +4,2%</span></div>
     <div class="land-copy">
       <h1>${__('Your money, finally in one place.')}</h1>
       <p class="land-sub">${__('Track spending, set budgets, and watch your net worth grow across savings, investments and debts. Simple, private and built for how you actually live.')}</p>
@@ -109,9 +111,9 @@ function viewLanding() {
     </div>
   </section>
   <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, browse your days, hide your balance, check budgets, debts and investments, and move money between accounts.')}</p>
-    <div class="demo-frame"><video controls playsinline preload="metadata" poster="media/demo-poster.jpg" aria-label="${__('Stiver demo video')}"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div></section>
+    <div class="glow-wrap"><div class="demo-frame"><video controls muted loop playsinline preload="metadata" poster="media/demo-poster.jpg" aria-label="${__('Stiver demo video')}"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div></div></section>
   ${IS_STANDALONE ? '' : `<section class="land-sec land-phone"><div class="phone-card">
-    <div class="phone-art"><div class="phone-mock"><video autoplay muted loop playsinline preload="metadata" poster="media/demo-phone-poster.jpg" aria-label="${__('Stiver on a phone')}"><source src="media/demo-phone.mp4" type="video/mp4"><source src="media/demo-phone.webm" type="video/webm"></video></div></div>
+    <div class="phone-art"><div class="phone-mock"><video muted loop playsinline preload="metadata" poster="media/demo-phone-poster.jpg" aria-label="${__('Stiver on a phone')}"><source src="media/demo-phone.mp4" type="video/mp4"><source src="media/demo-phone.webm" type="video/webm"></video></div></div>
     <div class="phone-copy"><h2>${__('Get a better experience on your phone')}</h2><p>${__('Add Stiver to your Home Screen: it opens full screen, loads faster and feels like a real app. No app store needed.')}</p>
       <button type="button" class="btn lg" data-act="phone-tutorial">📲 ${__('See how to add it to your phone')}</button></div></div></section>`}
   <section class="land-sec"><h2>${__('Everything you need, nothing you don’t')}</h2>
@@ -121,13 +123,69 @@ function viewLanding() {
       ${feat('👛', 'Savings across accounts and currencies', 'Cash, bank accounts and e-wallets in any currency, with easy transfers between them.')}
       ${feat('📈', 'Investments with live prices', 'Track stocks, ETFs and crypto with current prices, buys and sells.')}
       ${feat('🤝', 'Debts and money you lent', "Know what you owe and what you're owed, and record each payment as it happens.")}
-      ${feat('🌱', 'Net worth over time', 'See everything together and how it changes month by month.')}
+      ${feat('👨‍👩‍👧', 'Shared with your household', 'Invite your family as Editor or Viewer. Everyone sees the same money, and every entry shows who added it.')}
     </div></section>
   <section class="land-sec"><h2>${__('How it works')}</h2>
     <ol class="steps">${step(1, 'Create your account with email or Google.')}${step(2, 'Add your accounts and your first transactions.')}${step(3, 'See your full picture on every device.')}</ol></section>
   <section class="land-final"><h2>${__('Ready to take control of your money?')}</h2><button class="btn lg" data-act="auth-view" data-view="signup">${__('Create your account')}</button></section>
   <footer class="land-foot"><span>© ${new Date().getFullYear()} Stiver</span><span><a href="privacy.html">${__('Privacy Policy')}</a> · <a href="terms.html">${__('Terms of Service')}</a></span></footer>
 </div>`;
+}
+
+/* landing page motion: scroll reveals, a cursor glow and tilt on the cards, a hero that follows the pointer, and videos that play only while on screen.
+   All of it is skipped when the visitor asks for reduced motion; the tilt and glow need a real mouse (hover + fine pointer). */
+let landRevealed = false;   // reveals play once per visit; a re-render (theme, language) shows everything at once
+function landingFx() {
+  const root = document.querySelector('.land'); if (!root) return;
+  const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const fine = !!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches);
+  const hasIO = 'IntersectionObserver' in window;
+  // videos: play while at least a third is visible, pause when scrolled away (saves battery); a viewer who pauses a video keeps it paused
+  root.querySelectorAll('video').forEach((v) => {
+    v.muted = true; v.loop = true;
+    v.addEventListener('pause', () => { if (v._vis) v._user = true; });
+    v.addEventListener('play', () => { v._user = false; });
+  });
+  if (hasIO) {
+    const vio = new IntersectionObserver((es) => es.forEach((e) => {
+      const v = e.target; v._vis = e.isIntersecting;
+      if (e.isIntersecting && !reduced && !v._user) { const r = v.play(); if (r && r.catch) r.catch(() => {}); } else if (!e.isIntersecting) v.pause();
+    }), { threshold: 0.35 });
+    root.querySelectorAll('video').forEach((v) => vio.observe(v));
+    // the hero's moving background rests while it is off screen
+    const hio = new IntersectionObserver((es) => es.forEach((e) => root.classList.toggle('hero-off', !e.isIntersecting)));
+    hio.observe(root.querySelector('.land-hero'));
+  }
+  if (reduced) return;
+  root.classList.add('fx');
+  if (hasIO && !landRevealed) {
+    landRevealed = true;
+    const stagger = (sel, step, base = 0) => root.querySelectorAll(sel).forEach((el, i) => { el.classList.add('rv'); el.style.setProperty('--d', (base + i * step) + 's'); });
+    stagger('.land-copy h1, .land-sub, .land-cta-wrap', 0.12);
+    stagger('.land-demo h2, .land-demo-sub, .land-demo .glow-wrap', 0.1);
+    stagger('.land-phone .phone-card', 0);
+    root.querySelectorAll('.land-sec:not(.land-demo):not(.land-phone) h2, .land-final h2, .land-final .btn').forEach((el) => el.classList.add('rv'));
+    stagger('.feat', 0.09);
+    stagger('.steps li', 0.28, 0.25);
+    root.querySelectorAll('.steps').forEach((el) => el.classList.add('rvo'));
+    root.classList.add('rv-on');
+    const rio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); rio.unobserve(e.target); } }), { threshold: 0.15, rootMargin: '0px 0px -6% 0px' });
+    root.querySelectorAll('.rv, .rvo').forEach((el) => rio.observe(el));
+  }
+  if (!fine) return;
+  let raf = 0;
+  root.addEventListener('pointermove', (e) => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      root.style.setProperty('--px', ((e.clientX / innerWidth) * 2 - 1).toFixed(3)); root.style.setProperty('--py', ((e.clientY / innerHeight) * 2 - 1).toFixed(3));
+      const c = e.target.closest && e.target.closest('.feat, .phone-card, .steps li'); if (!c) return;
+      const r = c.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      c.style.setProperty('--mx', x + 'px'); c.style.setProperty('--my', y + 'px');
+      if (c.classList.contains('feat')) { c.style.setProperty('--rx', ((0.5 - y / r.height) * 7).toFixed(2) + 'deg'); c.style.setProperty('--ry', ((x / r.width - 0.5) * 7).toFixed(2) + 'deg'); }
+    });
+  });
+  root.addEventListener('pointerout', (e) => { const c = e.target.closest && e.target.closest('.feat'); if (c && !c.contains(e.relatedTarget)) { c.style.removeProperty('--rx'); c.style.removeProperty('--ry'); } });
 }
 
 const authLink = (view, text) => `<button type="button" class="legend-btn" data-act="auth-view" data-view="${view}">${__(text)}</button>`;

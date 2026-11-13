@@ -143,6 +143,32 @@ h1, h2, h3, p { margin: 0; }
 .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: #fff; border-radius: 50%; transition: transform .15s; pointer-events: none; }
 .switch:has(input:checked)::after { transform: translateX(20px); }
 
+/* Settings hub (#/settings) and the pages opened from it (#/settings/<page>). No bottom bar there: the back arrow in the header leads out (the hub's goes to Overview; on desktop the sidebar does that) */
+.main.no-nav { padding-bottom: calc(36px + env(safe-area-inset-bottom) * .4); }
+@media (min-width: 901px) { .back[href="#/overview"] { display: none; } }
+.head-l { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.back { display: grid; place-items: center; flex: none; width: 36px; height: 36px; margin-left: -8px; border-radius: 50%; color: var(--muted); }
+.back svg { width: 22px; height: 22px; transform: scaleX(-1); }
+.set-hub { max-width: 720px; }
+.set-id { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; text-align: left; padding: 16px; }
+.set-id .avatar { width: 56px; height: 56px; font-size: 22px; flex: none; }
+.set-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 auto; }
+.set-txt b { font-weight: 600; overflow-wrap: anywhere; }
+.set-txt small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.set-chev { flex: none; display: grid; color: var(--muted); }
+.set-chev svg { width: 20px; height: 20px; }
+.set-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.set-tiles > :last-child:nth-child(odd) { grid-column: 1 / -1; }   /* three tiles (no Household): the last one spans the row */
+.set-tile { display: flex; align-items: center; gap: 10px; min-width: 0; background: var(--surface); border: 0; border-radius: var(--radius); padding: 14px 12px; box-shadow: var(--shadow); text-align: left; }
+.set-ico { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 14px; background: var(--soft); }
+.set-ico svg, .set-row > svg { width: 22px; height: 22px; flex: none; }
+.set-list { padding-top: 4px; padding-bottom: 4px; }
+.set-row { display: flex; align-items: center; gap: 14px; width: 100%; background: none; border: 0; padding: 12px 0; text-align: left; }
+.set-signout, .set-other .btn { width: 100%; }
+.set-other { display: flex; flex-direction: column; gap: 10px; }
+.set-foot { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
+.set-foot .pill { font-size: 12px; font-weight: 500; padding: 5px 12px; }
+
 /* ---------- dialog / forms ---------- */
 dialog { border: 0; border-radius: 28px; padding: 0; width: min(480px, calc(100vw - 24px)); box-shadow: 0 30px 80px rgba(30, 27, 75, .35); color: var(--ink); }
 dialog::backdrop { background: rgba(30, 27, 75, .45); backdrop-filter: blur(3px); }

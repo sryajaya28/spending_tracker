@@ -100,6 +100,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
+  else if (act === 'settings-open') location.hash = '#/settings/' + el.dataset.route;   // the Settings hub: each tile or row opens one page
   else if (act === 'goto') { if (el.dataset.route === 'activity') { actState.rows = null; actState.who = ''; actState.type = 'all'; } location.hash = '#/' + el.dataset.route; }
   else if (act === 'hero-balance') location.hash = '#/portfolio';   // Overview hero chip: Balance lives on Portfolio (Net worth)
   else if (act === 'hero-budget') location.hash = '#/budgets';   // Overview hero sub-line / bar

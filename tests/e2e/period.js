@@ -18,7 +18,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const spent = (k) => p.evaluate((k) => sumBy(inMonth(k), 'expense'), k);
   assert.equal(await spent('2026-10'), 100000 + 200000 + 300000, 'calendar month by default');
   // change the start day in Settings: saved on the profile, periods move
-  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('select[data-setting=period]'); await log();
+  await p.evaluate(() => { location.hash = '#/settings/preferences'; }); await p.waitForSelector('select[data-setting=period]'); await log();
   await p.selectOption('select[data-setting=period]', '25'); await settle();
   const l = await log(); assert(l.some((o) => o.op === 'update' && o.table === 'profiles' && o.values.period_day === 25), JSON.stringify(l));
   assert.equal(await spent('2026-10'), 200000 + 300000, '25 Oct onward');

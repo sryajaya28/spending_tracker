@@ -14,11 +14,11 @@ function bottomNav() {
   const add = canWrite() ? `<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>` : '';   // a Viewer has no Add: four equal tabs, no empty slot
   return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'wallet-nav', 'Portfolio')}</nav>`;
 }
-function topbar(title, sub) {
+function topbar(title, sub, back) {
   const p = D().profile, hour = new Date().getHours();
   const first = esc(p.name.split(' ')[0]);
   const greet = title ? __(title) : hour < 12 ? __('Good morning, {name}', { name: first }) : hour < 18 ? __('Good afternoon, {name}', { name: first }) : __('Good evening, {name}', { name: first });
-  return `<header class="topbar"><div><h1>${greet}</h1></div>
+  return `<header class="topbar"><div class="head-l">${back ? `<a class="back" href="${back}" aria-label="${back === '#/settings' ? __('Back to Settings') : __('Back')}">${icon('chev')}</a>` : ''}<h1>${greet}</h1></div>
     <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="${__('Search transactions')}" aria-label="${__('Search transactions')}"></label>
     <button type="button" class="icon-btn support-btn" data-act="support" aria-label="${__('Report a bug or send feedback')}" title="${__('Report a bug or send feedback')}">${icon('chat')}</button>
     <a class="profile" href="#/settings" aria-label="${__('Settings')}"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></a></div></header>`;
@@ -408,28 +408,54 @@ function categoriesCard() {
   return `<section class="card"><div class="card-head"><h2>${__('Categories')}</h2><div class="tools">${D().categories.some((c) => c.archived) ? `<button class="chip" data-act="archived-cats">${__('Archived')}</button>` : ''}<button class="btn" data-act="add-cat">${__('+ Category')}</button></div></div>
     ${section('expense', __('Expense'), '#E5484D')}${section('income', __('Income'), '#1fa971')}</section>`;
 }
-function viewSettings() {
-  const p = D().profile;
-  return `${topbar('Settings', 'Profile, currency and privacy')}
-  <div class="stack">
-  ${categoriesCard()}
-  ${occasionsCard()}
-  ${recurringCard()}
-  <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
-    <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
+/* Settings is a hub (#/settings) and pages opened from it (#/settings/<page>). Each page shows the same cards as before, one topic per page. */
+const setTile = (route, ic, title, sub) => `<button type="button" class="set-tile" data-act="settings-open" data-route="${route}"><span class="set-ico">${icon(ic)}</span><span class="set-txt"><b>${title}</b><small>${sub}</small></span></button>`;
+const setRow = (route, ic, title) => `<button type="button" class="set-row" data-act="settings-open" data-route="${route}">${icon(ic)}<span class="set-txt"><b>${title}</b></span><span class="set-chev">${icon('chev')}</span></button>`;
+const setCount = (n, one, many, none) => (n === 0 && none ? none : n === 1 ? __(one, { n }) : __(many, { n }));
+function settingsHub() {
+  const p = D().profile, hh = hhAvailable();
+  const cats = D().categories.filter((c) => !c.archived).length, occs = occasionStatus().filter((o) => !o.archived).length, recs = (D().recurring || []).length;
+  const people = hh ? hhPeople().length || 1 : 0;
+  const tiles = [
+    setTile('categories', 'grid', __('Categories'), setCount(cats, '{n} category', '{n} categories', __('None yet'))),
+    setTile('occasions', 'calendar', __('Occasions'), occs ? __('{n} active', { n: occs }) : __('None yet')),
+    setTile('recurring', 'transfer', __('Recurring'), setCount(recs, '{n} rule', '{n} rules', __('None yet'))),
+    hh ? setTile('household', 'people', __('Household'), people === 1 ? __('Just you') : __('{n} people', { n: people })) : '',
+  ].join('');
+  return `${topbar('Settings', null, '#/overview')}
+  <div class="stack set-hub">
+  <button type="button" class="card set-id" data-act="settings-open" data-route="profile"><span class="avatar" aria-hidden="true">${esc((p.name || '?')[0].toUpperCase())}</span>
+    <span class="set-txt"><b>${esc(p.name)}</b>${state.auth.email ? `<small>${esc(state.auth.email)}</small>` : ''}</span>${hh ? `<span class="badge">${roleLabel(Cloud.household.status === 'member' ? Cloud.household.role : 'owner')}</span>` : ''}<span class="set-chev">${icon('chev')}</span></button>
+  <div class="set-tiles">${tiles}</div>
+  <section class="card set-list">${setRow('preferences', 'filter', __('Preferences'))}${setRow('legal', 'doc', __('Terms & privacy'))}</section>
+  <section class="card"><div class="form-row"><div>${__('Use sample data')}<small>${__('Try the app with demo numbers. Nothing is saved.')}</small></div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="${__('Use sample data')}"></label></div>
+    ${p.sample ? `<div class="form-row"><div>${__('Sample data saved earlier')}</div><button class="btn danger" data-act="remove-sample">${__('Remove')}</button></div>` : ''}</section>
+  <section class="card"><button type="button" class="btn secondary lg set-signout" data-act="signout">${__('Sign out')}</button></section>
+  ${!state.real && Cloud.configured ? `<div class="set-foot"><span class="pill">${__('Synced to your account')}</span></div>` : ''}</div>`;
+}
+const settingsPreferences = () => { const p = D().profile; return `<div class="stack"><section class="card">
     <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" ${hhLocked()} aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Budget period starts on')}</div><div class="field"><select data-setting="period" ${hhLocked()} aria-label="${__('Budget period starts on')}">${Array.from({ length: 28 }, (_, n) => `<option value="${n + 1}" ${n + 1 === periodDay() ? 'selected' : ''}>${n === 0 ? __('Day 1 (calendar month)') : __('Day {n}', { n: n + 1 })}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Language')}</div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Appearance')}</div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div></section>
-  <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
-    <div class="form-row"><div>${__('AI category suggestions')}</div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
-  ${householdCard()}
-  <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
-    <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div>
-    <div class="form-row"><div>${__('Sign out')}</div><button class="btn secondary" data-act="signout">${__('Sign out')}</button></div>
-    <div class="form-row"><div>${__('Sign out everywhere else')}</div><button class="btn secondary" data-act="revoke">${__('Sign out others')}</button></div>
-    <div class="form-row"><div>${__('Use sample data')}</div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="${__('Use sample data')}"></label></div>
-    ${p.sample ? `<div class="form-row"><div>${__('Sample data saved earlier')}</div><button class="btn danger" data-act="remove-sample">${__('Remove')}</button></div>` : ''}</section></div>`;
+  <section class="card"><div class="form-row"><div>${__('AI category suggestions')}</div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section></div>`; };
+const settingsProfile = () => `<div class="stack"><section class="card">
+    <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(D().profile.name)}" aria-label="${__('Display name')}"></div></div>
+    <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div></section>
+  <section class="card set-other"><button type="button" class="btn secondary lg" data-act="revoke">${__('Sign out of other devices')}</button><small class="muted">${__('Ends your sign-in on every other phone or browser. This device stays signed in.')}</small></section></div>`;
+const settingsLegal = () => `<section class="card set-list"><a class="set-row" href="privacy.html">${icon('doc')}<span class="set-txt"><b>${__('Privacy Policy')}</b></span><span class="set-chev">${icon('chev')}</span></a><a class="set-row" href="terms.html">${icon('doc')}<span class="set-txt"><b>${__('Terms of Service')}</b></span><span class="set-chev">${icon('chev')}</span></a></section>`;
+const SETTINGS_PAGES = {
+  categories: ['Categories', () => `<div class="stack">${categoriesCard()}</div>`],
+  occasions: ['Occasions', () => `<div class="stack">${occasionsCard()}</div>`],
+  recurring: ['Recurring', () => `<div class="stack">${recurringCard() || `<section class="card"><div class="empty">${__('Nothing repeats yet. Choose a repeat when you add a transaction or a debt and it shows up here.')}</div></section>`}</div>`],
+  household: ['Household', () => (hhAvailable() ? `<div class="stack">${householdCard()}</div>` : '')],
+  preferences: ['Preferences', settingsPreferences],
+  profile: ['Profile', settingsProfile],
+  legal: ['Terms & privacy', settingsLegal],
+};
+function viewSettings() {
+  const pg = SETTINGS_PAGES[routeArg()], body = pg ? pg[1]() : '';
+  return body ? `${topbar(pg[0], null, '#/settings')}${body}` : settingsHub();   // an unknown page, or Household when there is none, shows the hub
 }
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';

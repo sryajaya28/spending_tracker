@@ -20,6 +20,12 @@ Mobile / Desktop / Components (older flat imports of the app: reference only, no
 | Recurring row | `Icon`, `Title`, `Amount`, `Where`, `When` (has a Manage button) |
 | Avatar (who did it; shown only when a household has more than one person) | `Initial` |
 | Chip (filter, e.g. by person) | `Text`, `Selected` |
+| Icon (set of 24px line icons: categories, occasions, recurring, household, preferences, account, terms) | `Name` |
+| Chevron (muted, 20px) | none |
+| Settings row (icon, title, optional subtitle and value, chevron) | `Icon` (instance swap), `Title`, `Subtitle`, `Value`, `Show subtitle`, `Show value` |
+| Settings tile (half-width card: icon box, title, subtitle) | `Icon` (instance swap), `Title`, `Subtitle` |
+| Footer pill (small soft pill under a page) | `Text` |
+| Switch | `State` on / off |
 
 Figma instances cannot take new children, so **containers** (card, dialog, phone frame, rows) are built by the helper functions (`frame`, `card`, `phone`) with the same variable bindings.
 A review frame per mode ("Library overview - Light / Dark") and an example ("Example - Edit debt, Every month") sit on the Library page.

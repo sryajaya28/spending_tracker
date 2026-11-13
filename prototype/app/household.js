@@ -32,6 +32,7 @@ const hhState = { invites: [] };
 const HH_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, HH_CAP = 5;
 const roleLabel = (r) => ({ owner: __('Owner'), editor: __('Editor'), viewer: __('Viewer') }[r] || r);
 const hhShort = (iso) => new Date(iso).toLocaleDateString(LANG === 'id' ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short' });
+const hhAvailable = () => !(state.real || !Cloud.configured || !state.auth.uid);   // the Household card and the Settings tile exist only for a signed-in real account
 const hhLocked = () => (Cloud.household.status === 'member' ? 'disabled title="' + __('Set by the household owner') + '"' : '');   // currency and period day belong to the owner
 const hhPeople = () => (Cloud.household.people || []).filter((p) => !p.former);
 const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
@@ -65,7 +66,7 @@ async function hhLoadInvites() {
   if (route() === 'settings') render();
 }
 function householdCard() {
-  if (state.real || !Cloud.configured || !state.auth.uid) return '';
+  if (!hhAvailable()) return '';
   const h = Cloud.household, me = state.auth.uid, isOwner = h.status === 'owner', live = hhPeople();
   const list = live.length ? live : [{ user_id: me, display_name: D().profile.name, role: 'owner', email: state.auth.email }];
   const pending = isOwner ? hhState.invites : [], full = list.length + pending.length >= HH_CAP;

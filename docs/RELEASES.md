@@ -2,6 +2,53 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 24 contents (main 0d0d896)
+
+**Items in this release**
+- Feature: coin transfer fee. Move to account on a stablecoin or crypto holding takes a quantity, a network fee and a date (PR 89 `claude/clever-pascal-6i7jvg`, Tier 3), with a spacing fix (PR 92, Tier 1)
+- Feature: Overview is today (today list, missing-days card), Report holds Transactions and Analysis, Budgets tab kept (PR 93 `claude/budget-bar-prototype-3l3ywm`, Tier 2)
+- Docs/process: change files, learning trim, design mocks in `design/`; release PR 94
+
+**Exact detail.** Range: 59501f5..e73f937. 17 commits, 38 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- Moving a stablecoin or crypto holding to another investment account now asks for a quantity, a network fee and a date; the fee counts as spending, the move does not, and it can be deleted from the transfer details
+- Overview shows today's entries and a card for days in the last week with nothing recorded (Add, or Nothing to add); Report has two pages, Transactions and Analysis
+
+**What a user can see change**
+Yes: 11 app files changed (prototype/app/activity.js, prototype/app/events-input.js, prototype/app/events-submit.js, prototype/app/invest-dialogs.js, prototype/app/portfolio-calc.js, prototype/app/trades.js, prototype/app/transfers.js, prototype/app/views.js, ...).
+
+**Commits**
+- 6183fdc Overview is today, Report is the rest: today list, missing-days card, Report with Transactions and Analysis
+- faf0db5 Overview report mock: remove the hero Balance chip
+- 7078cb4 Overview report mock: no-budget hero says 'spent this month'; keep the link in one piece
+- b53f2f8 Overview report mock: add no-budget states (Overview, Analysis); no underline on Nothing to add
+- 86a8428 Overview report mock: keep the hero budget line and bar
+- 260900b Design mock: add filters-applied and filter-sheet states; add hand-over task file
+- fa66665 Design mock: no card when no missing days; empty Today becomes one Add transaction prompt
+- 86a2622 Design mock: build it from the real app's HTML and CSS
+- e474f1d Design mock: keep the Budgets tab in the bottom bar; Analysis shows budget progress only
+- 8b2cb16 Design mock: drop search icon, month subtitle and summary line from Report
+- 562234a Design mock: show today's list above the missing-days card on Overview
+- b770c7e Add interim HTML design mock for Overview (today + missing days) and Report (Transactions, Analysis)
+- 25e7bb4 Move to account (coin): keep the 16px spacing between Quantity/Fee, Date and the note
+- 835d99b Trim learning.md session log into the archive (doc budget)
+- 8d7e6e3 Coin transfer fee: Move to account for stablecoin and crypto with quantity, network fee and date
+- cd66052 Task file: design approved by the owner, hand over to a fresh build session
+- be19cc4 Task file: coin transfer fee between investment accounts (design stage)
+
+**Files by area**
+- App (what users see) (11): prototype/app/activity.js, prototype/app/events-input.js, prototype/app/events-submit.js, prototype/app/invest-dialogs.js, prototype/app/portfolio-calc.js, prototype/app/trades.js, prototype/app/transfers.js, prototype/app/views.js, prototype/cloud.js, prototype/i18n-id.js, prototype/styles.css
+- Tests (12): tests/e2e/analytics.js, tests/e2e/cointransfer.js, tests/e2e/daily.js, tests/e2e/donut.js, tests/e2e/inrphp.js, tests/e2e/movehold.js, tests/e2e/period.js, tests/e2e/report.js, tests/e2e/run_all.sh, tests/e2e/sample.js, tests/e2e/spenthero.js, tests/e2e/trend.js
+- Docs and rules (12): context.md, docs/ANALYTICS.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/changes/2026-11-13-coin-move-spacing.md, docs/changes/2026-11-13-coin-transfer-fee.md, docs/changes/2026-11-13-overview-report.md, docs/learning-archive.md, docs/tasks/2026-11-13-coin-transfer-fee.md, docs/tasks/2026-11-13-overview-report.md, learning.md, regression_scenario.md
+- Other (3): design/build_report_mock.js, design/report-split-mock.html, design/report-split-template.html
+
+**Database migrations**
+None.
+
+**Tests and smoke:** Regression of staging passed (browser suite, staging smoke, real-database regression); production smoke below; https://stiver.io answers 200 and serves stiver-shell-0d0d896773. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** Coin transfers not proven against the real database (browser suite uses the fake one); owner staging check for PR 89 not seen; Copilot did not review PRs 89, 92, 93 (diff-only review in the release session); minor: Nothing-to-add cache not cleared on user switch in one tab
+
 ## Release 23 contents (main 73c040d)
 
 **Items in this release**

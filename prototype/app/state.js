@@ -1,6 +1,6 @@
 'use strict';
 /* Stiver app: the state object, save(). Part of the former prototype/app.js; see docs/MAP.md. */
-const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', catsOpen: false, openCats: new Set(), openDays: new Set(), archOpen: false } };
+const state = { data: null, real: null, auth: { status: 'loading', view: 'landing', email: '', notice: '', error: '' }, ui: { month: monthKey(new Date()), q: '', cat: '', wallet: '', who: '', catsOpen: false, openCats: new Set(), openDays: new Set(), archOpen: false } };
 function loadPrices() { try { return JSON.parse(localStorage.getItem(PRICES_KEY)) || {}; } catch { return {}; } }
 /* transactions are ordered newest date first and, on the same date, the latest entered first (created_at; the database sets it
    on insert and it is read back on load, new entries get the current time here) */

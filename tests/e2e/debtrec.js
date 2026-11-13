@@ -30,7 +30,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const tab = await p.evaluate(() => { const c = [...document.querySelectorAll('#app .stack .card')].find((x) => /Visa card/.test(x.textContent)), t = c.querySelector('.loan-tab'); if (!t) return null; const a = c.getBoundingClientRect(), b = t.getBoundingClientRect(); return { text: t.textContent, dr: Math.round(a.right - b.right), dt: Math.round(b.top - a.top), card: c.classList.contains('has-tab') }; });
   assert(tab && tab.text === '9 months left' && tab.dr === 0 && tab.dt === 0 && tab.card, 'corner tab: ' + JSON.stringify(tab));
   // 4. it shows under Recurring in Settings and can be edited there (account, amount)
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('[data-act=rec-manage]');
+  await p.evaluate(() => { location.hash = '#/settings/recurring'; render(); }); await p.waitForSelector('[data-act=rec-manage]');
   const st = (await p.innerText('.main')).replace(/ /g, ' '); assert(/Visa card/.test(st) && /Rp 100\.000/.test(st) && /Every month/.test(st), 'Settings > Recurring lists the debt payment: ' + st.slice(0, 400));
   await p.evaluate((id) => ruleDialog(D().recurring.find((x) => x.id === id)), r.id); await p.waitForSelector('#dlg select[name=wallet]');
   assert(await p.$('#dlg select[name=category]') === null, 'no category box on a debt payment rule'); assert.equal(await p.$eval('#dlg select[name=wallet] option', (o) => o.value), '', 'No account is offered');
@@ -61,7 +61,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate((id) => { const x = D().recurring.find((q) => q.id === id), d = new Date(); d.setDate(d.getDate() - 3); x.start = isoDate(d); x.next = isoDate(d); }, r.id); await p.evaluate(() => runRecurring());
   assert.equal((await loan()).bal, b0 - 50000, 'the debt went down'); assert.equal(await p.evaluate(() => D().transactions.filter((x) => x.type === 'expense' && x.note === 'Visa card').length), exp0, 'no expense without an account');
   t = await card(); assert(/Rp 50\.000 every week/.test(t) && /weeks left/.test(t), 'no-account weekly card: ' + t);
-  assert(/Visa card/.test(await p.evaluate(() => { location.hash = '#/settings'; render(); return document.querySelector('.main').textContent; })) && /No account/.test(await p.innerText('.main')), 'Settings shows "No account"');
+  assert(/Visa card/.test(await p.evaluate(() => { location.hash = '#/settings/recurring'; render(); return document.querySelector('.main').textContent; })) && /No account/.test(await p.innerText('.main')), 'Settings shows "No account"');
   // 9. a one-off payment (no repeat) makes no rule; a paid-off debt shows no time left
   await p.evaluate((i) => { D().recurring = []; paymentDialog(D().loans.find((x) => x.id === i)); }, ids.loan); await p.waitForSelector('#dlg [name=amount]'); await p.fill('#dlg [name=amount]', '1000'); await p.click('#dlg button[type=submit]'); await settle(); await p.waitForTimeout(150);
   assert.equal(await rule(), null, 'no repeat, no rule');

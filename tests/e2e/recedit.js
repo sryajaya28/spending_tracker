@@ -19,7 +19,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // an upcoming first entry follows an edit of the rule (it has not happened yet), so no stale copy is left behind
   const fut2 = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 12); return isoDate(d); });
   await p.evaluate(() => txnDialog(null, 'expense')); await p.fill('input[name=amount]', '49000'); await p.fill('input[name=date]', fut); await p.selectOption('select[name=repeat]', 'monthly'); await p.fill('textarea[name=note], input[name=note]', 'Music'); await p.click('#dlg button[type=submit]'); await settle();
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); const idx = await p.evaluate(() => D().recurring.findIndex((r) => r.spec.note === 'Music'));
+  await p.evaluate(() => { location.hash = '#/settings/recurring'; render(); }); const idx = await p.evaluate(() => D().recurring.findIndex((r) => r.spec.note === 'Music'));
   await p.click(`[data-act=rec-manage][data-id="${await p.evaluate((i) => D().recurring[i].id, idx)}"]`); await p.fill('input[name=amount]', '59000'); await p.fill('input[name=next]', fut2); await p.click('#dlg button[type=submit]'); await settle();
   const mus = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Music').map((t) => [t.occurred_at, t.amount_minor])); assert.deepEqual(mus, [[fut2, 59000]], 'the upcoming first entry moved with the rule: ' + JSON.stringify(mus));
   await p.evaluate(() => { const r = D().recurring.find((x) => x.spec.note === 'Music'); D().transactions.filter((t) => t.note === 'Music').forEach((t) => { t.occurred_at = isoDate(new Date()); }); r.start = isoDate(new Date()); r.next = isoDate(new Date()); r.spec.first_made = isoDate(new Date()); runRecurring(); }); assert.equal(await p.evaluate(() => D().transactions.filter((t) => t.note === 'Music').length), 1, 'still one entry once the date arrives');
@@ -41,7 +41,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     D().wallets.push({ id: uid(), name: 'DANA', type: 'ewallet', currency: w1.currency, opening_balance_minor: 0, since: monthKey(new Date()), archived: false });
     D().transactions.push({ id: uid(), type: 'expense', amount_minor: 49000, currency: w1.currency, wallet_id: w1.id, category_id: null, note: 'Ecommurz', occurred_at: f(16), category_source: 'user' });
     D().recurring.push({ id: uid(), kind: 'txn', freq: 'monthly', start: f(16), next: f(16), end: '', active: true, spec: { type: 'expense', amount_minor: 49000, currency: w1.currency, wallet_id: w1.id, category_id: null, note: 'Ecommurz' } });
-    location.hash = '#/settings'; render();
+    location.hash = '#/settings/recurring'; render();
   });
   await p.click(`[data-act=rec-manage][data-id="${await p.evaluate(() => D().recurring.find((x) => x.spec.note === 'Ecommurz').id)}"]`);
   await p.selectOption('#dlg select[name=wallet]', await p.evaluate(() => D().wallets.find((w) => w.name === 'DANA').id)); await p.click('#dlg button[type=submit]'); await settle();
@@ -51,7 +51,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { const r0 = D().recurring[0]; r0.start = '2026-06-10'; r0.next = '2026-09-10'; runRecurring(); });   // creates catch-up entries from June
   const before = await p.evaluate(() => D().transactions.filter((t) => t.note === 'Gym').map((t) => t.id + ':' + t.amount_minor + ':' + t.occurred_at).sort());
   assert(before.length >= 2, 'past entries exist: ' + before.length);
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('[data-act=rec-manage]'); assert.equal(await p.$$eval('.cat-row [data-act=rec-toggle], .cat-row [data-act=rec-del], .cat-row .dots', (e) => e.length), 0, 'one Manage button per rule'); assert.equal((await p.innerText('[data-act=rec-manage]')).trim(), 'Manage'); await p.click('[data-act=rec-manage]'); assert.deepEqual(await p.$$eval('#dlg [data-act]', (e) => e.map((x) => x.dataset.act)), ['close', 'rec-toggle', 'rec-del']); await p.waitForSelector('form[data-form=recedit]');
+  await p.evaluate(() => { location.hash = '#/settings/recurring'; render(); }); await p.waitForSelector('[data-act=rec-manage]'); assert.equal(await p.$$eval('.cat-row [data-act=rec-toggle], .cat-row [data-act=rec-del], .cat-row .dots', (e) => e.length), 0, 'one Manage button per rule'); assert.equal((await p.innerText('[data-act=rec-manage]')).trim(), 'Manage'); await p.click('[data-act=rec-manage]'); assert.deepEqual(await p.$$eval('#dlg [data-act]', (e) => e.map((x) => x.dataset.act)), ['close', 'rec-toggle', 'rec-del']); await p.waitForSelector('form[data-form=recedit]');
   const newDate = await p.evaluate(() => { const d = new Date(); d.setDate(d.getDate() + 20); return isoDate(d); });
   await p.fill('input[name=amount]', '150000'); await p.fill('input[name=next]', newDate); await p.click('#dlg button[type=submit]'); await settle();
   r = await p.evaluate(() => ({ amount: D().recurring[0].spec.amount_minor, next: D().recurring[0].next, start: D().recurring[0].start }));

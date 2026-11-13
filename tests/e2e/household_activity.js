@@ -23,7 +23,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
       { id: 5, actor_id: 'gone', actor_name: 'Maria Lim', entity: 'debt_payments', entity_id: 'x3', action: 'create', summary: { amount_minor: 950000, currency: 'IDR' }, at: at(18, 1) }];
     return loadUserData();
   }, ME);
-  await p.waitForFunction(() => Cloud.household.hasMembers); await p.evaluate(() => { location.hash = '#/settings'; });
+  await p.waitForFunction(() => Cloud.household.hasMembers); await p.evaluate(() => { location.hash = '#/settings/household'; });
   await p.waitForSelector('.hh-activity'); assert.match(await p.textContent('.hh-activity'), /Who added, edited or deleted what/, 'the entry row sits in the Household card');
   // Household card rework (fast lane): Manage on accepted rows except the owner's own, role badge after the name, Pending row with both buttons on one line
   await p.evaluate(() => { hhState.invites = [{ id: 'i1', email: 'a.very.long.invited.person@example.com', role: 'viewer', created_at: new Date().toISOString() }]; render(); });

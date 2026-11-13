@@ -12,8 +12,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 12345, currency: D().wallets[0].currency, occurred_at: isoDate(new Date()), note: 'MY REAL ONE', category_source: 'user', ai_confidence: null }); save(); });
   await settle(); await log();
   const own = await snap(); assert.equal(own.txns, 1);
-  // the (i) next to Total Balance explains what it contains
-  await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.click('.hero .lbl-link'); assert((await p.innerText('.hero .info-pop')).includes('Savings + investments'), 'total balance tooltip');
+  // the hero label (Spent today) is plain text: no tooltip
+  await p.evaluate(() => { location.hash = '#/overview'; render(); }); assert.equal(await p.$$eval('.hero .lbl-link, .hero .info-pop', (e) => e.length), 0, 'no tooltip on Spent today');
   // an empty account (balance under 1 USD) gets a one-tap sample-data switch on Overview
   await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.waitForSelector('.sample-promo [data-act=demo-on]');
   await p.click('.sample-promo [data-act=demo-on]'); await p.waitForSelector('.demo-bar'); assert.equal(await p.$$('.sample-promo').then((a) => a.length), 0, 'promo disappears in sample mode'); assert.equal(await p.$$('.demo-bar').then((a) => a.length), 1); assert((await snap()).demo);
@@ -27,7 +27,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // toggle ON: demo data shows, banner appears, own data untouched
   await p.check('[data-demo]'); await p.waitForSelector('.demo-bar');
   // not pinned: it scrolls away with the page
-  await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.waitForTimeout(200); await p.evaluate(() => window.scrollTo(0, 900)); await p.waitForTimeout(200);
+  await p.evaluate(() => { location.hash = '#/analysis'; render(); }); await p.waitForTimeout(200); await p.evaluate(() => window.scrollTo(0, 900)); await p.waitForTimeout(200);
   assert((await p.$eval('.demo-bar', (e) => e.getBoundingClientRect().top)) < 0, 'banner is not sticky'); await p.evaluate(() => { window.scrollTo(0, 0); location.hash = '#/settings'; render(); });
   const on = await snap(); assert(on.demo && on.txns > 50 && on.wallets.includes('BCA'), JSON.stringify(on));
   assert((await p.$eval('.demo-bar', (e) => e.textContent)).includes('sample data'));

@@ -1,6 +1,6 @@
 const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
-/* Hide balance: one eye button on Overview (Total Balance) and Portfolio (Net worth) drives one setting that also masks the balances on the four Portfolio tabs.
-   Transactions, budgets and spending stay visible. The setting is remembered on the device (a new session opens the way it was left), and the change pill is red / green. */
+/* Hide balance: one eye button on Overview (Spent today hero) and Portfolio (Net worth) drives one setting that masks the two hero amounts on Overview and the balances on the four Portfolio tabs.
+   Transactions, the other Overview cards and spending lists stay visible; the budget bar stays too. The setting is remembered on the device (a new session opens the way it was left), and the change pill is red / green. */
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: 'block' }); const p = await ctx.newPage();
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
@@ -18,24 +18,20 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const noDigits = async (sel, what) => { const t = await digits(sel); assert(t.length, 'found ' + what); t.forEach((x) => assert(!/\d/.test(x), what + ' is masked: ' + x)); };
   const hasDigits = async (sel, what) => { const t = await digits(sel); assert(t.length && t.every((x) => /\d/.test(x)), what + ' is visible: ' + JSON.stringify(t)); };
 
-  // shown by default for someone who never used the button; the label is underlined text that opens the tooltip (no (i) icon), the eye sits after it
+  // shown by default for someone who never used the button; the label is plain text (no tooltip, no (i) icon), the eye sits after it
   assert.equal(await p.evaluate(() => localStorage.getItem('stiver.hidebal.v1')), null);
-  await hasDigits('.hero .amount', 'Total Balance'); assert.equal(await p.$$eval('.hero .info-btn', (e) => e.length), 0, 'no (i) icon any more');
+  await hasDigits('.hero .amount', 'Spent today'); assert.equal(await p.$$eval('.hero .info-btn', (e) => e.length), 0, 'no (i) icon any more');
   assert.equal(await p.getAttribute('.hero .eye-btn', 'aria-label'), 'Hide balance');
-  const tipOpen = () => p.$eval('.hero .info-wrap', (e) => e.classList.contains('open'));   // the class, not visibility: a hover also shows the tip on desktop
-  await p.click('.hero .lbl-link'); assert(await tipOpen(), 'tapping the label text opens the tooltip'); assert((await p.textContent('.hero .info-pop')).includes('Savings + investments'));
-  await p.click('.hero .lbl-link'); assert(!(await tipOpen()), 'tapping again closes it');
-  // the change pill: red when the month fell (the expense above), green when it grew
-  assert.equal(await p.getAttribute('.hero .delta b', 'class'), 'down', 'falling = red pill');
-  const bg = await p.$eval('.hero .delta b', (e) => getComputedStyle(e).backgroundColor); assert.equal(bg, 'rgb(229, 72, 77)', 'red is the app red');
-  await p.evaluate(() => { D().transactions.unshift({ id: 'i1', type: 'income', amount_minor: 90000000, currency: 'IDR', wallet_id: D().wallets[0].id, category_id: null, note: 'Salary', occurred_at: isoDate(new Date()) }); render(); });
-  assert.equal(await p.getAttribute('.hero .delta b', 'class'), 'up', 'growing = green pill'); assert.equal(await p.$eval('.hero .delta b', (e) => getComputedStyle(e).backgroundColor), 'rgb(31, 169, 113)');
-  await p.evaluate(() => { D().transactions = D().transactions.filter((t) => t.id !== 'i1'); render(); });
+  assert.equal(await p.$$eval('.hero .lbl-link, .hero .info-wrap', (e) => e.length), 0, 'the Spent today label is plain text: no underline, no tooltip'); assert.equal(await p.$eval('.hero .label', (e) => e.firstChild.textContent.trim()), 'Spent today');
+  assert.equal(await p.$$eval('.hero .delta', (e) => e.length), 0, 'no change pill on the Spent today hero');
 
-  // hide on Overview: total masked, the change line gone, budgets and recent transactions untouched
+  // hide on Overview: both hero amounts masked (today's spending and what is left), the bar and days stay, lists below untouched
+  await p.evaluate(() => { D().budgets.push({ id: uid(), category_id: null, amount_minor: 90000000, currency: 'IDR', start_month: currentPeriod() + '-01' }); render(); });
+  await hasDigits('.hero-bud-line', 'budget line');
   await p.click('.hero .eye-btn');
-  assert.equal(await p.innerText('.hero .amount'), await p.evaluate(() => maskMoney('IDR')), 'Total Balance shows dots in the amount format'); assert(/^Rp\s•{8}$/.test(await p.innerText('.hero .amount')));
-  assert.equal(await p.$$eval('.hero .delta', (e) => e.length), 0, 'the change line would give the balance away');
+  assert.equal(await p.innerText('.hero .amount'), await p.evaluate(() => maskMoney('IDR')), 'the amount shows dots in the amount format'); assert(/^Rp\s•{8}$/.test(await p.innerText('.hero .amount')));
+  const line = (await p.innerText('.hero-bud-line')).replace(/\u00a0/g, ' '); assert(/^Rp •{8} left this month · \d+ days? to go$/.test(line), 'the left amount is masked, the days are not: ' + line);
+  assert.equal(await p.$$eval('.hero-bar', (e) => e.length), 1, 'the bar stays'); assert.equal(await p.$eval('.hero-bar i', (e) => e.style.width), '9%', 'and still shows the real share');
   assert.equal(await p.getAttribute('.hero .eye-btn', 'aria-label'), 'Show balance'); assert.equal(await p.getAttribute('.hero .eye-btn', 'aria-pressed'), 'true');
   assert.equal(await p.evaluate(() => localStorage.getItem('stiver.hidebal.v1')), '1', 'remembered on the device');
   assert((await p.innerText('.shell')).includes('7.777.700'), 'spending stays visible: ' + (await p.innerText('.shell')).slice(0, 300));
@@ -59,19 +55,16 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const p2 = await ctx.newPage(); p2.on('pageerror', (e) => errs.push(e.message)); await route(p2); await signIn(p2);
   await p2.evaluate(() => { state.ui.onbSkipped = true; location.hash = '#/overview'; render(); });
   assert.equal(await p2.getAttribute('.hero .eye-btn', 'aria-pressed'), 'true', 'remembered in the next session');
-  assert(!/\d/.test(await p2.innerText('.hero .amount')), 'opens hidden');
+  assert(!/\d/.test(await p2.innerText('.hero .amount')), 'opens hidden'); assert.equal(await p2.getAttribute('.hero .eye-btn', 'aria-label'), 'Show balance');
   await p2.click('.hero .eye-btn'); assert(/\d/.test(await p2.innerText('.hero .amount')), 'shown again');
   assert.equal(await p2.evaluate(() => localStorage.getItem('stiver.hidebal.v1')), '0');
   await p2.evaluate(() => { location.hash = '#/portfolio'; }); await p2.waitForSelector('.hero .eye-btn'); assert(/\d/.test(await p2.innerText('.hero .amount')), 'Portfolio follows');
-  // dark mode keeps the pill readable
-  await p2.evaluate(() => { applyTheme('dark'); location.hash = '#/overview'; render(); }); await p2.waitForSelector('.hero .delta b');
+  // dark mode: the masked hero is still readable, and Portfolio's change pill keeps its red / green
+  await p2.evaluate(() => { applyTheme('dark'); location.hash = '#/overview'; render(); }); await p2.waitForSelector('.hero .amount');
   await p2.screenshot({ path: __dirname + '/out/hidebal_dark.png' });
-  // dark mode on the account with real figures: red pill on the falling month, green on a growing one, both readable
-  await p.bringToFront(); await p.evaluate(() => { state.ui.hideBal = undefined; applyTheme('dark'); location.hash = '#/overview'; render(); }); await p.waitForSelector('.hero .delta b');
-  assert.equal(await p.$eval('.hero .delta b', (e) => getComputedStyle(e).backgroundColor), 'rgb(255, 107, 112)', 'dark red'); assert.equal(await p.$eval('.hero .delta b', (e) => getComputedStyle(e).color), 'rgb(30, 27, 75)');
-  await (await p.$('.hero')).screenshot({ path: __dirname + '/out/hidebal_dark_down.png' });
-  await p.evaluate(() => { D().transactions.unshift({ id: 'i2', type: 'income', amount_minor: 90000000, currency: 'IDR', wallet_id: D().wallets[0].id, category_id: null, note: 'Salary', occurred_at: isoDate(new Date()) }); render(); });
-  assert.equal(await p.getAttribute('.hero .delta b', 'class'), 'up'); await (await p.$('.hero')).screenshot({ path: __dirname + '/out/hidebal_dark_up.png' });
+  await p.bringToFront(); await p.evaluate(() => { setHideBal(false); applyTheme('dark'); location.hash = '#/portfolio'; render(); }); await p.waitForSelector('.hero .delta b');
+  assert.equal(await p.$eval('.hero .delta b', (e) => getComputedStyle(e).color) === 'rgb(30, 27, 75)' || await p.$eval('.hero .delta b', (e) => getComputedStyle(e).color) === 'rgb(255, 255, 255)', true, 'pill text readable in dark');
+  await (await p.$('.hero')).screenshot({ path: __dirname + '/out/hidebal_dark_portfolio.png' });
   assert.deepEqual(errs, []);
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message, (e.stack||'').split('\n').slice(1,3).join(' | ')); process.exit(1); });

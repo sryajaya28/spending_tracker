@@ -9,11 +9,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('#occasions-card'); await log();
+  await p.evaluate(() => { location.hash = '#/settings/occasions'; render(); }); await p.waitForSelector('#occasions-card'); await log();
   // History is always on Budgets (left of + Add), also when nothing is past yet: it then says so
   await p.evaluate(() => { location.hash = '#/budgets'; render(); }); assert.equal(await p.$$eval('.card-head:has(h2:text-is("Special occasions")) .tools > *', (e) => e.map((x) => x.textContent.trim()).join('|')), 'History|+ Add');
   await p.click('[data-act=occasion-history]'); await p.waitForSelector('#dlg .empty'); assert((await p.innerText('#dlg')).includes('No past special occasions yet.')); await p.click('#dlg [data-act=close]');
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('#occasions-card');
+  await p.evaluate(() => { location.hash = '#/settings/occasions'; render(); }); await p.waitForSelector('#occasions-card');
   // 1. Settings: add an occasion with no budget
   await p.click('#occasions-card [data-act=add-occasion]'); await p.fill('#dlg input[name=name]', 'Wedding'); assert(!(await p.$eval('#dlg input[name=amount]', (e) => e.required)), 'budget is optional here');
   await p.click('#dlg button[type=submit]'); await settle();
@@ -33,7 +33,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert((await p.innerText('.main')).includes('Wedding'), 'now on Budgets');
   // 4. a new occasion from Budgets also shows in Settings
   await p.click('[data-act=add-occasion-budget]'); await p.waitForSelector('#dlg input[name=name]'); await p.fill('#dlg input[name=name]', 'Bali Trip'); await p.fill('#dlg input[name=amount]', '10000000'); await p.click('#dlg button[type=submit]'); await settle();
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); t = await p.innerText('#occasions-card'); assert(t.includes('Bali Trip') && t.includes('Wedding'), t);
+  await p.evaluate(() => { location.hash = '#/settings/occasions'; render(); }); t = await p.innerText('#occasions-card'); assert(t.includes('Bali Trip') && t.includes('Wedding'), t);
   // 4b. occasions that already have a budget stay in the picker, greyed out and tagged "Budget Added" (not selectable)
   await p.evaluate(() => { D().occasions.push({ id: uid(), name: 'Pending Party', amount_minor: null, currency: 'IDR', start: '', end: '', archived: false }); render(); });
   await p.evaluate(() => { location.hash = '#/budgets'; render(); });
@@ -44,9 +44,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.mouse.click(...(await p.$eval('#dlg select[name=pick]', (e) => { const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }))); await p.waitForSelector('.cs-pop');
   assert.equal(await p.$$eval('.cs-pop .cs-opt.dis .cs-tag', (e) => e.map((x) => x.textContent).join()), 'Budget Added,Budget Added', 'greyed rows carry the tag');
   await p.keyboard.press('Escape'); await p.click('#dlg [data-act=close]'); await p.evaluate(() => { D().occasions = D().occasions.filter((o) => o.name !== 'Pending Party'); render(); });
-  await p.evaluate(() => { location.hash = '#/settings'; render(); });
+  await p.evaluate(() => { location.hash = '#/settings/occasions'; render(); });
   // 4c. Settings: archived occasions are not listed; the Archived button (left of + Add, like History on Budgets) opens them in a pop-up, where Edit can reopen one
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('#occasions-card');
+  await p.evaluate(() => { location.hash = '#/settings/occasions'; render(); }); await p.waitForSelector('#occasions-card');
   assert.equal(await p.$$eval('#occasions-card .card-head .tools > *', (e) => e.map((x) => x.textContent.trim()).join('|')), 'Archived|+ Add', 'Archived sits left of + Add');
   await p.click('#occasions-card [data-act=occasion-archived]'); await p.waitForSelector('#dlg .empty'); assert((await p.innerText('#dlg')).includes('No archived special occasions.')); await p.click('#dlg [data-act=close]');
   await p.evaluate(() => { D().occasions.find((o) => o.name === 'Bali Trip').archived = true; render(); });

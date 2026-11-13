@@ -32,6 +32,7 @@ const hhState = { invites: [] };
 const HH_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, HH_CAP = 5;
 const roleLabel = (r) => ({ owner: __('Owner'), editor: __('Editor'), viewer: __('Viewer') }[r] || r);
 const hhShort = (iso) => new Date(iso).toLocaleDateString(LANG === 'id' ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short' });
+const hhAvailable = () => !(state.real || !Cloud.configured || !state.auth.uid);   // the Household card and the Settings tile exist only for a signed-in real account
 const hhLocked = () => (Cloud.household.status === 'member' ? 'disabled title="' + __('Set by the household owner') + '"' : '');   // currency and period day belong to the owner
 const hhPeople = () => (Cloud.household.people || []).filter((p) => !p.former);
 const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
@@ -39,6 +40,13 @@ const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 const hhMulti = () => !state.real && Cloud.household.hasMembers;
 /* in a household a delete names what goes (PRD 27): other people can see and rely on it */
 const hhOk = (name) => { hhLastDel = name; return !hhMulti() || confirm(__('Delete "{name}"? This can\'t be undone.', { name })) };
+/* names on Transactions rows and the person filter only matter when 2+ people can add entries (owner + Editors); Viewers cannot add, so they do not count */
+const hhWriters = () => hhPeople().filter((p) => p.role === 'owner' || p.role === 'editor');
+const hhNames = () => hhMulti() && hhWriters().length >= 2;
+/* who can be picked in the Transactions filter: the writers, plus a removed member who still has entries */
+const hhAuthors = () => [...hhWriters(), ...(Cloud.household.people || []).filter((p) => p.former && D().transactions.some((t) => t.by === p.user_id))];
+/* an entry with no recorded creator counts as the owner's */
+const txnAuthor = (t) => t.by || (hhWriters().find((p) => p.role === 'owner') || {}).user_id || '';
 const byLine = (r) => (hhMulti() && r && r.by ? `<small class="muted hh-by">${whoLine(r).replace('<br>', ' · ')}</small>` : '');
 const hhName = (id) => { const x = (Cloud.household.people || []).find((p) => p.user_id === id); return hhFirstName(x && x.display_name) || ''; };
 const hhWhen = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -58,7 +66,7 @@ async function hhLoadInvites() {
   if (route() === 'settings') render();
 }
 function householdCard() {
-  if (state.real || !Cloud.configured || !state.auth.uid) return '';
+  if (!hhAvailable()) return '';
   const h = Cloud.household, me = state.auth.uid, isOwner = h.status === 'owner', live = hhPeople();
   const list = live.length ? live : [{ user_id: me, display_name: D().profile.name, role: 'owner', email: state.auth.email }];
   const pending = isOwner ? hhState.invites : [], full = list.length + pending.length >= HH_CAP;

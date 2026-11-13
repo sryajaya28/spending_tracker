@@ -50,7 +50,7 @@ const EXPECT = {
   }
   // changing the currency in Settings (or the Overview selector) while sample data is on rebuilds the sample for that country
   await p.evaluate(() => setDemo(false).then(() => { D().profile.currency = 'IDR'; return setDemo(true); })); await p.waitForTimeout(400);
-  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('select[data-setting=currency]'); await p.selectOption('select[data-setting=currency]', 'JPY'); await p.waitForTimeout(400);
+  await p.evaluate(() => { location.hash = '#/settings/preferences'; }); await p.waitForSelector('select[data-setting=currency]'); await p.selectOption('select[data-setting=currency]', 'JPY'); await p.waitForTimeout(400);
   let n = await p.evaluate(() => ({ cur: D().profile.currency, banks: D().wallets.map((w) => w.name), demo: !!state.real, ownCur: state.real.profile.currency })); assert.equal(n.cur, 'JPY'); assert(n.banks.includes('MUFG Bank') && n.banks.includes('PayPay'), JSON.stringify(n.banks)); assert(n.demo, 'still in sample mode'); assert.equal(n.ownCur, 'IDR', 'your own currency setting is untouched');
   await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero-cur select'); await p.selectOption('.hero-cur select', 'GBP'); await p.waitForTimeout(400);
   n = await p.evaluate(() => ({ cur: D().profile.currency, banks: D().wallets.map((w) => w.name) })); assert.equal(n.cur, 'GBP'); assert(n.banks.includes('Monzo'), JSON.stringify(n.banks));

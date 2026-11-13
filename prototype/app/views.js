@@ -3,22 +3,22 @@
 /* ---------- views ---------- */
 function sidebar() {
   const r = route();
-  const link = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}<span>${__(label)}</span></a>`;
+  const link = (id, ic, label, on = [id]) => `<a href="#/${id}" class="${on.includes(r) ? 'active' : ''}">${icon(ic)}<span>${__(label)}</span></a>`;
   return `<aside class="sidebar"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
-    <div class="nav-label">${__('MENU')}</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'swap', 'Transactions')}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'wallet-nav', 'Portfolio')}</nav>
+    <div class="nav-label">${__('MENU')}</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'trend', 'Report', ['transactions', 'analysis'])}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'wallet-nav', 'Portfolio')}</nav>
     <div class="nav-label">${__('ACCOUNT')}</div><nav class="nav">${link('settings', 'gear', 'Settings')}</nav></aside>`;
 }
 function bottomNav() {
   const r = route();
-  const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
+  const l = (id, ic, label, on = [id]) => `<a href="#/${id}" class="${on.includes(r) ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
   const add = canWrite() ? `<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>` : '';   // a Viewer has no Add: four equal tabs, no empty slot
-  return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'wallet-nav', 'Portfolio')}</nav>`;
+  return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'trend', 'Report', ['transactions', 'analysis'])}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'wallet-nav', 'Portfolio')}</nav>`;
 }
-function topbar(title, sub) {
+function topbar(title, sub, back) {
   const p = D().profile, hour = new Date().getHours();
   const first = esc(p.name.split(' ')[0]);
   const greet = title ? __(title) : hour < 12 ? __('Good morning, {name}', { name: first }) : hour < 18 ? __('Good afternoon, {name}', { name: first }) : __('Good evening, {name}', { name: first });
-  return `<header class="topbar"><div><h1>${greet}</h1></div>
+  return `<header class="topbar"><div class="head-l">${back ? `<a class="back" href="${back}" aria-label="${back === '#/settings' ? __('Back to Settings') : __('Back')}">${icon('chev')}</a>` : ''}<h1>${greet}</h1></div>
     <div class="tools"><label class="search">${icon('search')}<input id="gsearch" placeholder="${__('Search transactions')}" aria-label="${__('Search transactions')}"></label>
     <button type="button" class="icon-btn support-btn" data-act="support" aria-label="${__('Report a bug or send feedback')}" title="${__('Report a bug or send feedback')}">${icon('chat')}</button>
     <a class="profile" href="#/settings" aria-label="${__('Settings')}"><div class="avatar">${esc(p.name[0].toUpperCase())}</div><div><b>${esc(p.name)}</b><small>${esc(p.currency)} · ${__('signed in')}</small></div></a></div></header>`;
@@ -121,15 +121,6 @@ function trendDialog(k) {
       ${sg.key === 'others' ? '' : `<div class="bk-subs"><button class="legend-btn" data-act="trend-go" data-k="${k}" data-cat="${sg.key === 'none' ? 'none' : sg.cat || ''}">${__('View transactions')}</button></div>`}</div>`).join('') || ('<div class="empty">' + __('No spending in this period.') + '</div>')}</div>
     <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
-/* wide screens: show as many of the other budgets as fit the Budgets card (its height comes from the card next to it); the rest are hidden, never cut in half */
-function fitOverviewBudgets() {
-  const box = $('.ov-more-in'); if (!box) return;
-  const rows = [...box.children]; rows.forEach((r) => { r.hidden = false; });
-  if (!matchMedia('(min-width: 1101px)').matches) return;
-  const room = box.clientHeight; let full = true;
-  rows.forEach((r) => { if (!full || r.offsetTop + r.offsetHeight > room + 1) { r.hidden = true; full = false; } });
-}
-addEventListener('resize', () => requestAnimationFrame(fitOverviewBudgets));
 /* first run: what the user has set up so far. An empty account (no accounts with money, no budget, no transaction) gets a getting-started
    Overview instead of empty charts; afterwards a slim strip keeps pointing at what is still missing. */
 // the first-run screen stays until there is an account and a budget (or a first transaction)
@@ -175,44 +166,67 @@ function onboardingView(st) {
 /* after the first steps: one slim line for what is still missing */
 const setupStrip = (st) => (st.partial && !st.fresh
   ? `<div class="setup-strip" role="status"><span>${__('Finish setting up')}</span>${st.hasAccount ? '' : `<button type="button" class="chip" data-act="add-wallet">${__('Add account')}</button>`}${st.hasBudget ? '' : `<button type="button" class="chip" data-act="add-budget">${__('Set budget')}</button>`}</div>` : '');
+/* The line and thin bar under the Overview hero amount: what is left of the CURRENT period's overall budget and how many days remain (the last day counts).
+   No overall budget: what was spent this period and a nudge to set one. The whole block opens Budgets. The two amounts follow the eye button; the bar stays. */
+function heroBudget(spentToday) {
+  const k = currentPeriod(), g = budgetStatus(k).find((b) => b.category_id === null), c$ = cur();
+  if (!g) return `<div class="hero-bud" data-act="hero-budget" tabindex="0" role="link"><div class="hero-bud-line">${__('{amount} spent this month', { amount: moneyHtmlP(sumBy(inMonth(k), 'expense'), c$) })} · <u>${__('Set a monthly budget')} ›</u></div></div>`;
+  const days = Math.round((new Date(periodEnd(k) + 'T00:00') - new Date(todayIso() + 'T00:00')) / 86400000) + 1;
+  const left = g.remaining >= 0 ? __('{amount} left this month', { amount: moneyHtmlP(g.remaining, c$) }) : __('{amount} over budget', { amount: moneyHtmlP(-g.remaining, c$) });
+  const pct = Math.min(100, Math.max(0, Math.round(g.pct)));
+  return `<div class="hero-bud" data-act="hero-budget" tabindex="0" role="link"><div class="hero-bud-line">${left} · ${days === 1 ? __('1 day to go') : __('{n} days to go', { n: days })}</div>
+    <div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${esc(__('Budget used'))} ${pct}%"><i class="${g.status}" style="width:${pct}%"></i></div></div>`;
+}
+/* ---- Overview: today's list and the days of the last week with nothing recorded ----
+   A day counts as recorded when ANY entry is dated that day. "Nothing to add" is remembered on this device only (localStorage, no database change). */
+const nogapKey = () => 'stiver.nogap.' + (state.auth.uid || '');
+function nogapSet() {
+  if (!state.ui.nogap) { try { state.ui.nogap = new Set(JSON.parse(localStorage.getItem(nogapKey()) || '[]')); } catch (err) { state.ui.nogap = new Set(); } }
+  return state.ui.nogap;
+}
+function nogapMark(iso) { const set = nogapSet(); set.add(iso); try { localStorage.setItem(nogapKey(), JSON.stringify([...set].sort().slice(-30))); } catch (err) { /* private mode: it lasts until the page reloads */ } }
+const daysAgo = (n) => { const d = new Date(todayIso() + 'T00:00'); d.setDate(d.getDate() - n); return d; };
+/* the last 7 days, oldest first, today excluded; days before the very first entry are not missed (a new account is not nagged) */
+function lastWeek() {
+  const tx = D().transactions, first = tx.reduce((m, t) => (t.occurred_at < m ? t.occurred_at : m), todayIso()), set = nogapSet(), out = [];
+  for (let n = 7; n >= 1; n--) { const d = daysAgo(n), iso = isoDate(d); out.push({ d, iso, state: tx.some((t) => t.occurred_at === iso) ? 'ok' : (set.has(iso) || iso < first) ? 'skip' : 'miss' }); }
+  return out;
+}
+const gapDay = (d, o) => d.toLocaleDateString(locale(), o);
+function gapCard() {
+  if (!canWrite() || !D().transactions.length) return '';
+  const days = lastWeek(), miss = days.filter((x) => x.state === 'miss').reverse();   // newest first
+  if (!miss.length) return '';
+  const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+  const dash = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>';
+  const short = (x) => `${gapDay(x.d, { weekday: 'short' })} ${x.d.getDate()}`;
+  const strip = days.map((x) => x.state === 'miss'
+    ? `<button type="button" class="gap-d miss" data-act="gap-add" data-date="${x.iso}" aria-label="${esc(__('{day}, nothing recorded. Add transaction', { day: gapDay(x.d, { weekday: 'long', day: 'numeric', month: 'short' }) }))}"><span class="gap-c">${icon('plus')}</span><small>${short(x)}</small></button>`
+    : `<div class="gap-d ${x.state}"><span class="gap-c">${x.state === 'ok' ? tick : dash}</span><small>${short(x)}</small></div>`).join('');
+  const rows = miss.map((x) => `<div class="gap-row"><div class="gap-dt"><span>${gapDay(x.d, { weekday: 'short' })}</span><b>${x.d.getDate()}</b></div><div><div class="gap-t">${gapDay(x.d, { weekday: 'long', day: 'numeric', month: 'short' })}</div><button type="button" class="legend-btn gap-skip" data-act="gap-skip" data-date="${x.iso}">${__('Nothing to add')}</button></div><button type="button" class="btn gap-add" data-act="gap-add" data-date="${x.iso}">${__('Add')}</button></div>`).join('');
+  return `<section class="card gap-card"><div class="card-head"><div class="gap-head"><span class="gap-ico">${icon('calendar')}</span><div><h2>${miss.length === 1 ? __('1 day with nothing recorded') : __('{n} days with nothing recorded', { n: miss.length })}</h2><p class="muted">${__('Last 7 days. Add what you spent, or mark the day.')}</p></div></div></div><div class="gap-strip">${strip}</div>${rows}</section>`;
+}
+function todayCard() {
+  const rows = D().transactions.filter((t) => t.occurred_at === todayIso() && !hiddenLeg(t, ''));
+  if (!rows.length) return canWrite() ? `<section class="card gap-prompt"><span class="gap-ico">${icon('plus')}</span><h2>${__('Nothing recorded today yet')}</h2><p class="muted">${__('Add what you spend as you go, and it shows up here.')}</p><button type="button" class="btn" data-act="add-txn">${__('Add transaction')}</button></section>` : '';
+  return `<section class="card"><div class="card-head"><div><h2>${__('Today')}</h2><p class="muted">${gapDay(new Date(todayIso() + 'T00:00'), { weekday: 'short', day: 'numeric', month: 'short' })} · ${countLabel(rows.length)}</p></div><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`;
+}
 function viewOverview() {
   const st = setupState();
   if (st.fresh) { state.ui.onbSeen = true; return onboardingView(st); }
   // the first transaction just ended the first-run screen: congratulate once (only when the account and the budget are set up too)
   if (state.ui.onbSeen && !state.real) { state.ui.onbSeen = false; if (st.hasAccount && st.hasBudget && st.hasTx) { state.ui.congrats = true; setTimeout(endCongrats, 4200); } }
   if (state.ui.congrats) return congratsView();
-  const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
-  const months = lastMonths(6);
-  const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
-  const cats = spendByCategory(k), bs = budgetStatus(k);
-  const global = bs.find((b) => b.category_id === null);
-  const tiles = global ? [global] : [];   // the overall budget is always shown; on wide screens the other budgets fill the rest of the card (see below)
-  // wide screens only (CSS): the other budgets, most used first, then budgeted occasions that are live; the ones that do not fit the card's height are hidden (fitOverviewBudgets)
-  const bRow = (icon, name, spent, budget, pct, status) => `<div class="ov-occ"><div class="meta"><span>${icon} ${esc(name)}</span><span class="num">${money(spent, cur())} / ${money(budget, cur())} · ${Math.round(pct)}%</span></div><div class="bar"><i class="${status}" style="width:${Math.min(100, pct)}%"></i></div></div>`;
-  const moreRows = [...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct).map((b) => bRow(b.icon, b.name, b.spent, b.budget, b.pct, b.status)),
-    ...occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, k)).map((o) => bRow('🎉', o.name, o.spent, o.budget, o.pct, o.status))];
-  const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
-  const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
+  const spentToday = sumBy(D().transactions.filter((t) => t.occurred_at === todayIso()), 'expense');   // only today's expenses: not income, transfers or upcoming entries
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}${setupStrip(st)}
   <div class="grid">
-    <section class="card hero">${heroLabel(__('Total Balance'), 'ov-total', __('Savings + investments'))}
-      <div class="amount-line"><div class="amount num" style="--len:${moneyP(totalBalance(), cur()).length + 6}">${moneyHtmlP(totalBalance(), cur())}</div>${heroCurrency(cur())}</div>
-      ${hideBal() ? '' : `<div class="delta">${deltaPill(balChange)}<span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>`}
+    <section class="card hero">${heroLabel(__('Spent today'))}
+      <div class="amount-line"><div class="amount num" style="--len:${moneyP(spentToday, cur()).length + 6}">${moneyHtmlP(spentToday, cur())}</div>${heroCurrency(cur())}</div>
+      ${heroBudget(spentToday)}
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     ${installBtn('ov-install')}
-    <section class="card tap-card ov-bud-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
-      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })} · ${Math.round(global.pct)}%</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
-      <div class="ov-buds">${tiles.map((b) => `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, Math.round(b.pct))}" aria-label="${esc(__('All spending'))} ${Math.round(b.pct)}%"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div>`).join('')}</div>
-      ${moreRows.length ? `<div class="ov-more"><div class="ov-more-in">${moreRows.join('')}</div></div>` : ''}</section>
-    <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
-      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
-      ${flowChart(months, incs, exps)}</section>
-    <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools">${monthSelect()}<button class="chip" data-act="breakdown">${__('Details')}</button></div></div>
-      ${halfDonut(cats, exp)}</section>
- ${trendCard()}
-
-  <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map((t) => txnRow(t)).join('')}</div></section>
+    ${todayCard()}${gapCard()}
   </div>`;
 }
 
@@ -235,6 +249,12 @@ function txnRow(t) {
   if (t.type === 'transfer') {
     // money moved to/from an investment: not income or spending, so not editable here (edit it on the Portfolio page)
     const xfer = !!t.transfer_id;
+    if (xfer && isCoinTransfer(t.transfer_id)) {   // a stablecoin / crypto move between investment accounts: one row, opens its details dialog
+      const ch = coinOf(t), tr = ch && ch.trades.find((x) => x.id === t.trade_id);
+      return `<div class="row" data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"><span class="tile" style="--c:#4A44C6">🔁</span>
+    <div><div class="title">${esc(t.note)}</div><div class="sub">${__('Transfer')} · ${esc(ch ? assetInfo(ch.symbol).name : '')}</div></div>
+    <div class="amt-col"><div class="amt num"><span class="xfer-ico">${icon('transfer')}</span>${ch && tr ? `${esc(assetInfo(ch.symbol).symbol)} ${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 }).format(tr.quantity)}` : money(t.amount_minor, t.currency)}</div><div class="sub">${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
+    }
     return `<div class="row" ${xfer ? `data-act="view-transfer" data-id="${t.transfer_id}" tabindex="0"` : ''}><span class="tile" style="--c:${xfer ? '#4A44C6' : '#F5B800'}">${xfer ? '🔁' : t.flow === 'out' ? '📈' : '💵'}</span>
     <div><div class="title">${esc(xfer ? transferTitle(t) : t.note)}</div>
     <div class="sub">${xfer ? __('Transfer') : t.flow === 'out' ? __('Buy Invest') : __('Sell Invest')} · ${esc(walletOf(t.wallet_id)?.name || '')}</div></div>
@@ -243,12 +263,12 @@ function txnRow(t) {
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
     <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
-    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}${hhMulti() && t.by ? ` · ${esc(hhName(t.by) || '')}` : ''}${hhMulti() && Cloud.household.role === 'editor' && !canEditRec(t) ? ` · ${__('read-only')}` : ''}</div></div>
+    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}${hhNames() && t.by ? ` · ${esc(hhName(t.by) || '')}` : ''}</div></div>
     <div class="amt-col"><div class="amt num ${t.type}">${sign}${coinOf(t) ? coinAmount(coinOf(t), t.amount_minor) : money(t.amount_minor, t.currency)}</div><div class="sub">${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
 }
 function filteredTxns(upcoming = false) {
-  const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
-  return D().transactions.filter((t) => !hiddenLeg(t) && (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
+  const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase(), who = hhNames() ? state.ui.who : '';
+  return D().transactions.filter((t) => !hiddenLeg(t) && (!who || txnAuthor(t) === who) && (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
     && (occ || state.ui.allPeriods || inPeriod(t.occurred_at, state.ui.month))
     && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2)) || (wallet.startsWith('l:') && (t.loan_id === wallet.slice(2) || (repaymentOf(t.id) || {}).loan?.id === wallet.slice(2)))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
@@ -256,7 +276,7 @@ function filteredTxns(upcoming = false) {
 /* the Transactions page filtered to a loan account: what was charged to it (expenses paid with it) and the payments made on it */
 const loanViewId = () => (state.ui.wallet && state.ui.wallet.startsWith('l:') ? state.ui.wallet.slice(2) : '');
 function loanPaymentRows() {
-  const id = loanViewId(), l = id && D().loans.find((x) => x.id === id), { q, cat, occ } = state.ui, ql = q.trim().toLowerCase(); if (!l || cat || occ) return [];
+  const id = loanViewId(), l = id && D().loans.find((x) => x.id === id), { q, cat, occ } = state.ui, ql = q.trim().toLowerCase(); if (!l || cat || occ || (hhNames() && state.ui.who)) return [];
   return l.payments.filter((p) => p.kind !== 'charge' && !p.txn_id && p.date <= todayIso() &&   // a payment made from an account is listed as that account's expense instead
  (state.ui.allPeriods || inPeriod(p.date, state.ui.month)) && (!ql || __('Debt payment').toLowerCase().includes(ql)))
     .map((p) => ({ id: 'pay:' + p.id, type: 'loan_payment', amount_minor: p.amount_minor, currency: l.currency, occurred_at: p.date, note: __('Debt payment'), loan_id: l.id }));
@@ -267,7 +287,7 @@ const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions',
 /* days are collapsible: tap a day to open its transactions in place; Expand all / Hide all for the whole list. A search opens every matching day. */
 function txnListHtml() {
   const loanView = !!loanViewId(), rows = [...filteredTxns(), ...loanPaymentRows()];
-  const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet), up = filteredTxns(true).length;
+  const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet || (hhNames() && state.ui.who)), up = filteredTxns(true).length;
   const upBtn = up ? `<button type="button" class="see-upcoming" data-act="see-upcoming">${__('See upcoming transactions ({n})', { n: up })}</button>` : '';
   const reset = anyFilter ? `<button type="button" class="legend-btn reset-filters" data-act="reset-filters">${__('Reset filters')}</button>` : '';
   if (!rows.length) return (reset ? `<div class="day-tools">${reset}</div>` : '') + '<div class="empty">' + __('No transactions match.') + '</div>' + upBtn;
@@ -304,30 +324,87 @@ function viewDay(d) {
     <div class="txn-top"><input data-filter="dayq" placeholder="${__('Search')}" value="${esc(state.ui.dayQ || '')}" aria-label="${__('Search note or category')}"></div>
     <div class="list" id="day-list">${dayListHtml(d)}</div></section>`;
 }
+/* the three usual filters (category, occasion when the account has any, account); occasion and account get a search box above 5 choices */
+const occFilterOpts = () => `<option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" data-s="${esc(o.name)}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}`;
+const walFilterOpts = () => `<option value="">${__('All accounts')}</option><optgroup label="${__('Savings Account')}">${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>${stableHoldings().length ? `<optgroup label="${__('Investment Account')}">${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(coinLabel(h))}</option>`).join('')}</optgroup>` : ''}${D().loans.length ? `<optgroup label="${__('Debt Account')}">${D().loans.map((l) => `<option value="l:${l.id}" ${state.ui.wallet === 'l:' + l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</optgroup>` : ''}`;
+const txnFilterSelects = () => `<select data-filter="cat" class="${state.ui.cat ? 'f-on' : ''}" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}</select>
+      ${D().occasions.length ? `<select data-filter="occ" class="${state.ui.occ ? 'f-on' : ''}"${searchAttr(occFilterOpts(), 'Occasion not found')} aria-label="${__('Occasion')}">${occFilterOpts()}</select>` : ''}
+      <select data-filter="wallet" class="${state.ui.wallet ? 'f-on' : ''}"${searchAttr(walFilterOpts(), 'Account not found')} aria-label="${__('Account')}">${walFilterOpts()}</select>`;
+const whoSelect = () => `<select data-filter="who" class="${state.ui.who ? 'f-on' : ''}" aria-label="${__('Person')}"><option value="">${__('All people')}</option>${hhAuthors().map((p) => `<option value="${p.user_id}" ${state.ui.who === p.user_id ? 'selected' : ''}>${esc(hhName(p.user_id) || '?')}</option>`).join('')}</select>`;
+const FKEYS = ['cat', 'occ', 'wallet', 'who'];
+const fActive = () => FKEYS.filter((k) => state.ui[k] && (k !== 'who' || hhNames()));
+function fLabel(k) {
+  const v = state.ui[k];
+  if (k === 'cat') return v === 'none' ? 'Uncategorized' : (catOf(v)?.name || '');
+  if (k === 'occ') return occasionOf(v)?.name || '';
+  if (k === 'who') return hhName(v) || '?';
+  if (v.startsWith('h:')) { const h = stableHoldings().find((x) => x.id === v.slice(2)); return h ? coinLabel(h) : ''; }
+  if (v.startsWith('l:')) return (D().loans.find((x) => x.id === v.slice(2)) || {}).name || '';
+  return walletOf(v)?.name || '';
+}
+/* the person filter (2+ writers): all filters move into a sheet opened by the filter button in the search row; active ones show as chips that clear on a tap */
+const filterBtnHtml = () => { const n = fActive().length; return `<button type="button" class="filter-btn ${n ? 'on' : ''}" id="filter-btn" data-act="open-filters" aria-label="${__('Filters')}">${icon('filter')}${n ? `<i class="fcount">${n}</i>` : ''}</button>`; };
+const filtersAHtml = () => `<div class="filters-a" id="filters-a">${fActive().map((k) => `<button type="button" class="chip f-btn f-on" data-act="clear-filter" data-id="${k}" aria-label="${__('Clear filter')}">${esc(fLabel(k))} ✕</button>`).join('')}</div>`;
+const txnFiltersHtml = () => (hhNames() ? filtersAHtml() : `<div class="filters scroll-row">${txnFilterSelects()}</div>`);
+const showLabel = () => { const n = [...filteredTxns(), ...loanPaymentRows()].length; return n === 1 ? __('Show 1 transaction') : __('Show {n} transactions', { n }); };
+/* the sheet. The selects are the same ones with the same data-filter, so the page's change handler updates the list behind it */
+function filtersDialog() {
+  const f = (label, sel) => `<label class="field">${label}${sel}</label>`;
+  open(`<div data-form="txn-filters"><h2>${__('Filters')}</h2>${f(__('Category'), txnFilterSelects().match(/<select data-filter="cat".*?<\/select>/s)[0])}${D().occasions.length ? f(__('Occasion'), txnFilterSelects().match(/<select data-filter="occ".*?<\/select>/s)[0]) : ''}${f(__('Account'), txnFilterSelects().match(/<select data-filter="wallet".*?<\/select>/s)[0])}${f(__('Person'), whoSelect())}
+    <div class="actions"><button type="button" class="btn secondary" data-act="filters-reset">${__('Reset')}</button><button type="button" class="btn" id="filters-count" data-act="close">${showLabel()}</button></div></div>`);
+}
+/* after any filter changed: the list, the button, the chips and the sheet's count */
+function refreshFilterUi() {
+  const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml();
+  const a = $('#filters-a'); if (a) a.outerHTML = filtersAHtml();
+  const w = $('#filter-btn'); if (w) w.outerHTML = filterBtnHtml();
+  const b = $('#filters-count'); if (b) b.textContent = showLabel();
+}
 function viewTransactions() {
-  const all = !!state.ui.allPeriods, list = all ? D().transactions.filter((t) => t.occurred_at <= todayIso()) : inMonth(state.ui.month);
-  return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: all ? __('All periods') : monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
-  <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true, true)}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
-    <div class="filters scroll-row">
-      <select data-filter="cat" class="${state.ui.cat ? 'f-on' : ''}" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}</select>
-      ${D().occasions.length ? `<select data-filter="occ" class="${state.ui.occ ? 'f-on' : ''}" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" class="${state.ui.wallet ? 'f-on' : ''}" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option><optgroup label="${__('Savings Account')}">${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>${stableHoldings().length ? `<optgroup label="${__('Investment Account')}">${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(coinLabel(h))}</option>`).join('')}</optgroup>` : ''}${D().loans.length ? `<optgroup label="${__('Debt Account')}">${D().loans.map((l) => `<option value="l:${l.id}" ${state.ui.wallet === 'l:' + l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</optgroup>` : ''}</select></div>
+  return `${topbar('Report')}${reportTabs('transactions')}
+  <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true, true)}${hhNames() ? filterBtnHtml() : ''}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
+    ${txnFiltersHtml()}
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
+}
+
+const budgetCap = (b) => `<span class="badge ${b.status}">${b.status === 'ok' ? __('On track') : b.status === 'warning' ? __('Almost there') : __('Over budget')}</span>`;
+/* the Overall budget and By category cards; ro = read-only (Report > Analysis): no add or edit buttons */
+function overallBudgetCard(g, ro) {
+  return `<section class="card"><div class="card-head"><h2>${__('Overall budget')}</h2><div class="tools">${monthSelect()}${ro ? '' : `<button class="btn" data-act="add-budget">${__('+ Budget')}</button>`}</div></div>
+    ${g ? `<div class="big num">${money(g.spent, cur())} <span class="muted" style="font-size:18px;font-weight:500">${__('of {amount}', { amount: money(g.budget, cur()) })}</span></div>
+      <div class="bar" style="margin:14px 0 10px"><i class="${g.status}" style="width:${Math.min(100, g.pct)}%"></i></div>
+      <div class="budget-foot"><span class="muted">${g.remaining >= 0 ? __('{amount} left', { amount: money(g.remaining, cur()) }) : __('{amount} over', { amount: money(-g.remaining, cur()) })} · ${__('{pct}% used', { pct: Math.round(g.pct) })}</span><span class="budget-end">${budgetCap(g)}${ro ? '' : `<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">${__('Edit')}</button>`}</span></div>`
+      : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>`;
+}
+function categoryBudgetCard(rest, ro) {
+  return `<section class="card"><div class="card-head"><h2>${__('By category')}</h2>${ro ? '' : `<button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button>`}</div>
+    ${rest.length ? rest.map((b) => `<div class="brow tap-row" data-act="cat-txns" data-cat="${b.category_id}" tabindex="0" role="link" aria-label="${esc(__('See {name} transactions', { name: b.name }))}">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${budgetCap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>${ro ? '' : `<button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button>`}</div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>`;
+}
+/* Report has two pages: Transactions and Analysis (budget progress, Spending, Category trend, Money Flow) */
+const reportTabs = (on) => `<div class="tabs report-tabs" role="tablist" aria-label="${__('Report pages')}">${['transactions', 'analysis'].map((t) => `<button type="button" class="tab${on === t ? ' on' : ''}" role="tab" aria-selected="${on === t}" data-act="report-tab" data-tab="${t}">${__(t === 'transactions' ? 'Transactions' : 'Analysis')}</button>`).join('')}</div>`;
+function viewAnalysis() {
+  const k = state.ui.month, list = inMonth(k), exp = sumBy(list, 'expense'), net = sumBy(list, 'income') - exp;
+  const months = lastMonths(6), incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
+  const bs = budgetStatus(k);
+  return `${topbar('Report')}${reportTabs('analysis')}
+  <div class="grid">
+    ${overallBudgetCard(bs.find((b) => b.category_id === null), true)}${categoryBudgetCard(bs.filter((b) => b.category_id), true)}
+    <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools">${monthSelect()}<button class="chip" data-act="breakdown">${__('Details')}</button></div></div>
+      ${halfDonut(spendByCategory(k), exp)}</section>
+    ${trendCard()}
+    <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
+      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
+      ${flowChart(months, incs, exps)}</section>
+  </div>`;
 }
 
 function viewBudgets() {
   const bs = budgetStatus(state.ui.month), g = bs.find((b) => b.category_id === null), rest = bs.filter((b) => b.category_id);
   const over = bs.filter((b) => b.status === 'exceeded').length;
-  const cap = (b) => `<span class="badge ${b.status}">${b.status === 'ok' ? __('On track') : b.status === 'warning' ? __('Almost there') : __('Over budget')}</span>`;
   return `${topbar('Budgets', over ? __(over > 1 ? '{n} budgets exceeded in {month}' : '{n} budget exceeded in {month}', { n: over, month: monthLabel(state.ui.month) }) : __('Monthly limits for {month}', { month: monthLabel(state.ui.month) }))}
   <div class="stack">
-  <section class="card"><div class="card-head"><h2>${__('Overall budget')}</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-budget">${__('+ Budget')}</button></div></div>
-    ${g ? `<div class="big num">${money(g.spent, cur())} <span class="muted" style="font-size:18px;font-weight:500">${__('of {amount}', { amount: money(g.budget, cur()) })}</span></div>
-      <div class="bar" style="margin:14px 0 10px"><i class="${g.status}" style="width:${Math.min(100, g.pct)}%"></i></div>
-      <div class="budget-foot"><span class="muted">${g.remaining >= 0 ? __('{amount} left', { amount: money(g.remaining, cur()) }) : __('{amount} over', { amount: money(-g.remaining, cur()) })} · ${__('{pct}% used', { pct: Math.round(g.pct) })}</span><span class="budget-end">${cap(g)}<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">${__('Edit')}</button></span></div>`
-      : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>
-  <section class="card"><div class="card-head"><h2>${__('By category')}</h2><button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button></div>
-    ${rest.length ? rest.map((b) => `<div class="brow tap-row" data-act="cat-txns" data-cat="${b.category_id}" tabindex="0" role="link" aria-label="${esc(__('See {name} transactions', { name: b.name }))}">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
+  ${overallBudgetCard(g, false)}
+  ${categoryBudgetCard(rest, false)}
   <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><div class="tools"><button class="chip" data-act="occasion-history">${__('History')}</button><button class="btn" data-act="add-occasion-budget">${__('+ Add')}</button></div></div>
     ${(() => { const live = occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, state.ui.month)); return live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>'); })()}</section></div>`;
 }
@@ -383,28 +460,54 @@ function categoriesCard() {
   return `<section class="card"><div class="card-head"><h2>${__('Categories')}</h2><div class="tools">${D().categories.some((c) => c.archived) ? `<button class="chip" data-act="archived-cats">${__('Archived')}</button>` : ''}<button class="btn" data-act="add-cat">${__('+ Category')}</button></div></div>
     ${section('expense', __('Expense'), '#E5484D')}${section('income', __('Income'), '#1fa971')}</section>`;
 }
-function viewSettings() {
-  const p = D().profile;
-  return `${topbar('Settings', 'Profile, currency and privacy')}
-  <div class="stack">
-  ${categoriesCard()}
-  ${occasionsCard()}
-  ${recurringCard()}
-  <section class="card"><div class="card-head"><h2>${__('Profile')}</h2></div>
-    <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(p.name)}" aria-label="${__('Display name')}"></div></div>
+/* Settings is a hub (#/settings) and pages opened from it (#/settings/<page>). Each page shows the same cards as before, one topic per page. */
+const setTile = (route, ic, title, sub) => `<button type="button" class="set-tile" data-act="settings-open" data-route="${route}"><span class="set-ico">${icon(ic)}</span><span class="set-txt"><b>${title}</b><small>${sub}</small></span></button>`;
+const setRow = (route, ic, title) => `<button type="button" class="set-row" data-act="settings-open" data-route="${route}">${icon(ic)}<span class="set-txt"><b>${title}</b></span><span class="set-chev">${icon('chev')}</span></button>`;
+const setCount = (n, one, many, none) => (n === 0 && none ? none : n === 1 ? __(one, { n }) : __(many, { n }));
+function settingsHub() {
+  const p = D().profile, hh = hhAvailable();
+  const cats = D().categories.filter((c) => !c.archived).length, occs = occasionStatus().filter((o) => !o.archived).length, recs = (D().recurring || []).length;
+  const people = hh ? hhPeople().length || 1 : 0;
+  const tiles = [
+    setTile('categories', 'grid', __('Categories'), setCount(cats, '{n} category', '{n} categories', __('None yet'))),
+    setTile('occasions', 'calendar', __('Occasions'), occs ? __('{n} active', { n: occs }) : __('None yet')),
+    setTile('recurring', 'transfer', __('Recurring'), setCount(recs, '{n} rule', '{n} rules', __('None yet'))),
+    hh ? setTile('household', 'people', __('Household'), people === 1 ? __('Just you') : __('{n} people', { n: people })) : '',
+  ].join('');
+  return `${topbar('Settings', null, '#/overview')}
+  <div class="stack set-hub">
+  <button type="button" class="card set-id" data-act="settings-open" data-route="profile"><span class="avatar" aria-hidden="true">${esc((p.name || '?')[0].toUpperCase())}</span>
+    <span class="set-txt"><b>${esc(p.name)}</b>${state.auth.email ? `<small>${esc(state.auth.email)}</small>` : ''}</span>${hh ? `<span class="badge">${roleLabel(Cloud.household.status === 'member' ? Cloud.household.role : 'owner')}</span>` : ''}<span class="set-chev">${icon('chev')}</span></button>
+  <div class="set-tiles">${tiles}</div>
+  <section class="card set-list">${setRow('preferences', 'filter', __('Preferences'))}${setRow('legal', 'doc', __('Terms & privacy'))}</section>
+  <section class="card"><div class="form-row"><div>${__('Use sample data')}<small>${__('Try the app with demo numbers. Nothing is saved.')}</small></div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="${__('Use sample data')}"></label></div>
+    ${p.sample ? `<div class="form-row"><div>${__('Sample data saved earlier')}</div><button class="btn danger" data-act="remove-sample">${__('Remove')}</button></div>` : ''}</section>
+  <section class="card"><button type="button" class="btn secondary lg set-signout" data-act="signout">${__('Sign out')}</button></section>
+  ${!state.real && Cloud.configured ? `<div class="set-foot"><span class="pill">${__('Synced to your account')}</span></div>` : ''}</div>`;
+}
+const settingsPreferences = () => { const p = D().profile; return `<div class="stack"><section class="card">
     <div class="form-row"><div>${__('Reporting currency')}</div><div class="field"><select data-setting="currency" ${hhLocked()} aria-label="${__('Currency')}">${Object.keys(RATES).map((c) => `<option ${c === p.currency ? 'selected' : ''} data-list="${flagLabel(c)}">${c}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Budget period starts on')}</div><div class="field"><select data-setting="period" ${hhLocked()} aria-label="${__('Budget period starts on')}">${Array.from({ length: 28 }, (_, n) => `<option value="${n + 1}" ${n + 1 === periodDay() ? 'selected' : ''}>${n === 0 ? __('Day 1 (calendar month)') : __('Day {n}', { n: n + 1 })}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Language')}</div><div class="field"><select data-lang aria-label="${__('Language')}">${Object.entries(LANGS).map(([k, n]) => `<option value="${k}" ${k === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
     <div class="form-row"><div>${__('Appearance')}</div><div class="field"><select data-theme-select aria-label="${__('Appearance')}">${[['system', 'Match device'], ['light', 'Light'], ['dark', 'Dark']].map(([k, n]) => `<option value="${k}" ${k === THEME ? 'selected' : ''}>${__(n)}</option>`).join('')}</select></div></div></section>
-  <section class="card"><div class="card-head"><h2>${__('Smart tagging')}</h2></div>
-    <div class="form-row"><div>${__('AI category suggestions')}</div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section>
-  ${householdCard()}
-  <section class="card"><div class="card-head"><h2>${__('Account')}</h2></div>
-    <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div>
-    <div class="form-row"><div>${__('Sign out')}</div><button class="btn secondary" data-act="signout">${__('Sign out')}</button></div>
-    <div class="form-row"><div>${__('Sign out everywhere else')}</div><button class="btn secondary" data-act="revoke">${__('Sign out others')}</button></div>
-    <div class="form-row"><div>${__('Use sample data')}</div><label class="switch"><input type="checkbox" data-demo ${state.real ? 'checked' : ''} aria-label="${__('Use sample data')}"></label></div>
-    ${p.sample ? `<div class="form-row"><div>${__('Sample data saved earlier')}</div><button class="btn danger" data-act="remove-sample">${__('Remove')}</button></div>` : ''}</section></div>`;
+  <section class="card"><div class="form-row"><div>${__('AI category suggestions')}</div><label class="switch"><input type="checkbox" data-setting="ai" ${p.ai ? 'checked' : ''} aria-label="${__('AI tagging')}"></label></div></section></div>`; };
+const settingsProfile = () => `<div class="stack"><section class="card">
+    <div class="form-row"><div>${__('Display name')}</div><div class="field"><input data-setting="name" value="${esc(D().profile.name)}" aria-label="${__('Display name')}"></div></div>
+    <div class="form-row"><div>${__('Signed in as')}<small>${esc(state.auth.email)}</small></div><span class="badge ok">${__('Active now')}</span></div></section>
+  <section class="card set-other"><button type="button" class="btn secondary lg" data-act="revoke">${__('Sign out of other devices')}</button><small class="muted">${__('Ends your sign-in on every other phone or browser. This device stays signed in.')}</small></section></div>`;
+const settingsLegal = () => `<section class="card set-list"><a class="set-row" href="privacy.html">${icon('doc')}<span class="set-txt"><b>${__('Privacy Policy')}</b></span><span class="set-chev">${icon('chev')}</span></a><a class="set-row" href="terms.html">${icon('doc')}<span class="set-txt"><b>${__('Terms of Service')}</b></span><span class="set-chev">${icon('chev')}</span></a></section>`;
+const SETTINGS_PAGES = {
+  categories: ['Categories', () => `<div class="stack">${categoriesCard()}</div>`],
+  occasions: ['Occasions', () => `<div class="stack">${occasionsCard()}</div>`],
+  recurring: ['Recurring', () => `<div class="stack">${recurringCard() || `<section class="card"><div class="empty">${__('Nothing repeats yet. Choose a repeat when you add a transaction or a debt and it shows up here.')}</div></section>`}</div>`],
+  household: ['Household', () => (hhAvailable() ? `<div class="stack">${householdCard()}</div>` : '')],
+  preferences: ['Preferences', settingsPreferences],
+  profile: ['Profile', settingsProfile],
+  legal: ['Terms & privacy', settingsLegal],
+};
+function viewSettings() {
+  const pg = SETTINGS_PAGES[routeArg()], body = pg ? pg[1]() : '';
+  return body ? `${topbar(pg[0], null, '#/settings')}${body}` : settingsHub();   // an unknown page, or Household when there is none, shows the hub
 }
 
 const GOOGLE_LOGO = '<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3A12 12 0 1 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 1 0 44 24c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8A12 12 0 0 1 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44a20 20 0 0 0 13.5-5.2l-6.2-5.2A12 12 0 0 1 12.7 28l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3a12 12 0 0 1-4.1 5.6l6.2 5.2C37 39 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></svg>';

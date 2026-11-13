@@ -26,6 +26,15 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero .eye-btn'); await p.click('.hero .eye-btn'); await p.click('.hero .eye-btn');
   const hb = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'balance_visibility_changed'); assert.deepEqual(hb.map((e) => e.properties.hidden), [true, false], 'balance_visibility_changed carries hidden true then false'); assert(!hb.some((e) => Object.keys(e.properties).some((k) => /amount|balance|value|minor/i.test(k))), 'no amounts in the event');
   assert((await p.evaluate(() => window.__phEvents)).some((e) => e.event === 'button_clicked' && e.properties.action === 'toggle_hide_balance'), 'the eye button is tracked as a button click');
+  // Overview hero (Spent today): the budget line is a tracked button click; Report tabs and the missing-days card are too (only the tab is sent, never a date or amount)
+  await p.click('.hero-bud'); await p.waitForFunction(() => location.hash === '#/budgets'); await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('.report-tabs'); await p.click('.report-tabs .tab:nth-child(2)'); await p.waitForFunction(() => location.hash === '#/analysis');
+  await p.evaluate(() => { state.ui.nogap = null; try { localStorage.removeItem(nogapKey()); } catch (e) { /* ignore */ } const w = D().wallets[0]; D().transactions = [{ id: 'old1', type: 'expense', amount_minor: 1000, currency: w.currency, wallet_id: w.id, category_id: null, note: 'old', occurred_at: isoDate(new Date(Date.now() - 6 * 864e5)) }]; location.hash = '#/overview'; render(); });
+  await p.waitForSelector('.gap-skip'); await p.click('.gap-skip'); await p.click('.gap-add'); await p.waitForSelector('#dlg [name=amount]'); await p.evaluate(() => close());
+  const heroClicks = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'button_clicked'); const acts = heroClicks.map((e) => e.properties.action);
+  assert(acts.includes('hero_budget') && acts.includes('report_tab') && acts.includes('gap_skip') && acts.includes('gap_add'), 'hero budget line, Report tab and missing-days buttons are tracked: ' + acts.slice(-8));
+  assert.equal(heroClicks.find((e) => e.properties.action === 'report_tab').properties.tab, 'analysis'); assert(!acts.includes('hero_balance'), 'the Balance chip is gone');
+  const gapProps = heroClicks.filter((e) => /^gap_/.test(e.properties.action)).map((e) => Object.fromEntries(Object.entries(e.properties).filter(([k]) => !k.startsWith('$'))));
+  assert(gapProps.length === 2 && gapProps.every((o) => o.date === undefined && !Object.values(o).some((v) => /^20\d\d-\d\d-\d\d/.test(String(v)))), 'no date in the gap click events: ' + JSON.stringify(gapProps));
   const all = await p.evaluate(() => window.__phEvents);
   const tx = all.find((e) => e.event === 'expense_recorded'); assert(tx, 'expense_recorded'); assert.equal(tx.properties.type, 'expense'); assert.equal(tx.properties.payment_source, 'account'); assert.equal(tx.properties.is_recurring, false);
   assert(!all.some((e) => e.event === 'transaction_saved'), 'old event name is gone');
@@ -34,7 +43,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // household events: role only, never an email, name or id
   await p.evaluate(() => {
     Cloud.inviteMember = async () => ({ result: 'ok' }); Cloud.manageInvite = async () => ({ result: 'ok' }); Cloud.setRole = async () => {}; Cloud.removeMember = async () => {}; Cloud.leaveHousehold = async () => {};
-    location.hash = '#/settings';
+    location.hash = '#/settings/household';
   });
   await p.waitForSelector('[data-act=hh-invite]'); await p.click('[data-act=hh-invite]'); await p.waitForSelector('form[data-form=invite]');
   await p.fill('form[data-form=invite] [name=email]', 'secret.person@example.com'); await p.click('form[data-form=invite] label:has(input[value=viewer])'); await p.click('form[data-form=invite] [data-send]'); await p.waitForTimeout(300);
@@ -127,14 +136,23 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => transferDialog({ from: 'w:' + D().wallets[0].id, to: 'w:' + D().wallets[1].id })); await p.waitForSelector('form[data-form=transfer]'); await p.fill('#dlg [name=amount]', '55555'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
   const gx = await p.evaluate(() => D().transactions.find((t) => t.transfer_id && /Zzz Bank/.test(t.note)).transfer_id); await p.evaluate((g) => transferDialog(null, g), gx); await p.waitForSelector('[data-act=delete-transfer]'); await p.fill('#dlg [name=amount]', '66666'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
   await p.evaluate((g) => transferDialog(null, g), gx); await p.waitForSelector('[data-act=delete-transfer]'); await p.click('[data-act=delete-transfer]'); await p.waitForTimeout(300);
+  // coin transfer between investment accounts: named events with flags only (no quantities or account names)
+  await p.evaluate(() => { const a = D().investments.find((x) => x.name === 'Zzz Broker'), a2 = { id: uid(), name: 'Zzz Ledger', archived: false }; D().investments.push(a2); const h = { id: uid(), account_id: a.id, symbol: 'USDT', quantity: 5000, since: '2026-01', trades: [] }; D().holdings.push(h); save(); render(); holdingDialog(h); });
+  await p.waitForSelector('[name=mvqty]', { state: 'attached' }); await p.selectOption('#dlg select[name=account]', { label: 'Zzz Ledger' }); await p.fill('#dlg [name=mvqty]', '3333'); await p.fill('#dlg [name=mvfee]', '7'); await p.click('#dlg button[type=submit]'); await p.waitForTimeout(300);
+  await p.evaluate(() => coinTransferDialog(D().transactions.find((t) => t.transfer_id && /Zzz Broker → Zzz Ledger/.test(t.note)).transfer_id)); await p.waitForSelector('[data-act=delete-coin-transfer]'); await p.click('[data-act=delete-coin-transfer]'); await p.waitForTimeout(300);
   const tr = await p.evaluate(() => window.__phEvents);
   assert(tr.some((e) => e.event === 'cash_deposited' && e.properties.has_fee === true && e.properties.is_cross_currency === false), 'cash_deposited with has_fee');
   assert(tr.some((e) => e.event === 'cash_withdrawn' && e.properties.has_fee === false), 'cash_withdrawn');
   assert(tr.some((e) => e.event === 'transfer_recorded' && e.properties.involves_investment_cash === false), 'transfer_recorded'); assert(tr.some((e) => e.event === 'transfer_edited'), 'transfer_edited'); assert(tr.some((e) => e.event === 'delete_transfer'), 'delete_transfer');
+  assert(tr.some((e) => e.event === 'coin_transferred' && e.properties.has_fee === true && e.properties.is_partial === true && e.properties.asset_type === 'stablecoin' && e.properties.new_destination === true), 'coin_transferred with flags only'); assert(tr.some((e) => e.event === 'coin_transfer_deleted'), 'coin_transfer_deleted');
   assert(tr.some((e) => e.event === 'dialog_opened' && e.properties.form === 'cashx'), 'the Cash pop-up is tracked as a dialog');
   // random ids and timestamps are removed first: a UUID or a millisecond time can contain "1234" or "55555" by chance (seen as a rare failure)
   const trBlob = JSON.stringify(tr).replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID').replace(/"\$?(time|timestamp|\$session_id|\$window_id|\$insert_id|\$device_id|distinct_id|\$pageview_id|\$sdk_debug[a-z_]*)":("[^"]*"|[\d.]+)/g, '');
-  const leak = trBlob.match(/777777|1234\b|55555|66666|Zzz Broker|Zzz Bank/); assert(!leak, 'no amounts or names from transfers leaked: ' + (leak && trBlob.slice(Math.max(0, leak.index - 80), leak.index + 40)));
+  const leak = trBlob.match(/777777|1234\b|55555|66666|3333|Zzz Broker|Zzz Bank|Zzz Ledger/); assert(!leak, 'no amounts or names from transfers leaked: ' + (leak && trBlob.slice(Math.max(0, leak.index - 80), leak.index + 40)));
+  // Settings hub: a tile or row opens a page; the click carries the page code name only
+  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('.set-tile[data-route=categories]'); await p.click('.set-tile[data-route=categories]'); await p.waitForSelector('.cat-sec'); await p.waitForTimeout(150);
+  const so = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'button_clicked' && e.properties.action === 'settings_open');
+  assert(so.some((e) => e.properties.route === 'categories' && e.properties.page === 'settings'), 'settings_open click with route and page: ' + JSON.stringify(so)); assert(!JSON.stringify(so).match(/a@b\.co|Owner/), 'no name or email in the settings_open event');
   // sign-out resets the person
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-act=signout]');
   await p.click('[data-act=signout]'); await p.waitForSelector('.land'); await p.waitForTimeout(400);

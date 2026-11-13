@@ -2,6 +2,129 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 23 contents (main 73c040d)
+
+**Items in this release**
+- Feature: Settings hub, a short hub page with tiles and pages opened from it, no bottom bar on Settings (PR 86, `claude/settings-page-redesign-vwoklw`, Tier 2)
+- Docs/process: Release 22 record and COSTS row (PR 85); Copilot-unavailable fallback and release as its own session (PR 84)
+
+**Exact detail.** Range: 11ba2c6..c18c16e. 4 commits, 42 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- Settings is no longer one long scroll: a short hub with Categories, Occasions, Recurring and Household tiles, Preferences and Terms & privacy rows, the sample-data switch and Sign out; each topic opens on its own page with a back arrow. The Account card is gone (display name, email and "Sign out of other devices" are on the Profile page).
+
+**What a user can see change**
+Yes: 7 app files changed (prototype/app/activity.js, prototype/app/events-input.js, prototype/app/household.js, prototype/app/icons.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css).
+
+**Commits**
+- cd46dbe Settings hub: short hub page with tiles, pages opened from it, no bottom bar
+- 64c6aae COSTS: session cost for the move-asset fix (docs only)
+- 652abf3 Release 22 record: move-asset fix (docs only)
+- 1f57c28 Docs: Copilot-unavailable fallback and release as its own session
+
+**Files by area**
+- App (what users see) (7): prototype/app/activity.js, prototype/app/events-input.js, prototype/app/household.js, prototype/app/icons.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css
+- Tests (19): tests/e2e/analytics.js, tests/e2e/archcat.js, tests/e2e/cats.js, tests/e2e/darkshots.js, tests/e2e/debtedit.js, tests/e2e/debtrec.js, tests/e2e/household_activity.js, tests/e2e/household_labels.js, tests/e2e/idcrawl.js, tests/e2e/langsave.js, tests/e2e/loginstart.js, tests/e2e/occnobudget.js, tests/e2e/period.js, tests/e2e/recedit.js, tests/e2e/recurring.js, tests/e2e/run.js, tests/e2e/run_all.sh, tests/e2e/samplelocal.js, tests/e2e/settingshub.js
+- Docs and rules (16): context.md, docs/COSTS.md, docs/DEV_WORKFLOW.md, docs/EVENTS.md, docs/FEATURE_TESTS.md, docs/FIGMA.md, docs/RELEASES.md, docs/changes/2026-11-13-review-fallback-release-session.md, docs/changes/2026-11-13-settings-hub.md, docs/tasks/RELEASE.md, docs/workflows/TIER_1.md, docs/workflows/TIER_2.md, docs/workflows/TIER_3.md, docs/workflows/V2_PLAN.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** regression of staging at c18c16e: browser suite, staging smoke and real-database regression (create, cleanup) all passed; CI on PR 88 (e2e, tier) green. Production: https://stiver.io answers 200 and serves stiver-shell-73c040dc4e; production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io). Merged by the release session on the owner's word in chat.
+**Known gaps:** no Copilot review on PRs 84, 85, 86 (diff-only review of PR 86 found no bugs); no real-phone check and no `tools/staging_shot.js` proof of the Settings pages; on the Profile page in sample-data mode "Signed in as" is empty and "Sign out of other devices" is shown (same as the old Account card).
+
+## Release 22 contents (main 11ba2c6)
+
+**Items in this release**
+Fixes:
+- Moving an asset to another investment account no longer errors
+
+**Exact detail.** Range: 69b26c9..1f7b7a0. 6 commits, 15 files (the app change is 3 files; the rest is tests and docs).
+
+**What changed, in plain words** (the changelog line this release added)
+- 2026-11-13: Fix: moving an asset to another investment account no longer errors. "Move to account" in a holding's dialog only rewrote the account, so moving an asset into an account that already held it left two holdings with the same account + asset, which the database rejects. The two are now combined into one holding (quantity, events and a blended starting price add up); a move into an account without that asset is unchanged. Test `movehold`.
+
+**What a user can see change**
+Yes: 3 app files changed (prototype/app/events-submit.js, prototype/app/trades.js, prototype/i18n-id.js). Moving an asset into an account that already holds it now combines them and shows "Moved and combined with the ... already in that account".
+
+**Commits**
+- 2d9509a Fix error when moving an asset to an investment account that already holds it (PR 77)
+- d8c73f6 Fold change file into the changelog for the release (PR 80)
+- 07b8c1c, f0003af, a0e364c, 715c884: docs only, from other sessions (Release 21 record, COSTS, release prompt; PRs 79 and 81)
+
+**Files by area**
+- App (what users see) (3): prototype/app/events-submit.js, prototype/app/trades.js, prototype/i18n-id.js
+- Tests (2): tests/e2e/movehold.js, tests/e2e/run_all.sh
+- Docs and rules (10): context.md, docs/CHANGELOG.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/RELEASES.md, docs/changes/2026-11-13-release-prompt.md, docs/learning-archive.md, docs/tasks/RELEASE.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** full browser suite passed locally before and after merging staging; `tools/regression.js` on staging (stiver-shell-3bc4e3bc87): browser suite, staging smoke, real-database regression create and cleanup all passed; CI tier + e2e green on the release PR head 1f7b7a0 (PR 82). Production serves stiver-shell-11ba2c66d3; production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io).
+**Known gaps:** the automated PR reviewer did not review PR 77 (owner waived it, Copilot quota exhausted); the owner has not hand-checked the move-asset merge on staging, and neither the staging smoke nor the production smoke test exercises it (the browser test `movehold` does, against a stand-in database with no unique keys), so the fix is not yet confirmed against the real database's unique key.
+
+## Release 21 contents (main 69b26c9)
+
+**Items in this release**
+Features:
+- Names and person filter on Transactions only with 2+ writers
+- Search in the Occasion and Account lists
+
+**Exact detail.** Range: b19a760..75ec1b8. 2 commits, 15 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-13: Names and person filter on Transactions only with 2+ writers. The first name under a Transactions row is shown only when the owner plus Editors number two or more (Viewers do not count); then a person filter (owner, Editors, a removed member with entries) is added; with 2+ writers all filters (Category, Occasion, Account, Person) move into a sheet opened by a filter button in the search row, and active filters show as chips that clear on a tap. Entries without a creator count as the owner's. e2e `household_labels` extended; branch claude/txn-who-filter. The "read-only" text is removed from Transactions rows (other people's rows still open a read-only detail); "Expand all"/"Hide all" have no background in any state.
+- 2026-11-13: Search in the Occasion and Account lists. When there are more than 5 special occasions or more than 5 accounts (Savings, Investment and Debt together), the list opens with a Search box on top, like the Category list: in the Transactions filters (row and filter sheet), in Add/Edit transaction (Account, Special occasion) and in Transfer (From, To). Account search matches the name only. Also fixed: the "not found" note only showed in lists with an add entry, so it never appeared in the Category filter; it now shows at the end of the list (new strings "Occasion not found", "Account not found" with Bahasa Indonesia). No data or sync change. Test `searchlists` (new); `dropdown` unchanged. Branch `claude/wonderful-gates-b8v4o6`.
+
+**What a user can see change**
+Yes: 6 app files changed (prototype/app/events-input.js, prototype/app/transfers.js, prototype/app/ui-helpers.js, prototype/app/views.js, prototype/dropdown.js, prototype/i18n-id.js).
+
+**Commits**
+- 933b481 Fold change files into the changelog for the release
+- 3c99d1d Search box in the Occasion and Account lists above 5 choices
+
+**Files by area**
+- App (what users see) (6): prototype/app/events-input.js, prototype/app/transfers.js, prototype/app/ui-helpers.js, prototype/app/views.js, prototype/dropdown.js, prototype/i18n-id.js
+- Tests (2): tests/e2e/run_all.sh, tests/e2e/searchlists.js
+- Docs and rules (7): context.md, docs/CHANGELOG.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/changes/2026-11-13-txn-who-filter.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** browser suite 61/61 (local) and CI tier+e2e green; staging smoke, real-database regression create+cleanup passed on 75ec1b8; https://stiver.io answers 200 and serves stiver-shell-69b26c9395. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** Copilot review did not run (quota); owner has not hand-checked staging
+
+## Release 20 contents (main b7e2ce2)
+
+**Items in this release**
+Features:
+- Overview hero "Spent today"
+
+**Exact detail.** Range: 3652217..99760e4. 4 commits, 29 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-13: Overview hero "Spent today". The Overview hero card now shows today's expenses under a plain "Spent today" label (no tooltip) (not income, transfers, earlier days or upcoming entries) in the reporting currency, with the currency selector beside it, a `Balance ›` chip (to Portfolio) and, under the amount, the current period's overall budget as "{left} left this month · {n} days to go" (or "{x} over budget", or "{spent} spent · Set a monthly budget ›") with a thin bar that opens Budgets. Total Balance, its % pill and the Budgets card (with `fitOverviewBudgets` and the `.ov-*` CSS) are gone from Overview; the eye now masks the two hero amounts (the bar stays). Display only, no stored value or sync change (Tier 2). New `spenthero` test (replaces `ovbud`); `budgetbar`, `hidebal`, `ovocc`, `trend`, `donut`, `sample`, `analytics` updated; new click actions `hero_budget`, `hero_balance`. Branch `claude/laughing-maxwell-mf9y2z`.
+
+**What a user can see change**
+Yes: 6 app files changed (prototype/app/activity.js, prototype/app/charts.js, prototype/app/events-input.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css).
+
+**Commits**
+- 0fa568b Fold change files for the Spent today release
+- 071bd61 Spent today label is plain text: remove the dotted underline and tooltip
+- 25b4af6 Overview hero shows Spent today with budget line, Balance chip and currency selector; Budgets card removed
+- 01cf91a Release record 19: hide balance (docs only)
+
+**Files by area**
+- App (what users see) (6): prototype/app/activity.js, prototype/app/charts.js, prototype/app/events-input.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css
+- Tests (13): tests/e2e/affects.json, tests/e2e/analytics.js, tests/e2e/budgetbar.js, tests/e2e/coin.js, tests/e2e/donut.js, tests/e2e/handoff.js, tests/e2e/hidebal.js, tests/e2e/ovbud.js, tests/e2e/ovocc.js, tests/e2e/run_all.sh, tests/e2e/sample.js, tests/e2e/spenthero.js, tests/e2e/trend.js
+- Docs and rules (10): context.md, docs/ANALYTICS.md, docs/CHANGELOG.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/RELEASES.md, docs/tasks/2026-11-11-hide-balance.md, docs/tasks/2026-11-13-overview-spent-hero.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** e2e 60 of 60 local; CI e2e and tier green on PR 68 and PR 70; staging build checked; https://stiver.io answers 200 and serves stiver-shell-b7e2ce27f8. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** Copilot review did not run (quota); owner staging check not done
+
 ## Release 19 contents (main 3652217)
 
 **Items in this release**

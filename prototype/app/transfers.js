@@ -32,12 +32,12 @@ function transferDialog(preset, editGid) {
   const cur0 = editGid ? xferRead(editGid) : null;
   const ends = [...ws.map((w) => 'w:' + w.id), ...cashes.map((h) => 'h:' + h.id)];
   const from = (cur0 && cur0.from) || preset?.from || ends[0], to = (cur0 && cur0.to) || preset?.to || ends.find((e) => e !== from);
-  const opt = (v, sel) => { const e = xferEnd(v); return `<option value="${v}" ${v === sel ? 'selected' : ''}>${esc(e.name)} (${esc(e.ccy)}) · ${money(e.bal, e.ccy)}</option>`; };
+  const opt = (v, sel) => { const e = xferEnd(v); return `<option value="${v}" data-s="${esc(e.name)}" ${v === sel ? 'selected' : ''}>${esc(e.name)} (${esc(e.ccy)}) · ${money(e.bal, e.ccy)}</option>`; };
   const group = (sel) => `<optgroup label="${__('Accounts')}">${ws.map((w) => opt('w:' + w.id, sel)).join('')}</optgroup>${cashes.length ? `<optgroup label="${__('Investment cash')}">${cashes.map((h) => opt('h:' + h.id, sel)).join('')}</optgroup>` : ''}`;
   open(`<h2>${editGid ? __('Edit transfer') : __('Transfer between accounts')}</h2><form data-form="transfer" data-gid="${editGid || ''}" style="display:contents">
     ${editGid ? '' : kindSeg('transfer')}
-    <label class="field">${__('From')}<select name="from">${group(from)}</select></label>
-    <label class="field">${__('To')}<select name="to">${group(to)}</select></label>
+    <label class="field">${__('From')}<select name="from"${searchAttr(group(from), 'Account not found')}>${group(from)}</select></label>
+    <label class="field">${__('To')}<select name="to"${searchAttr(group(to), 'Account not found')}>${group(to)}</select></label>
     <div class="two"><label class="field"><span data-send-label>${__('Amount sent')}</span><input name="amount" type="number" inputmode="decimal" min="0" step="any" required value="${cur0 ? cur0.sent : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${cur0 ? cur0.date : isoDate(new Date())}"></label></div>
     <label class="field" data-recv hidden><span data-recv-label>${__('Amount received')}</span><input name="received" type="number" inputmode="decimal" min="0" step="any" value="${cur0 ? cur0.received : ''}"></label>
@@ -96,6 +96,16 @@ function saveTransfer({ from, to, amount, received, fee, date, note, editGid, re
   sortTxns();
   state.ui.month = periodKeyOf(date) <= currentPeriod() ? periodKeyOf(date) : state.ui.month;
   return { ok: true };
+}
+/* details of a stablecoin / crypto move between investment accounts: what was sent, the network fee, what arrived, with Delete */
+function coinTransferDialog(gid) {
+  const ev = coinEv(gid), at = (id) => { for (const h of D().holdings) { const tr = h.trades.find((x) => x.id === id); if (tr) return { h, tr }; } return null; };
+  const o = at(ev.out), f = at(ev.fee), i = at(ev.inn); if (!o || !i) return;
+  const sym = assetInfo(o.h.symbol).symbol, fee = f ? f.tr.quantity : 0, row = (l, v) => `<div class="hs-row"><span>${l}</span><b class="num">${v}</b></div>`;
+  open(`<h2>${esc(accountName(o.h.account_id))} → ${esc(accountName(i.h.account_id))}</h2>
+    <div class="hold-sum">${row(__('Asset'), esc(assetInfo(o.h.symbol).name))}${row(__('Sent'), `${qtyFmt(r12(o.tr.quantity + fee))} ${esc(sym)}`)}${row(__('Network fee'), `${qtyFmt(fee)} ${esc(sym)}`)}${row(__('Received'), `${qtyFmt(i.tr.quantity)} ${esc(sym)}`)}${row(__('Date'), esc(new Date(o.tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' })))}</div>
+    <p class="hint">${__('The fee counts as spending (category Fee); the move itself does not. To change it, delete it and record it again.')}</p>
+    <div class="actions"><button type="button" class="btn danger" data-act="delete-coin-transfer" data-id="${gid}">${__('Delete')}</button></div>`);
 }
 /* take a saved transfer apart: restore the Cash balance it moved and remove its legs and fee; false when that cash was already spent */
 function removeTransferGroup(gid) {
@@ -156,9 +166,9 @@ function acctOptions(type, selected, noNew) {
   const fresh = type === 'income' && !noNew ? ['USDT', 'USDC'].flatMap((sym) => (accts.length ? accts : [{ id: '', name: '' }]).filter((a) => !D().holdings.some((h) => h.account_id === a.id && h.symbol === sym)).map((a) => ({ sym, a }))) : [];
   const sel = (v) => (v === selected ? 'selected' : '');
   const loans = type === 'expense' ? activeLoans() : [];   // a loan account can pay for expenses; what is paid raises the loan
-  return (ws.length ? `<optgroup label="${__('Savings Account')}">${ws.map((w) => `<option value="${w.id}" ${sel(w.id)}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</optgroup>` : '')
-    + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" ${sel('h:' + h.id)}>${esc(coinLabel(h))}</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '')
-    + (loans.length ? `<optgroup label="${__('Debt Account')}">${loans.map((l) => `<option value="l:${l.id}" ${sel('l:' + l.id)}>${esc(l.name)} (${esc(l.currency)})</option>`).join('')}</optgroup>` : '');
+  return (ws.length ? `<optgroup label="${__('Savings Account')}">${ws.map((w) => `<option value="${w.id}" data-s="${esc(w.name)}" ${sel(w.id)}>${esc(w.name)} (${esc(w.currency)})</option>`).join('')}</optgroup>` : '')
+    + (coins.length || fresh.length ? `<optgroup label="${__('Investment Account')}">${coins.map((h) => `<option value="h:${h.id}" data-s="${esc(coinLabel(h))}" ${sel('h:' + h.id)}>${esc(coinLabel(h))}</option>`).join('')}${fresh.map(({ sym, a }) => `<option value="n:${sym}:${a.id}" ${sel('n:' + sym + ':' + a.id)}>${a.name ? esc(a.name) : __('Crypto')} (${sym})</option>`).join('')}</optgroup>` : '')
+    + (loans.length ? `<optgroup label="${__('Debt Account')}">${loans.map((l) => `<option value="l:${l.id}" data-s="${esc(l.name)}" ${sel('l:' + l.id)}>${esc(l.name)} (${esc(l.currency)})</option>`).join('')}</optgroup>` : '');
 }
 /* the amount's unit and step follow the chosen account */
 function syncTxnUnit(form) {
@@ -177,7 +187,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
   open(`<h2>${t ? __('Edit transaction') : __('Add transaction')}</h2>${t && hhMulti() && t.by ? `<p class="muted hh-who-line">${whoLine(t)}</p>` : ''}
   <form data-form="txn" data-id="${t?.id || ''}" style="display:contents">
     <div class="seg ${t ? '' : 'seg4'}"><label><input type="radio" name="type" value="expense" ${type === 'expense' ? 'checked' : ''}>${__('Expense')}</label><label><input type="radio" name="type" value="income" ${type === 'income' ? 'checked' : ''}>${__('Income')}</label>${t ? '' : ('<label><input type="radio" name="type" value="invest">' + __('Invest') + '</label><label><input type="radio" name="type" value="transfer">' + __('Transfer') + '</label>')}</div>
-    <label class="field">${__('Account')}<select name="wallet">${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? (t.loan_id ? 'l:' + t.loan_id : t.wallet_id) : (recallAcct(type, acctOptions(type, '')) || (ws.find((w) => w.currency === cur()) || ws[0]).id))}</select></label>
+    <label class="field">${__('Account')}<select name="wallet"${tcoin ? '' : searchAttr(acctOptions(type, ''), 'Account not found')}>${tcoin ? coinOption(tcoin, true) : acctOptions(type, t ? (t.loan_id ? 'l:' + t.loan_id : t.wallet_id) : (recallAcct(type, acctOptions(type, '')) || (ws.find((w) => w.currency === cur()) || ws[0]).id))}</select></label>
     <div class="two"><label class="field"><span data-amt-label>${__('Amount ({cur})', { cur: esc(unit) })}</span><input name="amount" type="number" inputmode="decimal" min="0" step="${step}" required value="${tcoin ? tcoin.trades.find((x) => x.id === t.trade_id).quantity : t ? toMajor(t.amount_minor, c) : ''}"></label>
       <label class="field">${__('Date')}<input name="date" type="date" required value="${date0}"></label></div>
     <label class="field">${__('Category')}<select name="category" data-search data-empty="${__('Category not found')}" data-prev="${t?.category_id || ''}">${catOptions(type, t?.category_id, true)}</select></label>
@@ -186,7 +196,7 @@ function txnDialog(t, presetType, presetOccasion, presetDate) {
         ${iconField('qc_icon', __('Icon'), '🏷️')}</div>${iconPicks('qc_icon', '🏷️')}
       <label class="field">${__('Inside')}<select name="qc_parent">${quickParentOptions(type)}</select></label>
       <div class="actions"><button type="button" class="btn secondary" data-act="quick-cat-cancel">${__('Cancel')}</button><button type="button" class="btn" data-act="quick-cat-add">${__('Add category')}</button></div></div>
-    ${live.length ? `<label class="field">${__('🎉 Special occasion (optional)')}<select name="occasion"><option value="">${__('None')}</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
+    ${live.length ? `<label class="field">${__('🎉 Special occasion (optional)')}<select name="occasion"${live.length > SEARCH_OVER ? ` data-search data-empty="${__('Occasion not found')}"` : ''}><option value="">${__('None')}</option>${live.map((o) => `<option value="${o.id}" ${o.id === occ0 ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}</select></label>` : ''}
     <label class="field">${__('Note')}<textarea name="note" maxlength="140" placeholder="${__('e.g. Coffee shop')}">${esc(t?.note || '')}</textarea></label>
     ${t ? '' : repeatField()}
     <div class="actions">${t ? '<button type="button" class="btn danger" data-act="delete-txn" data-id="' + t.id + ('">' + __('Delete') + '</button>') : ''}<button class="btn" type="submit">${__('Save')}</button></div></form>`);

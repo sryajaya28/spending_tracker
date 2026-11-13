@@ -55,7 +55,7 @@ function hideWriteControls() {
     b.remove();
   });
 }
-const VIEWS = { activity: viewActivity, overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
+const VIEWS = { activity: viewActivity, overview: viewOverview, transactions: () => (/^\d{4}-\d{2}-\d{2}$/.test(routeArg()) ? viewDay(routeArg()) : viewTransactions()), analysis: viewAnalysis, budgets: viewBudgets, portfolio: viewPortfolio, settings: viewSettings };
 function render() {
   const app = $('#app');
   const a = state.auth;
@@ -72,14 +72,13 @@ function render() {
   }
   if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); state.ui.allPeriods = false; }   // a new start day (or switching demo/real data) re-selects the current period
   const r = VIEWS[route()] ? route() : 'overview';
-  app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${bottomNav()}`;
+  app.innerHTML = `<div class="shell">${sidebar()}<main class="main${r === 'settings' ? ' no-nav' : ''}">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${r === 'settings' ? '' : bottomNav()}`;   // Settings has no bottom bar: its own back arrow leads out
   hideWriteControls();
   if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);
   if (r === 'portfolio' && state.chart2 && $('#pnl')) bindValue(state.chart2.months, state.chart2.series, state.chart2.vc, { id: 'pnl', neg: true });   // the asset page (#/portfolio/<id>) has no value chart
-  if (r === 'overview') {
+  if (r === 'analysis') {
     const months = lastMonths(6);
     bindFlow(months, months.map((m) => sumBy(inMonth(m), 'income')), months.map((m) => sumBy(inMonth(m), 'expense')));
-    fitOverviewBudgets(); requestAnimationFrame(fitOverviewBudgets); if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitOverviewBudgets);   // again once the layout and fonts settle
   }
 }
 

@@ -15,13 +15,17 @@ document.addEventListener('click', (e) => {
   else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
   else if (act === 'toggle-day') { const g = el.closest('.day-group'), on = !g.classList.contains('open'); g.classList.toggle('open', on); el.setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(id); else state.ui.openDays.delete(id); }
   else if (act === 'cat-txns') { Object.assign(state.ui, { cat: el.dataset.cat, q: '', occ: '', wallet: '', allPeriods: false }); forgetScroll('#/transactions'); location.hash = '#/transactions'; }   // a budget row opens its transactions for the same period
-  else if (act === 'reset-filters') { Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); render(); }
+  else if (act === 'reset-filters') { Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '', who: '' }); render(); }
+  else if (act === 'open-filters') filtersDialog();  // the filter button (2+ writers)
+  else if (act === 'clear-filter') { state.ui[id] = ''; Analytics.track('filter_changed', { filter: id, active: false }); refreshFilterUi(); }
+  else if (act === 'filters-reset') { Object.assign(state.ui, { cat: '', occ: '', wallet: '', who: '' }); filtersDialog(); refreshFilterUi(); }
   else if (act === 'days-all' || act === 'days-none') { $$('#txn-list .day-group').forEach((g) => { const on = act === 'days-all'; g.classList.toggle('open', on); $('.day-row', g).setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(g.dataset.day); else state.ui.openDays.delete(g.dataset.day); }); }
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
-  else if (act === 'view-transfer') transferDialog(null, id);
+  else if (act === 'view-transfer') { if (isCoinTransfer(id)) coinTransferDialog(id); else transferDialog(null, id); }
+  else if (act === 'delete-coin-transfer') { if (!removeCoinTransfer(id)) { toast(__("Can't delete: the other account no longer holds the coins it received")); return; } Analytics.track('coin_transfer_deleted'); save(); close(); render(); toast('Transfer deleted'); }
   else if (act === 'delete-transfer') { if (!removeTransferGroup(id)) { toast(__("Can't delete: the cash has already been spent")); return; } Analytics.track('delete_transfer'); save(); close(); render(); toast('Transfer deleted'); }
-  else if (act === 'edit-txn') { const tx = find(D().transactions); if (!canEditRec(tx)) { txnReadDialog(tx); return; } if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
+  else if (act === 'edit-txn') { const tx = find(D().transactions); if (!canEditRec(tx)) { txnReadDialog(tx); return; } if (tx.transfer_id && xferRead(tx.transfer_id)) { transferDialog(null, tx.transfer_id); return; } { const cg = coinXferOfFee(tx); if (cg) { coinTransferDialog(cg); return; } } if (isSaleRecord(tx)) { toast(__('This follows the sale. Change or undo the sale on the asset.')); return; } txnDialog(tx); }
   else if (act === 'rec-toggle') { close(); const r = find(D().recurring); r.active = r.active === false; if (r.active) { const today = isoDate(new Date()); while (r.next < today) r.next = nextAfter(r, r.next); } save(); render(); }   // resuming skips what was missed while paused
   else if (act === 'rec-manage') ruleDialog(find(D().recurring));
   else if (act === 'rec-del') { close(); hhLastDel = find(D().recurring)?.note || find(D().recurring)?.name || ''; D().recurring = D().recurring.filter((r) => r.id !== id); save(); render(); toast('Recurring entry deleted'); }
@@ -97,7 +101,12 @@ document.addEventListener('click', (e) => {
   else if (act === 'revoke') Cloud.signOut('others').then(({ error }) => toast(error ? error.message : 'Other devices signed out'));
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
+  else if (act === 'settings-open') location.hash = '#/settings/' + el.dataset.route;   // the Settings hub: each tile or row opens one page
   else if (act === 'goto') { if (el.dataset.route === 'activity') { actState.rows = null; actState.who = ''; actState.type = 'all'; } location.hash = '#/' + el.dataset.route; }
+  else if (act === 'report-tab') location.hash = '#/' + el.dataset.tab;   // Report: Transactions | Analysis
+  else if (act === 'gap-add') txnDialog(null, 'expense', undefined, date);   // Overview missing-days card: Add for that day
+  else if (act === 'gap-skip') { nogapMark(date); render(); }   // "Nothing to add": remembered on this device only
+  else if (act === 'hero-budget') location.hash = '#/budgets';   // Overview hero sub-line / bar
   else if (act === 'demo-on') { Analytics.track('demo_on', {}, true); setDemo(true); }
   else if (act === 'onb-skip') skipOnboarding();
   else if (act === 'congrats-add') { endCongrats(); txnDialog(null, 'expense'); }   // on to the normal Overview, with the Add transaction pop-up open
@@ -155,7 +164,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'demo-off') { Analytics.track('demo_off', {}, true); setDemo(false); }
   else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); if (e.key === 'Escape' && state.ui.walletMenu) { state.ui.walletMenu = null; render(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act], .hero-bud[data-act]')) e.target.click(); if (e.key === 'Escape' && state.ui.walletMenu) { state.ui.walletMenu = null; render(); } });
 
 document.addEventListener('input', (e) => {
   const t = e.target, f = t.form;
@@ -173,7 +182,7 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
   else if (t.matches('[data-bind="pnlPeriod"]')) { location.hash = '#/portfolio/pnl-' + t.value; }
   // (the search box is handled on input: a change event from a removed, focused box must not bring its old text back)
-  else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
+  else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); refreshFilterUi(); }
   else if (t.name === 'category' && (t.form?.dataset.form === 'txn' || t.form?.dataset.form === 'budget')) {
     const q = $('.quick-cat', t.form); if (!q) return;
     if (t.value === '__new') { t.value = t.dataset.prev || ''; q.hidden = false; q.scrollIntoView({ block: 'nearest' }); }   // open the add-category form; no keyboard until a field is tapped
@@ -188,7 +197,7 @@ document.addEventListener('change', (e) => {
     else if (t.value === 'transfer') transferDialog();
     else {
       $('select[name=category]', t.form).innerHTML = catOptions(t.value, '', true); $('select[name=category]', t.form).dataset.prev = ''; $('.quick-cat', t.form).hidden = true; $('select[name=qc_parent]', t.form).innerHTML = quickParentOptions(t.value);
-      if (!t.form.dataset.id) { const w = t.form.wallet, keep = recallAcct(t.value, acctOptions(t.value, '')) || w.value; w.innerHTML = acctOptions(t.value, keep); if (![...w.options].some((o) => o.value === keep)) w.selectedIndex = 0; syncTxnUnit(t.form); }   // "new" coin options exist for income only
+      if (!t.form.dataset.id) { const w = t.form.wallet, keep = recallAcct(t.value, acctOptions(t.value, '')) || w.value; w.innerHTML = acctOptions(t.value, keep); syncSearch(w, 'Account not found'); if (![...w.options].some((o) => o.value === keep)) w.selectedIndex = 0; syncTxnUnit(t.form); }   // "new" coin options exist for income only
     }
   }
   else if (t.matches('[data-pick-type]')) { state.ui.pickType = t.value; syncPickType(t.form); runAssetSearch(); }
@@ -202,6 +211,7 @@ document.addEventListener('change', (e) => {
   else if (t.form?.dataset.form === 'cashx' && t.name === 'account') { delete t.form.received.dataset.touched; syncCashForm(t.form); }
   else if (t.name === 'source' && t.form?.dataset.form === 'trade') syncTradeForm(t.form, false);
   else if (t.name === 'fund' && t.form?.dataset.form === 'holding') syncFund(t.form);
+  else if (t.name === 'account' && t.form?.dataset.form === 'holding' && t.form.dataset.id) syncMoveBox(t.form);
   else if (t.form?.dataset.form === 'recedit' && !t.form.dataset.debt && ['wallet', 'from', 'fund'].includes(t.name)) syncRuleUnit(t.form);
   else if (t.name === 'txkind') {
     const here = t.form?.dataset.form;   // 'holding' is the Invest dialog

@@ -98,6 +98,8 @@ document.addEventListener('click', (e) => {
   else if (act === 'edit-wallet') walletDialog(walletOf(id));
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'goto') { if (el.dataset.route === 'activity') { actState.rows = null; actState.who = ''; actState.type = 'all'; } location.hash = '#/' + el.dataset.route; }
+  else if (act === 'hero-balance') location.hash = '#/portfolio';   // Overview hero chip: Balance lives on Portfolio (Net worth)
+  else if (act === 'hero-budget') location.hash = '#/budgets';   // Overview hero sub-line / bar
   else if (act === 'demo-on') { Analytics.track('demo_on', {}, true); setDemo(true); }
   else if (act === 'onb-skip') skipOnboarding();
   else if (act === 'congrats-add') { endCongrats(); txnDialog(null, 'expense'); }   // on to the normal Overview, with the Add transaction pop-up open
@@ -155,7 +157,7 @@ document.addEventListener('click', (e) => {
   else if (act === 'demo-off') { Analytics.track('demo_off', {}, true); setDemo(false); }
   else if (act === 'remove-sample') { if (confirm(__('Remove the sample data? Anything you added yourself stays.'))) removeSample(); }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act]')) e.target.click(); if (e.key === 'Escape' && state.ui.walletMenu) { state.ui.walletMenu = null; render(); } });
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.row[data-act], .hero-bud[data-act]')) e.target.click(); if (e.key === 'Escape' && state.ui.walletMenu) { state.ui.walletMenu = null; render(); } });
 
 document.addEventListener('input', (e) => {
   const t = e.target, f = t.form;

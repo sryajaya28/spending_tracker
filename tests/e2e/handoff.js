@@ -13,7 +13,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const signIn = async (p) => { await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]'); await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell'); };
   // desktop browser: no button anywhere
   { const { ctx, p } = await mk({}); await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); assert.equal(await p.$$eval('.install-cta', (e) => e.length), 0, 'no button on desktop'); await signIn(p); assert.equal(await p.$$eval('.install-cta', (e) => e.length), 0); await ctx.close(); }
-  // mobile browser: the button is on the landing page (below Sign in) and on Overview (below Total Balance)
+  // mobile browser: the button is on the landing page (below Sign in) and on Overview (below the Spent today hero)
   const { ctx, p } = await mk({ mobile: true });
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land');
   assert.equal(await p.$$eval('.install-cta', (e) => e.length), 1, 'button on the landing page'); assert((await p.innerText('.install-cta')).includes('Use mobile app experience'));

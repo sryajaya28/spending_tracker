@@ -2,6 +2,36 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 22 contents (main 11ba2c6)
+
+**Items in this release**
+Fixes:
+- Moving an asset to another investment account no longer errors
+
+**Exact detail.** Range: 69b26c9..1f7b7a0. 6 commits, 15 files (the app change is 3 files; the rest is tests and docs).
+
+**What changed, in plain words** (the changelog line this release added)
+- 2026-11-13: Fix: moving an asset to another investment account no longer errors. "Move to account" in a holding's dialog only rewrote the account, so moving an asset into an account that already held it left two holdings with the same account + asset, which the database rejects. The two are now combined into one holding (quantity, events and a blended starting price add up); a move into an account without that asset is unchanged. Test `movehold`.
+
+**What a user can see change**
+Yes: 3 app files changed (prototype/app/events-submit.js, prototype/app/trades.js, prototype/i18n-id.js). Moving an asset into an account that already holds it now combines them and shows "Moved and combined with the ... already in that account".
+
+**Commits**
+- 2d9509a Fix error when moving an asset to an investment account that already holds it (PR 77)
+- d8c73f6 Fold change file into the changelog for the release (PR 80)
+- 07b8c1c, f0003af, a0e364c, 715c884: docs only, from other sessions (Release 21 record, COSTS, release prompt; PRs 79 and 81)
+
+**Files by area**
+- App (what users see) (3): prototype/app/events-submit.js, prototype/app/trades.js, prototype/i18n-id.js
+- Tests (2): tests/e2e/movehold.js, tests/e2e/run_all.sh
+- Docs and rules (10): context.md, docs/CHANGELOG.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/RELEASES.md, docs/changes/2026-11-13-release-prompt.md, docs/learning-archive.md, docs/tasks/RELEASE.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** full browser suite passed locally before and after merging staging; `tools/regression.js` on staging (stiver-shell-3bc4e3bc87): browser suite, staging smoke, real-database regression create and cleanup all passed; CI tier + e2e green on the release PR head 1f7b7a0 (PR 82). Production serves stiver-shell-11ba2c66d3; production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io).
+**Known gaps:** the automated PR reviewer did not review PR 77 (owner waived it, Copilot quota exhausted); the owner has not hand-checked the move-asset merge on staging, and neither the staging smoke nor the production smoke test exercises it (the browser test `movehold` does, against a stand-in database with no unique keys), so the fix is not yet confirmed against the real database's unique key.
+
 ## Release 21 contents (main 69b26c9)
 
 **Items in this release**

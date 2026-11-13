@@ -29,7 +29,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.selectOption('#dlg select[name=account]', ids.wallet); await save();
   assert.deepEqual((({ freq, amount, wallet }) => ({ freq, amount, wallet }))(await rule()), { freq: 'monthly', amount: 250000, wallet: ids.wallet }, 'rule created');
   let t = await card(); assert(/Rp 250\.000 every month/.test(t) && /4 months left/.test(t), 'card: ' + t);
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); await p.waitForSelector('[data-act=rec-manage]'); const st = (await p.innerText('.main')).replace(/ /g, ' '); assert(/Visa card/.test(st) && /Every month/.test(st) && /Rp 250\.000/.test(st), 'Settings > Recurring lists it');
+  await p.evaluate(() => { location.hash = '#/settings/recurring'; render(); }); await p.waitForSelector('[data-act=rec-manage]'); const st = (await p.innerText('.main')).replace(/ /g, ' '); assert(/Visa card/.test(st) && /Every month/.test(st) && /Rp 250\.000/.test(st), 'Settings > Recurring lists it');
   // 3. open again: Every month preselected; switch to Every week: labels and installments follow, the rule is edited
   await open(); assert.equal(await p.inputValue('#dlg select[name=repeat]'), 'monthly'); assert.equal(await p.isVisible('#dlg [name=monthly]'), true);
   await p.selectOption('#dlg select[name=repeat]', 'weekly');

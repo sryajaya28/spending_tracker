@@ -6,9 +6,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
-  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('select[data-lang]');
+  await p.evaluate(() => { location.hash = '#/settings/preferences'; }); await p.waitForSelector('select[data-lang]');
   await p.selectOption('select[data-lang]', 'id'); await settle();
-  assert.equal(await p.innerText('.topbar h1'), 'Pengaturan');
+  assert.equal(await p.innerText('.topbar h1'), 'Preferensi');
   const l = await log(); assert(l.some((o) => o.op === 'update' && o.table === 'profiles' && o.values.language === 'id'), JSON.stringify(l));
   // the saved choice follows the account: another device (no local choice) loads Indonesian after sign-in
   await p.evaluate(() => { localStorage.removeItem('stiver.lang.v1'); setLang('en'); }); await p.evaluate(() => loadUserData()); await p.waitForSelector('.shell');

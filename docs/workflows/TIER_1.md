@@ -16,6 +16,6 @@
 
 **Docs in the same PR:** a change file `docs/changes/YYYY-MM-DD-name.md`, a `docs/tasks/` file only if work is left over, a row in `docs/COSTS.md` and a `learning.md` session-log line when the task ends.
 
-**Releasing a Tier 1 batch (after the owner's "Release" in chat):** no regression run and no production smoke test. Merge `staging` into `main`, then check only that the site answers 200 and serves the new build stamp (`node tools/ship.js`).
+**Releasing a Tier 1 batch (a fresh release session, `docs/tasks/RELEASE.md`, after the owner's "Release" in chat):** no regression run and no production smoke test. Merge `staging` into `main`, then check only that the site answers 200 and serves the new build stamp (`node tools/ship.js`).
 
 **How the tools know (`tools/gates.js`):** a release skips regression and the smoke test when its only non-docs changes come from commits listed in `docs/workflows/tier1-approved.txt` (short sha, then the owner's words; add a line only when the owner says so in chat, because the path rule calls every `app.js` change Tier 2) and no changed file is Tier 3. Docs- and tooling-only releases skip them as before. `--force` runs regression anyway. Test: `node tools/gates.test.js`.

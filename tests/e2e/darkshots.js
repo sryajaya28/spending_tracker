@@ -12,7 +12,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   const log = () => p.evaluate(() => window.__log.splice(0)), settle = () => p.evaluate(() => Cloud.idle());
   // pick Dark in Settings: saved to the profile
-  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('select[data-theme-select]');
+  await p.evaluate(() => { location.hash = '#/settings/preferences'; }); await p.waitForSelector('select[data-theme-select]');
   await p.selectOption('select[data-theme-select]', 'light'); assert.equal(await p.evaluate(() => document.documentElement.dataset.theme), 'light');
   await p.selectOption('select[data-theme-select]', 'dark'); await settle();
   const l = await log(); assert(l.some((o) => o.op === 'update' && o.table === 'profiles' && o.values.theme === 'dark'), JSON.stringify(l));
@@ -20,7 +20,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const shot = async (name, hash) => { if (hash) await p.evaluate((h) => { location.hash = h; }, hash); await p.waitForTimeout(250); await p.screenshot({ path: __dirname + `/out/dark/${name}.png` }); };
   await shot('overview', '#/overview'); await shot('transactions', '#/transactions'); await shot('budgets', '#/budgets');
   for (const t of ['savings', 'investment', 'lent', 'loan']) { await p.evaluate((x) => { location.hash = '#/portfolio'; state.ui.pfTab = x; render(); }, t); await p.waitForTimeout(200); await p.screenshot({ path: __dirname + `/out/dark/portfolio_${t}.png` }); }
-  await shot('settings', '#/settings');
+  await shot('settings', '#/settings'); await shot('settings_preferences', '#/settings/preferences'); await shot('settings_categories', '#/settings/categories');
   await p.evaluate(() => { location.hash = '#/overview'; }); await p.click('[data-act=add-txn][data-type=expense]'); await p.waitForTimeout(250); await p.screenshot({ path: __dirname + '/out/dark/dialog_txn.png' }); await p.keyboard.press('Escape');
   await p.evaluate(() => { location.hash = '#/portfolio'; state.ui.pfTab = 'savings'; render(); }); await p.click('.wallet .dots'); await p.screenshot({ path: __dirname + '/out/dark/wallet_menu.png' });
   // reload from the saved profile: dark is restored even with no local choice

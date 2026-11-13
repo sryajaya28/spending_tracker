@@ -40,7 +40,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     const h = D().holdings.find((x) => x.symbol === 'BTC'); return { q: h && h.quantity, trades: h && h.trades.length }; });
   assert(inv.trades >= 2 && Math.abs(inv.q - 0.001 * inv.trades) < 1e-9, 'recurring buys recorded: ' + JSON.stringify(inv));
   // manage list
-  await p.evaluate(() => { location.hash = '#/settings'; render(); }); assert((await p.innerText('main')).includes('Recurring'));
+  await p.evaluate(() => { location.hash = '#/settings/recurring'; render(); }); assert((await p.innerText('main')).includes('Recurring'));
   await p.click('[data-act=rec-manage] >> nth=0'); await p.click('#dlg [data-act=rec-toggle]'); assert.equal(await p.evaluate(() => D().recurring[0].active), false);
   await p.screenshot({ path: __dirname + '/out/recurring_settings.png' });
   await p.click('[data-act=rec-manage] >> nth=0'); await p.click('#dlg [data-act=rec-del]'); assert.equal(await p.evaluate(() => D().recurring.length), 2);

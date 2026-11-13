@@ -91,7 +91,7 @@ const assert = require('assert');
   await page.evaluate(() => { location.hash = '#/budgets'; });
   await page.click('[data-act=edit-occasion]'); await page.click('[data-act=archive-occasion]'); await settle();
   l = await log(); assert(l.some((o) => o.table === 'occasions' && o.rows[0].archived === true));
-  await page.evaluate(() => { location.hash = '#/settings'; });   // an archived occasion is history: it is managed from Settings
+  await page.evaluate(() => { location.hash = '#/settings/occasions'; });   // an archived occasion is history: it is managed from Settings
   assert.equal(await page.$$eval('#occasions-card [data-act=edit-occasion]', (e) => e.length), 0, 'an archived occasion is not listed in the Settings card');
   await page.click('#occasions-card [data-act=occasion-archived]'); await page.click('#dlg [data-act=edit-occasion]'); await page.click('[data-act=delete-occasion]'); await settle();   // it is in the Archived pop-up
   l = await log(); console.log('occasion delete ops', l.map((o) => o.op + ':' + o.table).join(' '));
@@ -104,7 +104,7 @@ const assert = require('assert');
   console.log('page after portfolio nav ok');
 
   // sample data (exercises every table)
-  await page.evaluate(() => { location.hash = '#/settings'; });
+  await page.evaluate(() => { location.hash = '#/settings/occasions'; });
   // empty-account check: budget exists, so it must refuse
   await page.evaluate(() => { D().budgets.length = 0; D().transactions.length = 0; save(); }); await settle(); await log();
   await page.evaluate(() => { const d = D(), s = seed(d.profile.name || 'You', cur()); Object.assign(d, { categories: s.categories, wallets: s.wallets, transactions: s.transactions, budgets: s.budgets, investments: s.investments, holdings: s.holdings, customAssets: s.customAssets, loans: s.loans, lent: s.lent }); save(); }); await settle();
@@ -146,9 +146,10 @@ const assert = require('assert');
   console.log('failed save reverted to server data');
 
   // sign out
-  await page.evaluate(() => { location.hash = '#/settings'; });
+  await page.evaluate(() => { location.hash = '#/settings/profile'; });
   await page.click('[data-act=revoke]'); await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => window.__signOut.scope), 'others');
+  await page.evaluate(() => { location.hash = '#/settings'; });   // Sign out is on the hub
   await page.click('button[data-act=signout]'); await page.waitForSelector('.land');
   console.log('signed out');
   console.log('ERRORS', JSON.stringify(errors));

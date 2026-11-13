@@ -72,7 +72,7 @@ function render() {
   }
   if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); state.ui.allPeriods = false; }   // a new start day (or switching demo/real data) re-selects the current period
   const r = VIEWS[route()] ? route() : 'overview';
-  app.innerHTML = `<div class="shell">${sidebar()}<main class="main">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${bottomNav()}`;
+  app.innerHTML = `<div class="shell">${sidebar()}<main class="main${r === 'settings' ? ' no-nav' : ''}">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${r === 'settings' ? '' : bottomNav()}`;   // Settings has no bottom bar: its own back arrow leads out
   hideWriteControls();
   if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);
   if (r === 'portfolio' && state.chart2 && $('#pnl')) bindValue(state.chart2.months, state.chart2.series, state.chart2.vc, { id: 'pnl', neg: true });   // the asset page (#/portfolio/<id>) has no value chart

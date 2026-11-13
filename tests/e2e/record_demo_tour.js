@@ -34,6 +34,9 @@ const OUT = __dirname + '/video';
   await p.evaluate(() => document.querySelector('.donut').scrollIntoView({ block: 'center' })); const ring2 = await p.$eval('.donut svg', (e) => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, k: b.width / 260 }; });
   for (const f of [0.12, 0.45, 0.7, 0.9]) { const a = f * 2 * Math.PI; await p.mouse.move(ring2.x + (130 + 100 * Math.sin(a)) * ring2.k, ring2.y + (130 - 100 * Math.cos(a)) * ring2.k, { steps: 18 }); await pause(900); }
   await p.evaluate(() => window.scrollTo(0, 0)); await pause(400);
+  // hide the balance with the eye button (all amounts turn into dots), then show it again
+  await p.evaluate(() => window.scrollTo(0, 0)); await pause(300);
+  await go('[data-act=toggle-hide-balance]'); await pause(1700); await go('[data-act=toggle-hide-balance]'); await pause(900);
   // 2. add an expense: account first, then the category list with search
   await go('[data-act=add-txn][data-type=expense]'); await p.waitForSelector('#dlg[open]'); await pause(700);
   await p.type('input[name=amount]', '85000', { delay: 140 }); await pause(500);

@@ -47,7 +47,7 @@ infrastructure names, see section 8).
 
 ## 3. Features (current)
 
-- **Landing page** for signed-out visitors (hero with product mock, demo video, feature grid, how it works, final CTA,
+- **Landing page** for signed-out visitors (hero with product mock, demo video, a "Get a better experience on your phone" card whose button opens the Add to Home Screen tutorial (iPhone Safari / iPhone Chrome / Android tabs; a phone browser gets its own install dialog; hidden inside the installed app), feature grid, how it works, final CTA,
   footer with Privacy/Terms), language selector, light/dark toggle. Rendered by the app itself (`viewLanding`).
 - **Auth:** email + password with **email confirmation link**, Google sign-in, password reset, resend, "I've confirmed my
   email" button; while the "Check your email" screen is open, it retries sign-in every 15s and on tab focus so

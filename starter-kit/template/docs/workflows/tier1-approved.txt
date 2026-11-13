@@ -1,0 +1,2 @@
+# Tier 1 approvals: commits the owner lowered from the path rule's Tier 2 to Tier 1 (tools/gates.js reads this).
+# One line per commit: short sha, then the owner's words. Add a line only when the owner says so in chat.

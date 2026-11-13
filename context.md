@@ -146,6 +146,7 @@ supabase/tests/     pgTAP tests (first migrations only)
 tests/e2e/          Playwright browser tests with a fake Supabase; run_all.sh; record_demo_tour.js
 docs/NEXT_STEPS.md  roadmap, rules, known gaps            vercel.json  hosting, rewrites, security headers
 regression_scenario.md  manual regression scenarios per feature + automated coverage map (keep current)
+starter-kit/        portable copy of the workflow, tools, templates and lessons for NEW repositories (README.md there; `bash starter-kit/kit.test.sh` after any change to it; not part of the app)
 tools/release_contents.js, docs/RELEASES.md  exact release contents (never a summary)
 docs/WORKSPACE.md  Workspace artifact: shared feed + Needs-you tray (URL, schema, rules)
 docs/WORKFLOW.md  agent-to-agent workflow, diagram, hand-off formats

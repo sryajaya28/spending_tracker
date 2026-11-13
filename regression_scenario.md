@@ -61,15 +61,15 @@ Automated: `noscroll`, `langsave`, `darkshots`, `idcrawl`, `ios`, `csp`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| OV-01 | Hero card | **Total Balance = savings accounts + investments** (money lent and loans are **not** included; Portfolio > Net worth covers them), so with no investments it equals Portfolio > Savings. The words "Total Balance" are **underlined and tappable**: tap (or hover on desktop) shows "Savings + investments"; there is no (i) icon. A small **eye** button follows them (OV-08). Shows the period's change in amount and as a **% of the balance it started with** (e.g. `−0.8%` next to `−IDR 680,886 this month`; both always have the same sign; `—` when the starting balance is zero or negative). The % **pill is red when the figure fell, green when it grew**, yellow when there is nothing to compare (same on Portfolio > Net worth). No "N accounts" label. No chart. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
+| OV-01 | Hero card | Label **Spent today** (underlined, tappable: tooltip "Everything you spent today"; no (i) icon) with the **eye** (OV-08) and a **Balance ›** chip at the right end of the row that opens Portfolio (Net worth). The big number is **today's expenses only** in the reporting currency (not income, transfers, earlier days or upcoming entries); the **currency selector** sits right next to it and converts the figure. No Total Balance, no % pill, no "this month" line. Four buttons Expense / Income / Invest / Transfer on **one row**; each opens the right dialog. |
 | OV-01b | Sample-data offer on an empty account | When the total balance is **under 1 USD** (a new or empty account) and sample mode is off, the **yellow banner** (same look as the sample-mode banner) "Just looking around? · Test Stiver now with sample data" (description next to the question) and a short **Try** button (not a toggle) appears at the very top of Overview. Tapping the button shows the demo account and the sample banner (the card disappears; "Back to my data" restores the own data and the card). With a real balance of 1 USD or more the card is not shown. Settings > Account > Use sample data still works. |
 | OV-02 | Desktop layout | Hero spans the full width; below it a two-column grid: Money Flow and Spending, then Budgets and Recent transactions side by side with no empty cell. Phone: single column. |
 | OV-03 | Money Flow | Six periods of income and spending; hover/tap on the chart shows a tooltip with the period, Income, Spending and Net. Saved shows income minus spending of the selected period. |
 | OV-04 | Spending donut | Top 5 categories + Others. Hover (desktop) or tap (phone) an arc: centre shows name, amount and % of total; tap the same arc or elsewhere to clear. Empty month: grey ring and zero total. No category buttons under it. **Details** opens the breakdown with expandable sub-categories. |
-| OV-05 | Budgets card | Shows **only the overall budget** ("All spending": spent / budget · %, empty bar at 0%): no category budgets and no special occasions on Overview. The button says **Details**; tapping the button or anywhere on the card (except the month picker) opens the Budgets page. The period dropdown on the card also changes the Spending card (shared period). Without an overall budget it says "No monthly budget". |
+| OV-05 | Budget line in the hero | Under the amount: **"Rp x left this month · n days to go"** (days to the period's last day, today counted; "1 day to go" on the last day) and a thin bar of the current period's **overall** budget (yellow from 80%, red when over: **"Rp x over budget"**). No overall budget: **"Rp x spent · Set a monthly budget ›"**, no bar. Tapping the line or the bar opens the Budgets page. There is **no Budgets card** on Overview any more (the other budgets and occasions are on the Budgets page). |
 | OV-06 | Recent transactions | Latest rows, "View all" goes to Activity. Each row: title and amount on the **same line**, `Category · Account` below the title and the **date below the amount** (right aligned); there is **no "Uncategorized" tag** (an uncategorized row just says "No category"); for a sub-category only the sub-category name is shown ("Public transit", not "Transport › Public transit"). |
 | OV-07 | Add/Edit through any entry point | After saving, numbers on the page refresh immediately. |
-| OV-08 | Hide balance | The small eye button after "Total Balance" hides the total (`Rp ••••••••`, the % pill and the "this month" line disappear); tap again shows them. Budgets, Money Flow, Spending and Recent transactions are **never** masked. The same setting drives Portfolio (PF-08) and is remembered on this device, so a new session opens the way it was left. First use: shown. |
+| OV-08 | Hide balance | The small eye button after "Spent today" masks the two hero amounts (today's total and the amount left / over / spent in the budget line, `Rp ••••••••`); the bar and the days stay; tap again shows them. Money Flow, Spending and Recent transactions are **never** masked. The same setting drives Portfolio (PF-08) and is remembered on this device, so a new session opens the way it was left. First use: shown. |
 
 Automated: `donut`, `ovocc`, `budgetbar`, `run`, `hidebal`.
 
@@ -194,7 +194,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 |---|---|---|
 | AC-01 | + Account | Name prominent; currency, type, opening balance; created in the chosen currency. Counts from the period it is created in. |
 | AC-02 | Edit an account | Name, type and **current balance** editable (adjusts the opening amount; past transactions untouched); currency cannot change. |
-| AC-03 | An account created on a different calendar month than the period | Included in Savings, Total Balance and Net worth (they agree). |
+| AC-03 | An account created on a different calendar month than the period | Included in Savings and Net worth (they agree). |
 
 ### 9.4 Investments
 
@@ -224,8 +224,6 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 | PF-CASHQ | Fiat cash decimals | A cash balance in an investment account (e.g. Cash (IDR) in Ajaib) shows its amount with at most 2 decimals under the name, in the asset dialog, in the Pay-with list and in its history (never 46,600,560.99999999) and with the currency's own separators (IDR: 46.600.561); crypto amounts still show up to 8 decimals. |
 | RC-LINK | Rule edit reaches the upcoming entry | A recurring rule whose first payment is still upcoming (e.g. Apple Music, next Nov 17): after Manage > change the account (or amount, category, date), Transactions > See upcoming transactions shows the same account, amount and date. Rules edited before this existed (entry still on the old account or date) are repaired the next time the app opens, and when the rule's date arrives only one entry exists. |
 | AU-START | Where a session starts | Log in: you land on Overview at the top, even if you were on another page (e.g. Settings, scrolled down) when you logged out. Log out (button at the bottom of Settings): the landing/sign-in page is at the top, not scrolled down. Closing and reopening the app while still signed in keeps the page you were on. |
-| OV-BUD0 | Overall budget on Overview | The Budgets card shows the amount spent, "of Rp y monthly budget · n%" and the overall progress bar right under it (red when over budget); no "All spending" label row. |
-| OV-BUD | Budgets card on wide screens | Overview in a window wider than 1100 px: under the overall budget the card lists the other budgets (most used first, then live special occasions) as many as fit the card's height, whole rows only, no empty gap and the card is not taller than the one beside it; resizing the window re-fits the list. At 1100 px and narrower and on phones only the overall budget shows. |
 | OV-LEG | Spending donut legend | Overview > Spending: under the donut a centred legend lists the categories shown (up to 5 plus Others) with their icon and a dot in the same colour as the arc, in the same order; it wraps on a phone; not shown when there is no spending. |
 | OC-NB | Occasion without a budget | Settings > Special occasions > + Add: name only (budget optional, dates optional) saves; the card shows it as "No budget". It does not appear on Budgets, but can be tagged to an expense (Add transaction > Special occasion, and the Occasion filter). Budgets > Special occasions > + Add: an **Occasion** picker lists the pre-added occasions without a budget (and + New occasion); picking one hides name/dates and asks only for the budget, which is required there; saving puts it on Budgets with progress and does not create a duplicate. An occasion created from Budgets also shows in Settings. Clearing the budget in Edit (Settings) removes it from Budgets but keeps it in Settings. An occasion with a budget that has not ended yet (e.g. a trip next month) shows on Budgets in every period; one that ended shows only in the periods it spans or has expenses in. |
 | OV-BRK | Spending breakdown | Overview > Spending > Details: categories with amount, percentage and bar; a category with sub-categories expands to show them; there are no "+ Add sub-category" buttons. Sub-categories are added in Settings > Categories. |
@@ -234,7 +232,7 @@ Automated: `run`, `budgetbar`, `occtx`, `ovocc`.
 | PF-INVROW | Investment rows | A buy or sell shows no Investment tag, "Buy Invest · BCA" / "Sell Invest · BCA" under the title, and the circular-arrows icon instead of +/− before the amount. |
 | PF-AVG | Average price auto-fill | Invest (or Add asset with a Pay with account chosen): type Amount paid and Quantity; Average price shows paid ÷ quantity (e.g. 1.000.000 / 5 = 200000) in the account's currency and updates when either changes; it cannot be typed. With only one of the two filled it stays empty. Choosing "Already owned" (Add asset) clears it and lets you type an average price and choose its currency. |
 | PF-OWN | Already owned asset | Portfolio > Add asset: with Paid from = Already owned (no payment) the Amount paid box is greyed out, says "No payment" and cannot be typed in (and anything typed is cleared when you switch back); choosing a payment source enables it. Saving as already owned adds the asset with its quantity and optional average price, no payment. |
-| OV-ORD | Overview order | Total Balance, then (mobile browser only) the install nudge, then Budgets, Money Flow, Spending, Category trend, Recent transactions. Budgets fills its row on wide screens. |
+| OV-ORD | Overview order | The Spent today hero, then (mobile browser only) the install nudge, then Money Flow, Spending, Category trend, Recent transactions. |
 | CY-FLAG | Currency flags | Opening any currency list (Overview chip, Settings, Add account...) shows a flag left of each code (🇮🇩 IDR, 🇺🇸 USD ... 🇮🇳 INR, 🇵🇭 PHP); choosing one still shows and stores the plain code. |
 | LN-CYC | Paid-off card used again | A loan or credit card that was paid off to Rp 0 and then used again (an expense paid with it) shows the new charges as the amount owed and "0% paid · Rp 0 of <new charges>"; paying part of it shows the share of the new amount; a card paid off and not used again shows 100%; a loan never paid off keeps its normal figures. |
 | TX-DAYT | Day total with only transfers | On Transactions a day that only has transfer rows (e.g. a lent repayment) shows the amount moved in a muted colour with no sign, not Rp 0; a day with income or spending still shows the signed net. |
@@ -313,7 +311,7 @@ Precondition: Settings > Profile > Budget period starts on = **Day 25**, today b
 | PD-05 | Portfolio history | Balances, holdings and loans are measured at the end of each period; the net worth card matches Overview. |
 | PD-06 | Change the start day back to 1 | Everything returns to calendar months; saved on the profile; same on a second device. |
 | PD-07 | Day 28 | Works; February periods end on the 27th. |
-| PD-08 | Account created in the calendar month the period ends in | Counted in Savings immediately (regression: Savings equals Total Balance). |
+| PD-08 | Account created in the calendar month the period ends in | Counted in Savings immediately (regression: Savings equals Net worth without investments). |
 
 Automated: `period`.
 
@@ -321,7 +319,7 @@ Automated: `period`.
 
 | ID | Scenario | Expected |
 |---|---|---|
-| FD-01 | Income dated tomorrow or later | Listed with an **Upcoming** badge; Total Balance, account balance, net worth, Money Flow, "this month", saved %, donut, budgets and occasion spent do **not** include it. |
+| FD-01 | Income dated tomorrow or later | Listed with an **Upcoming** badge; Spent today, account balance, net worth, Money Flow, "this month", saved %, donut, budgets and occasion spent do **not** include it. |
 | FD-02 | On the date | It counts everywhere after the next open (no server job needed). |
 | FD-03 | Expense or loan payment dated later | Same: no effect until its day. |
 | FD-04 | Future-dated USDT income | Holding does not change until the date (see CN-07). |
@@ -426,7 +424,7 @@ Written from the PRD only. **E** = automated e2e, **DB** = real staging database
 | `onboarding` | first-run Overview, default categories (new vs existing account), category from Add budget, setup strip |
 | `inrphp` | ₹/₱ choices, live rate request, Indian grouping and L/Cr axes, peso format, sample accounts |
 | `loginstart` | login opens Overview, logout scrolls to top, saved session keeps the page |
-| `ovbud` | Overview budgets fill the card on wide screens only |
+| `spenthero` | Overview Spent today hero: today's expenses only, budget line and bar, taps, mask, currency; `budgetbar` covers the bar and over-budget |
 | `occnobudget` | occasions without a budget: Settings card, picker on Budgets, tagging |
 | `donut` (also OV-LEG legend matches the arcs) | spending donut hover/tap, Budgets month picker |
 | `pfrange` | Portfolio time frames, sorting, See more, history list |
@@ -545,3 +543,5 @@ on a real phone keyboard, and anything that depends on the current date being a 
 ### Archived categories
 - Settings > Categories: the "Archived" button is left of "+ Category" and is **not shown** while nothing is archived (it disappears again after the last Restore). Archive a category with sub-categories: it leaves the list; Archived lists it (with its sub-category count); Restore brings it back with its sub-categories. A sub-category archived alone is listed as "in <parent>" and comes back alone. Empty state: "No archived categories." (tests/e2e/archcat.js)
 - **Invite email (copy and layout, 2026-11-05).** Invite someone as Viewer and as Editor (staging, a Mailinator address): subject `🏡 <name> saved you a seat in their Stiver household`; heading "You're invited 🎉"; the inviter's email comes first, then (name); a box names the role in plain words and says the member will see all the household's data; a "Join the household →" button opens `/join#t=...`; three numbered steps; the footer says the link works once and expires in 7 days. With the owner's language Indonesian the same email is in Indonesian. Automated: `node tests/invite_email.test.mjs` (copy, sanitising, link, plain-text part; runs in CI). Manual: look at it on a phone in Gmail, light and dark.
+
+- 2026-11-13: OV-01, OV-05, OV-08, OV-ORD rewritten and OV-BUD0 / OV-BUD removed: Overview hero is now "Spent today" with the budget line and bar; the Budgets card is gone; Balance chip opens Portfolio.

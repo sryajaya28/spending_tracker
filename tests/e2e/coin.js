@@ -52,7 +52,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     return { before, after: { held: heldNow(h), nw: portfolioUSD(monthKey(new Date())), cash: walletBalance(w) }, total: h.quantity, h: h.id }; });
   assert.deepEqual(fut.after, fut.before, JSON.stringify(fut)); assert(fut.total >= fut.before.held + 500);
   await p.evaluate((id) => { const h = D().holdings.find((x) => x.id === id); h.trades.filter((t) => t.date > isoDate(new Date())).forEach((t) => removeTrade(h, t)); D().transactions = D().transactions.filter((t) => t.note !== 'Later cash'); }, fut.h);
-  // Overview's Total Balance = savings + investments (lent money and loans are not included)
+  // totalBalance() = savings + investments (Portfolio Net worth; Overview's Balance chip leads there) (lent money and loans are not included)
   const tb = await p.evaluate(() => { const k = currentPeriod(), inv = usdToMinor(portfolioUSD(k), cur()); return { total: totalBalance(), sum: savingsTotal() + inv, inv }; });
   assert(tb.inv > 0 && tb.total === tb.sum, JSON.stringify(tb));
   // recurring in USDT

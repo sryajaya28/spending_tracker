@@ -303,9 +303,6 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 
 /* special occasions on the Overview budgets card */
 .ov-h { margin-top: 22px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-.ov-occ { margin-top: 12px; }
-.ov-occ .meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; font-weight: 600; flex-wrap: wrap; }
-.ov-occ .meta span:last-child { color: var(--muted); font-weight: 500; }
 
 .seg.seg4 { grid-template-columns: repeat(4, 1fr); }
 .seg.seg4 label { padding: 10px 4px; font-size: 14px; }
@@ -379,7 +376,6 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 @container (max-width: 520px) { .hero-actions .ghost svg { display: none; } .hero-actions .ghost { font-size: 13px; } }
 @container (max-width: 290px) { .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-.ov-buds { margin-top: 14px; }
 
 dialog { background: var(--surface); }
 
@@ -893,15 +889,6 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 .day-tools .legend-btn { padding: 5px 12px; justify-content: center; border-radius: 99px; }
 .day-tools .legend-btn:active { background: var(--soft); color: var(--ink); }
 
-/* Overview > Budgets on wide screens (the two-column layout): the other budgets fill the room under the overall one; the card keeps the height of its neighbour */
-.ov-more { display: none; }
-@media (min-width: 1101px) {
-  .ov-bud-card { display: flex; flex-direction: column; }
-  .ov-more { display: block; position: relative; flex: 1 1 0; min-height: 0; margin-top: 6px; }
-  .ov-more-in { position: absolute; inset: 0; overflow: hidden; }
-  .ov-more-in > [hidden] { display: none; }
-}
-
 /* four buttons (Delete, Reopen, Cancel, Save) do not fit in one row on a phone: two rows of two, equal width, nothing outside the dialog's padding */
 .actions:has(> :nth-child(4)) { display: grid; grid-template-columns: 1fr 1fr; }
 .actions:has(> :nth-child(4)) > .btn { width: 100%; justify-content: center; }
@@ -1041,3 +1028,15 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .hero .delta b.up { background: var(--good); color: #1e1b4b; }
 .hero .delta b.down { background: var(--bad); color: #fff; }
 :root[data-theme="dark"] .hero .delta b.down { background: #ff6b70; color: #1e1b4b; }
+
+/* Overview hero "Spent today": the Balance chip at the far end of the label row, and the budget line + thin bar under the amount (white on the hero gradient in both themes) */
+.hero .hero-chip { margin-left: auto; flex: none; background: rgba(255, 255, 255, .18); color: #fff; border: 0; border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12px; letter-spacing: 0; cursor: pointer; }
+.hero .hero-chip:hover { background: rgba(255, 255, 255, .3); }
+.hero-bud { display: flex; flex-direction: column; gap: 8px; cursor: pointer; border-radius: 10px; }
+.hero-bud-line { font-size: 14px; opacity: .95; }
+.hero-bud-line u { text-underline-offset: 3px; }
+.hero-bar { height: 6px; background: rgba(255, 255, 255, .25); border-radius: 999px; overflow: hidden; }
+.hero-bar i { display: block; height: 100%; border-radius: 999px; background: #fff; }
+.hero-bar i.warning { background: var(--warn); }
+.hero-bar i.exceeded { background: #ff6b70; }
+.hero-bud:focus-visible, .hero .hero-chip:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }

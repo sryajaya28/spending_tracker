@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   await p.evaluate(() => setDemo(true)); await p.waitForTimeout(700);
   // placed between Spending and Budgets
-  const titles = await p.$$eval('.grid > section h2', (h) => h.map((x) => x.textContent.trim())); const iS = titles.indexOf('Spending'), iT = titles.indexOf('Category trend'), iB = titles.indexOf('Budgets'); assert(iS >= 0 && iT === iS + 1 && iB === 0, 'Budgets is the first card after Total Balance: ' + JSON.stringify(titles));
+  const titles = await p.$$eval('.grid > section h2', (h) => h.map((x) => x.textContent.trim())); const iS = titles.indexOf('Spending'), iT = titles.indexOf('Category trend'), iB = titles.indexOf('Budgets'); assert(iS >= 0 && iT === iS + 1 && iB === -1, 'no Budgets card on Overview any more (it is in the hero): ' + JSON.stringify(titles));
   assert.equal(await p.$$eval('.tbar', (e) => e.length), 6, 'six months by default');
   // all categories: segments are top-level categories
   const names = () => p.$$eval('#trend-chart svg.trend rect title', (t) => [...new Set(t.map((x) => x.textContent.split(':')[0].trim()))]); assert.equal(await p.$$eval('#trend-chart .legend-row', (e) => e.length), 1, 'legend under the chart'); assert(!(await p.innerText('#trend-chart')).includes('Tap a bar'), 'no hint text'); let legend = await names(); assert(legend.length >= 3 && legend.some((x) => /Groceries|Bills|Dining|Shopping/.test(x)), JSON.stringify(legend));

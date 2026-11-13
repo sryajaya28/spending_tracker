@@ -121,15 +121,6 @@ function trendDialog(k) {
       ${sg.key === 'others' ? '' : `<div class="bk-subs"><button class="legend-btn" data-act="trend-go" data-k="${k}" data-cat="${sg.key === 'none' ? 'none' : sg.cat || ''}">${__('View transactions')}</button></div>`}</div>`).join('') || ('<div class="empty">' + __('No spending in this period.') + '</div>')}</div>
     <div class="actions"><button type="button" class="btn" data-act="close">${__('Close')}</button></div>`);
 }
-/* wide screens: show as many of the other budgets as fit the Budgets card (its height comes from the card next to it); the rest are hidden, never cut in half */
-function fitOverviewBudgets() {
-  const box = $('.ov-more-in'); if (!box) return;
-  const rows = [...box.children]; rows.forEach((r) => { r.hidden = false; });
-  if (!matchMedia('(min-width: 1101px)').matches) return;
-  const room = box.clientHeight; let full = true;
-  rows.forEach((r) => { if (!full || r.offsetTop + r.offsetHeight > room + 1) { r.hidden = true; full = false; } });
-}
-addEventListener('resize', () => requestAnimationFrame(fitOverviewBudgets));
 /* first run: what the user has set up so far. An empty account (no accounts with money, no budget, no transaction) gets a getting-started
    Overview instead of empty charts; afterwards a slim strip keeps pointing at what is still missing. */
 // the first-run screen stays until there is an account and a budget (or a first transaction)
@@ -175,6 +166,17 @@ function onboardingView(st) {
 /* after the first steps: one slim line for what is still missing */
 const setupStrip = (st) => (st.partial && !st.fresh
   ? `<div class="setup-strip" role="status"><span>${__('Finish setting up')}</span>${st.hasAccount ? '' : `<button type="button" class="chip" data-act="add-wallet">${__('Add account')}</button>`}${st.hasBudget ? '' : `<button type="button" class="chip" data-act="add-budget">${__('Set budget')}</button>`}</div>` : '');
+/* The line and thin bar under the Overview hero amount: what is left of the CURRENT period's overall budget and how many days remain (the last day counts).
+   No overall budget: what was spent this period and a nudge to set one. The whole block opens Budgets. The two amounts follow the eye button; the bar stays. */
+function heroBudget(spentToday) {
+  const k = currentPeriod(), g = budgetStatus(k).find((b) => b.category_id === null), c$ = cur();
+  if (!g) return `<div class="hero-bud" data-act="hero-budget" tabindex="0" role="link"><div class="hero-bud-line">${__('{amount} spent', { amount: moneyHtmlP(sumBy(inMonth(k), 'expense'), c$) })} · <u>${__('Set a monthly budget')} ›</u></div></div>`;
+  const days = Math.round((new Date(periodEnd(k) + 'T00:00') - new Date(todayIso() + 'T00:00')) / 86400000) + 1;
+  const left = g.remaining >= 0 ? __('{amount} left this month', { amount: moneyHtmlP(g.remaining, c$) }) : __('{amount} over budget', { amount: moneyHtmlP(-g.remaining, c$) });
+  const pct = Math.min(100, Math.max(0, Math.round(g.pct)));
+  return `<div class="hero-bud" data-act="hero-budget" tabindex="0" role="link"><div class="hero-bud-line">${left} · ${days === 1 ? __('1 day to go') : __('{n} days to go', { n: days })}</div>
+    <div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${esc(__('Budget used'))} ${pct}%"><i class="${g.status}" style="width:${pct}%"></i></div></div>`;
+}
 function viewOverview() {
   const st = setupState();
   if (st.fresh) { state.ui.onbSeen = true; return onboardingView(st); }
@@ -184,27 +186,17 @@ function viewOverview() {
   const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
   const months = lastMonths(6);
   const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
-  const cats = spendByCategory(k), bs = budgetStatus(k);
-  const global = bs.find((b) => b.category_id === null);
-  const tiles = global ? [global] : [];   // the overall budget is always shown; on wide screens the other budgets fill the rest of the card (see below)
-  // wide screens only (CSS): the other budgets, most used first, then budgeted occasions that are live; the ones that do not fit the card's height are hidden (fitOverviewBudgets)
-  const bRow = (icon, name, spent, budget, pct, status) => `<div class="ov-occ"><div class="meta"><span>${icon} ${esc(name)}</span><span class="num">${money(spent, cur())} / ${money(budget, cur())} · ${Math.round(pct)}%</span></div><div class="bar"><i class="${status}" style="width:${Math.min(100, pct)}%"></i></div></div>`;
-  const moreRows = [...bs.filter((b) => b.category_id).sort((a, b) => b.pct - a.pct).map((b) => bRow(b.icon, b.name, b.spent, b.budget, b.pct, b.status)),
-    ...occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, k)).map((o) => bRow('🎉', o.name, o.spent, o.budget, o.pct, o.status))];
-  const startBal = totalBalance() - net, balChange = startBal > 0 ? (net / startBal) * 100 : null;   // this period's change as a % of the balance it started with
+  const cats = spendByCategory(k);
+  const spentToday = sumBy(D().transactions.filter((t) => t.occurred_at === todayIso()), 'expense');   // only today's expenses: not income, transfers or upcoming entries
   const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}${setupStrip(st)}
   <div class="grid">
-    <section class="card hero">${heroLabel(__('Total Balance'), 'ov-total', __('Savings + investments'))}
-      <div class="amount-line"><div class="amount num" style="--len:${moneyP(totalBalance(), cur()).length + 6}">${moneyHtmlP(totalBalance(), cur())}</div>${heroCurrency(cur())}</div>
-      ${hideBal() ? '' : `<div class="delta">${deltaPill(balChange)}<span>${__('{amount} this month', { amount: (net >= 0 ? '+' : '−') + money(Math.abs(net), cur()) })}</span></div>`}
+    <section class="card hero">${heroLabel(__('Spent today'), 'ov-spent', __('Everything you spent today'), `<button type="button" class="hero-chip" data-act="hero-balance">${__('Balance')} ›</button>`)}
+      <div class="amount-line"><div class="amount num" style="--len:${moneyP(spentToday, cur()).length + 6}">${moneyHtmlP(spentToday, cur())}</div>${heroCurrency(cur())}</div>
+      ${heroBudget(spentToday)}
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     ${installBtn('ov-install')}
-    <section class="card tap-card ov-bud-card" data-act="goto" data-route="budgets" tabindex="0" role="link"><div class="card-head"><h2>${__('Budgets')}</h2><div class="tools">${monthSelect()}<a class="chip" href="#/budgets">${__('Details')}</a></div></div>
-      ${global ? `<div class="big num">${money(global.spent, cur())}</div><p class="muted">${__('of {amount} monthly budget', { amount: money(global.budget, cur()) })} · ${Math.round(global.pct)}%</p>` : ('<div class="big">' + __('No monthly budget') + '</div><p class="muted">' + __('Set one to track your month') + '</p>')}
-      <div class="ov-buds">${tiles.map((b) => `<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, Math.round(b.pct))}" aria-label="${esc(__('All spending'))} ${Math.round(b.pct)}%"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div>`).join('')}</div>
-      ${moreRows.length ? `<div class="ov-more"><div class="ov-more-in">${moreRows.join('')}</div></div>` : ''}</section>
     <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
       <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
       ${flowChart(months, incs, exps)}</section>

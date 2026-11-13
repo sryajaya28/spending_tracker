@@ -220,7 +220,6 @@ DICT.id = {
  "That cash balance belongs to another investment account": "Saldo tunai itu milik akun investasi lain",
  "Balance": "Saldo",
  "Spent today": "Pengeluaran hari ini",
- "Everything you spent today": "Semua yang Anda belanjakan hari ini",
  "{amount} left this month": "sisa {amount} bulan ini",
  "{amount} over budget": "{amount} melebihi anggaran",
  "{amount} spent": "{amount} terpakai",

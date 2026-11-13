@@ -18,13 +18,11 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const noDigits = async (sel, what) => { const t = await digits(sel); assert(t.length, 'found ' + what); t.forEach((x) => assert(!/\d/.test(x), what + ' is masked: ' + x)); };
   const hasDigits = async (sel, what) => { const t = await digits(sel); assert(t.length && t.every((x) => /\d/.test(x)), what + ' is visible: ' + JSON.stringify(t)); };
 
-  // shown by default for someone who never used the button; the label is underlined text that opens the tooltip (no (i) icon), the eye sits after it
+  // shown by default for someone who never used the button; the label is plain text (no tooltip, no (i) icon), the eye sits after it
   assert.equal(await p.evaluate(() => localStorage.getItem('stiver.hidebal.v1')), null);
   await hasDigits('.hero .amount', 'Spent today'); assert.equal(await p.$$eval('.hero .info-btn', (e) => e.length), 0, 'no (i) icon any more');
   assert.equal(await p.getAttribute('.hero .eye-btn', 'aria-label'), 'Hide balance');
-  const tipOpen = () => p.$eval('.hero .info-wrap', (e) => e.classList.contains('open'));   // the class, not visibility: a hover also shows the tip on desktop
-  await p.click('.hero .lbl-link'); assert(await tipOpen(), 'tapping the label text opens the tooltip'); assert((await p.textContent('.hero .info-pop')).includes('Everything you spent today'));
-  await p.click('.hero .lbl-link'); assert(!(await tipOpen()), 'tapping again closes it');
+  assert.equal(await p.$$eval('.hero .lbl-link, .hero .info-wrap', (e) => e.length), 0, 'the Spent today label is plain text: no underline, no tooltip'); assert.equal(await p.$eval('.hero .label', (e) => e.firstChild.textContent.trim()), 'Spent today');
   assert.equal(await p.$$eval('.hero .delta', (e) => e.length), 0, 'no change pill on the Spent today hero');
 
   // hide on Overview: both hero amounts masked (today's spending and what is left), the bar and days stay, lists below untouched

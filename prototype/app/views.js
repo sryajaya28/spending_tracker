@@ -191,7 +191,7 @@ function viewOverview() {
   const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}${setupStrip(st)}
   <div class="grid">
-    <section class="card hero">${heroLabel(__('Spent today'), 'ov-spent', __('Everything you spent today'), `<button type="button" class="hero-chip" data-act="hero-balance">${__('Balance')} ›</button>`)}
+    <section class="card hero">${heroLabel(__('Spent today'), '', '', `<button type="button" class="hero-chip" data-act="hero-balance">${__('Balance')} ›</button>`)}
       <div class="amount-line"><div class="amount num" style="--len:${moneyP(spentToday, cur()).length + 6}">${moneyHtmlP(spentToday, cur())}</div>${heroCurrency(cur())}</div>
       ${heroBudget(spentToday)}
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>

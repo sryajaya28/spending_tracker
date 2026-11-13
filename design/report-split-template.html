@@ -21,6 +21,9 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
 .phone { container: phone / inline-size; position: relative; width: min(390px, 100%); background: var(--bg); border-radius: 36px; box-shadow: var(--frame-shadow); overflow: hidden; border: 1px solid var(--line); }
 .phone .shell { min-height: 0; }
 .phone .bottom-nav { position: absolute; }   /* the app pins it to the screen; here it sits at the bottom of its own phone */
+.sheet-phone { min-height: 780px; }
+.phone .scrim { position: absolute; inset: 0; background: rgba(30, 27, 75, .45); z-index: 25; }
+.phone dialog { position: absolute; z-index: 26; left: 12px; right: 12px; bottom: 12px; top: auto; width: auto; margin: 0; }   /* the app's filter sheet, pinned inside its phone */
 .mock-toast { position: absolute; left: 16px; right: 16px; bottom: 96px; z-index: 30; background: var(--navy); color: #fff; border-radius: 14px; padding: 11px 14px; font-weight: 600; font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; pointer-events: none; text-align: center; }
 .mock-toast.show { opacity: 1; transform: none; }
 
@@ -85,6 +88,10 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
     <div class="phone"><div class="shell"><!--F3--></div></div></section>
   <section aria-label="Overview, nothing today yet and no missing days"><p class="frame-cap">4 · Overview <span>— Phone 390 · nothing today yet, no missing days</span></p>
     <div class="phone"><div class="shell"><!--F4--></div></div></section>
+  <section aria-label="Report, Transactions with filters applied"><p class="frame-cap">5 · Report, Transactions <span>— filters applied, household with 2+ people</span></p>
+    <div class="phone"><div class="shell"><!--F5--></div></div></section>
+  <section aria-label="Filter sheet"><p class="frame-cap">6 · Filter sheet <span>— Category, Occasion, Account, Person</span></p>
+    <div class="phone sheet-phone"><div class="shell"><!--F6--></div></div></section>
 </main>
 
 <section class="notes" aria-label="Design notes">

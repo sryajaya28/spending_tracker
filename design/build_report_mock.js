@@ -76,13 +76,27 @@ const ROOT = path.resolve(__dirname, '..'), PORT = 5181;
       return m.outerHTML + nav(0); };
     const report = (a) => `<div class="main">${topbarReport()}${tabs(a ? 'a' : 't')}${a ? `<div class="grid">${overall}${bycat}${piece.spend}${piece.trend}${piece.flow}</div>` : `<div class="stack">${txCard}</div>`}</div>${nav(1)}`;
     const fix = (h) => h.replace(/ id="(?!gapcard|gaptitle|strip|gaplist)[^"]*"/g, '');
-    return { f1: fix(overview(false)), f2: fix(report(false)), f3: fix(report(true)), f4: fix(overview(true)) };
+    const f1 = fix(overview(false)), f2 = fix(report(false)), f3 = fix(report(true)), f4 = fix(overview(true));
+
+    // ---- household with 2 writers (owner + editor): all four filters (Category, Occasion, Account, Person) move into a filter sheet
+    const realStash = state.real; state.real = null;   // in sample mode the stashed real account sits in state.real, which switches the household display off
+    Cloud.household.hasMembers = true;
+    Cloud.household.people = [{ user_id: 'u1', display_name: 'Test User', role: 'owner' }, { user_id: 'u2', display_name: 'Dewi Lestari', role: 'editor' }];
+    D().transactions.forEach((t, i) => { t.by = i % 2 ? 'u2' : 'u1'; });
+    const pick = D().transactions.find((t) => t.occasion_id && t.category_id) || D().transactions.find((t) => t.category_id);
+    pick.by = 'u2';
+    Object.assign(state.ui, { cat: pick.category_id, wallet: pick.wallet_id, occ: pick.occasion_id || '', who: 'u2', q: '', allPeriods: false, month: periodKeyOf(pick.occurred_at) });
+    const hx = strip(go('#/transactions')); const hxCard = hx.querySelector('section.card').outerHTML;
+    filtersDialog(); const sheet = document.querySelector('#dlg').innerHTML; document.querySelector('#dlg').close();
+    const page5 = `<div class="main">${topbarReport()}${tabs('t')}<div class="stack">${hxCard}</div></div>${nav(1)}`;
+    state.real = realStash;
+    return { f1, f2, f3, f4, f5: fix(page5), f6: fix(page5) + `<div class="scrim"></div><dialog open>${fix(sheet)}</dialog>` };
   });
 
   let css = fs.readFileSync(path.join(ROOT, 'prototype/styles.css'), 'utf8')
     .replace(/@media \((max|min)-width: (\d+)px\)/g, '@container phone ($1-width: $2px)');
   const tpl = fs.readFileSync(path.join(__dirname, 'report-split-template.html'), 'utf8');
-  const out = tpl.replace('/*REAL_CSS*/', () => css).replace('<!--F1-->', () => frames.f1).replace('<!--F2-->', () => frames.f2).replace('<!--F3-->', () => frames.f3).replace('<!--F4-->', () => frames.f4);
+  const out = tpl.replace('/*REAL_CSS*/', () => css).replace('<!--F1-->', () => frames.f1).replace('<!--F2-->', () => frames.f2).replace('<!--F3-->', () => frames.f3).replace('<!--F4-->', () => frames.f4).replace('<!--F5-->', () => frames.f5).replace('<!--F6-->', () => frames.f6);
   fs.writeFileSync(path.join(__dirname, 'report-split-mock.html'), out);
   console.log('wrote design/report-split-mock.html', out.length, 'bytes');
   await b.close(); server.kill();

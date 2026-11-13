@@ -28,24 +28,26 @@ const OUT = __dirname + '/video-phone';
   const START = Date.now() - t0;
   const pause = (ms) => p.waitForTimeout(ms);
   const go = async (sel, opts = {}) => { const el = await p.waitForSelector(sel); await el.scrollIntoViewIfNeeded(); const bx = await el.boundingBox(); await p.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2, { steps: 16 }); await pause(opts.beforeClick || 200); await p.mouse.click(bx.x + bx.width / 2, bx.y + bx.height / 2); };
-  // 1. overview, then hide and show the balance
-  await pause(1500);
+  // 1. overview: spent today, hide and show the amounts
+  await pause(1800);
   await go('[data-act=toggle-hide-balance]'); await pause(1500); await go('[data-act=toggle-hide-balance]'); await pause(800);
-  await p.mouse.wheel(0, 500); await pause(1500); await p.evaluate(() => window.scrollTo(0, 0)); await pause(500);
+  await p.mouse.wheel(0, 420); await pause(1500); await p.evaluate(() => window.scrollTo(0, 0)); await pause(500);
   // 2. add an expense
   await go('.nav-add'); await p.waitForSelector('#dlg[open]'); await pause(700);
   await p.type('input[name=amount]', '85000', { delay: 140 }); await pause(500);
   await go('select[name=category]', { beforeClick: 250 }); await p.waitForSelector('.cs-pop'); await pause(700);
   await go('.cs-search'); await p.type('.cs-search', 'cof', { delay: 160 }); await pause(700);
   await go('.cs-opt:has-text("Coffee")'); await pause(600);
-  await go('#dlg button[type=submit]'); await pause(1800);
-  // 3. activity, budgets, portfolio
+  await go('#dlg button[type=submit]'); await pause(2200);
+  // 3. report (days, then Analysis), budgets, portfolio
   await go('.bottom-nav a[href="#/transactions"]'); await pause(1800);
+  await go('#txn-list [data-act=toggle-day]'); await pause(1800); await go('#txn-list [data-act=toggle-day]'); await pause(600);
+  await go('[data-act=report-tab][data-tab=analysis]'); await pause(1800); await p.mouse.wheel(0, 380); await pause(1500); await p.evaluate(() => window.scrollTo(0, 0));
   await go('.bottom-nav a[href="#/budgets"]'); await pause(1800); await p.mouse.wheel(0, 380); await pause(1300);
   await go('.bottom-nav a[href="#/portfolio"]'); await pause(1800); await p.mouse.wheel(0, 500); await pause(1300);
   await p.evaluate(() => window.scrollTo(0, 0)); await go('[data-act=pf-tab][data-tab=loan]'); await pause(1500);
   await go('[data-act=pf-tab][data-tab=investment]'); await pause(1500);
-  await go('.bottom-nav a[href="#/overview"]'); await pause(1800);
+  await go('.bottom-nav a[href="#/overview"]'); await pause(2000);
   const END = Date.now() - t0;
   await ctx.close(); await b.close();
   const vids = fs.readdirSync(OUT).filter((f) => f.endsWith('.webm')).map((f) => ({ f, t: fs.statSync(OUT + '/' + f).mtimeMs })).sort((a, b) => b.t - a.t);

@@ -736,7 +736,7 @@ DICT.id = {
  "Search transactions": "Cari transaksi",
  "Searching the full Finnhub list of US stocks, ETFs and crypto.": "Mencari di seluruh daftar Finnhub: saham AS, ETF, dan kripto.",
  "Searching…": "Mencari…",
- "A quick tour: add an expense, browse your days, hide your balance, check budgets, debts and investments, and move money between accounts.": "Tur singkat: catat pengeluaran, telusuri hari-hari Anda, sembunyikan saldo, cek anggaran, utang dan investasi, lalu pindahkan uang antar akun.",
+ "A quick tour: see what you spent today, add an expense, read your report, check budgets, debts and investments, and move money between accounts.": "Tur singkat: lihat pengeluaran hari ini, catat pengeluaran, baca laporan Anda, cek anggaran, utang dan investasi, lalu pindahkan uang antar akun.",
  "Get a better experience on your phone": "Pengalaman lebih baik di ponsel Anda",
  "Add Stiver to your Home Screen: it opens full screen, loads faster and feels like a real app. No app store needed.": "Tambahkan Stiver ke Layar Utama: terbuka layar penuh, lebih cepat dimuat dan terasa seperti aplikasi sungguhan. Tanpa app store.",
  "See how to add it to your phone": "Lihat cara menambahkannya ke ponsel Anda",

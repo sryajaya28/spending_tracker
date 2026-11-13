@@ -2,6 +2,37 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 23 contents (main 73c040d)
+
+**Items in this release**
+- Feature: Settings hub, a short hub page with tiles and pages opened from it, no bottom bar on Settings (PR 86, `claude/settings-page-redesign-vwoklw`, Tier 2)
+- Docs/process: Release 22 record and COSTS row (PR 85); Copilot-unavailable fallback and release as its own session (PR 84)
+
+**Exact detail.** Range: 11ba2c6..c18c16e. 4 commits, 42 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- Settings is no longer one long scroll: a short hub with Categories, Occasions, Recurring and Household tiles, Preferences and Terms & privacy rows, the sample-data switch and Sign out; each topic opens on its own page with a back arrow. The Account card is gone (display name, email and "Sign out of other devices" are on the Profile page).
+
+**What a user can see change**
+Yes: 7 app files changed (prototype/app/activity.js, prototype/app/events-input.js, prototype/app/household.js, prototype/app/icons.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css).
+
+**Commits**
+- cd46dbe Settings hub: short hub page with tiles, pages opened from it, no bottom bar
+- 64c6aae COSTS: session cost for the move-asset fix (docs only)
+- 652abf3 Release 22 record: move-asset fix (docs only)
+- 1f57c28 Docs: Copilot-unavailable fallback and release as its own session
+
+**Files by area**
+- App (what users see) (7): prototype/app/activity.js, prototype/app/events-input.js, prototype/app/household.js, prototype/app/icons.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css
+- Tests (19): tests/e2e/analytics.js, tests/e2e/archcat.js, tests/e2e/cats.js, tests/e2e/darkshots.js, tests/e2e/debtedit.js, tests/e2e/debtrec.js, tests/e2e/household_activity.js, tests/e2e/household_labels.js, tests/e2e/idcrawl.js, tests/e2e/langsave.js, tests/e2e/loginstart.js, tests/e2e/occnobudget.js, tests/e2e/period.js, tests/e2e/recedit.js, tests/e2e/recurring.js, tests/e2e/run.js, tests/e2e/run_all.sh, tests/e2e/samplelocal.js, tests/e2e/settingshub.js
+- Docs and rules (16): context.md, docs/COSTS.md, docs/DEV_WORKFLOW.md, docs/EVENTS.md, docs/FEATURE_TESTS.md, docs/FIGMA.md, docs/RELEASES.md, docs/changes/2026-11-13-review-fallback-release-session.md, docs/changes/2026-11-13-settings-hub.md, docs/tasks/RELEASE.md, docs/workflows/TIER_1.md, docs/workflows/TIER_2.md, docs/workflows/TIER_3.md, docs/workflows/V2_PLAN.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** regression of staging at c18c16e: browser suite, staging smoke and real-database regression (create, cleanup) all passed; CI on PR 88 (e2e, tier) green. Production: https://stiver.io answers 200 and serves stiver-shell-73c040dc4e; production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io). Merged by the release session on the owner's word in chat.
+**Known gaps:** no Copilot review on PRs 84, 85, 86 (diff-only review of PR 86 found no bugs); no real-phone check and no `tools/staging_shot.js` proof of the Settings pages; on the Profile page in sample-data mode "Signed in as" is empty and "Sign out of other devices" is shown (same as the old Account card).
+
 ## Release 22 contents (main 11ba2c6)
 
 **Items in this release**

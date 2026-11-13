@@ -64,6 +64,46 @@ function moveHolding(h, accId) {
   return dest;
 }
 
+/* ---- coin transfer between investment accounts (stablecoin and crypto only; stocks and cash keep the plain move) ----
+   Move to account with a quantity and a network fee. The fee is deducted from the amount moved (send 100, fee 1: the destination gets 99).
+   Events: source sell kind transfer (Q - F), source sell kind expense (F, only when F > 0), destination buy kind transfer (Q - F).
+   Crypto events carry price = the source's average price, so the destination keeps it. Rows: an out leg and an in leg (type transfer, no wallet,
+   one transfer_id) and the fee as its own Fee expense. All ids derive from the transfer id, so the group can be found and undone later. */
+const coinFeeEvent = (tr) => tr.kind === 'expense' && D().transactions.some((t) => t.trade_id === tr.id && t.id === detId('fee', tr.id) && coinXferOfFee(t));
+const isCoinMovable = (h) => ['stablecoin', 'crypto'].includes(assetInfo(h.symbol).type);
+const coinEv = (gid) => ({ out: detId('cout', gid), fee: detId('cfee', gid), inn: detId('cin', gid) });
+const isCoinTransfer = (gid) => !!gid && D().transactions.some((t) => t.transfer_id === gid && !t.wallet_id && t.trade_id === detId('cout', gid));
+/* the transfer a fee row belongs to (null when it is not the fee of a coin transfer) */
+const coinXferOfFee = (t) => { const o = t && !t.wallet_id && t.type === 'expense' ? D().transactions.find((x) => x.transfer_id && x.trade_id === detId('cout', x.transfer_id) && detId('fee', detId('cfee', x.transfer_id)) === t.id) : null; return o ? o.transfer_id : null; };
+function moveCoin(h, accId, qty, fee, date) {
+  const info = assetInfo(h.symbol), gid = uid(), ev = coinEv(gid), net = r12(qty - fee), usd = info.usd(currentPeriod()), mk = (q) => Math.max(1, Math.round(q * usd * 100));
+  const hc = trackCost(h) ? holdingCost(h) : null, px = hc && hc.known && hc.qty > 1e-12 ? { price: hc.avg } : {};
+  let dest = D().holdings.find((x) => x.account_id === accId && x.symbol === h.symbol), created = false;
+  if (!dest) { dest = { id: uid(), account_id: accId, symbol: h.symbol, quantity: 0, since: date.slice(0, 7), trades: [], ...(h.ccy ? { ccy: h.ccy } : {}) }; D().holdings.push(dest); created = true; }
+  else if (hc && !dest.ccy && h.ccy) dest.ccy = h.ccy;
+  if (date.slice(0, 7) < dest.since) dest.since = date.slice(0, 7);
+  h.quantity = r12(h.quantity - qty); dest.quantity = r12(dest.quantity + net);
+  h.trades.push({ id: ev.out, date, side: 'sell', quantity: net, kind: 'transfer', ...px });
+  if (fee > 0) h.trades.push({ id: ev.fee, date, side: 'sell', quantity: fee, kind: 'expense', ...px });
+  dest.trades.push({ id: ev.inn, date, side: 'buy', quantity: net, kind: 'transfer', ...px });
+  const a = accountName(h.account_id), b = accountName(accId), base = { wallet_id: null, type: 'transfer', transfer_id: gid, currency: 'USD', occurred_at: date, note: `${a} → ${b}`, category_id: null, category_source: 'user', ai_confidence: null };
+  D().transactions.push({ ...base, id: uid(), trade_id: ev.out, flow: 'out', amount_minor: mk(net) }, { ...base, id: uid(), trade_id: ev.inn, flow: 'in', amount_minor: mk(net) });
+  if (fee > 0) D().transactions.push({ id: detId('fee', ev.fee), wallet_id: null, trade_id: ev.fee, category_id: feeCategory().id, type: 'expense', amount_minor: mk(fee), currency: 'USD', occurred_at: date, note: `${__('Network fee')} (${a} → ${b})`, category_source: 'user', ai_confidence: null });
+  sortTxns();
+  return { gid, dest, created };
+}
+/* undo a coin transfer: the source gets everything back (moved quantity and fee), the destination gives up what it received (an account left
+   with nothing and no history is removed). False when the destination no longer holds what it received. */
+function removeCoinTransfer(gid) {
+  const ev = coinEv(gid), at = (id) => { for (const h of D().holdings) { const tr = h.trades.find((x) => x.id === id); if (tr) return { h, tr }; } return null; };
+  const o = at(ev.out), f = at(ev.fee), i = at(ev.inn);
+  if (o && i && i.h.quantity - i.tr.quantity < -1e-9) return false;
+  if (o) { o.h.quantity = r12(o.h.quantity + o.tr.quantity + (f ? f.tr.quantity : 0)); o.h.trades = o.h.trades.filter((x) => x.id !== ev.out && x.id !== ev.fee); }
+  if (i) { i.h.quantity = r12(Math.max(0, i.h.quantity - i.tr.quantity)); i.h.trades = i.h.trades.filter((x) => x.id !== ev.inn); if (i.h.quantity <= 1e-12 && !i.h.trades.length && i.h.open_price == null) D().holdings = D().holdings.filter((x) => x.id !== i.h.id); }
+  D().transactions = D().transactions.filter((t) => t.transfer_id !== gid && t.id !== detId('fee', ev.fee));
+  return true;
+}
+
 /* returns a message when the paying side can't cover a buy; null when it is fine */
 function payShortfall(src, side, amount) {
   if (side !== 'buy') return null;
@@ -202,8 +242,8 @@ function tradeList(h) {
   const hc = trackCost(h) ? holdingCost(h) : null;
   return `<div class="list">${trades.map((tr) => {
     const pi = hc && hc.per[tr.id] ? hc.per[tr.id] : null, ptxt = pi ? ` · @ ${priceFmt(pi.price, hc.ccy)}` : '', rtxt = pi && tr.side === 'sell' && hc.known ? ` · ${__('P&L')} <span class="pl ${pi.realized >= 0 ? 'up' : 'down'}">${signed(pi.realized, money(usdToMinor(usdOfCcy(Math.abs(pi.realized), hc.ccy), vcOf(h)), vcOf(h)))}</span>` : '';
-    const tail = tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('account'))}`;
-    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'expense' ? __('Spent') : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity, h)} ${esc(sym)}<br><small class="muted">${tail}${ptxt}${rtxt}</small></span><span></span><button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button></div>`;
+    const tail = tr.kind === 'transfer' ? __('Moved between accounts') : tr.kind ? `${tr.kind === 'income' ? __('Income') : __('Expense')} · ${money(tr.amount_minor, tr.currency)}` : tr.via ? __('in exchange for {qty} {symbol}', { qty: qtyFmt(tr.via.quantity), symbol: esc(tr.via.symbol) }) : `${tr.side === 'buy' ? __('paid') : __('received')} ${money(tr.amount_minor, tr.currency)} · ${esc(walletOf(tr.wallet_id)?.name || __('account'))}`;
+    return `<div class="pay-row"><span>${esc(new Date(tr.date + 'T00:00').toLocaleDateString(locale(), { year: 'numeric', month: 'short', day: 'numeric' }))} · ${tr.kind === 'income' ? __('Received') : tr.kind === 'transfer' ? (tr.side === 'buy' ? __('Moved in') : __('Moved out')) : tr.kind === 'expense' ? (coinFeeEvent(tr) ? __('Network fee') : __('Spent')) : sym2 === 'cash' ? (tr.side === 'buy' ? __('Deposited') : __('Withdrew')) : tr.side === 'buy' ? __('Bought') : __('Sold')} ${qtyFmt(tr.quantity, h)} ${esc(sym)}<br><small class="muted">${tail}${ptxt}${rtxt}</small></span><span></span>${tr.kind === 'transfer' || coinFeeEvent(tr) ? '' : `<button type="button" class="icon-x" data-act="delete-trade" data-id="${h.id}" data-tid="${tr.id}" aria-label="${__('Remove trade')}">×</button>`}</div>`;
   }).join('')}</div>`;
 }
 

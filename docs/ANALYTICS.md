@@ -49,6 +49,8 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `update_transaction` / `delete_transaction` | same / `type` | edit / delete |
 | `transfer_recorded` / `transfer_edited` | `has_fee`, `is_recurring`, `involves_investment_cash` | transfer between accounts (or with an investment Cash balance), added / edited |
 | `delete_transfer` | none | a transfer deleted |
+| `coin_transferred` | `has_fee`, `is_partial`, `asset_type`, `new_destination` | Move to account on a stablecoin or crypto holding saved (quantity and fee are never sent) |
+| `coin_transfer_deleted` | none | a coin transfer deleted from its details dialog |
 | `invite_sent` / `invite_resent` / `invite_revoked` | `role` (editor/viewer) / none / none | the owner invites, resends or cancels an invitation (never the email) |
 | `invite_accepted` | `role` | the invitee finished the Join page and is signed in |
 | `member_role_changed` / `member_removed` / `household_left` | `role` / none / none | household admin actions and a member leaving |

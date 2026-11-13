@@ -292,6 +292,16 @@ document.addEventListener('submit', async (e) => {
   if (kind === 'holding') {
     if (f.dataset.id) {
       const h = D().holdings.find((x) => x.id === f.dataset.id);
+      if (h && v.account && v.account !== h.account_id && isCoinMovable(h)) {   // stablecoin / crypto: a transfer with a network fee (stocks and cash keep the plain move below)
+        const held = heldNow(h), qty = v.mvqty === '' || v.mvqty == null ? held : parseFloat(v.mvqty), fee = v.mvfee ? parseFloat(v.mvfee) : 0, sym = assetInfo(h.symbol).symbol;
+        if (!(qty > 0)) { toast('Enter a quantity above zero'); return; }
+        if (qty > held + 1e-12) { toast(__('You only hold {qty} {symbol}', { qty: qtyFmt(held), symbol: sym })); return; }
+        if (!(fee >= 0)) { toast('The fee must be zero or more'); return; }
+        if (fee >= qty) { toast(__('The fee must be less than the quantity moved')); return; }
+        const r = moveCoin(h, v.account, qty, fee, v.mvdate || isoDate(new Date()));
+        Analytics.track('coin_transferred', { has_fee: fee > 0, is_partial: qty < held - 1e-12, asset_type: assetInfo(h.symbol).type, new_destination: r.created });
+        save(); close(); render(); toast(__('Moved {qty} {symbol} to {name}', { qty: qtyFmt(r12(qty - fee)), symbol: sym, name: accountName(v.account) })); return;
+      }
       const merged = moveHolding(h, v.account); save(); close(); render(); toast(merged !== h ? __('Moved and combined with the {name} already in that account', { name: assetInfo(merged.symbol).name }) : 'Saved'); return;
     }
     const qty = parseFloat(v.quantity);

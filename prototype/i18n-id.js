@@ -985,5 +985,15 @@ DICT.id = {
  "Ends your sign-in on every other phone or browser. This device stays signed in.": "Mengakhiri masuk di semua ponsel atau browser lain. Perangkat ini tetap masuk.",
  "Nothing repeats yet. Choose a repeat when you add a transaction or a debt and it shows up here.": "Belum ada yang berulang. Pilih pengulangan saat menambah transaksi atau utang, nanti muncul di sini.",
  "Synced to your account": "Tersinkron ke akunmu",
- "Delete \"{name}\"? This can't be undone.": "Hapus \"{name}\"? Ini tidak bisa dibatalkan."
+ "Delete \"{name}\"? This can't be undone.": "Hapus \"{name}\"? Ini tidak bisa dibatalkan.",
+ "Moved between accounts": "Dipindahkan antar akun",
+ "Moved in": "Masuk",
+ "Moved out": "Keluar",
+ "Network fee": "Biaya jaringan",
+ "Network fee ({unit})": "Biaya jaringan ({unit})",
+ "The fee is taken from the amount you move: the other account receives the quantity minus the fee. The fee counts as spending; the move itself does not.": "Biaya diambil dari jumlah yang kamu pindahkan: akun tujuan menerima jumlah dikurangi biaya. Biaya dihitung sebagai pengeluaran; pemindahannya tidak.",
+ "Can't delete: the other account no longer holds the coins it received": "Tidak bisa dihapus: akun tujuan sudah tidak memegang koin yang diterimanya",
+ "The fee must be less than the quantity moved": "Biaya harus lebih kecil dari jumlah yang dipindahkan",
+ "Moved {qty} {symbol} to {name}": "{qty} {symbol} dipindahkan ke {name}",
+ "The fee counts as spending (category Fee); the move itself does not. To change it, delete it and record it again.": "Biaya dihitung sebagai pengeluaran (kategori Fee); pemindahannya tidak. Untuk mengubahnya, hapus lalu catat ulang."
 };

@@ -12,8 +12,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: null, type: 'expense', amount_minor: 12345, currency: D().wallets[0].currency, occurred_at: isoDate(new Date()), note: 'MY REAL ONE', category_source: 'user', ai_confidence: null }); save(); });
   await settle(); await log();
   const own = await snap(); assert.equal(own.txns, 1);
-  // the (i) next to Total Balance explains what it contains
-  await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.click('.hero .lbl-link'); assert((await p.innerText('.hero .info-pop')).includes('Savings + investments'), 'total balance tooltip');
+  // the hero label (Spent today) is plain text: no tooltip
+  await p.evaluate(() => { location.hash = '#/overview'; render(); }); assert.equal(await p.$$eval('.hero .lbl-link, .hero .info-pop', (e) => e.length), 0, 'no tooltip on Spent today');
   // an empty account (balance under 1 USD) gets a one-tap sample-data switch on Overview
   await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.waitForSelector('.sample-promo [data-act=demo-on]');
   await p.click('.sample-promo [data-act=demo-on]'); await p.waitForSelector('.demo-bar'); assert.equal(await p.$$('.sample-promo').then((a) => a.length), 0, 'promo disappears in sample mode'); assert.equal(await p.$$('.demo-bar').then((a) => a.length), 1); assert((await snap()).demo);

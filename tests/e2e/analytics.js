@@ -26,6 +26,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero .eye-btn'); await p.click('.hero .eye-btn'); await p.click('.hero .eye-btn');
   const hb = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'balance_visibility_changed'); assert.deepEqual(hb.map((e) => e.properties.hidden), [true, false], 'balance_visibility_changed carries hidden true then false'); assert(!hb.some((e) => Object.keys(e.properties).some((k) => /amount|balance|value|minor/i.test(k))), 'no amounts in the event');
   assert((await p.evaluate(() => window.__phEvents)).some((e) => e.event === 'button_clicked' && e.properties.action === 'toggle_hide_balance'), 'the eye button is tracked as a button click');
+  // Overview hero (Spent today): the budget line and the Balance chip are tracked button clicks
+  await p.click('.hero-bud'); await p.waitForFunction(() => location.hash === '#/budgets'); await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero-chip'); await p.click('.hero-chip'); await p.waitForFunction(() => location.hash === '#/portfolio');
+  const heroClicks = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'button_clicked').map((e) => e.properties.action); assert(heroClicks.includes('hero_budget') && heroClicks.includes('hero_balance'), 'hero budget line and Balance chip are tracked: ' + heroClicks.slice(-6));
   const all = await p.evaluate(() => window.__phEvents);
   const tx = all.find((e) => e.event === 'expense_recorded'); assert(tx, 'expense_recorded'); assert.equal(tx.properties.type, 'expense'); assert.equal(tx.properties.payment_source, 'account'); assert.equal(tx.properties.is_recurring, false);
   assert(!all.some((e) => e.event === 'transaction_saved'), 'old event name is gone');

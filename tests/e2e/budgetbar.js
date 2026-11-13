@@ -11,17 +11,18 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     D().budgets.push({ id: uid(), category_id: null, amount_minor: 55000000, currency: 'IDR', start_month: m }, { id: uid(), category_id: cat.id, amount_minor: 3000000, currency: 'IDR', start_month: m });
     D().occasions.push({ id: uid(), name: 'Bandung Trip', amount_minor: 5000000, currency: 'IDR', start: '2026-11-06', end: '2026-11-08', archived: false });
     location.hash = '#/overview'; render(); });
-  const card = async () => p.$('.card:has(h2:text("Budgets"))');
-  const rows = async () => (await card()).$$eval('.ov-buds .bar', (bs) => bs.map((b) => ({ label: b.getAttribute('aria-label'), w: b.querySelector('i').style.width, barW: b.getBoundingClientRect().width, cardW: b.closest('.card').getBoundingClientRect().width })));
-  // nothing spent yet: empty bars, 0% visible, and the bar spans the card (no space wasted on the right)
-  let z = await rows(); console.log(JSON.stringify(z.map((r) => [r.label, r.w])));
-  assert.equal(z.length, 1, 'Overview shows only the overall budget'); assert(z.every((r) => r.w === '0%' && r.label.includes('0%')), JSON.stringify(z)); assert(/monthly budget · 0%/.test((await (await card()).innerText()).replace(/\u00a0/g, ' ')), 'the percentage follows "of ... monthly budget" after a dot, like the other rows'); assert(!(await (await card()).innerText()).includes('All spending'), 'no "All spending" label: just the bar under "of ... monthly budget"'); assert(z.every((r) => r.barW > r.cardW * 0.8), 'bars use the card width');
-  await (await card()).screenshot({ path: __dirname + '/out/budget_bars_zero.png' });
-  // with spending: widths follow the percentage, over-budget turns red
+  // the overall budget is the hero's sub-line and thin bar on Overview (the Budgets card is gone)
+  const hero = async () => (await p.innerText('.hero')).replace(/\u00a0/g, ' ');
+  const bar = () => p.$eval('.hero-bar', (b) => ({ w: b.querySelector('i').style.width, cls: b.querySelector('i').className, now: b.getAttribute('aria-valuenow'), barW: b.getBoundingClientRect().width, boxW: b.parentElement.getBoundingClientRect().width }));
+  // nothing spent yet: empty bar, the whole budget left, and the bar spans the line's width
+  let z = await bar(); console.log(JSON.stringify(z));
+  assert.equal(z.w, '0%'); assert.equal(z.now, '0'); assert(Math.abs(z.barW - z.boxW) < 2, 'bar spans the block: ' + JSON.stringify(z)); assert(/Rp 55\.000\.000 left this month/.test(await hero()), await hero()); assert(!(await hero()).includes('All spending'));
+  await (await p.$('.hero')).screenshot({ path: __dirname + '/out/budget_bars_zero.png' });
+  // with spending: width follows the percentage, over budget turns red and says so
   await p.evaluate(() => { const cat = D().categories.find((c) => c.name === 'Dining'); D().transactions.push({ id: uid(), wallet_id: D().wallets[0].id, category_id: cat.id, type: 'expense', amount_minor: 3300000, currency: 'IDR', occurred_at: isoDate(new Date()), note: 'Dinner', category_source: 'user', ai_confidence: null }); render(); });
+  const mid = await bar(); assert.equal(mid.w, '6%'); assert(/Rp 51\.700\.000 left this month/.test(await hero()), await hero());
   await p.evaluate(() => { D().budgets.find((b) => b.category_id === null).amount_minor = 3000000; render(); });   // 3.3M spent of 3M
-  const w = await rows(); const all = w[0]; assert.equal(all.w, '100%'); assert(all.label.includes('110%'), all.label); assert(/monthly budget · 110%/.test((await (await card()).innerText()).replace(/\u00a0/g, ' ')), 'percentage follows the spending');
-  assert.equal(await (await card()).$$eval('.ov-buds .bar i.exceeded', (e) => e.length), 1);
-  await (await card()).screenshot({ path: __dirname + '/out/budget_bars.png' });
+  const all = await bar(); assert.equal(all.w, '100%'); assert.equal(all.now, '100'); assert(all.cls.includes('exceeded'), all.cls); assert(/Rp 300\.000 over budget/.test(await hero()), await hero());
+  await (await p.$('.hero')).screenshot({ path: __dirname + '/out/budget_bars.png' });
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.error('FAIL', e.message.split('\n').slice(0, 3).join(' | ')); process.exit(1); });

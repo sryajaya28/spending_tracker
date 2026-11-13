@@ -27,7 +27,7 @@ function actTitle(r) {
   const k = actKind(r);
   return k === 'create' ? __("{name} added '{item}'", { name, item }) : k === 'update' ? __("{name} edited '{item}'", { name, item }) : k === 'delete' ? __("{name} deleted '{item}'", { name, item }) : __("{name} changed the balance of '{item}'", { name, item });
 }
-function viewActivity() {
+function viewActivity() {   // opened from Settings > Household (the only entry), so the back arrow leads there and there is no bottom bar
   if (actState.rows === null) { actLoad(); }
   const rows = actState.rows || [], me = Cloud.household;
   const people = [...new Map(rows.map((r) => [r.actor_id, hhFirstName(r.actor_name)])).entries()].filter(([id, n]) => id && n);
@@ -40,7 +40,7 @@ function viewActivity() {
   const empty = actState.rows === null || actState.loading ? `<p class="muted">${__('Loading…')}</p>` : actState.error ? `<div class="card"><h3>${__("Couldn't load Activity")}</h3><p class="muted">${__('Check your connection and try again.')}</p><button class="btn secondary" data-act="act-retry">${__('Try again')}</button></div>`
     : !rows.length ? `<div class="card"><h3>${__('No activity yet')}</h3><p class="muted">${__('Adds, edits, deletes and balance changes by anyone in the household show up here for 180 days.')}</p></div>`
     : !shown.length ? `<div class="card"><h3>${__('Nothing here')}</h3><p class="muted">${__('No {type} {by} in the last 180 days. Try another person or type.', { type: typeName, by: who ? __('by {name}', { name: esc(who) }) : '' })}</p></div>` : '';
-  return `${topbar('Activity', me.role === 'viewer' ? 'View only' : 'Last 180 days')}
+  return `${topbar('Activity', me.role === 'viewer' ? 'View only' : 'Last 180 days', '#/settings/household')}
     ${me.role === 'viewer' ? `<p class="muted">${__('Viewers can read Activity; nothing on it can be changed.')}</p>` : ''}
     ${people.length > 1 ? `<div class="act-chips"><button type="button" class="chip${actState.who ? '' : ' on'}" data-act="act-who" data-id="">${__('Everyone')}</button>${people.map(([id, n]) => `<button type="button" class="chip${actState.who === id ? ' on' : ''}" data-act="act-who" data-id="${esc(id)}">${esc(n)}</button>`).join('')}</div>` : ''}
     <div class="act-chips">${ACT_TYPES.map(([k, l]) => `<button type="button" class="chip${actState.type === k ? ' on' : ''}" data-act="act-type" data-type="${k}">${__(l)}</button>`).join('')}</div>
@@ -71,8 +71,8 @@ function render() {
     return;
   }
   if (state.ui.monthSrc !== periodDay()) { state.ui.month = currentPeriod(); state.ui.monthSrc = periodDay(); state.ui.allPeriods = false; }   // a new start day (or switching demo/real data) re-selects the current period
-  const r = VIEWS[route()] ? route() : 'overview';
-  app.innerHTML = `<div class="shell">${sidebar()}<main class="main${r === 'settings' ? ' no-nav' : ''}">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${r === 'settings' ? '' : bottomNav()}`;   // Settings has no bottom bar: its own back arrow leads out
+  const r = VIEWS[route()] ? route() : 'overview', noNav = r === 'settings' || r === 'activity';
+  app.innerHTML = `<div class="shell">${sidebar()}<main class="main${noNav ? ' no-nav' : ''}">${state.real ? demoBar() : ''}${VIEWS[r]()}</main></div>${noNav ? '' : bottomNav()}`;   // Settings and Activity have no bottom bar: their own back arrow leads out
   hideWriteControls();
   if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);
   if (r === 'portfolio' && state.chart2 && $('#pnl')) bindValue(state.chart2.months, state.chart2.series, state.chart2.vc, { id: 'pnl', neg: true });   // the asset page (#/portfolio/<id>) has no value chart

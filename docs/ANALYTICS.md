@@ -76,6 +76,6 @@ PostHog Cloud EU, project id 334082, token `POSTHOG_KEY` in `prototype/config.js
 `/ingest` (Vercel rewrite to `eu.i.posthog.com`). SDK vendored in `prototype/vendor/posthog.js`. Privacy rules are in the
 header of `analytics.js` and in `prototype/privacy.html`; do not weaken them.
 
-Click actions added with the Overview "Spent today" hero (2026-11-13), both through `button_clicked`: `hero_budget` (the budget line and bar, to Budgets) and `hero_balance` (the Balance chip, to Portfolio).
+Click actions added with the Overview "Spent today" hero (2026-11-13), through `button_clicked`: `hero_budget` (the budget line and bar, to Budgets). The `hero_balance` chip was removed (2026-11-13, Overview/Report split). New `button_clicked` actions in that split: `report_tab` (prop `tab`: `transactions` or `analysis`), `gap_add` and `gap_skip` (the missing-days card; no date or amount is sent).
 
 Click actions added with the sign-up agreement: `agree_terms` (tick box) and `toggle_password` (show / hide), both through `button_clicked`.

@@ -1,5 +1,5 @@
 const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
-/* Category trend on Overview: stacked bars per period; one category breaks into its sub-categories; tap a bar for the breakdown. */
+/* Category trend on Report > Analysis: stacked bars per period; one category breaks into its sub-categories; tap a bar for the breakdown. */
 (async () => {
   const b = await chromium.launch(); const ctx = await b.newContext({ viewport: { width: 390, height: 900 }, serviceWorkers: 'block' }); const p = await ctx.newPage();
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
@@ -7,7 +7,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
   await p.evaluate(() => setDemo(true)); await p.waitForTimeout(700);
-  // placed between Spending and Budgets
+  // Category trend sits on Report > Analysis, right after Spending (the Budgets card is not on Overview any more)
+  await p.evaluate(() => { location.hash = '#/analysis'; render(); });
   const titles = await p.$$eval('.grid > section h2', (h) => h.map((x) => x.textContent.trim())); const iS = titles.indexOf('Spending'), iT = titles.indexOf('Category trend'), iB = titles.indexOf('Budgets'); assert(iS >= 0 && iT === iS + 1 && iB === -1, 'no Budgets card on Overview any more (it is in the hero): ' + JSON.stringify(titles));
   assert.equal(await p.$$eval('.tbar', (e) => e.length), 6, 'six months by default');
   // all categories: segments are top-level categories

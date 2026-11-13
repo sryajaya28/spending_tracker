@@ -24,8 +24,8 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.deepEqual(f.c, ['4.5K', '1.2 L', '15.5 L', '2.3 Cr', '25 Cr', '0'], 'short rupee amounts: K, L (lakh), Cr (crore): ' + JSON.stringify(f.c)); assert.equal(f.neg, '−2.5 L'); assert(/^\$?1\.5M$/.test(f.usd), 'other currencies keep the browser style: ' + f.usd);
   // the sample account for each: local names and amounts in lakhs/crores
   for (const [cur, want] of [['INR', /HDFC Bank|SBI/], ['PHP', /BDO|BPI/]]) {
-    await p.evaluate(async (c) => { await setDemo(false); D().profile.currency = c; await setDemo(true); location.hash = '#/overview'; render(); }, cur); await p.waitForTimeout(600);
-    const t = await p.evaluate(() => ({ wallets: D().wallets.map((w) => w.name).join(), cur: D().profile.currency, hero: document.querySelector('.hero .amount').textContent.trim(), axis: [...document.querySelectorAll('.chart text, svg text')].map((x) => x.textContent).filter((x) => /Cr| L$|K$|M$|jt/.test(x)).slice(0, 3) }));
+    await p.evaluate(async (c) => { await setDemo(false); D().profile.currency = c; await setDemo(true); location.hash = '#/overview'; render(); window.__hero = document.querySelector('.hero .amount').textContent.trim(); location.hash = '#/analysis'; render(); }, cur); await p.waitForTimeout(600);
+    const t = await p.evaluate(() => ({ wallets: D().wallets.map((w) => w.name).join(), cur: D().profile.currency, hero: window.__hero, axis: [...document.querySelectorAll('.chart text, svg text')].map((x) => x.textContent).filter((x) => /Cr| L$|K$|M$|jt/.test(x)).slice(0, 3) }));
     assert(want.test(t.wallets), cur + ' wallets ' + t.wallets); assert.equal(t.cur, cur);
     if (cur === 'INR') { assert(/₹\d{1,3}(,\d{2})*,\d{3}/.test(t.hero), 'hero total with Indian grouping: ' + t.hero); assert(t.axis.some((x) => / L$| Cr$|K$/.test(x)), 'chart axis in K / L / Cr: ' + JSON.stringify(t.axis)); }
     else assert(t.hero.startsWith('₱'), 'peso sign: ' + t.hero);

@@ -32,7 +32,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert(!/Lunch|Coffee/.test(await p.innerText('#txn-list')), 'collapsed again after clearing the search');
   // a transaction inside an open day opens for editing
   await p.click('#txn-list .day-row[data-id="' + m + '-05"]'); await p.click('#txn-list .day-group.open .day-body .row'); assert((await p.$$('#dlg')).length >= 1); await p.click('[data-act=close]');
-  assert((await p.innerText('.sidebar a.active')).includes('Transactions'));
+  assert((await p.innerText('.sidebar a.active')).includes('Report'));
   // upcoming (future-dated) entries are not in the history
   await p.evaluate(() => { const w = D().wallets[0], d = new Date(); d.setDate(d.getDate() + 1); D().transactions.push({ id: uid(), type: 'expense', amount_minor: 4000, currency: w.currency, wallet_id: w.id, category_id: null, note: 'Future thing', occurred_at: isoDate(d) }); state.ui.month = periodKeyOf(isoDate(d)); location.hash = '#/transactions'; render(); });
   await p.waitForTimeout(150); assert(!(await p.innerText('#txn-list')).includes('Future thing') && !(await p.innerText('.main')).includes('Future thing'), 'an upcoming entry is hidden from the history');
@@ -40,17 +40,17 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert((await p.innerText('#txn-list .see-upcoming')).includes('(1)'), 'upcoming button with count');
   await p.click('#txn-list .see-upcoming'); await p.waitForSelector('#dlg[open] .up-list');
   assert((await p.innerText('#dlg .up-list')).includes('Future thing'), 'upcoming pop-up lists it'); await p.click('#dlg [data-act=close]'); await p.waitForTimeout(100);
-  // Overview > Recent transactions: expenses keep their − sign (every row, not just the first) and upcoming entries are not listed
-  await p.evaluate(() => { const w = D().wallets[0], d = new Date(); d.setDate(d.getDate() - 1); for (let i = 0; i < 3; i++) D().transactions.push({ id: uid(), type: 'expense', amount_minor: 1000 + i, currency: w.currency, wallet_id: w.id, category_id: null, note: 'Recent ' + i, occurred_at: isoDate(d) }); D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)); location.hash = '#/overview'; render(); });
+  // Overview > Today: expenses keep their − sign (every row, not just the first) and upcoming entries are not listed
+  await p.evaluate(() => { const w = D().wallets[0], d = new Date(); for (let i = 0; i < 3; i++) D().transactions.push({ id: uid(), type: 'expense', amount_minor: 1000 + i, currency: w.currency, wallet_id: w.id, category_id: null, note: 'Recent ' + i, occurred_at: isoDate(d) }); D().transactions.sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)); location.hash = '#/overview'; render(); });
   const signs = await p.$$eval('.main .card:has(h2) .list .row .amt', (e) => e.map((x) => x.textContent.trim()[0])); assert(signs.length >= 3 && signs.every((c) => c === '−' || c === '+'), JSON.stringify(signs)); assert.equal(await p.$$eval('.main .list .row .amt.expense, .main .list .row .amt', (e) => e.filter((x) => /Recent/.test(x.closest('.row').textContent) && !x.textContent.trim().startsWith('−')).length), 0, 'expenses show a minus on every row');
-  assert(!(await p.innerText('.main')).includes('Future thing'), 'upcoming not in Recent transactions');
+  assert(!(await p.innerText('.main')).includes('Future thing'), 'upcoming not in Today');
   // on the same date, the latest entered transaction is listed first (also after loading from the server)
   for (const note of ['First in', 'Second in', 'Third in']) {
     await p.evaluate(() => { location.hash = '#/overview'; txnDialog(null, 'expense'); }); await p.waitForSelector('#dlg[open] [name=amount]');
     await p.fill('#dlg [name=amount]', '1000'); await p.fill('#dlg [name=note]', note); await p.click('#dlg button[type=submit]'); await settle(); await p.waitForTimeout(20);
   }
   const order = async () => p.$$eval('.main .list .row .title', (e) => e.map((x) => x.textContent).filter((t) => / in$/.test(t)));
-  assert.deepEqual(await order(), ['Third in', 'Second in', 'First in'], 'latest first in Recent transactions');
+  assert.deepEqual(await order(), ['Third in', 'Second in', 'First in'], 'latest first in Today');
   await p.evaluate(() => loadUserData()); await p.waitForSelector('.shell'); await settle(); await p.evaluate(() => { location.hash = '#/overview'; render(); });
   assert.deepEqual(await order(), ['Third in', 'Second in', 'First in'], 'latest first after a reload');
   console.log('ok', JSON.stringify(errs)); await b.close();

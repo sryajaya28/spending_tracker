@@ -1,7 +1,7 @@
 const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
 /* Overview hero "Spent today": today's expenses only (not income, transfers, past or upcoming entries), in the reporting currency with its selector; under it the
-   current period's overall budget as "{left} left this month · {n} days to go" and a thin bar (over budget: "{x} over budget"; no budget: "{spent} spent · Set a monthly budget"),
-   which opens Budgets; a Balance chip opens Portfolio; the eye masks the two amounts and not the bar. No Total Balance, no % pill, no Budgets card. */
+   current period's overall budget as "{left} left this month · {n} days to go" and a thin bar (over budget: "{x} over budget"; no budget: "{spent} spent this month · Set a monthly budget"),
+   which opens Budgets; no Balance chip (Portfolio is in the bottom bar); the eye masks the two amounts and not the bar. No Total Balance, no % pill, no Budgets card. */
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 900 } });
   const errs = []; p.on('pageerror', (e) => errs.push(e.message));
@@ -24,17 +24,17 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   const rp = (n) => p.evaluate((n) => money(n, 'IDR').replace(/ /g, ' '), n);
   assert.equal(await amountOf(), await rp(1250000), 'today expenses only: ' + await amountOf());
   const all = await txt();
-  assert(all.includes('Spent today') && !all.includes('Total Balance') && !all.includes('this month') && !/%/.test(all), all);
+  assert(all.includes('Spent today') && !all.includes('Total Balance') && !/%/.test(all), all);
   assert.equal(await p.$$eval('.hero .delta', (e) => e.length), 0, 'no % pill'); assert.equal(await p.$$eval('.hero-actions .ghost', (e) => e.length), 4, 'the 4 action buttons stay');
   assert.equal(await p.$$eval('.ov-bud-card, .ov-more, .ov-buds', (e) => e.length), 0, 'the Budgets card is gone from Overview');
   assert.equal(await p.evaluate(() => [...document.querySelectorAll('.grid h2')].some((h) => h.textContent.trim() === 'Budgets')), false);
-  const chip = await p.$('.hero .label .hero-chip'); assert.equal(await chip.evaluate((e) => e.tagName), 'BUTTON', 'the chip is a button, not a span (spans get the pill style)'); assert.equal((await chip.innerText()).trim(), 'Balance ›');
-  assert(await chip.evaluate((e) => { const r = e.getBoundingClientRect(), l = e.parentElement.getBoundingClientRect(); return r.right > l.right - 4 && r.top >= l.top - 1; }), 'the chip sits at the right end of the label row');
+  assert.equal(await p.$$eval('.hero-chip', (e) => e.length), 0, 'no Balance chip any more');
+
 
   // no overall budget yet: what was spent this period and a nudge, no bar
   let line = await txt('.hero-bud-line'); const period = await p.evaluate(() => currentPeriod());
   const spentPeriod = await p.evaluate(() => money(sumBy(inMonth(currentPeriod()), 'expense'), 'IDR').replace(/ /g, ' '));
-  assert.equal(line, `${spentPeriod} spent · Set a monthly budget ›`, line); assert.equal(await p.$$eval('.hero-bar', (e) => e.length), 0, 'no bar without a budget');
+  assert.equal(line, `${spentPeriod} spent this month · Set a monthly budget ›`, line); assert.equal(await p.$$eval('.hero-bar', (e) => e.length), 0, 'no bar without a budget');
   await p.click('.hero-bud'); await p.waitForFunction(() => location.hash === '#/budgets'); await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero-bud');
 
   // with an overall budget: left, days to the end of the period (the last day counts), bar = share used by the whole period
@@ -56,16 +56,16 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await p.$eval('.hero-bar i', (e) => e.style.width), '100%'); assert(await p.$eval('.hero-bar i', (e) => e.classList.contains('exceeded')), 'over budget is red');
   await p.evaluate(() => { D().budgets.find((x) => x.category_id === null).amount_minor = 20000000; render(); });
 
-  // taps: the line and the bar open Budgets (tracked), the chip opens Portfolio (tracked)
+  // taps: the line and the bar open Budgets (tracked)
   await p.click('.hero-bar'); await p.waitForFunction(() => location.hash === '#/budgets'); await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero-bud');
   await p.focus('.hero-bud'); await p.keyboard.press('Enter'); await p.waitForFunction(() => location.hash === '#/budgets'); await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero-bud');
-  await p.click('.hero-chip'); await p.waitForFunction(() => location.hash === '#/portfolio'); await p.waitForFunction(() => (document.querySelector('.hero') || {}).innerText?.includes('Net worth'), null, { timeout: 5000 });   /* Portfolio shows the Net worth */ await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero-chip');
-  assert.equal(await p.getAttribute('.hero-bud', 'data-act'), 'hero-budget'); assert.equal(await p.getAttribute('.hero-chip', 'data-act'), 'hero-balance');
+  await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.hero-bud');
+  assert.equal(await p.getAttribute('.hero-bud', 'data-act'), 'hero-budget');
 
-  // the eye masks both amounts, not the bar or the days; the Balance chip and the actions stay
+  // the eye masks both amounts, not the bar or the days; the actions stay
   await p.click('.hero .eye-btn');
   assert(/^Rp\s•{8}$/.test(await amountOf()), await amountOf()); line = await txt('.hero-bud-line'); assert(/^Rp •{8} left this month · \d+ days? to go$/.test(line), line);
-  assert.equal(await p.$eval('.hero-bar i', (e) => e.style.width), info.pct + '%', 'the bar stays'); assert.equal(await p.$$eval('.hero-chip', (e) => e.length), 1);
+  assert.equal(await p.$eval('.hero-bar i', (e) => e.style.width), info.pct + '%', 'the bar stays');
   assert(!/\d/.test(await txt('.hero .amount-line .amount')), 'no digits in the hero amount');
   await p.click('.hero .eye-btn'); assert.equal(await amountOf(), await rp(1250000), 'shown again');
 

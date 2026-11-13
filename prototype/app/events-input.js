@@ -103,7 +103,9 @@ document.addEventListener('click', (e) => {
   else if (act === 'toggle-more') { const key = el.dataset.key, k = key === 'hist' ? 'histMore' : key === 'wallets' ? 'walletsMore' : key === 'pnlhist' ? 'pnlhistMore' : 'more_' + key; state.ui[k] = !state.ui[k]; render(); }
   else if (act === 'settings-open') location.hash = '#/settings/' + el.dataset.route;   // the Settings hub: each tile or row opens one page
   else if (act === 'goto') { if (el.dataset.route === 'activity') { actState.rows = null; actState.who = ''; actState.type = 'all'; } location.hash = '#/' + el.dataset.route; }
-  else if (act === 'hero-balance') location.hash = '#/portfolio';   // Overview hero chip: Balance lives on Portfolio (Net worth)
+  else if (act === 'report-tab') location.hash = '#/' + el.dataset.tab;   // Report: Transactions | Analysis
+  else if (act === 'gap-add') txnDialog(null, 'expense', undefined, date);   // Overview missing-days card: Add for that day
+  else if (act === 'gap-skip') { nogapMark(date); render(); }   // "Nothing to add": remembered on this device only
   else if (act === 'hero-budget') location.hash = '#/budgets';   // Overview hero sub-line / bar
   else if (act === 'demo-on') { Analytics.track('demo_on', {}, true); setDemo(true); }
   else if (act === 'onb-skip') skipOnboarding();

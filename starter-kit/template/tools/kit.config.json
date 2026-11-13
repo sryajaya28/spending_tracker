@@ -1,0 +1,25 @@
+{
+  "_about": "Project settings read by the tools/ scripts. tierRules: [minimum tier, path regex, why]; checked top-down, first match per file, highest tier of any file wins; an unknown path is Tier 2. Keep docs/workflows/README.md (the table) in step.",
+  "kitVersion": "2026-11-13",
+  "project": "__PROJECT__",
+  "slug": "__SLUG__",
+  "appDir": "__APP_DIR__",
+  "prodUrl": "__PROD_URL__",
+  "stagingUrl": "__STAGING_URL__",
+  "docsOnly": "^(docs/|tools/|\\.claude/|[^/]+\\.md$)",
+  "tierRules": [
+    [1, "^(supabase|db|migrations)/.*\\.md$", "documentation inside the database folder"],
+    [3, "^(supabase|db|migrations|prisma)/", "database, auth email or server function"],
+    [3, "\\.sql$", "SQL"],
+    [3, "^(api|server|functions)/", "server code"],
+    [3, "(^|/)(auth|signin|login|session|sync|cloud|payment|billing)[^/]*\\.(js|ts|tsx|jsx|py)$", "sign-in, sync or money"],
+    [1, "^\\.env\\.example$", "template without secrets"],
+    [3, "^(vercel\\.json|netlify\\.toml|__APP_DIR__/config\\.[jt]s|\\.env.*)$", "security posture or configuration"],
+    [1, "^__APP_DIR__/.*\\.(css|scss|png|jpg|jpeg|svg|webp|ico|gif|mp4|webm|woff2?)$", "presentation"],
+    [1, "^__APP_DIR__/(.*/)?(i18n|locales?)[^/]*(/|$|\\.)", "translations"],
+    [2, "^__APP_DIR__/", "app logic or markup (not told apart reliably: Tier 2)"],
+    [2, "^(tests|\\.github)/", "tests or CI (can weaken protection)"],
+    [2, "^(package(-lock)?\\.json|pnpm-lock\\.yaml|yarn\\.lock|requirements[^/]*\\.txt)$", "dependencies"],
+    [1, "^(docs/|tools/|\\.claude/|\\.gitignore$|[^/]+\\.md$)", "docs or tooling"]
+  ]
+}

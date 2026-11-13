@@ -1,0 +1,31 @@
+# secrets
+.env
+.env.local
+.env.*.local
+
+# dependencies / build output
+node_modules/
+.next/
+out/
+
+# misc
+.DS_Store
+.vercel/
+supabase/.temp/
+
+# local caches
+.cache/
+
+# local tool settings
+.claude/settings.local.json
+
+# local test output
+tests/e2e/out/
+tests/e2e/*_ops.json
+
+# screenshots the e2e tests rewrite on every run
+tests/e2e/*.png
+
+# python bytecode
+__pycache__/
+*.pyc

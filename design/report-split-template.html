@@ -1,0 +1,168 @@
+<title>Stiver Report Redesign</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/*REAL_CSS*/
+
+/* ===== design board (not part of the app) ===== */
+:root { --board: #e3e5f6; --frame-shadow: 0 2px 6px rgba(30,27,75,.08), 0 24px 60px rgba(30,27,75,.14); }
+:root[data-theme="dark"] { --board: #060512; --frame-shadow: 0 24px 60px rgba(0,0,0,.55); }
+body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; }
+.board-head { max-width: 1760px; margin: 0 auto 26px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; justify-content: space-between; }
+.board-head h1 { font-size: 26px; line-height: 1.15; letter-spacing: -.01em; margin: 0 0 6px; text-wrap: balance; }
+.board-head p { color: var(--muted); max-width: 64ch; }
+.theme { display: inline-flex; background: var(--surface); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+.theme button { padding: 7px 16px; border: 0; background: none; border-radius: 999px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.theme button[aria-pressed="true"] { background: var(--navy); color: #fff; }
+.frames { max-width: 1760px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(390px, 100%), 390px)); gap: 40px 32px; justify-content: center; align-items: start; }
+.frame-cap { font-size: 13px; font-weight: 600; margin: 0 4px 10px; }
+.frame-cap span { color: var(--muted); font-weight: 500; }
+/* a 390px phone: the app's max-width media queries are container queries on this box, so the real mobile layout applies */
+.phone { container: phone / inline-size; position: relative; width: min(390px, 100%); background: var(--bg); border-radius: 36px; box-shadow: var(--frame-shadow); overflow: hidden; border: 1px solid var(--line); }
+.phone .shell { min-height: 0; }
+.phone .bottom-nav { position: absolute; }   /* the app pins it to the screen; here it sits at the bottom of its own phone */
+.sheet-phone { min-height: 780px; }
+.phone .scrim { position: absolute; inset: 0; background: rgba(30, 27, 75, .45); z-index: 25; }
+.phone dialog { position: absolute; z-index: 26; left: 12px; right: 12px; bottom: 12px; top: auto; width: auto; margin: 0; }   /* the app's filter sheet, pinned inside its phone */
+.mock-toast { position: absolute; left: 16px; right: 16px; bottom: 96px; z-index: 30; background: var(--navy); color: #fff; border-radius: 14px; padding: 11px 14px; font-weight: 600; font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; pointer-events: none; text-align: center; }
+.mock-toast.show { opacity: 1; transform: none; }
+
+/* ===== NEW pieces (built from the app's tokens, card, chip, btn and legend-btn) ===== */
+.report-tabs { display: flex; width: 100%; margin: 2px 0 12px; }
+.report-tabs .tab { flex: 1; padding: 10px 8px; }
+.gap-head { display: flex; gap: 12px; align-items: flex-start; }
+.gap-ico { width: 40px; height: 40px; border-radius: 14px; flex: none; display: grid; place-items: center; background: color-mix(in srgb, var(--warn) 24%, var(--surface)); color: var(--ink); }
+.gap-ico svg { width: 20px; height: 20px; }
+.gap-head p { font-size: 13px; margin-top: 1px; }
+.gap-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin: 4px 0 8px; }
+.gap-d { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 2px 0; border: 0; background: none; border-radius: 12px; }
+.gap-d small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.gap-c { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; }
+.gap-c svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.gap-d.ok .gap-c { background: color-mix(in srgb, var(--good) 18%, var(--surface)); color: var(--good); }
+.gap-d.miss .gap-c { border: 2px dashed var(--warn); background: color-mix(in srgb, var(--warn) 22%, var(--surface)); color: var(--ink); }
+.gap-d.miss small { color: var(--ink); font-weight: 700; }
+.gap-d.skip .gap-c { background: var(--soft); color: var(--muted); }
+.gap-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 9px 2px; border-top: 1px solid var(--line); }
+.gap-dt { width: 44px; height: 44px; border-radius: 14px; border: 2px dashed var(--warn); background: color-mix(in srgb, var(--warn) 22%, var(--surface)); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.gap-dt span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.gap-dt b { font-size: 16px; }
+.gap-t { font-weight: 600; font-size: 15px; }
+.gap-skip { padding: 2px 0; color: var(--brand); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; font-size: 13px; }
+.gap-add { height: 36px; padding: 0 16px; font-size: 14px; }
+.gap-row.out { opacity: 0; transform: translateX(10px); transition: opacity .2s, transform .2s; }
+.gap-card[hidden] { display: none; }
+.gap-prompt { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding-block: 26px; }
+.gap-prompt h2 { margin-top: 4px; }
+.gap-prompt p { max-width: 30ch; margin-bottom: 8px; }
+.gap-prompt .btn { padding-inline: 28px; }
+
+/* ===== notes ===== */
+.notes { max-width: 1760px; margin: 48px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 20px; }
+.note { background: var(--surface); border-radius: 22px; padding: 20px 22px; box-shadow: var(--shadow); min-width: 0; }
+.note h3 { font-size: 15px; margin-bottom: 10px; }
+.note ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; }
+.note li b { font-weight: 600; }
+.reset { margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) { .gap-row.out, .mock-toast { transition: none; } }
+</style>
+
+<header class="board-head">
+  <div>
+    <h1>Overview and Report redesign</h1>
+    <p>Every frame is the app's own HTML and CSS, captured from the running app with sample data. Only the Report switch, the Today card and the missing-days card are new. Frame 1 is interactive: try "Add" and "Nothing to add".</p>
+  </div>
+  <div class="theme" role="group" aria-label="Theme">
+    <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    <button type="button" data-theme-set="system" aria-pressed="true">Device</button>
+  </div>
+</header>
+
+<main class="frames">
+  <section aria-label="Overview with missing days"><p class="frame-cap">1 · Overview <span>— Phone 390 · today, with missing days</span></p>
+    <div class="phone" id="phone1"><div class="shell"><!--F1--></div><div class="mock-toast" id="mtoast" role="status" aria-live="polite"></div></div></section>
+  <section aria-label="Report, Transactions"><p class="frame-cap">2 · Report, Transactions <span>— Phone 390</span></p>
+    <div class="phone"><div class="shell"><!--F2--></div></div></section>
+  <section aria-label="Report, Analysis"><p class="frame-cap">3 · Report, Analysis <span>— Phone 390</span></p>
+    <div class="phone"><div class="shell"><!--F3--></div></div></section>
+  <section aria-label="Overview, nothing today yet and no missing days"><p class="frame-cap">4 · Overview <span>— Phone 390 · nothing today yet, no missing days</span></p>
+    <div class="phone"><div class="shell"><!--F4--></div></div></section>
+  <section aria-label="Report, Transactions with filters applied"><p class="frame-cap">5 · Report, Transactions <span>— filters applied, household with 2+ people</span></p>
+    <div class="phone"><div class="shell"><!--F5--></div></div></section>
+  <section aria-label="Filter sheet"><p class="frame-cap">6 · Filter sheet <span>— Category, Occasion, Account, Person</span></p>
+    <div class="phone sheet-phone"><div class="shell"><!--F6--></div></div></section>
+</main>
+
+<section class="notes" aria-label="Design notes">
+  <div class="note">
+    <h3>What is real, what is new</h3>
+    <ul>
+      <li><b>Real:</b> hero, cards, rows, chips, buttons, tabs, budget bars, donut, trend, Money Flow and the bottom bar are the app's own markup and styles.</li>
+      <li><b>New:</b> the Transactions | Analysis tabs (the Portfolio tab component), the Today card header, the missing-days card, and the bottom tab renamed Report.</li>
+      <li><b>Removed from Overview:</b> the budget line and bar, Money Flow, Spending, Category trend.</li>
+      <li>Rebuild after the app changes: <code>node design/build_report_mock.js</code>.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>Rules behind frame 1</h3>
+    <ul>
+      <li>A missing day is one of the last 7 days (today excluded) with no transaction of any kind. Recurring entries count.</li>
+      <li>Days before the first transaction are never flagged.</li>
+      <li>Nothing to add is remembered on this device only (no database change).</li>
+      <li>Add, or a dashed day in the strip, opens Add transaction dated to that day.</li>
+      <li>No missing days: the card is not shown at all (frame 4).</li>
+      <li>Nothing recorded today: the whole Today section becomes one prompt with a single Add transaction button (frame 4).</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>Please look at</h3>
+    <ul>
+      <li><b>Bottom bar:</b> Overview, Report, Add, Budgets, Portfolio. Budgets stays its own tab.</li>
+      <li><b>Analysis</b> shows budget progress only (no add or edit), then Spending, Category trend and Money Flow. Is a read-only budget summary what you want, or none?</li>
+      <li><b>Report</b> has no subtitle line and no summary line. The month stays in the month picker.</li>
+    </ul>
+    <button type="button" class="chip reset" id="reset">Reset frame 1</button>
+  </div>
+</section>
+
+<script>
+(function () {
+  var root = document.documentElement, btns = document.querySelectorAll('[data-theme-set]');
+  var sys = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  var mode = 'system';
+  function paint() {
+    var t = mode === 'system' ? (sys && sys.matches ? 'dark' : 'light') : mode;
+    root.setAttribute('data-theme', t);
+    btns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-theme-set') === mode)); });
+  }
+  var pre = root.getAttribute('data-theme'); if (pre === 'dark' || pre === 'light') mode = 'system';
+  btns.forEach(function (b) { b.addEventListener('click', function () { mode = b.getAttribute('data-theme-set'); paint(); }); });
+  if (sys && sys.addEventListener) sys.addEventListener('change', function () { if (mode === 'system') paint(); });
+  paint();
+
+  var card = document.getElementById('gapcard'); if (!card) return;
+  var html = card.innerHTML, toast = document.getElementById('mtoast'), tt;
+  function say(m) { toast.textContent = m; toast.classList.add('show'); clearTimeout(tt); tt = setTimeout(function () { toast.classList.remove('show'); }, 2400); }
+  function label(n) { var r = card.querySelector('.gap-row[data-day="' + n + '"] .gap-t'); return r ? r.textContent : 'day ' + n; }
+  function title() {
+    var n = card.querySelectorAll('.gap-row').length;
+    if (n === 0) { card.hidden = true; return; }
+    document.getElementById('gaptitle').textContent = n === 1 ? '1 day with nothing recorded' : n + ' days with nothing recorded';
+  }
+  function wire() {
+    card.addEventListener('click', function (e) {
+      var add = e.target.closest('[data-add]'), skip = e.target.closest('[data-skip]'), dot = e.target.closest('.gap-d.miss');
+      if (add) { say('Opens Add transaction, dated ' + label(add.getAttribute('data-add'))); return; }
+      if (dot) { say('Opens Add transaction, dated ' + label(dot.getAttribute('data-day'))); return; }
+      if (skip) {
+        var n = skip.getAttribute('data-skip'), row = card.querySelector('.gap-row[data-day="' + n + '"]'), d = card.querySelector('.gap-d[data-day="' + n + '"]'), name = label(n);
+        d.className = 'gap-d skip'; d.removeAttribute('data-day'); d.querySelector('.gap-c').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>';
+        row.classList.add('out'); setTimeout(function () { row.remove(); title(); }, 200); say(name + ' marked as nothing to add');
+      }
+    });
+  }
+  wire();
+  document.getElementById('reset').addEventListener('click', function () { card.innerHTML = html; card.hidden = false; });
+})();
+</script>

@@ -89,6 +89,7 @@ infrastructure names, see section 8).
 - **Dropdowns:** every `<select>` opens an app-styled popover list (`prototype/dropdown.js`, `.cs-pop`) instead of the OS picker. The native select stays
   as the visible field and value holder (so forms, `change` handlers and tests are unchanged) but gets `pointer-events: none`; the script finds the select under the
   tap, builds the list (optgroups as headings), writes the value and dispatches `input` + `change`. Add `data-native` to a select to keep the OS picker.
+  `data-search` puts a Search box on top (`data-empty` = the "not found" note, shown above the add entry or, with none, at the end of the list; `data-s` on an option = the text that is searched). Category lists always have it; **Occasion and Account lists get it only above 5 real choices** (`SEARCH_OVER`, `searchAttr()`, `syncSearch()` in `app/ui-helpers.js`): the Transactions filters (`txnFilterSelects`, also the household filter sheet), Add/Edit transaction (Account, Special occasion; the account list is rebuilt on a type change, so `syncSearch` runs then) and Transfer (From, To). Account search matches the name only (`data-s`). Test `searchlists`.
 - **Language:** English and Bahasa Indonesia (about 510 strings). **Appearance:** match device / light / dark.
   Both saved to the profile and remembered per device.
 - **Sample data** is a demo mode (switch in Settings, and a card on Overview for empty accounts): a seeded demo account lives only in memory, saves are disabled,

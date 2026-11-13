@@ -58,6 +58,7 @@
       if (n.tagName === 'OPTGROUP') { const g = document.createElement('div'); g.className = 'cs-group'; g.textContent = n.label; list.appendChild(g); [...n.children].forEach((o) => add(o, list)); }
       else if (n.tagName === 'OPTION') add(n, list);
     });
+    if (empty && !empty.parentNode) list.appendChild(empty);   // a list with no add entry: the "not found" note goes at the end
     pop.appendChild(list);
     // top layer: a popover sits above the open <dialog> and is not clipped by it (inside the dialog the end of a long list was cut off by the dialog edge)
     (sel.closest('dialog') || document.body).appendChild(pop);   // it must stay inside the modal dialog (everything outside it is inert)

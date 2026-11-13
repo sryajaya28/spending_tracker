@@ -64,14 +64,15 @@ const ROOT = path.resolve(__dirname, '..'), PORT = 5181;
       ? `<div class="gap-d ok"><span class="gap-c">${icon('plus').replace('<path d="M12 5v14M5 12h14"/>', '<path d="M5 12l5 5 9-10"/>')}</span><small>${x.wd.slice(0, 3)} ${x.n}</small></div>`
       : `<button type="button" class="gap-d miss" data-day="${x.n}" aria-label="${x.wd} ${x.n} ${x.mon}, nothing recorded. Add transaction"><span class="gap-c">${icon('plus')}</span><small>${x.wd.slice(0, 3)} ${x.n}</small></button>`).join('');
     const gapCard = `<section class="card gap-card" id="gapcard"><div class="card-head"><div class="gap-head"><span class="gap-ico">${icon('calendar')}</span><div><h2 id="gaptitle">${missing.length} days with nothing recorded</h2><p class="muted">Last 7 days. Add what you spent, or mark the day.</p></div></div></div><div class="gap-strip" id="strip">${stripHtml}</div><div id="gaplist">${gapRows}</div></section>`;
-    const caught = `<div class="gap-caught" role="status">${icon('plus').replace('<path d="M12 5v14M5 12h14"/>', '<path d="M5 12l5 5 9-10"/>')}<div>Last 7 days are filled in <span>Nice and complete.</span></div></div>`;
 
     // ---- NEW: Overview = hero without the budget line, today's list (all of today), missing days
     const todayRows = D().transactions.filter((t) => t.occurred_at === todayIso() && !hiddenLeg(t, ''));
-    const todayCard = (rows) => `<section class="card"><div class="card-head"><div><h2>Today</h2><p class="muted">${WD[new Date().getDay()].slice(0, 3)} ${new Date().getDate()} ${MO[new Date().getMonth()]} · ${countLabel(rows.length)}</p></div><a class="chip" href="#">View all</a></div><div class="list">${rows.length ? rows.map((t) => txnRow(t)).join('') : `<div class="empty">Nothing recorded today. Add what you spend as you go.</div>`}</div></section>`;
+    const todayCard = (rows) => rows.length
+      ? `<section class="card"><div class="card-head"><div><h2>Today</h2><p class="muted">${WD[new Date().getDay()].slice(0, 3)} ${new Date().getDate()} ${MO[new Date().getMonth()]} · ${countLabel(rows.length)}</p></div><a class="chip" href="#">View all</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`
+      : `<section class="card gap-prompt"><span class="gap-ico">${icon('plus')}</span><h2>Nothing recorded today yet</h2><p class="muted">Add what you spend as you go, and it shows up here.</p><button type="button" class="btn" data-act="add-txn">Add transaction</button></section>`;
     const overview = (empty) => { const m = ov.cloneNode(true); const g = m.querySelector('.grid'); const h = (() => { const d = document.createElement('div'); d.innerHTML = heroHtml; const e = d.firstElementChild; e.querySelectorAll('.hero-bud').forEach((x) => x.remove());
         if (empty) e.querySelector('.hero .amount, .amount').innerHTML = moneyHtmlP(0, cur()); return e.outerHTML; })();
-      g.innerHTML = h + todayCard(empty ? [] : todayRows) + (empty ? caught : gapCard);
+      g.innerHTML = h + todayCard(empty ? [] : todayRows) + (empty ? '' : gapCard);
       return m.outerHTML + nav(0); };
     const report = (a) => `<div class="main">${topbarReport()}${tabs(a ? 'a' : 't')}${a ? `<div class="grid">${overall}${bycat}${piece.spend}${piece.trend}${piece.flow}</div>` : `<div class="stack">${txCard}</div>`}</div>${nav(1)}`;
     const fix = (h) => h.replace(/ id="(?!gapcard|gaptitle|strip|gaplist)[^"]*"/g, '');

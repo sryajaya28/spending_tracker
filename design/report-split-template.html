@@ -48,10 +48,11 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
 .gap-skip { padding: 2px 0; color: var(--brand); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; font-size: 13px; }
 .gap-add { height: 36px; padding: 0 16px; font-size: 14px; }
 .gap-row.out { opacity: 0; transform: translateX(10px); transition: opacity .2s, transform .2s; }
-.gap-caught { display: flex; align-items: center; gap: 10px; border-radius: 18px; padding: 12px 14px; font-weight: 600; font-size: 14px; background: color-mix(in srgb, var(--good) 16%, var(--surface)); color: var(--ink); }
-.gap-caught svg { width: 20px; height: 20px; color: var(--good); stroke-width: 2.4; flex: none; }
-.gap-caught span { font-weight: 500; color: var(--muted); }
-.gap-caught span::before { content: "· "; }
+.gap-card[hidden] { display: none; }
+.gap-prompt { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding-block: 26px; }
+.gap-prompt h2 { margin-top: 4px; }
+.gap-prompt p { max-width: 30ch; margin-bottom: 8px; }
+.gap-prompt .btn { padding-inline: 28px; }
 
 /* ===== notes ===== */
 .notes { max-width: 1760px; margin: 48px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 20px; }
@@ -103,7 +104,8 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
       <li>Days before the first transaction are never flagged.</li>
       <li>Nothing to add is remembered on this device only (no database change).</li>
       <li>Add, or a dashed day in the strip, opens Add transaction dated to that day.</li>
-      <li>No missing days: the card becomes the green line in frame 4.</li>
+      <li>No missing days: the card is not shown at all (frame 4).</li>
+      <li>Nothing recorded today: the whole Today section becomes one prompt with a single Add transaction button (frame 4).</li>
     </ul>
   </div>
   <div class="note">
@@ -138,7 +140,7 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
   function label(n) { var r = card.querySelector('.gap-row[data-day="' + n + '"] .gap-t'); return r ? r.textContent : 'day ' + n; }
   function title() {
     var n = card.querySelectorAll('.gap-row').length;
-    if (n === 0) { var c = document.createElement('div'); c.className = 'gap-caught'; c.id = 'gapcard'; c.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><div>Last 7 days are filled in <span>Nice and complete.</span></div>'; card.parentNode.replaceChild(c, card); card = c; return; }
+    if (n === 0) { card.hidden = true; return; }
     document.getElementById('gaptitle').textContent = n === 1 ? '1 day with nothing recorded' : n + ' days with nothing recorded';
   }
   function wire() {
@@ -154,8 +156,6 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
     });
   }
   wire();
-  document.getElementById('reset').addEventListener('click', function () {
-    var f = document.createElement('section'); f.className = 'card gap-card'; f.id = 'gapcard'; f.innerHTML = html; card.parentNode.replaceChild(f, card); card = f; wire();
-  });
+  document.getElementById('reset').addEventListener('click', function () { card.innerHTML = html; card.hidden = false; });
 })();
 </script>

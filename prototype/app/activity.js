@@ -79,7 +79,6 @@ function render() {
   if (r === 'overview') {
     const months = lastMonths(6);
     bindFlow(months, months.map((m) => sumBy(inMonth(m), 'income')), months.map((m) => sumBy(inMonth(m), 'expense')));
-    fitOverviewBudgets(); requestAnimationFrame(fitOverviewBudgets); if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitOverviewBudgets);   // again once the layout and fonts settle
   }
 }
 

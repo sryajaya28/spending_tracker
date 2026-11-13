@@ -303,9 +303,6 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 
 /* special occasions on the Overview budgets card */
 .ov-h { margin-top: 22px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
-.ov-occ { margin-top: 12px; }
-.ov-occ .meta { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; font-weight: 600; flex-wrap: wrap; }
-.ov-occ .meta span:last-child { color: var(--muted); font-weight: 500; }
 
 .seg.seg4 { grid-template-columns: repeat(4, 1fr); }
 .seg.seg4 label { padding: 10px 4px; font-size: 14px; }
@@ -379,7 +376,6 @@ details.bk-item[open] > summary::before { transform: rotate(90deg); }
 @container (max-width: 520px) { .hero-actions .ghost svg { display: none; } .hero-actions .ghost { font-size: 13px; } }
 @container (max-width: 290px) { .hero-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-.ov-buds { margin-top: 14px; }
 
 dialog { background: var(--surface); }
 
@@ -573,6 +569,7 @@ select:not([data-native]) { pointer-events: none; }
 .filters.scroll-row select[data-filter="cat"] { flex-grow: 36; }
 .filters.scroll-row select[data-filter="occ"] { flex-grow: 33; }
 .filters.scroll-row select[data-filter="wallet"] { flex-grow: 31; }
+
 @media (max-width: 900px) { .add-desk { display: none; } }
 @media (max-width: 380px) { .filters.scroll-row select { font-size: 12px; padding: 0 6px; } }
 
@@ -891,16 +888,8 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 
 /* Expand all / Hide all / Reset filters: they stay on the right; the pressed highlight is a pill with the text in its middle */
 .day-tools .legend-btn { padding: 5px 12px; justify-content: center; border-radius: 99px; }
-.day-tools .legend-btn:active { background: var(--soft); color: var(--ink); }
-
-/* Overview > Budgets on wide screens (the two-column layout): the other budgets fill the room under the overall one; the card keeps the height of its neighbour */
-.ov-more { display: none; }
-@media (min-width: 1101px) {
-  .ov-bud-card { display: flex; flex-direction: column; }
-  .ov-more { display: block; position: relative; flex: 1 1 0; min-height: 0; margin-top: 6px; }
-  .ov-more-in { position: absolute; inset: 0; overflow: hidden; }
-  .ov-more-in > [hidden] { display: none; }
-}
+.day-tools .legend-btn:active { background: none; color: var(--ink); }
+@media (hover: hover) { .day-tools .legend-btn:hover { background: none; color: var(--ink); } }   /* Expand all / Hide all / Reset filters are plain text: no background in any state */
 
 /* four buttons (Delete, Reopen, Cancel, Save) do not fit in one row on a phone: two rows of two, equal width, nothing outside the dialog's padding */
 .actions:has(> :nth-child(4)) { display: grid; grid-template-columns: 1fr 1fr; }
@@ -1041,3 +1030,30 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .hero .delta b.up { background: var(--good); color: #1e1b4b; }
 .hero .delta b.down { background: var(--bad); color: #fff; }
 :root[data-theme="dark"] .hero .delta b.down { background: #ff6b70; color: #1e1b4b; }
+
+/* Overview hero "Spent today": the Balance chip at the far end of the label row, and the budget line + thin bar under the amount (white on the hero gradient in both themes) */
+.hero .hero-chip { margin-left: auto; flex: none; background: rgba(255, 255, 255, .18); color: #fff; border: 0; border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12px; letter-spacing: 0; cursor: pointer; }
+.hero .hero-chip:hover { background: rgba(255, 255, 255, .3); }
+.hero-bud { display: flex; flex-direction: column; gap: 8px; cursor: pointer; border-radius: 10px; }
+.hero-bud-line { font-size: 14px; opacity: .95; }
+.hero-bud-line u { text-underline-offset: 3px; }
+.hero-bar { height: 6px; background: rgba(255, 255, 255, .25); border-radius: 999px; overflow: hidden; }
+.hero-bar i { display: block; height: 100%; border-radius: 999px; background: #fff; }
+.hero-bar i.warning { background: var(--warn); }
+.hero-bar i.exceeded { background: #ff6b70; }
+.hero-bud:focus-visible, .hero .hero-chip:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+/* Transactions person filter (2+ writers): a filter button in the search row opens a sheet; active filters show as chips under the search row */
+.filter-btn { position: relative; flex: none; width: 44px; height: 44px; border: 1px solid transparent; border-radius: 14px; background: var(--soft); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.filter-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.filter-btn.on { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); border: 1.5px solid var(--brand); }
+:root[data-theme="dark"] .filter-btn.on { background: color-mix(in srgb, var(--brand) 24%, var(--surface)); }
+.fcount { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; font-style: normal; text-align: center; }
+.filters-a { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters-a:not(:empty) { margin-bottom: 4px; }
+.f-btn { flex: 0 0 auto; border: 1.5px solid transparent; font-size: 13px; padding: 0 12px; height: 32px; }
+.f-btn.f-on { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); border-color: var(--brand); }
+:root[data-theme="dark"] .f-btn.f-on { background: color-mix(in srgb, var(--brand) 24%, var(--surface)); }
+[data-form="txn-filters"] { display: grid; gap: 14px; }
+[data-form="txn-filters"] h2 { margin: 0; }
+[data-form="txn-filters"] .field { display: grid; gap: 6px; margin: 0; }
+[data-form="txn-filters"] .actions { margin-top: 4px; }

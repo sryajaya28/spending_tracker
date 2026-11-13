@@ -40,7 +40,7 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `dialog_opened` | `form` (`info` for read-only pop-ups) | a pop-up opens |
 | `form_submitted` | `form`, `edit` | a form is submitted (attempt; the outcome events below say it worked) |
 | `setting_changed` | `setting` (currency, period, ai, language), `value` | a setting changes |
-| `filter_changed` / `period_changed` / `range_changed` | `filter`+`active` / `all_periods` / `range` | list filters, period picker, chart range |
+| `filter_changed` / `period_changed` / `range_changed` | `filter`+`active` / `all_periods` / `range` | list filters (`filter` = cat, occ, wallet, or `who` for the person filter, shown only when 2+ people can add entries; with 2+ writers the filters sit in a sheet opened by the filter button, and `filter_changed` also fires when an active-filter chip is cleared), period picker, chart range |
 | `signed_up` / `signed_in` | `confirmed` / none | account created / login |
 | `onboarding_skipped` / `onboarding_completed` | none | first-run flow |
 | `demo_on` / `demo_off` | none | sample data switched |
@@ -73,5 +73,7 @@ Dashboard: "Stiver key flows" https://eu.posthog.com/project/334082/dashboard/10
 PostHog Cloud EU, project id 334082, token `POSTHOG_KEY` in `prototype/config.js` (public). Browser traffic goes through
 `/ingest` (Vercel rewrite to `eu.i.posthog.com`). SDK vendored in `prototype/vendor/posthog.js`. Privacy rules are in the
 header of `analytics.js` and in `prototype/privacy.html`; do not weaken them.
+
+Click actions added with the Overview "Spent today" hero (2026-11-13), both through `button_clicked`: `hero_budget` (the budget line and bar, to Budgets) and `hero_balance` (the Balance chip, to Portfolio).
 
 Click actions added with the sign-up agreement: `agree_terms` (tick box) and `toggle_password` (show / hide), both through `button_clicked`.

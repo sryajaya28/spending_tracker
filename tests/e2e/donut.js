@@ -12,8 +12,6 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     [[0, 300000], [1, 100000], [2, 100000]].forEach(([i, a]) => D().transactions.push({ id: uid(), type: 'expense', amount_minor: a, currency: w.currency, wallet_id: w.id, category_id: cs[i].id, note: 'x', occurred_at: m + '-01' }));
     save(); location.hash = '#/overview'; render(); }, m);
   const at = async (f) => { await p.$eval('.donut svg', (e) => e.scrollIntoView({ block: 'center' })); const r = await p.$eval('.donut svg', (e) => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, k: b.width / 260 }; }), a = f * 2 * Math.PI; return [r.x + (130 + 100 * Math.sin(a)) * r.k, r.y + (130 - 100 * Math.cos(a)) * r.k]; };
-  // the hero's % is the period's change of the balance, with the same sign as the amount beside it (-500,000 of 10,500,000)
-  const hero = (await p.innerText('.hero .delta')).replace(/\u00a0/g, ' '); assert(/^−\d+\.\d%/.test(hero) && hero.includes('−Rp 500.000'), hero);
   const segs = await p.$$('.dseg'); assert.equal(segs.length, 3);
   const def = await p.innerText('.donut .center'); assert(def.includes('Spent in'));
   await p.mouse.move(...(await at(0.3))); const t = await p.innerText('.donut .center');
@@ -30,9 +28,9 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.evaluate(() => breakdownDialog()); await p.waitForSelector('#dlg .bk-item'); assert((await p.$$('#dlg .bk-item')).length >= 1, 'rows are listed');
   await p.evaluate(() => document.querySelectorAll('#dlg details').forEach((d) => { d.open = true; }));
   assert.equal(await p.$$eval('#dlg [data-act=add-cat]', (e) => e.length), 0, 'no add sub-category button'); assert(!(await p.innerText('#dlg')).includes('Add sub-category')); await p.click('#dlg .dlg-x'); await p.waitForTimeout(150);
-  // the Budgets card on Overview has its own month picker
-  const prev = await p.$eval('.card:has(a[href="#/budgets"]) select[data-bind=month] option:nth-child(2)', (o) => o.value);
-  await p.selectOption('.card:has(a[href="#/budgets"]) select[data-bind=month]', prev); assert.equal(await p.evaluate(() => state.ui.month), prev);
-  assert.equal(await p.$eval('.card:has(a[href="#/budgets"]) select[data-bind=month]', (e) => e.value), prev);
+  // the Spending card on Overview has its own month picker
+  const prev = await p.$eval('.card:has(button[data-act=breakdown]) select[data-bind=month] option:nth-child(2)', (o) => o.value);
+  await p.selectOption('.card:has(button[data-act=breakdown]) select[data-bind=month]', prev); assert.equal(await p.evaluate(() => state.ui.month), prev);
+  assert.equal(await p.$eval('.card:has(button[data-act=breakdown]) select[data-bind=month]', (e) => e.value), prev);
   console.log('ok', JSON.stringify(errs)); await b.close();
 })().catch((e) => { console.log('FAIL', e.message); process.exit(1); });

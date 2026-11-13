@@ -1120,12 +1120,8 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
   .main { max-width: 1320px; margin-inline: auto; }
   .set-hub { margin-inline: auto; }
   /* Overview: hero, Today and missed days on the left; two Report sections (Money Flow, budget by category) on the right */
-  .grid:has(> .ov-side) { grid-template-rows: auto auto 1fr auto; row-gap: 0; align-items: start; }   /* rows: hero, install button, Today (takes the spare height), missed days */
+  .grid:has(> .ov-side) { grid-template-rows: repeat(5, auto) 1fr; align-items: start; }
   .grid:has(> .ov-side) > * { grid-column: 1; }
-  .grid:has(> .ov-side) > .hero { grid-row: 1; }
-  .grid:has(> .ov-side) > .install-cta { grid-row: 2; margin-top: 12px; }
-  .grid:has(> .ov-side) > .ov-today { grid-row: 3; align-self: stretch; margin-top: 12px; justify-content: center; }   /* Today grows so the left column ends level with By category */
-  .grid:has(> .ov-side) > .gap-card { grid-row: 4; margin-top: 12px; }
   .grid > .ov-side { grid-column: 2; grid-row: 1 / -1; display: flex; flex-direction: column; gap: 12px; }
   /* Portfolio: net worth and its breakdown share one row */
   .grid > .hero:not(:has(.hero-actions)) { grid-column: auto; align-self: stretch; justify-content: center; }

@@ -208,8 +208,8 @@ function gapCard() {
 }
 function todayCard() {
   const rows = D().transactions.filter((t) => t.occurred_at === todayIso() && !hiddenLeg(t, ''));
-  if (!rows.length) return canWrite() ? `<section class="card gap-prompt ov-today"><span class="gap-ico">${icon('plus')}</span><h2>${__('Nothing recorded today yet')}</h2><p class="muted">${__('Add what you spend as you go, and it shows up here.')}</p><button type="button" class="btn" data-act="add-txn">${__('Add transaction')}</button></section>` : '';
-  return `<section class="card ov-today"><div class="card-head"><div><h2>${__('Today')}</h2><p class="muted">${gapDay(new Date(todayIso() + 'T00:00'), { weekday: 'short', day: 'numeric', month: 'short' })} · ${countLabel(rows.length)}</p></div><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`;
+  if (!rows.length) return canWrite() ? `<section class="card gap-prompt"><span class="gap-ico">${icon('plus')}</span><h2>${__('Nothing recorded today yet')}</h2><p class="muted">${__('Add what you spend as you go, and it shows up here.')}</p><button type="button" class="btn" data-act="add-txn">${__('Add transaction')}</button></section>` : '';
+  return `<section class="card"><div class="card-head"><div><h2>${__('Today')}</h2><p class="muted">${gapDay(new Date(todayIso() + 'T00:00'), { weekday: 'short', day: 'numeric', month: 'short' })} · ${countLabel(rows.length)}</p></div><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`;
 }
 function viewOverview() {
   const st = setupState();

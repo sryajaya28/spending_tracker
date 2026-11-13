@@ -251,6 +251,8 @@ DICT.id = {
  "Lining up your budgets…": "Merapikan anggaran Anda…",
  "Counting your coins…": "Menghitung koin Anda…",
  "Category not found": "Kategori tidak ditemukan",
+ "Occasion not found": "Acara tidak ditemukan",
+ "Account not found": "Akun tidak ditemukan",
  "Add new category": "Tambah kategori baru",
  "Investment Account": "Akun Investasi",
  "Info": "Info",

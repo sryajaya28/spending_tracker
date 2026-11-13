@@ -70,7 +70,7 @@ const ROOT = path.resolve(__dirname, '..'), PORT = 5181;
     const todayCard = (rows) => rows.length
       ? `<section class="card"><div class="card-head"><div><h2>Today</h2><p class="muted">${WD[new Date().getDay()].slice(0, 3)} ${new Date().getDate()} ${MO[new Date().getMonth()]} · ${countLabel(rows.length)}</p></div><a class="chip" href="#">View all</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`
       : `<section class="card gap-prompt"><span class="gap-ico">${icon('plus')}</span><h2>Nothing recorded today yet</h2><p class="muted">Add what you spend as you go, and it shows up here.</p><button type="button" class="btn" data-act="add-txn">Add transaction</button></section>`;
-    const overview = (empty, heroOverride) => { const m = ov.cloneNode(true); const g = m.querySelector('.grid'); const h = (() => { const d = document.createElement('div'); d.innerHTML = heroOverride || heroHtml; const e = d.firstElementChild;
+    const overview = (empty, heroOverride) => { const m = ov.cloneNode(true); const g = m.querySelector('.grid'); const h = (() => { const d = document.createElement('div'); d.innerHTML = heroOverride || heroHtml; const e = d.firstElementChild; e.querySelectorAll('.hero-chip').forEach((x) => x.remove());   // NEW: no "Balance ›" chip (Portfolio stays in the bottom bar)
         if (empty) e.querySelector('.hero .amount, .amount').innerHTML = moneyHtmlP(0, cur()); return e.outerHTML; })();
       g.innerHTML = h + todayCard(empty ? [] : todayRows) + (empty ? '' : gapCard);
       return m.outerHTML + nav(0); };

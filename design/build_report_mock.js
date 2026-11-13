@@ -70,13 +70,22 @@ const ROOT = path.resolve(__dirname, '..'), PORT = 5181;
     const todayCard = (rows) => rows.length
       ? `<section class="card"><div class="card-head"><div><h2>Today</h2><p class="muted">${WD[new Date().getDay()].slice(0, 3)} ${new Date().getDate()} ${MO[new Date().getMonth()]} · ${countLabel(rows.length)}</p></div><a class="chip" href="#">View all</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`
       : `<section class="card gap-prompt"><span class="gap-ico">${icon('plus')}</span><h2>Nothing recorded today yet</h2><p class="muted">Add what you spend as you go, and it shows up here.</p><button type="button" class="btn" data-act="add-txn">Add transaction</button></section>`;
-    const overview = (empty) => { const m = ov.cloneNode(true); const g = m.querySelector('.grid'); const h = (() => { const d = document.createElement('div'); d.innerHTML = heroHtml; const e = d.firstElementChild;
+    const overview = (empty, heroOverride) => { const m = ov.cloneNode(true); const g = m.querySelector('.grid'); const h = (() => { const d = document.createElement('div'); d.innerHTML = heroOverride || heroHtml; const e = d.firstElementChild;
         if (empty) e.querySelector('.hero .amount, .amount').innerHTML = moneyHtmlP(0, cur()); return e.outerHTML; })();
       g.innerHTML = h + todayCard(empty ? [] : todayRows) + (empty ? '' : gapCard);
       return m.outerHTML + nav(0); };
-    const report = (a) => `<div class="main">${topbarReport()}${tabs(a ? 'a' : 't')}${a ? `<div class="grid">${overall}${bycat}${piece.spend}${piece.trend}${piece.flow}</div>` : `<div class="stack">${txCard}</div>`}</div>${nav(1)}`;
+    const report = (a, noBud) => `<div class="main">${topbarReport()}${tabs(a ? 'a' : 't')}${a ? `<div class="grid">${noBud ? noBud : overall + bycat}${piece.spend}${piece.trend}${piece.flow}</div>` : `<div class="stack">${txCard}</div>`}</div>${nav(1)}`;
     const fix = (h) => h.replace(/ id="(?!gapcard|gaptitle|strip|gaplist)[^"]*"/g, '');
     const f1 = fix(overview(false)), f2 = fix(report(false)), f3 = fix(report(true)), f4 = fix(overview(true));
+
+    // ---- no budget set up: the hero shows "{spent} spent · Set a monthly budget ›" and no bar; Analysis shows the app's own empty budget cards
+    const budStash = D().budgets; D().budgets = [];
+    const heroNoBud = strip(go('#/overview')).querySelector('.hero').outerHTML;
+    const bud0 = strip(go('#/budgets'));
+    ['[data-act=add-budget]', '[data-act=edit-budget]', '[data-act=add-occasion-budget]'].forEach((q) => bud0.querySelectorAll(q).forEach((e) => e.remove()));
+    const noBudCards = (cardBy(bud0, 'Overall budget') ? cardBy(bud0, 'Overall budget').outerHTML : '') + (cardBy(bud0, 'By category') ? cardBy(bud0, 'By category').outerHTML : '');
+    D().budgets = budStash; go('#/overview');
+    const f7 = fix(overview(false, heroNoBud)), f8 = fix(report(true, noBudCards));
 
     // ---- household with 2 writers (owner + editor): all four filters (Category, Occasion, Account, Person) move into a filter sheet
     const realStash = state.real; state.real = null;   // in sample mode the stashed real account sits in state.real, which switches the household display off
@@ -90,13 +99,13 @@ const ROOT = path.resolve(__dirname, '..'), PORT = 5181;
     filtersDialog(); const sheet = document.querySelector('#dlg').innerHTML; document.querySelector('#dlg').close();
     const page5 = `<div class="main">${topbarReport()}${tabs('t')}<div class="stack">${hxCard}</div></div>${nav(1)}`;
     state.real = realStash;
-    return { f1, f2, f3, f4, f5: fix(page5), f6: fix(page5) + `<div class="scrim"></div><dialog open>${fix(sheet)}</dialog>` };
+    return { f1, f2, f3, f4, f7, f8, f5: fix(page5), f6: fix(page5) + `<div class="scrim"></div><dialog open>${fix(sheet)}</dialog>` };
   });
 
   let css = fs.readFileSync(path.join(ROOT, 'prototype/styles.css'), 'utf8')
     .replace(/@media \((max|min)-width: (\d+)px\)/g, '@container phone ($1-width: $2px)');
   const tpl = fs.readFileSync(path.join(__dirname, 'report-split-template.html'), 'utf8');
-  const out = tpl.replace('/*REAL_CSS*/', () => css).replace('<!--F1-->', () => frames.f1).replace('<!--F2-->', () => frames.f2).replace('<!--F3-->', () => frames.f3).replace('<!--F4-->', () => frames.f4).replace('<!--F5-->', () => frames.f5).replace('<!--F6-->', () => frames.f6);
+  const out = tpl.replace('/*REAL_CSS*/', () => css).replace('<!--F1-->', () => frames.f1).replace('<!--F2-->', () => frames.f2).replace('<!--F3-->', () => frames.f3).replace('<!--F4-->', () => frames.f4).replace('<!--F5-->', () => frames.f5).replace('<!--F7-->', () => frames.f7).replace('<!--F8-->', () => frames.f8).replace('<!--F6-->', () => frames.f6);
   fs.writeFileSync(path.join(__dirname, 'report-split-mock.html'), out);
   console.log('wrote design/report-split-mock.html', out.length, 'bytes');
   await b.close(); server.kill();

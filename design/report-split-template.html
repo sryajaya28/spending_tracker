@@ -48,7 +48,7 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
 .gap-dt span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .gap-dt b { font-size: 16px; }
 .gap-t { font-weight: 600; font-size: 15px; }
-.gap-skip { padding: 2px 0; color: var(--brand); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; font-size: 13px; }
+.gap-skip { padding: 2px 0; color: var(--brand); text-decoration: none; font-weight: 600; font-size: 13px; }
 .gap-add { height: 36px; padding: 0 16px; font-size: 14px; }
 .gap-row.out { opacity: 0; transform: translateX(10px); transition: opacity .2s, transform .2s; }
 .gap-card[hidden] { display: none; }
@@ -92,6 +92,10 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
     <div class="phone"><div class="shell"><!--F5--></div></div></section>
   <section aria-label="Filter sheet"><p class="frame-cap">6 · Filter sheet <span>— Category, Occasion, Account, Person</span></p>
     <div class="phone sheet-phone"><div class="shell"><!--F6--></div></div></section>
+  <section aria-label="Overview, no budget set up"><p class="frame-cap">7 · Overview <span>— Phone 390 · no budget set up</span></p>
+    <div class="phone"><div class="shell"><!--F7--></div></div></section>
+  <section aria-label="Report, Analysis, no budget set up"><p class="frame-cap">8 · Report, Analysis <span>— Phone 390 · no budget set up</span></p>
+    <div class="phone"><div class="shell"><!--F8--></div></div></section>
 </main>
 
 <section class="notes" aria-label="Design notes">
@@ -110,7 +114,8 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
     <ul>
       <li>A missing day is one of the last 7 days (today excluded) with no transaction of any kind. Recurring entries count.</li>
       <li>Days before the first transaction are never flagged.</li>
-      <li>Nothing to add is remembered on this device only (no database change).</li>
+      <li>Nothing to add is remembered on this device only (no database change). It is a plain bold link, no underline.</li>
+      <li><b>No budget set up (frames 7 and 8):</b> the hero line reads "{spent} spent this month · Set a monthly budget ›" and has no bar; tapping it opens Budgets. Analysis shows the app's own empty budget cards ("No overall budget yet", "No category budgets yet"), read-only like the rest.</li>
       <li>Add, or a dashed day in the strip, opens Add transaction dated to that day.</li>
       <li>No missing days: the card is not shown at all (frame 4).</li>
       <li>Nothing recorded today: the whole Today section becomes one prompt with a single Add transaction button (frame 4).</li>

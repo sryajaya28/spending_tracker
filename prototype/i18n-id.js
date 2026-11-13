@@ -234,6 +234,7 @@ DICT.id = {
  "Deposit": "Setor",
  "Cash balance": "Saldo tunai",
  "Move to account": "Pindahkan ke akun",
+ "Moved and combined with the {name} already in that account": "Dipindahkan dan digabung dengan {name} yang sudah ada di akun itu",
  "Share of account": "Porsi di akun",
  "Total value": "Total nilai",
  "Current price": "Harga saat ini",

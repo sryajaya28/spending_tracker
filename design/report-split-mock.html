@@ -1,0 +1,526 @@
+<title>Stiver Report Redesign</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a design board. Four phone frames (390px) that wrap, a notes panel below. Colours are the app's own tokens (prototype/styles.css), light and dark. */
+:root {
+  --board: #e3e5f6; --bg: #f2f3fb; --surface: #ffffff; --ink: #1b1a4b; --muted: #6b6f8f; --line: #e6e8f5; --soft: #f3f4fc;
+  --brand: #4a44c6; --brand-2: #8b8ff0; --fill: #4a44c6; --fill-2: #6b66e0; --accent: #ffd84d; --warn: #f5b800; --bad: #e5484d; --good: #1fa971;
+  --hero: linear-gradient(135deg, #3b35b5 0%, #5a55d6 55%, #8c90f2 100%);
+  --ok-bg: rgba(31,169,113,.14); --ok-ink: #11704a; --warn-bg: rgba(245,184,0,.2); --warn-ink: #7a5800; --bad-bg: rgba(229,72,77,.12); --bad-ink: #b3262b;
+  --hint-bg: #fff6cf; --hint-ink: #5f4c00;
+  --c1: #4a44c6; --c2: #8b8ff0; --c3: #ffd84d; --c4: #c9cbe6;
+  --shadow: 0 1px 2px rgba(30,27,75,.04), 0 8px 28px rgba(30,27,75,.06);
+  --frame-shadow: 0 2px 6px rgba(30,27,75,.08), 0 24px 60px rgba(30,27,75,.14);
+  --font: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --board: #060512; --bg: #0e0d22; --surface: #1a1840; --ink: #ecebff; --muted: #a3a7cf; --line: #2b2961; --soft: #232158;
+    --brand: #8f8bf5; --brand-2: #9996f0; --fill: #453fa6; --fill-2: #5650bd;
+    --hero: linear-gradient(135deg, #2f2b94 0%, #453fa6 55%, #5650bd 100%);
+    --ok-bg: rgba(31,169,113,.2); --ok-ink: #4fd9a0; --warn-bg: rgba(255,216,77,.16); --warn-ink: #ffd84d; --bad-bg: rgba(229,72,77,.2); --bad-ink: #ff8a8f;
+    --hint-bg: rgba(255,216,77,.12); --hint-ink: #f0dd9a;
+    --c1: #7f7bec; --c2: #b8b6ff; --c3: #ffd84d; --c4: #4a4780;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 28px rgba(0,0,0,.35); --frame-shadow: 0 24px 60px rgba(0,0,0,.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --board: #060512; --bg: #0e0d22; --surface: #1a1840; --ink: #ecebff; --muted: #a3a7cf; --line: #2b2961; --soft: #232158;
+  --brand: #8f8bf5; --brand-2: #9996f0; --fill: #453fa6; --fill-2: #5650bd;
+  --hero: linear-gradient(135deg, #2f2b94 0%, #453fa6 55%, #5650bd 100%);
+  --ok-bg: rgba(31,169,113,.2); --ok-ink: #4fd9a0; --warn-bg: rgba(255,216,77,.16); --warn-ink: #ffd84d; --bad-bg: rgba(229,72,77,.2); --bad-ink: #ff8a8f;
+  --hint-bg: rgba(255,216,77,.12); --hint-ink: #f0dd9a;
+  --c1: #7f7bec; --c2: #b8b6ff; --c3: #ffd84d; --c4: #4a4780;
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 8px 28px rgba(0,0,0,.35); --frame-shadow: 0 24px 60px rgba(0,0,0,.55);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--board); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.45; padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; }
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ---- board chrome ---- */
+.board-head { max-width: 1760px; margin: 0 auto 26px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; justify-content: space-between; }
+.board-head h1 { font-size: 26px; line-height: 1.15; letter-spacing: -.01em; margin: 0 0 6px; text-wrap: balance; }
+.board-head p { margin: 0; color: var(--muted); max-width: 62ch; }
+.theme { display: inline-flex; background: var(--surface); border-radius: 999px; padding: 4px; box-shadow: var(--shadow); }
+.theme button { padding: 7px 16px; border-radius: 999px; font-weight: 600; font-size: 13px; color: var(--muted); }
+.theme button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+:root[data-theme="dark"] .theme button[aria-pressed="true"] { background: var(--fill-2); }
+.frames { max-width: 1760px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(390px, 100%), 390px)); gap: 40px 32px; justify-content: center; align-items: start; }
+.frame-cap { font-size: 13px; font-weight: 600; margin: 0 4px 10px; color: var(--ink); }
+.frame-cap span { color: var(--muted); font-weight: 500; }
+.phone { position: relative; width: 100%; background: var(--bg); border-radius: 36px; box-shadow: var(--frame-shadow); overflow: hidden; border: 1px solid var(--line); }
+.screen { padding: 18px 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ---- app pieces ---- */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.topbar h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+.topbar .sub { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.tools { display: flex; align-items: center; gap: 8px; }
+.icon-btn { width: 40px; height: 40px; border-radius: 14px; background: var(--surface); display: grid; place-items: center; color: var(--muted); box-shadow: var(--shadow); }
+.avatar { width: 40px; height: 40px; border-radius: 14px; background: linear-gradient(135deg, var(--fill), var(--fill-2)); color: #fff; font-weight: 700; display: grid; place-items: center; }
+.card { background: var(--surface); border-radius: 24px; padding: 16px 18px; box-shadow: var(--shadow); min-width: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.card-head h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.card-head .meta { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border-radius: 999px; background: var(--soft); color: var(--brand); font-weight: 600; font-size: 12.5px; white-space: nowrap; }
+.chip .ic { width: 14px; height: 14px; }
+.pill-select { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 12px; background: var(--soft); font-weight: 600; font-size: 13px; }
+.pill-select .ic { width: 14px; height: 14px; transform: rotate(90deg); color: var(--muted); }
+
+.hero { background: var(--hero); color: #fff; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); }
+.hero-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hero-label { font-size: 13px; font-weight: 500; opacity: .9; }
+.hero-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 11px; border-radius: 999px; background: rgba(255,255,255,.18); color: #fff; font-size: 12.5px; font-weight: 600; }
+.hero-chip .ic { width: 14px; height: 14px; }
+.hero-eye { width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,.14); color: #fff; display: grid; place-items: center; }
+.hero-eye .ic { width: 16px; height: 16px; }
+.amount-line { display: flex; align-items: baseline; gap: 8px; }
+.amount { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
+.amount small { font-size: 18px; font-weight: 600; opacity: .85; margin-right: 4px; letter-spacing: 0; }
+.hero-note { font-size: 12.5px; opacity: .85; margin-top: -4px; }
+.hero-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 2px; }
+.hero-actions button { background: rgba(255,255,255,.16); color: #fff; border-radius: 14px; padding: 9px 2px 8px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; }
+.hero-actions .ic { width: 17px; height: 17px; }
+
+.list { display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+.row:last-child { border-bottom: 0; padding-bottom: 2px; }
+.tile { width: 44px; height: 44px; border-radius: 14px; background: var(--soft); display: grid; place-items: center; font-size: 21px; }
+.row .t { font-size: 15px; font-weight: 600; line-height: 1.25; }
+.row .s { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.row .a { font-size: 15px; font-weight: 600; text-align: right; }
+.row .a.in { color: var(--ok-ink); }
+.empty { text-align: center; padding: 22px 8px 10px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.empty .tile { width: 52px; height: 52px; border-radius: 18px; }
+.empty b { font-size: 15px; }
+.empty p { margin: 0 0 8px; color: var(--muted); font-size: 13px; max-width: 30ch; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--fill); color: #fff; font-weight: 600; font-size: 13.5px; padding: 9px 16px; border-radius: 14px; }
+.btn.small { padding: 7px 14px; font-size: 13px; border-radius: 12px; }
+.btn .ic { width: 15px; height: 15px; }
+.link { color: var(--brand); font-weight: 600; font-size: 12.5px; padding: 2px 0; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---- missing days ---- */
+.gap-card .ghead { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.gap-ico { width: 40px; height: 40px; border-radius: 14px; background: var(--warn-bg); color: var(--warn-ink); display: grid; place-items: center; flex: none; }
+.gap-card h2 { font-size: 16px; font-weight: 600; margin: 0; }
+.gap-card .meta { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin-bottom: 8px; }
+.strip .d { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 2px 0; border-radius: 12px; }
+.strip .c { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.strip small { font-size: 11px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.strip .ok .c { background: var(--ok-bg); color: var(--ok-ink); }
+.strip .ok .ic { width: 15px; height: 15px; stroke-width: 2.4; }
+.strip .miss .c { border: 2px dashed var(--warn); color: var(--warn-ink); background: var(--warn-bg); }
+.strip .miss .ic { width: 15px; height: 15px; stroke-width: 2.4; }
+.strip .miss small { color: var(--warn-ink); font-weight: 700; }
+.strip .skip .c { background: var(--soft); color: var(--muted); }
+.gap-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 9px 2px; border-top: 1px solid var(--line); }
+.gap-row .dt { width: 44px; height: 44px; border-radius: 14px; border: 2px dashed var(--warn); background: var(--warn-bg); color: var(--warn-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.gap-row .dt b { font-size: 16px; }
+.gap-row .dt span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.gap-row .t { font-size: 15px; font-weight: 600; }
+.gap-row.out { opacity: 0; transform: translateX(10px); transition: opacity .2s, transform .2s; }
+.caught { display: flex; align-items: center; gap: 10px; background: var(--ok-bg); color: var(--ok-ink); border-radius: 18px; padding: 11px 14px; font-weight: 600; font-size: 13.5px; }
+.caught .ic { stroke-width: 2.4; }
+.caught span { font-weight: 500; opacity: .9; }
+.caught span::before { content: "· "; }
+
+/* ---- report ---- */
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--soft); border-radius: 16px; padding: 4px; }
+.seg button { padding: 9px 8px; border-radius: 12px; font-weight: 600; font-size: 14px; color: var(--muted); }
+.seg button[aria-selected="true"] { background: var(--surface); color: var(--brand); box-shadow: 0 1px 3px rgba(30,27,75,.12); }
+.search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; background: var(--soft); border-radius: 12px; padding: 0 12px; height: 38px; color: var(--muted); font-size: 13.5px; }
+.search .ic { width: 16px; height: 16px; }
+.line { display: flex; gap: 8px; align-items: center; }
+.filters { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.filters .pill-select { white-space: nowrap; background: var(--surface); box-shadow: var(--shadow); font-weight: 500; }
+.sum { font-size: 12.5px; color: var(--muted); }
+.sum b { color: var(--ink); font-weight: 600; }
+.day { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 2px 6px; font-size: 13px; }
+.day b { font-weight: 700; }
+.day span { color: var(--muted); }
+.day .ic { width: 16px; height: 16px; color: var(--muted); transform: rotate(90deg); }
+.day.open .ic { transform: rotate(-90deg); }
+.day + .list { margin-bottom: 4px; }
+.card.flush { padding-block: 8px; }
+
+/* ---- analysis ---- */
+.big { font-size: 26px; font-weight: 700; letter-spacing: -.01em; }
+.big small { font-size: 15px; font-weight: 500; color: var(--muted); }
+.bar { height: 9px; border-radius: 99px; background: var(--soft); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 99px; background: var(--brand); }
+:root[data-theme="dark"] .bar i { background: var(--fill-2); }
+.bar i.warning { background: var(--warn); }
+.bar i.exceeded { background: var(--bad); }
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.badge { display: inline-block; white-space: nowrap; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; margin-left: 6px; vertical-align: 1px; }
+.badge.ok { background: var(--ok-bg); color: var(--ok-ink); }
+.badge.warning { background: var(--warn-bg); color: var(--warn-ink); }
+.badge.exceeded { background: var(--bad-bg); color: var(--bad-ink); }
+.brow { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+.brow:first-of-type { border-top: 0; }
+.brow .m { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; }
+.brow .m span:last-child { font-weight: 500; color: var(--muted); font-size: 12.5px; }
+.donut { position: relative; width: 240px; max-width: 100%; height: 120px; margin: 6px auto 12px; overflow: hidden; }
+.donut i { position: absolute; left: 0; top: 0; width: 240px; height: 240px; border-radius: 50%; background: conic-gradient(from 270deg, var(--c1) 0 22.5%, var(--c2) 22.5% 33.5%, var(--c3) 33.5% 43%, var(--c4) 43% 50%, transparent 50% 100%); }
+.donut b { position: absolute; left: 40px; top: 40px; width: 160px; height: 160px; border-radius: 50%; background: var(--surface); }
+.donut div { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; line-height: 1.2; }
+.donut strong { font-size: 19px; font-weight: 700; display: block; }
+.donut span { font-size: 12px; color: var(--muted); }
+.legend { display: grid; gap: 2px; }
+.legend div { display: grid; grid-template-columns: 12px 1fr auto auto; gap: 10px; align-items: center; padding: 6px 0; font-size: 13.5px; }
+.legend i { width: 12px; height: 12px; border-radius: 4px; }
+.legend em { font-style: normal; color: var(--muted); font-size: 12.5px; min-width: 34px; text-align: right; }
+.sw1 { background: var(--c1); } .sw2 { background: var(--c2); } .sw3 { background: var(--c3); } .sw4 { background: var(--c4); }
+.cols { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; align-items: end; margin-top: 10px; border-bottom: 1px solid var(--line); }
+.col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 130px; }
+.stack { width: 28px; display: flex; flex-direction: column-reverse; border-radius: 8px 8px 4px 4px; overflow: hidden; gap: 1px; }
+.stack i { display: block; width: 100%; }
+.pair { display: flex; align-items: flex-end; gap: 3px; height: 130px; justify-content: center; }
+.pair i { width: 12px; border-radius: 5px 5px 2px 2px; }
+.months { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; text-align: center; font-size: 11.5px; color: var(--muted); padding-top: 6px; }
+.months b { color: var(--ink); }
+.key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 10px; height: 10px; border-radius: 3px; }
+.occ { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.occ .t { font-weight: 600; font-size: 15px; }
+.occ .s { font-size: 12.5px; color: var(--muted); }
+
+/* ---- bottom bar ---- */
+.bottom-nav { display: grid; grid-template-columns: repeat(4, 1fr); align-items: end; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 6px 14px; }
+.bottom-nav a, .bottom-nav button { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--muted); text-decoration: none; padding: 4px 0; }
+.bottom-nav .on { color: var(--brand); }
+.bottom-nav .add span { width: 46px; height: 46px; margin-top: -22px; border-radius: 50%; background: linear-gradient(135deg, var(--fill), var(--fill-2)); color: #fff; display: grid; place-items: center; box-shadow: 0 8px 18px rgba(74,68,198,.35); }
+.toast { position: absolute; left: 16px; right: 16px; bottom: 86px; background: var(--ink); color: var(--surface); border-radius: 14px; padding: 11px 14px; font-weight: 600; font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity .2s, transform .2s; pointer-events: none; text-align: center; }
+.toast.show { opacity: 1; transform: none; }
+
+/* ---- notes ---- */
+.notes { max-width: 1760px; margin: 48px auto 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 20px; }
+.note { background: var(--surface); border-radius: 22px; padding: 20px 22px; box-shadow: var(--shadow); min-width: 0; }
+.note h3 { font-size: 15px; margin: 0 0 10px; }
+.note ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; }
+.note li { color: var(--ink); }
+.note li b { font-weight: 600; }
+.note p { margin: 0 0 8px; color: var(--muted); }
+.reset { margin-top: 12px; }
+@media (prefers-reduced-motion: reduce) { .gap-row.out, .toast { transition: none; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-report" viewBox="0 0 24 24"><path d="M5 20V11M12 20V4M19 20v-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h13v4M3 7v11a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2zM16 14h2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+</svg>
+
+<header class="board-head">
+  <div>
+    <h1>Overview and Report redesign</h1>
+    <p>Interim mock while Figma is not connected. It uses the app's real colours, so one design covers light and dark. Frame 1 is interactive: try "Add" and "Nothing to add".</p>
+  </div>
+  <div class="theme" role="group" aria-label="Theme">
+    <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
+    <button type="button" data-theme-set="dark" aria-pressed="false">Dark</button>
+    <button type="button" data-theme-set="system" aria-pressed="true">Device</button>
+  </div>
+</header>
+
+<main class="frames">
+
+  <!-- 1 · Overview -->
+  <section aria-label="Overview with missing days">
+    <p class="frame-cap">1 · Overview <span>— Phone 390 · today, with missing days</span></p>
+    <div class="phone" id="phone1">
+      <div class="screen">
+        <div class="topbar"><div><h1>Good afternoon, Alex</h1><div class="sub">Fri 13 Nov</div></div><div class="tools"><span class="icon-btn"><svg class="ic"><use href="#i-search"/></svg></span><span class="avatar">A</span></div></div>
+
+        <div class="hero">
+          <div class="hero-top"><span class="hero-label">Spent today</span><span class="tools" style="gap:6px"><span class="hero-chip">Balance <svg class="ic"><use href="#i-chev"/></svg></span><span class="hero-eye"><svg class="ic"><use href="#i-eye"/></svg></span></span></div>
+          <div class="amount-line"><div class="amount num"><small>Rp</small>185.000</div></div>
+          <div class="hero-actions">
+            <button type="button"><svg class="ic"><use href="#i-plus"/></svg>Expense</button>
+            <button type="button"><svg class="ic"><use href="#i-plus"/></svg>Income</button>
+            <button type="button"><svg class="ic"><use href="#i-trend"/></svg>Invest</button>
+            <button type="button"><svg class="ic"><use href="#i-swap"/></svg>Transfer</button>
+          </div>
+        </div>
+
+        <section class="card gap-card" id="gapcard">
+          <div class="ghead"><span class="gap-ico"><svg class="ic"><use href="#i-cal"/></svg></span><div><h2 id="gaptitle">3 days with nothing recorded</h2><div class="meta">Last 7 days. Add what you spent, or mark the day.</div></div></div>
+          <div class="strip" id="strip">
+            <div class="d ok"><span class="c"><svg class="ic"><use href="#i-check"/></svg></span><small>Fri 6</small></div>
+            <div class="d ok"><span class="c"><svg class="ic"><use href="#i-check"/></svg></span><small>Sat 7</small></div>
+            <button type="button" class="d miss" data-day="8" aria-label="Sunday 8 Nov, nothing recorded. Add transaction"><span class="c"><svg class="ic"><use href="#i-plus"/></svg></span><small>Sun 8</small></button>
+            <div class="d ok"><span class="c"><svg class="ic"><use href="#i-check"/></svg></span><small>Mon 9</small></div>
+            <button type="button" class="d miss" data-day="10" aria-label="Tuesday 10 Nov, nothing recorded. Add transaction"><span class="c"><svg class="ic"><use href="#i-plus"/></svg></span><small>Tue 10</small></button>
+            <button type="button" class="d miss" data-day="11" aria-label="Wednesday 11 Nov, nothing recorded. Add transaction"><span class="c"><svg class="ic"><use href="#i-plus"/></svg></span><small>Wed 11</small></button>
+            <div class="d ok"><span class="c"><svg class="ic"><use href="#i-check"/></svg></span><small>Thu 12</small></div>
+          </div>
+          <div id="gaplist">
+            <div class="gap-row" data-day="11"><div class="dt"><span>Wed</span><b>11</b></div><div><div class="t">Wednesday, 11 Nov</div><button type="button" class="link" data-skip="11">Nothing to add</button></div><button type="button" class="btn small" data-add="11"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
+            <div class="gap-row" data-day="10"><div class="dt"><span>Tue</span><b>10</b></div><div><div class="t">Tuesday, 10 Nov</div><button type="button" class="link" data-skip="10">Nothing to add</button></div><button type="button" class="btn small" data-add="10"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
+            <div class="gap-row" data-day="8"><div class="dt"><span>Sun</span><b>8</b></div><div><div class="t">Sunday, 8 Nov</div><button type="button" class="link" data-skip="8">Nothing to add</button></div><button type="button" class="btn small" data-add="8"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>Today</h2><div class="meta">Fri 13 Nov · 5 transactions</div></div><span class="chip">View all</span></div>
+          <div class="list">
+            <div class="row"><span class="tile">☕</span><div><div class="t">Coffee with Rina</div><div class="s">Food &amp; drink · BCA</div></div><div class="a num">−Rp 38.000</div></div>
+            <div class="row"><span class="tile">🛵</span><div><div class="t">Gojek to office</div><div class="s">Transport · Gopay</div></div><div class="a num">−Rp 27.000</div></div>
+            <div class="row"><span class="tile">🍜</span><div><div class="t">Lunch</div><div class="s">Food &amp; drink · Cash</div></div><div class="a num">−Rp 65.000</div></div>
+            <div class="row"><span class="tile">🛒</span><div><div class="t">Groceries</div><div class="s">Shopping · BCA</div></div><div class="a num">−Rp 55.000</div></div>
+            <div class="row"><span class="tile">💼</span><div><div class="t">Freelance payment</div><div class="s">Income · BCA</div></div><div class="a in num">+Rp 1.200.000</div></div>
+          </div>
+        </section>
+      </div>
+      <nav class="bottom-nav" aria-label="Main">
+        <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
+        <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
+      </nav>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- 2 · Report > Transactions -->
+  <section aria-label="Report, Transactions">
+    <p class="frame-cap">2 · Report, Transactions <span>— Phone 390</span></p>
+    <div class="phone">
+      <div class="screen">
+        <div class="topbar"><div><h1>Report</h1><div class="sub">November 2026</div></div><div class="tools"><span class="icon-btn"><svg class="ic"><use href="#i-search"/></svg></span><span class="avatar">A</span></div></div>
+        <div class="seg" role="tablist" aria-label="Report pages"><button type="button" role="tab" aria-selected="true">Transactions</button><button type="button" role="tab" aria-selected="false">Analysis</button></div>
+        <div class="line"><div class="search"><svg class="ic"><use href="#i-search"/></svg>Search note or category</div><span class="pill-select">Nov 2026 <svg class="ic"><use href="#i-chev"/></svg></span></div>
+        <div class="filters"><span class="pill-select">All categories <svg class="ic"><use href="#i-chev"/></svg></span><span class="pill-select">All accounts <svg class="ic"><use href="#i-chev"/></svg></span></div>
+        <div class="sum">34 in November · income <b class="num">Rp 8.500.000</b> · spent <b class="num">Rp 3.240.000</b></div>
+
+        <section class="card flush">
+          <div class="day open"><b>Today · Fri 13 Nov</b><span class="num">5 · spent Rp 185.000</span></div>
+          <div class="list">
+            <div class="row"><span class="tile">☕</span><div><div class="t">Coffee with Rina</div><div class="s">Food &amp; drink · BCA</div></div><div class="a num">−Rp 38.000</div></div>
+            <div class="row"><span class="tile">🛵</span><div><div class="t">Gojek to office</div><div class="s">Transport · Gopay</div></div><div class="a num">−Rp 27.000</div></div>
+            <div class="row"><span class="tile">🍜</span><div><div class="t">Lunch</div><div class="s">Food &amp; drink · Cash</div></div><div class="a num">−Rp 65.000</div></div>
+          </div>
+          <div class="day"><b>Thu 12 Nov</b><span class="num">4 · spent Rp 212.000</span></div>
+          <div class="day" style="border-top:1px solid var(--line)"><b>Mon 9 Nov</b><span class="num">2 · spent Rp 96.000</span></div>
+          <div class="day" style="border-top:1px solid var(--line)"><b>Sat 7 Nov</b><span class="num">6 · spent Rp 342.000</span></div>
+          <div class="day" style="border-top:1px solid var(--line)"><b>Fri 6 Nov</b><span class="num">3 · spent Rp 128.000</span></div>
+        </section>
+      </div>
+      <nav class="bottom-nav" aria-label="Main">
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
+        <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
+        <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
+      </nav>
+    </div>
+  </section>
+
+  <!-- 3 · Report > Analysis -->
+  <section aria-label="Report, Analysis">
+    <p class="frame-cap">3 · Report, Analysis <span>— Phone 390</span></p>
+    <div class="phone">
+      <div class="screen">
+        <div class="topbar"><div><h1>Report</h1><div class="sub">November 2026</div></div><div class="tools"><span class="icon-btn"><svg class="ic"><use href="#i-search"/></svg></span><span class="avatar">A</span></div></div>
+        <div class="seg" role="tablist" aria-label="Report pages"><button type="button" role="tab" aria-selected="false">Transactions</button><button type="button" role="tab" aria-selected="true">Analysis</button></div>
+        <div class="line" style="justify-content:space-between"><span class="pill-select">November 2026 <svg class="ic"><use href="#i-chev"/></svg></span><span class="sum">Period 1 – 30 Nov</span></div>
+
+        <section class="card">
+          <div class="card-head"><div><h2>Overall budget</h2></div><span class="chip"><svg class="ic"><use href="#i-plus"/></svg>Budget</span></div>
+          <div class="big num">Rp 3.240.000 <small>of Rp 5.000.000</small></div>
+          <div class="bar" style="margin:12px 0 0" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="65" aria-label="Budget used 65%"><i style="width:65%"></i></div>
+          <div class="foot"><span class="num">Rp 1.760.000 left · 65% used · 18 days to go</span><span class="badge ok" style="margin:0">On track</span></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>By category</h2><span class="chip"><svg class="ic"><use href="#i-plus"/></svg>Add</span></div>
+          <div class="brow"><span class="tile">🍜</span><div><div class="m"><span>Food &amp; drink <span class="badge warning">Almost there</span></span><span class="num">1.450.000 / 1.600.000</span></div><div class="bar"><i class="warning" style="width:91%"></i></div></div></div>
+          <div class="brow"><span class="tile">🛵</span><div><div class="m"><span>Transport <span class="badge ok">On track</span></span><span class="num">720.000 / 1.200.000</span></div><div class="bar"><i style="width:60%"></i></div></div></div>
+          <div class="brow"><span class="tile">🛍️</span><div><div class="m"><span>Shopping <span class="badge exceeded">Over budget</span></span><span class="num">610.000 / 500.000</span></div><div class="bar"><i class="exceeded" style="width:100%"></i></div></div></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>Special occasions</h2><span class="chip">History</span></div>
+          <div class="occ"><div><div class="t">Bali trip</div><div class="s num">20 – 27 Nov · Rp 1.800.000 of 6.000.000</div></div><svg class="ic" style="color:var(--muted)"><use href="#i-chev"/></svg></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>Spending</h2><span class="chip">Details</span></div>
+          <div class="donut" role="img" aria-label="Spending by category: Food 45%, Transport 22%, Shopping 19%, Others 14%"><i></i><b></b><div><strong class="num">Rp 3.240.000</strong><span>spent in Nov</span></div></div>
+          <div class="legend">
+            <div><i class="sw1"></i><span>Food &amp; drink</span><span class="num">Rp 1.450.000</span><em>45%</em></div>
+            <div><i class="sw2"></i><span>Transport</span><span class="num">Rp 720.000</span><em>22%</em></div>
+            <div><i class="sw3"></i><span>Shopping</span><span class="num">Rp 610.000</span><em>19%</em></div>
+            <div><i class="sw4"></i><span>Others</span><span class="num">Rp 460.000</span><em>14%</em></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><h2>Category trend</h2><span class="pill-select">6 months <svg class="ic"><use href="#i-chev"/></svg></span></div>
+          <div class="pill-select" style="width:100%;justify-content:space-between;font-weight:500">All categories <svg class="ic"><use href="#i-chev"/></svg></div>
+          <div class="cols" role="img" aria-label="Monthly spending by category, June to November. November is 3.24 million so far.">
+            <div class="col"><div class="stack"><i style="height:42px;background:var(--c1)"></i><i style="height:20px;background:var(--c2)"></i><i style="height:20px;background:var(--c3)"></i><i style="height:16px;background:var(--c4)"></i></div></div>
+            <div class="col"><div class="stack"><i style="height:48px;background:var(--c1)"></i><i style="height:22px;background:var(--c2)"></i><i style="height:30px;background:var(--c3)"></i><i style="height:12px;background:var(--c4)"></i></div></div>
+            <div class="col"><div class="stack"><i style="height:38px;background:var(--c1)"></i><i style="height:18px;background:var(--c2)"></i><i style="height:20px;background:var(--c3)"></i><i style="height:12px;background:var(--c4)"></i></div></div>
+            <div class="col"><div class="stack"><i style="height:52px;background:var(--c1)"></i><i style="height:24px;background:var(--c2)"></i><i style="height:34px;background:var(--c3)"></i><i style="height:12px;background:var(--c4)"></i></div></div>
+            <div class="col"><div class="stack"><i style="height:44px;background:var(--c1)"></i><i style="height:20px;background:var(--c2)"></i><i style="height:26px;background:var(--c3)"></i><i style="height:14px;background:var(--c4)"></i></div></div>
+            <div class="col"><div class="stack"><i style="height:29px;background:var(--c1)"></i><i style="height:14px;background:var(--c2)"></i><i style="height:12px;background:var(--c3)"></i><i style="height:9px;background:var(--c4)"></i></div></div>
+          </div>
+          <div class="months"><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><b>Nov</b></div>
+          <div class="key"><span><i class="sw1"></i>Food &amp; drink</span><span><i class="sw2"></i>Transport</span><span><i class="sw3"></i>Shopping</span><span><i class="sw4"></i>Others</span></div>
+        </section>
+
+        <section class="card">
+          <div class="card-head"><div><h2>Money Flow</h2><div class="meta">Saved in November</div></div><span class="chip">6 months</span></div>
+          <div class="big num" style="margin-bottom:4px">Rp 5.260.000</div>
+          <div class="cols" style="margin-top:6px" role="img" aria-label="Income and spending per month, June to November">
+            <div class="pair"><i style="height:109px;background:var(--c2)"></i><i style="height:69px;background:var(--c1)"></i></div>
+            <div class="pair"><i style="height:113px;background:var(--c2)"></i><i style="height:78px;background:var(--c1)"></i></div>
+            <div class="pair"><i style="height:111px;background:var(--c2)"></i><i style="height:62px;background:var(--c1)"></i></div>
+            <div class="pair"><i style="height:118px;background:var(--c2)"></i><i style="height:85px;background:var(--c1)"></i></div>
+            <div class="pair"><i style="height:112px;background:var(--c2)"></i><i style="height:73px;background:var(--c1)"></i></div>
+            <div class="pair"><i style="height:119px;background:var(--c2)"></i><i style="height:45px;background:var(--c1)"></i></div>
+          </div>
+          <div class="months"><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span><b>Nov</b></div>
+          <div class="key"><span><i class="sw2"></i>Income</span><span><i class="sw1"></i>Spent</span></div>
+        </section>
+      </div>
+      <nav class="bottom-nav" aria-label="Main">
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
+        <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
+        <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
+      </nav>
+    </div>
+  </section>
+
+  <!-- 4 · Overview, caught up, nothing yet today -->
+  <section aria-label="Overview, nothing today yet and no missing days">
+    <p class="frame-cap">4 · Overview <span>— Phone 390 · nothing today yet, no missing days</span></p>
+    <div class="phone">
+      <div class="screen">
+        <div class="topbar"><div><h1>Good morning, Alex</h1><div class="sub">Fri 13 Nov</div></div><div class="tools"><span class="icon-btn"><svg class="ic"><use href="#i-search"/></svg></span><span class="avatar">A</span></div></div>
+        <div class="hero">
+          <div class="hero-top"><span class="hero-label">Spent today</span><span class="tools" style="gap:6px"><span class="hero-chip">Balance <svg class="ic"><use href="#i-chev"/></svg></span><span class="hero-eye"><svg class="ic"><use href="#i-eye"/></svg></span></span></div>
+          <div class="amount-line"><div class="amount num"><small>Rp</small>0</div></div>
+          <div class="hero-actions">
+            <button type="button"><svg class="ic"><use href="#i-plus"/></svg>Expense</button>
+            <button type="button"><svg class="ic"><use href="#i-plus"/></svg>Income</button>
+            <button type="button"><svg class="ic"><use href="#i-trend"/></svg>Invest</button>
+            <button type="button"><svg class="ic"><use href="#i-swap"/></svg>Transfer</button>
+          </div>
+        </div>
+        <div class="caught"><svg class="ic"><use href="#i-check"/></svg><div>Last 7 days are filled in <span>Nice and complete.</span></div></div>
+        <section class="card">
+          <div class="card-head"><div><h2>Today</h2><div class="meta">Fri 13 Nov · 0 transactions</div></div><span class="chip">View all</span></div>
+          <div class="empty"><span class="tile">🌤️</span><b>Nothing recorded today</b><p>Add what you spend as you go, and it shows up here.</p><button type="button" class="btn"><svg class="ic"><use href="#i-plus"/></svg>Add expense</button></div>
+        </section>
+      </div>
+      <nav class="bottom-nav" aria-label="Main">
+        <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
+        <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
+      </nav>
+    </div>
+  </section>
+</main>
+
+<section class="notes" aria-label="Design notes">
+  <div class="note">
+    <h3>What changed</h3>
+    <ul>
+      <li><b>Overview</b> keeps one job: today. Budget line and bar, Money Flow, Spending and Category trend are gone from it.</li>
+      <li><b>Today list</b> shows every item from today, including income and transfers. The big number counts expenses only, as now.</li>
+      <li><b>Missing days</b> sit between the hero and the list: a 7-day strip, then one row per empty day with Add and Nothing to add.</li>
+      <li><b>Report</b> replaces Transactions in the bar. Transactions | Analysis is a switch at the top of the page.</li>
+      <li><b>Budgets tab</b> is gone. Its whole page lives in Analysis, so the bar is Overview, Report, Add, Portfolio.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>Rules behind frame 1</h3>
+    <ul>
+      <li>A missing day is one of the last 7 days (today excluded) with no transaction of any kind. Recurring entries count.</li>
+      <li>Days before the first transaction are never flagged, so a new account starts quiet.</li>
+      <li>Nothing to add is remembered on this device only (no database change). The day turns grey in the strip and the row goes away.</li>
+      <li>Tapping Add, or a dashed day in the strip, opens Add transaction already dated to that day.</li>
+      <li>No missing days: the card becomes the single green line in frame 4.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>Please look at</h3>
+    <ul>
+      <li><b>Add button position.</b> With three tabs, Add sits between Report and Portfolio, off centre. A floating Add button is the alternative.</li>
+      <li><b>Analysis order.</b> Budget, categories, occasions, Spending, Category trend, then Money Flow. Money Flow was not in your list, so it comes last.</li>
+      <li><b>Report remembers the month</b> you pick, and the same month applies to both pages.</li>
+      <li>Not drawn: an optional "no transactions" marker for empty days inside the Transactions list.</li>
+    </ul>
+    <button type="button" class="chip reset" id="reset">Reset frame 1</button>
+  </div>
+</section>
+
+<script>
+(function () {
+  var root = document.documentElement;
+  var themeBtns = document.querySelectorAll('[data-theme-set]');
+  function setTheme(t) {
+    if (t === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', t);
+    themeBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-theme-set') === t)); });
+  }
+  themeBtns.forEach(function (b) { b.addEventListener('click', function () { setTheme(b.getAttribute('data-theme-set')); }); });
+
+  var names = { 8: 'Sun 8 Nov', 10: 'Tue 10 Nov', 11: 'Wed 11 Nov' };
+  var gapCard = document.getElementById('gapcard');
+  var gapHtml = gapCard.innerHTML;
+  var toast = document.getElementById('toast'), tt;
+  function say(msg) { toast.textContent = msg; toast.classList.add('show'); clearTimeout(tt); tt = setTimeout(function () { toast.classList.remove('show'); }, 2400); }
+  function left() { return gapCard.querySelectorAll('.gap-row').length; }
+  function retitle() {
+    var n = left();
+    if (n === 0) {
+      gapCard.outerHTML = '<div class="caught" id="gapcard"><svg class="ic"><use href="#i-check"/></svg><div>Last 7 days are filled in <span>Nice and complete.</span></div></div>';
+      gapCard = document.getElementById('gapcard');
+      return;
+    }
+    document.getElementById('gaptitle').textContent = n === 1 ? '1 day with nothing recorded' : n + ' days with nothing recorded';
+  }
+  function dayEls(d) { return { row: gapCard.querySelector('.gap-row[data-day="' + d + '"]'), dot: gapCard.querySelector('.strip .d[data-day="' + d + '"]') }; }
+  function wire() {
+    gapCard.addEventListener('click', function (e) {
+      var add = e.target.closest('[data-add]'), skip = e.target.closest('[data-skip]'), dot = e.target.closest('.strip .miss');
+      if (add || dot) { say('Opens Add transaction, dated ' + names[(add || dot).getAttribute(add ? 'data-add' : 'data-day')]); return; }
+      if (skip) {
+        var d = skip.getAttribute('data-skip'), els = dayEls(d);
+        els.dot.className = 'd skip'; els.dot.removeAttribute('data-day');
+        els.dot.querySelector('.c').innerHTML = '<svg class="ic"><use href="#i-dash"/></svg>';
+        els.dot.querySelector('small').removeAttribute('style');
+        els.row.classList.add('out');
+        setTimeout(function () { els.row.remove(); retitle(); }, 200);
+        say(names[d] + ' marked as nothing to add');
+      }
+    });
+  }
+  wire();
+  document.getElementById('reset').addEventListener('click', function () {
+    var parent = gapCard.parentNode, fresh = document.createElement('section');
+    fresh.className = 'card gap-card'; fresh.id = 'gapcard'; fresh.innerHTML = gapHtml;
+    parent.replaceChild(fresh, gapCard); gapCard = fresh; wire();
+  });
+})();
+</script>

@@ -1,0 +1,1 @@
+2026-11-13: **Move to account (coin): spacing.** The Quantity / Network fee / Date block and its note now keep the dialog's 16 px rhythm (the wrapper had none, so Date and the note touched the row above). CSS only. Branch claude/clever-pascal-6i7jvg.

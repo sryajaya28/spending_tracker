@@ -31,7 +31,8 @@ function holdingCost(h) {
   let qty = q0, cost = 0;
   if (q0 > 1e-12) { if (h.open_price != null) cost = q0 * h.open_price; else out.known = false; }
   for (const tr of all) {
-    if (tr.date > today || tr.kind) continue;   // trades dated later are not in yet
+    if (tr.date > today) continue;   // trades dated later are not in yet
+    if (tr.kind && tr.price == null) { if (trackCost(h)) out.known = false; continue; }   // income/expense and coin-transfer events have no price of their own (a coin transfer carries the source's average price)
     const price = tradePrice(h, tr, ccy);
     if (price == null) { out.known = false; continue; }
     let r = 0;

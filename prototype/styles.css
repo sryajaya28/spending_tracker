@@ -187,6 +187,7 @@ dialog::backdrop { background: rgba(30, 27, 75, .45); backdrop-filter: blur(3px)
 .seg label:has(input:checked) { background: var(--navy); color: #fff; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 4px; }   /* wraps instead of spilling out of the dialog */
 .hint { font-size: 12px; color: var(--muted); background: #fff8dc; border-radius: 12px; padding: 8px 12px; }
+[data-move-box]:not([hidden]) { display: flex; flex-direction: column; gap: 16px; }   /* Move to account on a coin: the wrapper keeps the same 16px rhythm as the dialog around it */
 
 #toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); background: var(--navy); color: #fff; padding: 12px 20px; border-radius: 999px; font-weight: 600; opacity: 0; pointer-events: none; transition: .25s; z-index: 50; max-width: calc(100vw - 32px); }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -1057,9 +1058,7 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .hero .delta b.down { background: var(--bad); color: #fff; }
 :root[data-theme="dark"] .hero .delta b.down { background: #ff6b70; color: #1e1b4b; }
 
-/* Overview hero "Spent today": the Balance chip at the far end of the label row, and the budget line + thin bar under the amount (white on the hero gradient in both themes) */
-.hero .hero-chip { margin-left: auto; flex: none; background: rgba(255, 255, 255, .18); color: #fff; border: 0; border-radius: 999px; padding: 4px 11px; font: inherit; font-size: 12px; letter-spacing: 0; cursor: pointer; }
-.hero .hero-chip:hover { background: rgba(255, 255, 255, .3); }
+/* Overview hero "Spent today": the budget line + thin bar under the amount (white on the hero gradient in both themes) */
 .hero-bud { display: flex; flex-direction: column; gap: 8px; cursor: pointer; border-radius: 10px; }
 .hero-bud-line { font-size: 14px; opacity: .95; }
 .hero-bud-line u { text-underline-offset: 3px; }
@@ -1067,7 +1066,7 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .hero-bar i { display: block; height: 100%; border-radius: 999px; background: #fff; }
 .hero-bar i.warning { background: var(--warn); }
 .hero-bar i.exceeded { background: #ff6b70; }
-.hero-bud:focus-visible, .hero .hero-chip:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.hero-bud:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 /* Transactions person filter (2+ writers): a filter button in the search row opens a sheet; active filters show as chips under the search row */
 .filter-btn { position: relative; flex: none; width: 44px; height: 44px; border: 1px solid transparent; border-radius: 14px; background: var(--soft); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
 .filter-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
@@ -1083,3 +1082,33 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 [data-form="txn-filters"] h2 { margin: 0; }
 [data-form="txn-filters"] .field { display: grid; gap: 6px; margin: 0; }
 [data-form="txn-filters"] .actions { margin-top: 4px; }
+
+/* Report tabs, Overview missing-days card and "nothing today" prompt (design: docs/tasks/2026-11-13-overview-report.md) */
+.report-tabs { display: flex; width: 100%; margin: 2px 0 12px; }
+.report-tabs .tab { flex: 1; padding: 10px 8px; }
+.gap-head { display: flex; gap: 12px; align-items: flex-start; }
+.gap-ico { width: 40px; height: 40px; border-radius: 14px; flex: none; display: grid; place-items: center; background: color-mix(in srgb, var(--warn) 24%, var(--surface)); color: var(--ink); }
+.gap-ico svg { width: 20px; height: 20px; }
+.gap-head p { font-size: 13px; margin-top: 1px; }
+.gap-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin: 4px 0 8px; }
+.gap-d { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 2px 0; border: 0; background: none; border-radius: 12px; font: inherit; color: inherit; }
+.gap-d small { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.gap-c { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; }
+.gap-c svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.gap-d.ok .gap-c { background: color-mix(in srgb, var(--good) 18%, var(--surface)); color: var(--good); }
+.gap-d.miss { cursor: pointer; }
+.gap-d.miss .gap-c { border: 2px dashed var(--warn); background: color-mix(in srgb, var(--warn) 22%, var(--surface)); color: var(--ink); }
+.gap-d.miss small { color: var(--ink); font-weight: 700; }
+.gap-d.skip .gap-c { background: var(--soft); color: var(--muted); }
+.gap-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 9px 2px; border-top: 1px solid var(--line); }
+.gap-dt { width: 44px; height: 44px; border-radius: 14px; border: 2px dashed var(--warn); background: color-mix(in srgb, var(--warn) 22%, var(--surface)); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+.gap-dt span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.gap-dt b { font-size: 16px; }
+.gap-t { font-weight: 600; font-size: 15px; }
+.gap-skip { padding: 2px 0; color: var(--brand); text-decoration: none; font-weight: 600; font-size: 13px; }
+.gap-add { height: 36px; padding: 0 16px; font-size: 14px; }
+.gap-prompt { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding-block: 26px; }
+.gap-prompt h2 { margin-top: 4px; }
+.gap-prompt p { max-width: 30ch; margin-bottom: 8px; }
+.gap-prompt .btn { padding-inline: 28px; }
+.hero-bud-line u { white-space: nowrap; }

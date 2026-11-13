@@ -25,7 +25,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.equal(await spent('2026-09'), 100000 + 50000, '26 Sep to 24 Oct');
   assert.equal(await p.evaluate(() => periodKeyOf(isoDate(new Date())) === state.ui.month), true, 'current period selected');
   // the month picker shows ranges
-  await p.evaluate(() => { location.hash = '#/overview'; render(); }); assert(/\w+ \d+ – \w+ \d+/.test(await p.innerText('select[data-bind=month]')), 'range labels');
+  await p.evaluate(() => { location.hash = '#/analysis'; render(); }); assert(/\w+ \d+ – \w+ \d+/.test(await p.innerText('select[data-bind=month]')), 'range labels');
   const [periodStartNow, periodEndNow] = await p.evaluate(() => [periodStart(state.ui.month), periodEnd(state.ui.month)]);
   await p.evaluate(() => { location.hash = '#/transactions'; render(); }); assert(/\w+ \d+–\w+ \d+/.test(await p.innerText('.txn-top select[data-bind=month]')), 'Transactions filter shows the period');
   const rows = await p.$$eval('#txn-list .day-row', (e) => e.map((x) => x.dataset.id)); assert(rows.every((d) => d >= periodStartNow && d <= periodEndNow) && rows.length, JSON.stringify(rows));

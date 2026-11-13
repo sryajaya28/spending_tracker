@@ -49,6 +49,8 @@ Person properties: `currency`, `language`, `theme`. The person id is the account
 | `update_transaction` / `delete_transaction` | same / `type` | edit / delete |
 | `transfer_recorded` / `transfer_edited` | `has_fee`, `is_recurring`, `involves_investment_cash` | transfer between accounts (or with an investment Cash balance), added / edited |
 | `delete_transfer` | none | a transfer deleted |
+| `coin_transferred` | `has_fee`, `is_partial`, `asset_type`, `new_destination` | Move to account on a stablecoin or crypto holding saved (quantity and fee are never sent) |
+| `coin_transfer_deleted` | none | a coin transfer deleted from its details dialog |
 | `invite_sent` / `invite_resent` / `invite_revoked` | `role` (editor/viewer) / none / none | the owner invites, resends or cancels an invitation (never the email) |
 | `invite_accepted` | `role` | the invitee finished the Join page and is signed in |
 | `member_role_changed` / `member_removed` / `household_left` | `role` / none / none | household admin actions and a member leaving |
@@ -74,6 +76,6 @@ PostHog Cloud EU, project id 334082, token `POSTHOG_KEY` in `prototype/config.js
 `/ingest` (Vercel rewrite to `eu.i.posthog.com`). SDK vendored in `prototype/vendor/posthog.js`. Privacy rules are in the
 header of `analytics.js` and in `prototype/privacy.html`; do not weaken them.
 
-Click actions added with the Overview "Spent today" hero (2026-11-13), both through `button_clicked`: `hero_budget` (the budget line and bar, to Budgets) and `hero_balance` (the Balance chip, to Portfolio).
+Click actions added with the Overview "Spent today" hero (2026-11-13), through `button_clicked`: `hero_budget` (the budget line and bar, to Budgets). The `hero_balance` chip was removed (2026-11-13, Overview/Report split). New `button_clicked` actions in that split: `report_tab` (prop `tab`: `transactions` or `analysis`), `gap_add` and `gap_skip` (the missing-days card; no date or amount is sent).
 
 Click actions added with the sign-up agreement: `agree_terms` (tick box) and `toggle_password` (show / hide), both through `button_clicked`.

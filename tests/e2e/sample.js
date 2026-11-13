@@ -27,7 +27,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // toggle ON: demo data shows, banner appears, own data untouched
   await p.check('[data-demo]'); await p.waitForSelector('.demo-bar');
   // not pinned: it scrolls away with the page
-  await p.evaluate(() => { location.hash = '#/overview'; render(); }); await p.waitForTimeout(200); await p.evaluate(() => window.scrollTo(0, 900)); await p.waitForTimeout(200);
+  await p.evaluate(() => { location.hash = '#/analysis'; render(); }); await p.waitForTimeout(200); await p.evaluate(() => window.scrollTo(0, 900)); await p.waitForTimeout(200);
   assert((await p.$eval('.demo-bar', (e) => e.getBoundingClientRect().top)) < 0, 'banner is not sticky'); await p.evaluate(() => { window.scrollTo(0, 0); location.hash = '#/settings'; render(); });
   const on = await snap(); assert(on.demo && on.txns > 50 && on.wallets.includes('BCA'), JSON.stringify(on));
   assert((await p.$eval('.demo-bar', (e) => e.textContent)).includes('sample data'));

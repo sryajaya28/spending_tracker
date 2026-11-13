@@ -3,16 +3,16 @@
 /* ---------- views ---------- */
 function sidebar() {
   const r = route();
-  const link = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}<span>${__(label)}</span></a>`;
+  const link = (id, ic, label, on = [id]) => `<a href="#/${id}" class="${on.includes(r) ? 'active' : ''}">${icon(ic)}<span>${__(label)}</span></a>`;
   return `<aside class="sidebar"><div class="logo"><img src="icon.svg" alt="">Stiver</div>
-    <div class="nav-label">${__('MENU')}</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'swap', 'Transactions')}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'wallet-nav', 'Portfolio')}</nav>
+    <div class="nav-label">${__('MENU')}</div><nav class="nav">${link('overview', 'home', 'Overview')}${link('transactions', 'trend', 'Report', ['transactions', 'analysis'])}${link('budgets', 'pie', 'Budgets')}${link('portfolio', 'wallet-nav', 'Portfolio')}</nav>
     <div class="nav-label">${__('ACCOUNT')}</div><nav class="nav">${link('settings', 'gear', 'Settings')}</nav></aside>`;
 }
 function bottomNav() {
   const r = route();
-  const l = (id, ic, label) => `<a href="#/${id}" class="${r === id ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
+  const l = (id, ic, label, on = [id]) => `<a href="#/${id}" class="${on.includes(r) ? 'active' : ''}">${icon(ic)}${__(label)}</a>`;
   const add = canWrite() ? `<button type="button" class="nav-add" data-act="add-txn" aria-label="${__('Add transaction')}"><span>${icon('plus')}</span>${__('Add')}</button>` : '';   // a Viewer has no Add: four equal tabs, no empty slot
-  return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'swap', 'Transactions')}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'wallet-nav', 'Portfolio')}</nav>`;
+  return `<nav class="bottom-nav${add ? '' : ' four'}">${l('overview', 'home', 'Overview')}${l('transactions', 'trend', 'Report', ['transactions', 'analysis'])}${add}${l('budgets', 'pie', 'Budgets')}${l('portfolio', 'wallet-nav', 'Portfolio')}</nav>`;
 }
 function topbar(title, sub, back) {
   const p = D().profile, hour = new Date().getHours();
@@ -170,12 +170,46 @@ const setupStrip = (st) => (st.partial && !st.fresh
    No overall budget: what was spent this period and a nudge to set one. The whole block opens Budgets. The two amounts follow the eye button; the bar stays. */
 function heroBudget(spentToday) {
   const k = currentPeriod(), g = budgetStatus(k).find((b) => b.category_id === null), c$ = cur();
-  if (!g) return `<div class="hero-bud" data-act="hero-budget" tabindex="0" role="link"><div class="hero-bud-line">${__('{amount} spent', { amount: moneyHtmlP(sumBy(inMonth(k), 'expense'), c$) })} · <u>${__('Set a monthly budget')} ›</u></div></div>`;
+  if (!g) return `<div class="hero-bud" data-act="hero-budget" tabindex="0" role="link"><div class="hero-bud-line">${__('{amount} spent this month', { amount: moneyHtmlP(sumBy(inMonth(k), 'expense'), c$) })} · <u>${__('Set a monthly budget')} ›</u></div></div>`;
   const days = Math.round((new Date(periodEnd(k) + 'T00:00') - new Date(todayIso() + 'T00:00')) / 86400000) + 1;
   const left = g.remaining >= 0 ? __('{amount} left this month', { amount: moneyHtmlP(g.remaining, c$) }) : __('{amount} over budget', { amount: moneyHtmlP(-g.remaining, c$) });
   const pct = Math.min(100, Math.max(0, Math.round(g.pct)));
   return `<div class="hero-bud" data-act="hero-budget" tabindex="0" role="link"><div class="hero-bud-line">${left} · ${days === 1 ? __('1 day to go') : __('{n} days to go', { n: days })}</div>
     <div class="hero-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}" aria-label="${esc(__('Budget used'))} ${pct}%"><i class="${g.status}" style="width:${pct}%"></i></div></div>`;
+}
+/* ---- Overview: today's list and the days of the last week with nothing recorded ----
+   A day counts as recorded when ANY entry is dated that day. "Nothing to add" is remembered on this device only (localStorage, no database change). */
+const nogapKey = () => 'stiver.nogap.' + (state.auth.uid || '');
+function nogapSet() {
+  if (!state.ui.nogap) { try { state.ui.nogap = new Set(JSON.parse(localStorage.getItem(nogapKey()) || '[]')); } catch (err) { state.ui.nogap = new Set(); } }
+  return state.ui.nogap;
+}
+function nogapMark(iso) { const set = nogapSet(); set.add(iso); try { localStorage.setItem(nogapKey(), JSON.stringify([...set].sort().slice(-30))); } catch (err) { /* private mode: it lasts until the page reloads */ } }
+const daysAgo = (n) => { const d = new Date(todayIso() + 'T00:00'); d.setDate(d.getDate() - n); return d; };
+/* the last 7 days, oldest first, today excluded; days before the very first entry are not missed (a new account is not nagged) */
+function lastWeek() {
+  const tx = D().transactions, first = tx.reduce((m, t) => (t.occurred_at < m ? t.occurred_at : m), todayIso()), set = nogapSet(), out = [];
+  for (let n = 7; n >= 1; n--) { const d = daysAgo(n), iso = isoDate(d); out.push({ d, iso, state: tx.some((t) => t.occurred_at === iso) ? 'ok' : (set.has(iso) || iso < first) ? 'skip' : 'miss' }); }
+  return out;
+}
+const gapDay = (d, o) => d.toLocaleDateString(locale(), o);
+function gapCard() {
+  if (!canWrite() || !D().transactions.length) return '';
+  const days = lastWeek(), miss = days.filter((x) => x.state === 'miss').reverse();   // newest first
+  if (!miss.length) return '';
+  const tick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+  const dash = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>';
+  const short = (x) => `${gapDay(x.d, { weekday: 'short' })} ${x.d.getDate()}`;
+  const strip = days.map((x) => x.state === 'miss'
+    ? `<button type="button" class="gap-d miss" data-act="gap-add" data-date="${x.iso}" aria-label="${esc(__('{day}, nothing recorded. Add transaction', { day: gapDay(x.d, { weekday: 'long', day: 'numeric', month: 'short' }) }))}"><span class="gap-c">${icon('plus')}</span><small>${short(x)}</small></button>`
+    : `<div class="gap-d ${x.state}"><span class="gap-c">${x.state === 'ok' ? tick : dash}</span><small>${short(x)}</small></div>`).join('');
+  const rows = miss.map((x) => `<div class="gap-row"><div class="gap-dt"><span>${gapDay(x.d, { weekday: 'short' })}</span><b>${x.d.getDate()}</b></div><div><div class="gap-t">${gapDay(x.d, { weekday: 'long', day: 'numeric', month: 'short' })}</div><button type="button" class="legend-btn gap-skip" data-act="gap-skip" data-date="${x.iso}">${__('Nothing to add')}</button></div><button type="button" class="btn gap-add" data-act="gap-add" data-date="${x.iso}">${__('Add')}</button></div>`).join('');
+  return `<section class="card gap-card"><div class="card-head"><div class="gap-head"><span class="gap-ico">${icon('calendar')}</span><div><h2>${miss.length === 1 ? __('1 day with nothing recorded') : __('{n} days with nothing recorded', { n: miss.length })}</h2><p class="muted">${__('Last 7 days. Add what you spent, or mark the day.')}</p></div></div></div><div class="gap-strip">${strip}</div>${rows}</section>`;
+}
+function todayCard() {
+  const rows = D().transactions.filter((t) => t.occurred_at === todayIso() && !hiddenLeg(t, ''));
+  if (!rows.length) return canWrite() ? `<section class="card gap-prompt"><span class="gap-ico">${icon('plus')}</span><h2>${__('Nothing recorded today yet')}</h2><p class="muted">${__('Add what you spend as you go, and it shows up here.')}</p><button type="button" class="btn" data-act="add-txn">${__('Add transaction')}</button></section>` : '';
+  return `<section class="card"><div class="card-head"><div><h2>${__('Today')}</h2><p class="muted">${gapDay(new Date(todayIso() + 'T00:00'), { weekday: 'short', day: 'numeric', month: 'short' })} · ${countLabel(rows.length)}</p></div><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`;
 }
 function viewOverview() {
   const st = setupState();
@@ -183,28 +217,16 @@ function viewOverview() {
   // the first transaction just ended the first-run screen: congratulate once (only when the account and the budget are set up too)
   if (state.ui.onbSeen && !state.real) { state.ui.onbSeen = false; if (st.hasAccount && st.hasBudget && st.hasTx) { state.ui.congrats = true; setTimeout(endCongrats, 4200); } }
   if (state.ui.congrats) return congratsView();
-  const k = state.ui.month, list = inMonth(k), inc = sumBy(list, 'income'), exp = sumBy(list, 'expense'), net = inc - exp;
-  const months = lastMonths(6);
-  const incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
-  const cats = spendByCategory(k);
   const spentToday = sumBy(D().transactions.filter((t) => t.occurred_at === todayIso()), 'expense');   // only today's expenses: not income, transfers or upcoming entries
-  const recent = D().transactions.filter((t) => t.occurred_at <= todayIso() && !hiddenLeg(t, '')).slice(0, 6);   // upcoming entries are not listed here either
   return `${samplePromo()}${topbar('', 'Here is where your money stands today.')}${setupStrip(st)}
   <div class="grid">
-    <section class="card hero">${heroLabel(__('Spent today'), '', '', `<button type="button" class="hero-chip" data-act="hero-balance">${__('Balance')} ›</button>`)}
+    <section class="card hero">${heroLabel(__('Spent today'))}
       <div class="amount-line"><div class="amount num" style="--len:${moneyP(spentToday, cur()).length + 6}">${moneyHtmlP(spentToday, cur())}</div>${heroCurrency(cur())}</div>
       ${heroBudget(spentToday)}
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     ${installBtn('ov-install')}
-    <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
-      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
-      ${flowChart(months, incs, exps)}</section>
-    <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools">${monthSelect()}<button class="chip" data-act="breakdown">${__('Details')}</button></div></div>
-      ${halfDonut(cats, exp)}</section>
- ${trendCard()}
-
-  <section class="card"><div class="card-head"><h2>${__('Recent transactions')}</h2><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${recent.map((t) => txnRow(t)).join('')}</div></section>
+    ${todayCard()}${gapCard()}
   </div>`;
 }
 
@@ -339,26 +361,50 @@ function refreshFilterUi() {
   const b = $('#filters-count'); if (b) b.textContent = showLabel();
 }
 function viewTransactions() {
-  const all = !!state.ui.allPeriods, list = all ? D().transactions.filter((t) => t.occurred_at <= todayIso()) : inMonth(state.ui.month);
-  return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: all ? __('All periods') : monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
+  return `${topbar('Report')}${reportTabs('transactions')}
   <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true, true)}${hhNames() ? filterBtnHtml() : ''}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
     ${txnFiltersHtml()}
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 
+const budgetCap = (b) => `<span class="badge ${b.status}">${b.status === 'ok' ? __('On track') : b.status === 'warning' ? __('Almost there') : __('Over budget')}</span>`;
+/* the Overall budget and By category cards; ro = read-only (Report > Analysis): no add or edit buttons */
+function overallBudgetCard(g, ro) {
+  return `<section class="card"><div class="card-head"><h2>${__('Overall budget')}</h2><div class="tools">${monthSelect()}${ro ? '' : `<button class="btn" data-act="add-budget">${__('+ Budget')}</button>`}</div></div>
+    ${g ? `<div class="big num">${money(g.spent, cur())} <span class="muted" style="font-size:18px;font-weight:500">${__('of {amount}', { amount: money(g.budget, cur()) })}</span></div>
+      <div class="bar" style="margin:14px 0 10px"><i class="${g.status}" style="width:${Math.min(100, g.pct)}%"></i></div>
+      <div class="budget-foot"><span class="muted">${g.remaining >= 0 ? __('{amount} left', { amount: money(g.remaining, cur()) }) : __('{amount} over', { amount: money(-g.remaining, cur()) })} · ${__('{pct}% used', { pct: Math.round(g.pct) })}</span><span class="budget-end">${budgetCap(g)}${ro ? '' : `<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">${__('Edit')}</button>`}</span></div>`
+      : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>`;
+}
+function categoryBudgetCard(rest, ro) {
+  return `<section class="card"><div class="card-head"><h2>${__('By category')}</h2>${ro ? '' : `<button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button>`}</div>
+    ${rest.length ? rest.map((b) => `<div class="brow tap-row" data-act="cat-txns" data-cat="${b.category_id}" tabindex="0" role="link" aria-label="${esc(__('See {name} transactions', { name: b.name }))}">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${budgetCap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div>${ro ? '' : `<button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button>`}</div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>`;
+}
+/* Report has two pages: Transactions and Analysis (budget progress, Spending, Category trend, Money Flow) */
+const reportTabs = (on) => `<div class="tabs report-tabs" role="tablist" aria-label="${__('Report pages')}">${['transactions', 'analysis'].map((t) => `<button type="button" class="tab${on === t ? ' on' : ''}" role="tab" aria-selected="${on === t}" data-act="report-tab" data-tab="${t}">${__(t === 'transactions' ? 'Transactions' : 'Analysis')}</button>`).join('')}</div>`;
+function viewAnalysis() {
+  const k = state.ui.month, list = inMonth(k), exp = sumBy(list, 'expense'), net = sumBy(list, 'income') - exp;
+  const months = lastMonths(6), incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
+  const bs = budgetStatus(k);
+  return `${topbar('Report')}${reportTabs('analysis')}
+  <div class="grid">
+    ${overallBudgetCard(bs.find((b) => b.category_id === null), true)}${categoryBudgetCard(bs.filter((b) => b.category_id), true)}
+    <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools">${monthSelect()}<button class="chip" data-act="breakdown">${__('Details')}</button></div></div>
+      ${halfDonut(spendByCategory(k), exp)}</section>
+    ${trendCard()}
+    <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
+      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
+      ${flowChart(months, incs, exps)}</section>
+  </div>`;
+}
+
 function viewBudgets() {
   const bs = budgetStatus(state.ui.month), g = bs.find((b) => b.category_id === null), rest = bs.filter((b) => b.category_id);
   const over = bs.filter((b) => b.status === 'exceeded').length;
-  const cap = (b) => `<span class="badge ${b.status}">${b.status === 'ok' ? __('On track') : b.status === 'warning' ? __('Almost there') : __('Over budget')}</span>`;
   return `${topbar('Budgets', over ? __(over > 1 ? '{n} budgets exceeded in {month}' : '{n} budget exceeded in {month}', { n: over, month: monthLabel(state.ui.month) }) : __('Monthly limits for {month}', { month: monthLabel(state.ui.month) }))}
   <div class="stack">
-  <section class="card"><div class="card-head"><h2>${__('Overall budget')}</h2><div class="tools">${monthSelect()}<button class="btn" data-act="add-budget">${__('+ Budget')}</button></div></div>
-    ${g ? `<div class="big num">${money(g.spent, cur())} <span class="muted" style="font-size:18px;font-weight:500">${__('of {amount}', { amount: money(g.budget, cur()) })}</span></div>
-      <div class="bar" style="margin:14px 0 10px"><i class="${g.status}" style="width:${Math.min(100, g.pct)}%"></i></div>
-      <div class="budget-foot"><span class="muted">${g.remaining >= 0 ? __('{amount} left', { amount: money(g.remaining, cur()) }) : __('{amount} over', { amount: money(-g.remaining, cur()) })} · ${__('{pct}% used', { pct: Math.round(g.pct) })}</span><span class="budget-end">${cap(g)}<button class="btn secondary" data-act="edit-budget" data-id="${g.id}">${__('Edit')}</button></span></div>`
-      : ('<p class="muted">' + __('No overall budget yet. Add one to cap total monthly spending.') + '</p>')}</section>
-  <section class="card"><div class="card-head"><h2>${__('By category')}</h2><button class="btn" data-act="add-budget" data-preset="category">${__('+ Add')}</button></div>
-    ${rest.length ? rest.map((b) => `<div class="brow tap-row" data-act="cat-txns" data-cat="${b.category_id}" tabindex="0" role="link" aria-label="${esc(__('See {name} transactions', { name: b.name }))}">${tile({ icon: b.icon, color: b.color })}<div><div class="meta"><span>${esc(b.name)} ${cap(b)}</span><span class="num">${money(b.spent, cur())} / ${money(b.budget, cur())} · ${Math.round(b.pct)}%</span></div><div class="bar"><i class="${b.status}" style="width:${Math.min(100, b.pct)}%"></i></div></div><button class="btn secondary" data-act="edit-budget" data-id="${b.id}">${__('Edit')}</button></div>`).join('') : ('<div class="empty">' + __('No category budgets yet.') + '</div>')}</section>
+  ${overallBudgetCard(g, false)}
+  ${categoryBudgetCard(rest, false)}
   <section class="card"><div class="card-head"><h2>${__('Special occasions')}</h2><div class="tools"><button class="chip" data-act="occasion-history">${__('History')}</button><button class="btn" data-act="add-occasion-budget">${__('+ Add')}</button></div></div>
     ${(() => { const live = occasionStatus().filter((o) => o.hasBudget && !occasionIsPast(o) && occasionInMonth(o, state.ui.month)); return live.length ? live.map(occasionRow).join('') : ('<div class="empty">' + __('No occasion budgets yet. Add one like "Bali Trip" or "Birthday Dinner".') + '</div>'); })()}</section></div>`;
 }

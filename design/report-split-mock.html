@@ -260,6 +260,17 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
           </div>
         </div>
 
+        <section class="card">
+          <div class="card-head"><div><h2>Today</h2><div class="meta">Fri 13 Nov · 5 transactions</div></div><span class="chip">View all</span></div>
+          <div class="list">
+            <div class="row"><span class="tile">☕</span><div><div class="t">Coffee with Rina</div><div class="s">Food &amp; drink · BCA</div></div><div class="a num">−Rp 38.000</div></div>
+            <div class="row"><span class="tile">🛵</span><div><div class="t">Gojek to office</div><div class="s">Transport · Gopay</div></div><div class="a num">−Rp 27.000</div></div>
+            <div class="row"><span class="tile">🍜</span><div><div class="t">Lunch</div><div class="s">Food &amp; drink · Cash</div></div><div class="a num">−Rp 65.000</div></div>
+            <div class="row"><span class="tile">🛒</span><div><div class="t">Groceries</div><div class="s">Shopping · BCA</div></div><div class="a num">−Rp 55.000</div></div>
+            <div class="row"><span class="tile">💼</span><div><div class="t">Freelance payment</div><div class="s">Income · BCA</div></div><div class="a in num">+Rp 1.200.000</div></div>
+          </div>
+        </section>
+
         <section class="card gap-card" id="gapcard">
           <div class="ghead"><span class="gap-ico"><svg class="ic"><use href="#i-cal"/></svg></span><div><h2 id="gaptitle">3 days with nothing recorded</h2><div class="meta">Last 7 days. Add what you spent, or mark the day.</div></div></div>
           <div class="strip" id="strip">
@@ -275,17 +286,6 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
             <div class="gap-row" data-day="11"><div class="dt"><span>Wed</span><b>11</b></div><div><div class="t">Wednesday, 11 Nov</div><button type="button" class="link" data-skip="11">Nothing to add</button></div><button type="button" class="btn small" data-add="11"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
             <div class="gap-row" data-day="10"><div class="dt"><span>Tue</span><b>10</b></div><div><div class="t">Tuesday, 10 Nov</div><button type="button" class="link" data-skip="10">Nothing to add</button></div><button type="button" class="btn small" data-add="10"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
             <div class="gap-row" data-day="8"><div class="dt"><span>Sun</span><b>8</b></div><div><div class="t">Sunday, 8 Nov</div><button type="button" class="link" data-skip="8">Nothing to add</button></div><button type="button" class="btn small" data-add="8"><svg class="ic"><use href="#i-plus"/></svg>Add</button></div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-head"><div><h2>Today</h2><div class="meta">Fri 13 Nov · 5 transactions</div></div><span class="chip">View all</span></div>
-          <div class="list">
-            <div class="row"><span class="tile">☕</span><div><div class="t">Coffee with Rina</div><div class="s">Food &amp; drink · BCA</div></div><div class="a num">−Rp 38.000</div></div>
-            <div class="row"><span class="tile">🛵</span><div><div class="t">Gojek to office</div><div class="s">Transport · Gopay</div></div><div class="a num">−Rp 27.000</div></div>
-            <div class="row"><span class="tile">🍜</span><div><div class="t">Lunch</div><div class="s">Food &amp; drink · Cash</div></div><div class="a num">−Rp 65.000</div></div>
-            <div class="row"><span class="tile">🛒</span><div><div class="t">Groceries</div><div class="s">Shopping · BCA</div></div><div class="a num">−Rp 55.000</div></div>
-            <div class="row"><span class="tile">💼</span><div><div class="t">Freelance payment</div><div class="s">Income · BCA</div></div><div class="a in num">+Rp 1.200.000</div></div>
           </div>
         </section>
       </div>
@@ -448,7 +448,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
     <ul>
       <li><b>Overview</b> keeps one job: today. Budget line and bar, Money Flow, Spending and Category trend are gone from it.</li>
       <li><b>Today list</b> shows every item from today, including income and transfers. The big number counts expenses only, as now.</li>
-      <li><b>Missing days</b> sit between the hero and the list: a 7-day strip, then one row per empty day with Add and Nothing to add.</li>
+      <li><b>Missing days</b> sit below today's list: a 7-day strip, then one row per empty day with Add and Nothing to add.</li>
       <li><b>Report</b> replaces Transactions in the bar. Transactions | Analysis is a switch at the top of the page.</li>
       <li><b>Budgets tab</b> is gone. Its whole page lives in Analysis, so the bar is Overview, Report, Add, Portfolio.</li>
     </ul>

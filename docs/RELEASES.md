@@ -2,6 +2,37 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 20 contents (main b7e2ce2)
+
+**Items in this release**
+Features:
+- Overview hero "Spent today"
+
+**Exact detail.** Range: 3652217..99760e4. 4 commits, 29 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-13: Overview hero "Spent today". The Overview hero card now shows today's expenses under a plain "Spent today" label (no tooltip) (not income, transfers, earlier days or upcoming entries) in the reporting currency, with the currency selector beside it, a `Balance ›` chip (to Portfolio) and, under the amount, the current period's overall budget as "{left} left this month · {n} days to go" (or "{x} over budget", or "{spent} spent · Set a monthly budget ›") with a thin bar that opens Budgets. Total Balance, its % pill and the Budgets card (with `fitOverviewBudgets` and the `.ov-*` CSS) are gone from Overview; the eye now masks the two hero amounts (the bar stays). Display only, no stored value or sync change (Tier 2). New `spenthero` test (replaces `ovbud`); `budgetbar`, `hidebal`, `ovocc`, `trend`, `donut`, `sample`, `analytics` updated; new click actions `hero_budget`, `hero_balance`. Branch `claude/laughing-maxwell-mf9y2z`.
+
+**What a user can see change**
+Yes: 6 app files changed (prototype/app/activity.js, prototype/app/charts.js, prototype/app/events-input.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css).
+
+**Commits**
+- 0fa568b Fold change files for the Spent today release
+- 071bd61 Spent today label is plain text: remove the dotted underline and tooltip
+- 25b4af6 Overview hero shows Spent today with budget line, Balance chip and currency selector; Budgets card removed
+- 01cf91a Release record 19: hide balance (docs only)
+
+**Files by area**
+- App (what users see) (6): prototype/app/activity.js, prototype/app/charts.js, prototype/app/events-input.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css
+- Tests (13): tests/e2e/affects.json, tests/e2e/analytics.js, tests/e2e/budgetbar.js, tests/e2e/coin.js, tests/e2e/donut.js, tests/e2e/handoff.js, tests/e2e/hidebal.js, tests/e2e/ovbud.js, tests/e2e/ovocc.js, tests/e2e/run_all.sh, tests/e2e/sample.js, tests/e2e/spenthero.js, tests/e2e/trend.js
+- Docs and rules (10): context.md, docs/ANALYTICS.md, docs/CHANGELOG.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/RELEASES.md, docs/tasks/2026-11-11-hide-balance.md, docs/tasks/2026-11-13-overview-spent-hero.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** e2e 60 of 60 local; CI e2e and tier green on PR 68 and PR 70; staging build checked; https://stiver.io answers 200 and serves stiver-shell-b7e2ce27f8. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** Copilot review did not run (quota); owner staging check not done
+
 ## Release 19 contents (main 3652217)
 
 **Items in this release**

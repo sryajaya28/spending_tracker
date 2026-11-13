@@ -80,7 +80,7 @@ const ROOT = path.resolve(__dirname, '..'), PORT = 5181;
 
     // ---- no budget set up: the hero shows "{spent} spent · Set a monthly budget ›" and no bar; Analysis shows the app's own empty budget cards
     const budStash = D().budgets; D().budgets = [];
-    const heroNoBud = strip(go('#/overview')).querySelector('.hero').outerHTML;
+    const heroNoBud = strip(go('#/overview')).querySelector('.hero').outerHTML.replace(' spent · <u>', ' spent this month · <u>');   // NEW wording: the app says only "spent"
     const bud0 = strip(go('#/budgets'));
     ['[data-act=add-budget]', '[data-act=edit-budget]', '[data-act=add-occasion-budget]'].forEach((q) => bud0.querySelectorAll(q).forEach((e) => e.remove()));
     const noBudCards = (cardBy(bud0, 'Overall budget') ? cardBy(bud0, 'Overall budget').outerHTML : '') + (cardBy(bud0, 'By category') ? cardBy(bud0, 'By category').outerHTML : '');

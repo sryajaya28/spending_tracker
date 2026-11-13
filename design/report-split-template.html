@@ -65,6 +65,8 @@ body { background: var(--board); font-size: 14px; padding-inline: max(16px, env(
 .note li b { font-weight: 600; }
 .reset { margin-top: 12px; }
 @media (prefers-reduced-motion: reduce) { .gap-row.out, .mock-toast { transition: none; } }
+/* NEW: the "Set a monthly budget ›" link wraps as one piece (the line is longer now: "spent this month") */
+.hero-bud-line u { white-space: nowrap; }
 </style>
 
 <header class="board-head">

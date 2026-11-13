@@ -1,0 +1,49 @@
+# CI for the risk-tiered workflow (docs/workflows/README.md). Zero agent tokens: the path rule labels the PR with its minimum tier and the tests must pass.
+# Make `tier` and `test` required checks in the branch rules of `staging` and `main` (a skipped job counts as passing).
+name: ci
+on:
+  pull_request:
+    branches: [staging, main]
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  tier:
+    runs-on: ubuntu-latest
+    outputs:
+      tier: ${{ steps.tier.outputs.tier }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - name: path rule
+        id: tier
+        run: |
+          node tools/path_tier.test.js
+          node tools/path_tier.js origin/${{ github.base_ref }} HEAD
+          echo "tier=$(node tools/path_tier.js origin/${{ github.base_ref }} HEAD --json | node -e 'process.stdout.write(String(JSON.parse(require("fs").readFileSync(0,"utf8")).tier))')" >> "$GITHUB_OUTPUT"
+      - name: label the PR with its minimum tier
+        uses: actions/github-script@v7
+        env: { TIER: "${{ steps.tier.outputs.tier }}" }
+        with:
+          script: |
+            const want = `tier-${process.env.TIER}`;
+            const { owner, repo } = context.repo, issue_number = context.issue.number;
+            const cur = (await github.rest.issues.listLabelsOnIssue({ owner, repo, issue_number })).data.map((l) => l.name);
+            for (const l of cur) if (/^tier-\d$/.test(l) && l !== want) await github.rest.issues.removeLabel({ owner, repo, issue_number, name: l });
+            if (!cur.includes(want)) await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [want] });
+  test:
+    needs: tier
+    # Tier 1 (docs, CSS, translations, tooling) cannot change app behaviour: the suite is skipped.
+    if: ${{ needs.tier.outputs.tier != '1' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      # Browser tests: pin the version (an unpinned install once picked up a newer browser and failed a test with the app unchanged).
+      # - run: npm install -g playwright@1.63.0 && npx playwright@1.63.0 install --with-deps chromium
+      - run: bash tests/run_all.sh | tee test.log; ! grep -q '^FAIL' test.log

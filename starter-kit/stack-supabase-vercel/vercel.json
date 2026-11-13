@@ -1,0 +1,51 @@
+{
+  "buildCommand": "node tools/stamp_sw.js",
+  "outputDirectory": "prototype",
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "includeFiles": "tools/**"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/join",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/ingest/(.*)",
+      "destination": "https://eu.i.posthog.com/$1"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://__SUPABASE_PROD_REF__.supabase.co wss://__SUPABASE_PROD_REF__.supabase.co https://__SUPABASE_STAGING_REF__.supabase.co wss://__SUPABASE_STAGING_REF__.supabase.co; frame-src https://challenges.cloudflare.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        }
+      ]
+    }
+  ]
+}

@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.route('**/api/**', (r) => r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }));
   await p.goto('http://127.0.0.1:5180/'); await p.waitForSelector('.land'); await p.click('.land-cta [data-view=signin]'); await p.waitForSelector('[data-form=signin]');
   await p.fill('[name=email]', 'a@b.co'); await p.fill('[name=password]', 'goodpass1'); await p.click('button[type=submit]'); await p.waitForSelector('.shell');
-  await p.evaluate(() => { location.hash = '#/settings'; });
+  await p.evaluate(() => { location.hash = '#/settings/categories'; });
   await p.waitForSelector('.cat-sec');
   // expense and income are separate groups; on a phone each shows its first 5 with See more
   assert.deepEqual(await p.$$eval('.cat-sec-h b', (e) => e.map((x) => x.textContent)), ['Expense', 'Income']);

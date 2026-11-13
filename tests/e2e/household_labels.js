@@ -55,9 +55,12 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   assert.match(await p.evaluate(() => byLine(D().wallets[0])), /Added by Sari/, 'accounts show who added them');
   assert.match(await p.evaluate(() => { D().wallets[0].byAt = '2026-11-04T09:30:00.000Z'; return byLine(D().wallets[0]); }), /Added by Sari, .*\d/, 'the label carries the time for accounts too');
   // settings: Leave instead of Invite, currency and period locked
-  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('.hh-card');
+  await p.evaluate(() => { location.hash = '#/settings/household'; }); await p.waitForSelector('.hh-card');
   assert.equal(await p.$('[data-act=hh-invite]'), null, 'no Invite for a member'); assert.equal(await p.$$eval('[data-act=hh-leave]', (e) => e.length), 1);
+  assert.equal(await p.$('#app .hh-card') !== null, true); assert.equal(await p.$('.set-hub'), null, 'the Household page is not the hub');
+  await p.evaluate(() => { location.hash = '#/settings/preferences'; }); await p.waitForSelector('select[data-setting=currency]');
   assert.equal(await p.$eval('select[data-setting=currency]', (e) => e.disabled), true); assert.equal(await p.$eval('select[data-setting=period]', (e) => e.disabled), true);
+  await p.evaluate(() => { location.hash = '#/settings/household'; }); await p.waitForSelector('.hh-card');
   assert.match(await p.textContent('.hh-card'), /Sari/); assert.match(await p.textContent('.hh-card'), /sari@test\.dev/, 'members see names and emails');
   assert.doesNotMatch(await p.textContent('.hh-card'), /Maria/, 'a removed member is not listed as a member');
   // leaving asks first, then calls the server function
@@ -66,12 +69,13 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // a Viewer: details open, nothing can be added
   await p.evaluate((ME) => { __T.household_members[0].role = 'viewer'; __T.profiles[0].household_status = 'member'; return loadUserData(); }, ME); await p.waitForFunction(() => Cloud.household.role === 'viewer'); await p.waitForFunction(() => document.body.textContent.includes('Your access changed'), null, { timeout: 5000 });   // the owner changed the role while the app was open
   // PRD check 17: a Viewer sees no control that starts a change, on any screen (rows that only open a read-only detail stay)
-  for (const r of ['overview', 'transactions', 'budgets', 'portfolio', 'settings']) {
+  for (const r of ['overview', 'transactions', 'budgets', 'portfolio', 'settings', 'settings/categories', 'settings/occasions', 'settings/recurring', 'settings/household', 'settings/preferences', 'settings/profile']) {
     await p.evaluate((r) => { location.hash = '#/' + r; }, r); await p.waitForTimeout(300);
     const left = await p.evaluate(() => [...document.querySelectorAll('#app button[data-act]')].filter((e) => WRITE_ACT.test(e.dataset.act) && e.dataset.act !== 'edit-txn' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0).map((e) => e.dataset.act));
     assert.deepEqual(left, [], 'Viewer sees write controls on ' + r + ': ' + left);
   }
   assert.equal(await p.$('.nav-add'), null, 'a Viewer has no raised Add');
+  await p.evaluate(() => { location.hash = '#/overview'; }); await p.waitForSelector('.bottom-nav');   // the loop above ends on a Settings page, which has no bottom bar
   assert.equal(await p.$$eval('.bottom-nav > a', (a) => a.length), 4, 'four tabs'); const xs = await p.$$eval('.bottom-nav > a', (a) => a.map((e) => Math.round(e.getBoundingClientRect().width))); assert.ok(Math.max(...xs) - Math.min(...xs) <= 1, 'four equal tabs, no empty slot: ' + xs);
   await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t2]', { state: 'visible' });
   await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'a Viewer never gets the edit form'); await p.click('#dlg [data-act=close]');

@@ -37,7 +37,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // household events: role only, never an email, name or id
   await p.evaluate(() => {
     Cloud.inviteMember = async () => ({ result: 'ok' }); Cloud.manageInvite = async () => ({ result: 'ok' }); Cloud.setRole = async () => {}; Cloud.removeMember = async () => {}; Cloud.leaveHousehold = async () => {};
-    location.hash = '#/settings';
+    location.hash = '#/settings/household';
   });
   await p.waitForSelector('[data-act=hh-invite]'); await p.click('[data-act=hh-invite]'); await p.waitForSelector('form[data-form=invite]');
   await p.fill('form[data-form=invite] [name=email]', 'secret.person@example.com'); await p.click('form[data-form=invite] label:has(input[value=viewer])'); await p.click('form[data-form=invite] [data-send]'); await p.waitForTimeout(300);
@@ -138,6 +138,10 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   // random ids and timestamps are removed first: a UUID or a millisecond time can contain "1234" or "55555" by chance (seen as a rare failure)
   const trBlob = JSON.stringify(tr).replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID').replace(/"\$?(time|timestamp|\$session_id|\$window_id|\$insert_id|\$device_id|distinct_id|\$pageview_id|\$sdk_debug[a-z_]*)":("[^"]*"|[\d.]+)/g, '');
   const leak = trBlob.match(/777777|1234\b|55555|66666|Zzz Broker|Zzz Bank/); assert(!leak, 'no amounts or names from transfers leaked: ' + (leak && trBlob.slice(Math.max(0, leak.index - 80), leak.index + 40)));
+  // Settings hub: a tile or row opens a page; the click carries the page code name only
+  await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('.set-tile[data-route=categories]'); await p.click('.set-tile[data-route=categories]'); await p.waitForSelector('.cat-sec'); await p.waitForTimeout(150);
+  const so = (await p.evaluate(() => window.__phEvents)).filter((e) => e.event === 'button_clicked' && e.properties.action === 'settings_open');
+  assert(so.some((e) => e.properties.route === 'categories' && e.properties.page === 'settings'), 'settings_open click with route and page: ' + JSON.stringify(so)); assert(!JSON.stringify(so).match(/a@b\.co|Owner/), 'no name or email in the settings_open event');
   // sign-out resets the person
   await p.evaluate(() => { location.hash = '#/settings'; }); await p.waitForSelector('[data-act=signout]');
   await p.click('[data-act=signout]'); await p.waitForSelector('.land'); await p.waitForTimeout(400);

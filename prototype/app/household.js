@@ -39,6 +39,13 @@ const hhFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 const hhMulti = () => !state.real && Cloud.household.hasMembers;
 /* in a household a delete names what goes (PRD 27): other people can see and rely on it */
 const hhOk = (name) => { hhLastDel = name; return !hhMulti() || confirm(__('Delete "{name}"? This can\'t be undone.', { name })) };
+/* names on Transactions rows and the person filter only matter when 2+ people can add entries (owner + Editors); Viewers cannot add, so they do not count */
+const hhWriters = () => hhPeople().filter((p) => p.role === 'owner' || p.role === 'editor');
+const hhNames = () => hhMulti() && hhWriters().length >= 2;
+/* who can be picked in the Transactions filter: the writers, plus a removed member who still has entries */
+const hhAuthors = () => [...hhWriters(), ...(Cloud.household.people || []).filter((p) => p.former && D().transactions.some((t) => t.by === p.user_id))];
+/* an entry with no recorded creator counts as the owner's */
+const txnAuthor = (t) => t.by || (hhWriters().find((p) => p.role === 'owner') || {}).user_id || '';
 const byLine = (r) => (hhMulti() && r && r.by ? `<small class="muted hh-by">${whoLine(r).replace('<br>', ' · ')}</small>` : '');
 const hhName = (id) => { const x = (Cloud.household.people || []).find((p) => p.user_id === id); return hhFirstName(x && x.display_name) || ''; };
 const hhWhen = (iso) => new Date(iso).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });

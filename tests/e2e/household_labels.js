@@ -1,5 +1,5 @@
 const { chromium } = require('playwright'); const fs = require('fs'); const assert = require('assert');
-/* A household member's view: who submitted each transaction (first name in the subline), "read-only" on other people's rows for an Editor,
+/* A household member's view: who submitted each transaction (first name in the subline), no "read-only" text on rows (other people's rows open a read-only detail),
    a read-only detail with "Added by", currency/period locked, Leave instead of Invite, and a Viewer who can open details but not add. */
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 390, height: 900 } });
@@ -21,9 +21,30 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   }, { ME, OWNER });
   await p.waitForFunction(() => Cloud.household.status === 'member'); await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t1]', { state: 'visible' });
   const sub = (id) => p.$eval(`.row[data-id=${id}] .sub`, (e) => e.textContent);
-  assert.match(await sub('t1'), /Sari/); assert.match(await sub('t1'), /read-only/, "an Editor sees read-only on the owner's row");
+  assert.match(await sub('t1'), /Sari/); assert.doesNotMatch(await sub('t1'), /read-only/, 'no read-only text on rows (the owner\'s row still opens a read-only detail)');
   assert.match(await sub('t2'), /Budi/); assert.doesNotMatch(await sub('t2'), /read-only/, 'their own row is editable');
-  assert.match(await sub('t3'), /Maria/, "a removed member's entry keeps their name"); assert.match(await sub('t3'), /read-only/);
+  assert.match(await sub('t3'), /Maria/, "a removed member's entry keeps their name"); assert.doesNotMatch(await sub('t3'), /read-only/);
+  // two or more writers: no row of select chips; a filter icon button sits in the search row (with a count when filters are active) and the filters live in a sheet
+  assert.equal(await p.$('.filters.scroll-row'), null, 'no chip row of selects');
+  const g = await p.evaluate(() => { const q = document.querySelector('.txn-top input[data-filter=q]').getBoundingClientRect(), f = document.querySelector('#filter-btn').getBoundingClientRect(), m = document.querySelector('.txn-top .pill-select, .txn-top select').getBoundingClientRect(), l = document.querySelector('.day-tools').getBoundingClientRect(); return { sameRow: Math.abs(q.top - f.top) < 2 && Math.abs(q.top - m.top) < 2, w: Math.round(f.width), searchW: Math.round(q.width), gap: Math.round(l.top - f.bottom) }; });
+  assert.ok(g.sameRow && g.w >= 40 && g.searchW >= 150, 'the filter button shares the search row: ' + JSON.stringify(g)); assert.ok(g.gap <= 24, 'no spare space under the search row: ' + JSON.stringify(g));
+  assert.equal(await p.$eval('#filters-a', (e) => e.children.length), 0); assert.equal(await p.$('#filter-btn .fcount'), null, 'no count without filters');
+  await p.click('#filter-btn'); await p.waitForSelector('#dlg[open] select[data-filter=who]');
+  assert.deepEqual(await p.$$eval('#dlg select[data-filter]', (s) => s.map((e) => e.dataset.filter)), ['cat', 'wallet', 'who'], 'no Occasion field without special occasions');
+  assert.deepEqual(await p.$$eval('#dlg select[data-filter=who] option', (o) => o.map((x) => x.textContent)), ['All people', 'Sari', 'Budi', 'Maria'], 'owner, Editors, and a removed member with entries');
+  await p.selectOption('#dlg select[data-filter=who]', OWNER); await p.waitForTimeout(100);
+  assert.match(await p.textContent('#filters-count'), /Show 1 transaction$/, 'the button counts what matches'); assert.equal(await p.textContent('#filter-btn .fcount'), '1'); assert.match(await p.textContent('#filters-a'), /Sari/);
+  await p.click('#filters-count'); await p.waitForSelector('#dlg:not([open])', { state: 'attached' }); await p.click('[data-act=days-all]');
+  assert.deepEqual(await p.$$eval('#txn-list .row[data-id]:not(.day-row)', (r) => r.map((x) => x.dataset.id)), ['t1'], 'filtering by the owner shows only the owner\'s entry');
+  assert.ok(await p.$('[data-act=reset-filters]'), 'a person filter counts as an active filter');
+  await p.click('#filters-a [data-act=clear-filter]'); await p.waitForTimeout(100); assert.equal(await p.$eval('#filters-a', (e) => e.children.length), 0); assert.equal(await p.$('#filter-btn .fcount'), null); await p.click('[data-act=days-all]');
+  assert.equal(await p.$$eval('#txn-list .row[data-id]:not(.day-row)', (r) => r.length), 3, 'clearing the chip shows everyone again');
+  await p.evaluate(() => { D().occasions = [{ id: 'o1', name: 'Holiday' }]; });
+  await p.click('#filter-btn'); await p.waitForSelector('#dlg select[data-filter=occ]'); assert.deepEqual(await p.$$eval('#dlg select[data-filter]', (s) => s.map((e) => e.dataset.filter)), ['cat', 'occ', 'wallet', 'who'], 'special occasions appear in the sheet when the account has some');
+  await p.selectOption('#dlg select[data-filter=who]', OWNER); await p.click('#dlg [data-act=filters-reset]'); await p.waitForTimeout(100); assert.equal(await p.$eval('#filters-a', (e) => e.children.length), 0, 'Reset in the sheet clears every filter');
+  await p.evaluate(() => { D().occasions = []; }); await p.click('#dlg [data-act=close]'); await p.click('[data-act=days-all]');
+  // Expand all / Hide all are plain text, also while hovered or pressed (no background)
+  await p.hover('[data-act=days-all]'); assert.equal(await p.$eval('[data-act=days-all]', (e) => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)', 'Expand all has no background on hover'); assert.equal(await p.$eval('[data-act=days-none]', (e) => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)');
   // read-only detail for the owner's row; the edit form for their own
   await p.click('.row[data-id=t1]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'no edit form on another person\'s entry'); assert.match(await p.textContent('#dlg .hh-who-line'), /Added by Sari/); await p.click('#dlg [data-act=close]');
   await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg form[data-form=txn]');
@@ -56,6 +77,16 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
   await p.click('.row[data-id=t2]'); await p.waitForSelector('#dlg[open] .hh-who-line'); assert.equal(await p.$('#dlg form[data-form=txn]'), null, 'a Viewer never gets the edit form'); await p.click('#dlg [data-act=close]');
   await p.evaluate(() => document.querySelector('[data-act=add-txn]') && document.querySelector('[data-act=add-txn]').click());
   assert.equal(await p.evaluate(() => document.querySelector('#dlg').open), false, 'add is blocked for a Viewer');
+  // only one person can write (the owner; the other member is a Viewer): no names under the rows and no person filter, even if a person filter was set earlier
+  await p.evaluate((ME) => { state.ui.who = ME; __hhPeople.find((x) => x.user_id === ME).role = 'viewer'; return loadUserData(); }, ME); await p.waitForFunction(() => hhWriters().length === 1);
+  await p.evaluate(() => { location.hash = '#/overview'; }); await p.evaluate(() => { location.hash = '#/transactions'; }); await p.waitForSelector('[data-act=days-all]'); await p.click('[data-act=days-all]'); await p.waitForSelector('.row[data-id=t1]', { state: 'visible' });
+  assert.equal(await p.$('select[data-filter=who]') || await p.$('#filter-btn'), null, 'no person filter and no filter button with one writer');
+  assert.equal(await p.$('select[data-filter=occ]'), null, 'no Occasion filter without special occasions');
+  await p.evaluate(() => { D().occasions = [{ id: 'o1', name: 'Holiday' }]; render(); }); await p.waitForSelector('select[data-filter=occ]');
+  assert.deepEqual(await p.$$eval('.filters.scroll-row select', (s) => s.map((e) => e.dataset.filter)), ['cat', 'occ', 'wallet'], 'one writer with special occasions: Occasion stays, no person chip');
+  await p.evaluate(() => { D().occasions = []; render(); }); await p.click('[data-act=days-all]');
+  for (const id of ['t1', 't2', 't3']) assert.doesNotMatch(await sub(id), /Sari|Budi|Maria/, 'no name under ' + id + ' with one writer');
+  assert.equal(await p.$$eval('#txn-list .row[data-id]:not(.day-row)', (r) => r.length), 3, 'a stale person filter is ignored when it no longer applies');
   // the error contract: HTTP 409 PT409 'household_stale' is the stale-edit case, a guard carries kind and count, plain RLS has no prefix
   const kinds = await p.evaluate(() => [Cloud.classify({ code: 'PT409', message: 'household_stale' }), Cloud.classify({ code: '42501', message: 'household_guard:debt:3' }), Cloud.classify({ code: '42501', message: 'new row violates row-level security policy' }), Cloud.classify({ code: 'HH_GONE' })]);
   assert.deepEqual(kinds, [{ kind: 'stale' }, { kind: 'guard', what: 'debt', n: 3 }, { kind: 'rls' }, { kind: 'gone' }]);

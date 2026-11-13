@@ -737,10 +737,23 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 .land-cta-wrap .land-cta { margin-bottom: 0; } .land-cta-wrap .land-cta .btn { flex: 1; justify-content: center; }
 .land-transfer { margin-top: 14px; }
 
+/* landing: "get a better experience on your phone" card (button opens the Add to Home Screen tutorial) */
+.land-phone { padding-top: 0; }
+.phone-card { display: grid; grid-template-columns: 230px 1fr; align-items: center; gap: 40px; max-width: 860px; margin: 0 auto; padding: 28px 36px; border-radius: 28px; background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.phone-copy h2 { text-align: left; font-size: clamp(22px, 2.6vw, 30px); margin: 0 0 10px; }
+.phone-copy p { margin: 0 0 18px; color: var(--muted); line-height: 1.55; font-size: 16px; }
+.phone-art { display: grid; place-items: center; }
+.phone-mock { width: 200px; aspect-ratio: 390 / 844; border-radius: 32px; border: 6px solid var(--ink); background: #0f0e24; overflow: hidden; box-shadow: 0 20px 44px rgba(59, 53, 181, .25); }
+.phone-mock video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.android-guide .install-steps { text-align: left; width: 100%; margin: 6px 0 0; }
+@media (max-width: 700px) { .phone-card { grid-template-columns: 1fr; gap: 20px; padding: 24px 20px; text-align: center; } .phone-copy h2 { text-align: center; } .phone-copy .btn { width: 100%; justify-content: center; } .phone-mock { width: 180px; } }
+
 /* how-to animation (iPhone): four scenes of 3 s each, looping, silent */
 .install-guide { margin: 4px 0 14px; display: grid; justify-items: center; gap: 10px; }
 .g-tabs { display: inline-flex; background: var(--soft); border-radius: 999px; padding: 3px; }
 .g-tabs button { border: 0; background: none; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; padding: 5px 16px; border-radius: 999px; }
+.g-tabs button { white-space: nowrap; }
+.g-tabs-3 { display: flex; width: 100%; max-width: 340px; } .g-tabs-3 button { flex: 1; padding: 6px 4px; font-size: 12.5px; }
 .g-tabs button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .15); }
 .g-phone { position: relative; width: 210px; height: 270px; border-radius: 26px; border: 3px solid #1e1b4b; background: #f2f3fb; overflow: hidden; color: #1e1b4b; font-size: 11px; }
 .g-scene, .g-caps span { position: absolute; inset: 0; opacity: 0; animation: g-show 12s infinite; }
@@ -1112,6 +1125,101 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .gap-prompt p { max-width: 30ch; margin-bottom: 8px; }
 .gap-prompt .btn { padding-inline: 28px; }
 .hero-bud-line u { white-space: nowrap; }
+
+/* ---------- landing: living / futuristic layer (motion is gated by prefers-reduced-motion; tilt and glow need a mouse) ---------- */
+.land { position: relative; isolation: isolate; }
+.aurora { position: absolute; inset: 0 0 auto 0; height: 980px; overflow: hidden; z-index: -1; pointer-events: none; -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+.aurora i { position: absolute; border-radius: 50%; filter: blur(70px); will-change: transform; translate: calc(var(--px, 0) * 34px) calc(var(--py, 0) * 22px); transition: translate .5s ease-out; }
+.aurora i:nth-child(1) { width: 520px; height: 520px; left: 6%; top: -140px; background: #7c6cff; opacity: .42; }
+.aurora i:nth-child(2) { width: 460px; height: 460px; right: 4%; top: 30px; background: #22d3ee; opacity: .30; }
+.aurora i:nth-child(3) { width: 380px; height: 380px; left: 38%; top: 280px; background: #e879f9; opacity: .22; }
+.aurora::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(124, 108, 255, .10) 1px, transparent 1px), linear-gradient(90deg, rgba(124, 108, 255, .10) 1px, transparent 1px); background-size: 56px 56px; -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000, transparent); mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000, transparent); }
+:root[data-theme="dark"] .aurora i:nth-child(1) { opacity: .55; } :root[data-theme="dark"] .aurora i:nth-child(2) { opacity: .38; } :root[data-theme="dark"] .aurora i:nth-child(3) { opacity: .34; }
+:root[data-theme="dark"] .aurora::after { background-image: linear-gradient(rgba(150, 140, 255, .13) 1px, transparent 1px), linear-gradient(90deg, rgba(150, 140, 255, .13) 1px, transparent 1px); }
+@keyframes aur1 { to { transform: translate3d(90px, 60px, 0) scale(1.15); } }
+@keyframes aur2 { to { transform: translate3d(-110px, 80px, 0) scale(.9); } }
+@keyframes aur3 { to { transform: translate3d(-60px, -70px, 0) scale(1.2); } }
+@keyframes chip-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes h1-shift { to { background-position: 100% 0; } }
+@keyframes breathe { 0%, 100% { opacity: .32; } 50% { opacity: .6; } }
+@keyframes btn-glow { 0%, 100% { box-shadow: 0 6px 18px rgba(74, 68, 198, .30); } 50% { box-shadow: 0 8px 30px rgba(34, 211, 238, .45), 0 0 0 6px rgba(124, 108, 255, .10); } }
+@keyframes phone-bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -9px; } }
+
+/* hero: gradient headline and floating glass chips */
+.land-hero { position: relative; }
+.land-copy h1 { background: linear-gradient(100deg, var(--ink) 0%, var(--brand) 38%, #0e7490 62%, var(--brand) 82%, var(--ink) 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; }
+:root[data-theme="dark"] .land-copy h1 { background-image: linear-gradient(100deg, #fff 0%, #b9b4ff 38%, #67e8f9 62%, #b9b4ff 82%, #fff 100%); }
+.hero-chips { display: none; }
+@media (min-width: 1000px) {
+  .hero-chips { display: block; position: absolute; inset: 0; pointer-events: none; }
+  .hchip { position: absolute; display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 999px; font-weight: 700; font-size: 14px; color: var(--ink); background: rgba(255, 255, 255, .72); border: 1px solid rgba(124, 108, 255, .28); box-shadow: 0 12px 32px rgba(74, 68, 198, .18); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  :root[data-theme="dark"] .hchip { background: rgba(38, 34, 96, .62); border-color: rgba(165, 155, 255, .30); box-shadow: 0 12px 32px rgba(0, 0, 0, .4); }
+  .hchip.c1 { left: -70px; top: 26%; } .hchip.c2 { right: -60px; top: 40%; } .hchip.c3 { left: 10px; bottom: 12%; }
+}
+
+/* buttons: light sweep on hover */
+.land .btn { position: relative; overflow: hidden; }
+.land .btn:not(.secondary)::after { content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .45), transparent); transform: skewX(-20deg); transition: left .6s ease; pointer-events: none; }
+.land .btn:not(.secondary):hover::after { left: 130%; }
+
+/* cards: glass edge, glow that follows the cursor */
+.land .feat, .land .steps li, .phone-card { border: 1px solid rgba(124, 108, 255, .14); }
+:root[data-theme="dark"] .land .feat, :root[data-theme="dark"] .land .steps li, :root[data-theme="dark"] .phone-card { background: linear-gradient(160deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)); border-color: rgba(165, 155, 255, .2); }
+@media (min-width: 861px) { :root[data-theme="dark"] .land .feat, :root[data-theme="dark"] .phone-card { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); } }
+.feat, .phone-card { position: relative; overflow: hidden; }
+.feat::after, .phone-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(124, 108, 255, .18), transparent 70%); opacity: 0; transition: opacity .25s; pointer-events: none; }
+.feat:hover::after, .phone-card:hover::after { opacity: 1; }
+
+/* video frame and phone: a soft glow behind */
+.glow-wrap { position: relative; max-width: 960px; margin: 0 auto; }
+.glow-wrap::before { content: ""; position: absolute; inset: -3px; border-radius: 28px; background: conic-gradient(from 200deg, #7c6cff, #22d3ee, #e879f9, #7c6cff); filter: blur(24px); opacity: .4; z-index: 0; }
+.glow-wrap .demo-frame { position: relative; z-index: 1; }
+.phone-art { position: relative; }
+.phone-art::before { content: ""; position: absolute; width: 280px; height: 280px; border-radius: 50%; background: radial-gradient(circle, rgba(124, 108, 255, .5), rgba(34, 211, 238, .2) 55%, transparent 70%); opacity: .45; }
+.phone-mock { position: relative; z-index: 1; }
+.land-final { background: radial-gradient(620px 240px at 50% 100%, rgba(124, 108, 255, .22), transparent); }
+
+/* the connecting line between the "How it works" steps */
+.steps { position: relative; }
+.steps li { position: relative; }
+.steps::before { content: ""; position: absolute; left: 36px; top: 28px; bottom: 28px; width: 2px; border-radius: 2px; background: linear-gradient(var(--brand), #22d3ee); opacity: .55; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .aurora i:nth-child(1) { animation: aur1 22s ease-in-out infinite alternate; }
+  .aurora i:nth-child(2) { animation: aur2 26s ease-in-out infinite alternate; }
+  .aurora i:nth-child(3) { animation: aur3 30s ease-in-out infinite alternate; }
+  .land.hero-off .aurora i, .land.hero-off .hchip { animation-play-state: paused; }
+  .land-copy h1 { animation: h1-shift 9s ease-in-out infinite alternate; }
+  .hchip.c1 { animation: chip-float 7s ease-in-out infinite; } .hchip.c2 { animation: chip-float 8.5s ease-in-out -2s infinite; } .hchip.c3 { animation: chip-float 6.5s ease-in-out -4s infinite; }
+  .land .btn.lg:not(.secondary):not(.install-cta) { animation: btn-glow 3.2s ease-in-out infinite; }
+  .glow-wrap::before, .phone-art::before { animation: breathe 5s ease-in-out infinite; }
+  .phone-mock { animation: phone-bob 6s ease-in-out infinite; }
+  /* scroll reveals (the class is only added by landingFx when motion is allowed) */
+  .rv-on .rv { opacity: 0; translate: 0 26px; transition: opacity .8s cubic-bezier(.2, .7, .2, 1) var(--d, 0s), translate .8s cubic-bezier(.2, .7, .2, 1) var(--d, 0s); }
+  .rv-on .rv.in { opacity: 1; translate: 0 0; }
+  .rv-on .steps::before { transform: scaleY(0); transform-origin: top; transition: transform 1.3s ease .2s; }
+  .rv-on .steps.in::before { transform: scaleY(1); }
+  .rv-on .steps .step-n { transition: box-shadow .6s ease var(--d, 0s); }
+  .rv-on .steps.in .step-n { box-shadow: 0 0 0 6px rgba(124, 108, 255, .18), 0 0 18px rgba(34, 211, 238, .5); }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .land.fx .feat { transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); will-change: transform; }
+  .land.fx .feat, .land.fx.rv-on .feat.rv { transition: opacity .8s cubic-bezier(.2, .7, .2, 1) var(--d, 0s), translate .8s cubic-bezier(.2, .7, .2, 1) var(--d, 0s), transform .18s ease-out, box-shadow .25s; }
+  .land.fx .feat:hover { box-shadow: 0 18px 44px rgba(74, 68, 198, .24); }
+}
+@media (max-width: 700px) {
+  .aurora { height: 760px; } .aurora i { filter: blur(50px); }
+  .aurora i:nth-child(1) { width: 340px; height: 340px; left: -60px; } .aurora i:nth-child(2) { width: 300px; height: 300px; right: -70px; } .aurora i:nth-child(3) { width: 260px; height: 260px; left: 25%; top: 360px; }
+  .steps::before { left: 33px; }
+}
+/* small phones: the landing nav (logo, language, theme, Get started) has to fit in one row; on the narrowest phones the hero button just below takes over */
+@media (max-width: 480px) {
+  .land-nav { padding: 14px 14px; gap: 8px; } .land-nav-r { gap: 6px; min-width: 0; } .land-nav .logo { font-size: 17px; gap: 6px; } .land-nav .logo img { width: 26px; height: 26px; }
+  .lang-select { height: 38px; padding: 0 6px; max-width: 84px; font-size: 13px; }
+  .land-nav .theme-btn { flex: none; width: 38px; height: 38px; }
+  .land-nav .btn { flex: none; height: 38px; padding: 0 12px; font-size: 13px; }
+}
+@media (max-width: 380px) { .land-nav .btn { display: none; } }
 
 /* ---------- desktop layout pass (2026-11-13): wide screens only; phone and tablet untouched ---------- */
 .ov-side { display: none; }   /* phone and tablet: the Overview stays as it is */

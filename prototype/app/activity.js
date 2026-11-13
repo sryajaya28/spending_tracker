@@ -61,7 +61,7 @@ function render() {
   const a = state.auth;
   if (joinState) { app.innerHTML = viewJoin(); return; }   // /join works signed out, and signed in as someone else
   if (a.status === 'loading') { app.innerHTML = viewSplash('Waking up Stiver…'); return; }
-  if (a.status === 'out' && a.view === 'landing') { app.innerHTML = viewLanding(); return; }
+  if (a.status === 'out' && a.view === 'landing') { app.innerHTML = viewLanding(); landingFx(); return; }
   if (a.status === 'out' || a.view === 'recovery') { app.innerHTML = viewAuth(); mountCaptcha(); return; }
   if (!D() && a.noAccess) { app.innerHTML = viewNoAccess(); return; }
   if (!D()) {

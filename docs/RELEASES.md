@@ -2,6 +2,37 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 21 contents (main 69b26c9)
+
+**Items in this release**
+Features:
+- Names and person filter on Transactions only with 2+ writers
+- Search in the Occasion and Account lists
+
+**Exact detail.** Range: b19a760..75ec1b8. 2 commits, 15 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-13: Names and person filter on Transactions only with 2+ writers. The first name under a Transactions row is shown only when the owner plus Editors number two or more (Viewers do not count); then a person filter (owner, Editors, a removed member with entries) is added; with 2+ writers all filters (Category, Occasion, Account, Person) move into a sheet opened by a filter button in the search row, and active filters show as chips that clear on a tap. Entries without a creator count as the owner's. e2e `household_labels` extended; branch claude/txn-who-filter. The "read-only" text is removed from Transactions rows (other people's rows still open a read-only detail); "Expand all"/"Hide all" have no background in any state.
+- 2026-11-13: Search in the Occasion and Account lists. When there are more than 5 special occasions or more than 5 accounts (Savings, Investment and Debt together), the list opens with a Search box on top, like the Category list: in the Transactions filters (row and filter sheet), in Add/Edit transaction (Account, Special occasion) and in Transfer (From, To). Account search matches the name only. Also fixed: the "not found" note only showed in lists with an add entry, so it never appeared in the Category filter; it now shows at the end of the list (new strings "Occasion not found", "Account not found" with Bahasa Indonesia). No data or sync change. Test `searchlists` (new); `dropdown` unchanged. Branch `claude/wonderful-gates-b8v4o6`.
+
+**What a user can see change**
+Yes: 6 app files changed (prototype/app/events-input.js, prototype/app/transfers.js, prototype/app/ui-helpers.js, prototype/app/views.js, prototype/dropdown.js, prototype/i18n-id.js).
+
+**Commits**
+- 933b481 Fold change files into the changelog for the release
+- 3c99d1d Search box in the Occasion and Account lists above 5 choices
+
+**Files by area**
+- App (what users see) (6): prototype/app/events-input.js, prototype/app/transfers.js, prototype/app/ui-helpers.js, prototype/app/views.js, prototype/dropdown.js, prototype/i18n-id.js
+- Tests (2): tests/e2e/run_all.sh, tests/e2e/searchlists.js
+- Docs and rules (7): context.md, docs/CHANGELOG.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/changes/2026-11-13-txn-who-filter.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** browser suite 61/61 (local) and CI tier+e2e green; staging smoke, real-database regression create+cleanup passed on 75ec1b8; https://stiver.io answers 200 and serves stiver-shell-69b26c9395. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** Copilot review did not run (quota); owner has not hand-checked staging
+
 ## Release 20 contents (main b7e2ce2)
 
 **Items in this release**

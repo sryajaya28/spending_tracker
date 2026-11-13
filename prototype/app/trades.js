@@ -41,6 +41,29 @@ function addOpening(h, qty, price, ccy) {
   else if (q0 > 1e-12) delete h.open_price;   // an unpriced addition makes the starting price unknown
 }
 
+/* move a holding to another investment account. An account holds each asset once (unique account + symbol), so when the target
+   already holds it the two are merged into the target's: quantities, events and opening cost (blended into one starting price)
+   add up, and anything that pointed at the moved holding (swap pairs, recurring rules) is re-pointed. Returns the holding that results. */
+function moveHolding(h, accId) {
+  if (!h || !accId || h.account_id === accId) return h;
+  const dest = D().holdings.find((x) => x.id !== h.id && x.account_id === accId && x.symbol === h.symbol);
+  if (!dest) { h.account_id = accId; return h; }
+  const qa = holdingCost(dest).q0, qb = holdingCost(h).q0;
+  if (trackCost(h) && qb > 1e-12) {
+    if (!dest.ccy) dest.ccy = h.ccy || cur();
+    const pb = h.open_price != null ? (h.open_price * RATES[dest.ccy]) / RATES[h.ccy || dest.ccy] : null;
+    if (pb == null || (qa > 1e-12 && dest.open_price == null)) delete dest.open_price;   // an unpriced part makes the starting price unknown
+    else dest.open_price = qa > 1e-12 ? (qa * dest.open_price + qb * pb) / (qa + qb) : pb;
+  }
+  dest.quantity = r12(dest.quantity + h.quantity);
+  dest.trades.push(...h.trades);
+  if (h.since < dest.since) dest.since = h.since;
+  D().holdings = D().holdings.filter((x) => x.id !== h.id);
+  D().holdings.forEach((x) => x.trades.forEach((tr) => { if (tr.via && tr.via.holding_id === h.id) tr.via.holding_id = dest.id; }));
+  (D().recurring || []).forEach((r) => { if (r.spec) for (const k of Object.keys(r.spec)) if (r.spec[k] === 'h:' + h.id) r.spec[k] = 'h:' + dest.id; });
+  return dest;
+}
+
 /* returns a message when the paying side can't cover a buy; null when it is fine */
 function payShortfall(src, side, amount) {
   if (side !== 'buy') return null;

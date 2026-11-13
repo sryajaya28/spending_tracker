@@ -1,0 +1,1 @@
+2026-11-13: **Reusable release prompt.** Added `docs/tasks/RELEASE.md`: the standing prompt for a fresh release session (dry run, regression, migrations, review of PRs Copilot did not review, stop for "Release", ship, record). Docs only, no tests. Branch `docs/release-prompt`.

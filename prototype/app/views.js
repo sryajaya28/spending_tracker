@@ -208,8 +208,8 @@ function gapCard() {
 }
 function todayCard() {
   const rows = D().transactions.filter((t) => t.occurred_at === todayIso() && !hiddenLeg(t, ''));
-  if (!rows.length) return canWrite() ? `<section class="card gap-prompt"><span class="gap-ico">${icon('plus')}</span><h2>${__('Nothing recorded today yet')}</h2><p class="muted">${__('Add what you spend as you go, and it shows up here.')}</p><button type="button" class="btn" data-act="add-txn">${__('Add transaction')}</button></section>` : '';
-  return `<section class="card"><div class="card-head"><div><h2>${__('Today')}</h2><p class="muted">${gapDay(new Date(todayIso() + 'T00:00'), { weekday: 'short', day: 'numeric', month: 'short' })} · ${countLabel(rows.length)}</p></div><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`;
+  if (!rows.length) return canWrite() ? `<section class="card gap-prompt ov-today"><span class="gap-ico">${icon('plus')}</span><h2>${__('Nothing recorded today yet')}</h2><p class="muted">${__('Add what you spend as you go, and it shows up here.')}</p><button type="button" class="btn" data-act="add-txn">${__('Add transaction')}</button></section>` : '';
+  return `<section class="card ov-today"><div class="card-head"><div><h2>${__('Today')}</h2><p class="muted">${gapDay(new Date(todayIso() + 'T00:00'), { weekday: 'short', day: 'numeric', month: 'short' })} · ${countLabel(rows.length)}</p></div><a class="chip" href="#/transactions">${__('View all')}</a></div><div class="list">${rows.map((t) => txnRow(t)).join('')}</div></section>`;
 }
 function viewOverview() {
   const st = setupState();
@@ -226,7 +226,7 @@ function viewOverview() {
       <div class="hero-actions"><button class="ghost" data-act="add-txn" data-type="expense">${icon('plus')} ${__('Expense')}</button><button class="ghost" data-act="add-txn" data-type="income">${icon('plus')} ${__('Income')}</button><button class="ghost" data-act="invest">${icon('plus')} ${__('Invest')}</button><button class="ghost" data-act="transfer">${icon('swap')} ${__('Transfer')}</button></div>
       </section>
     ${installBtn('ov-install')}
-    ${todayCard()}${gapCard()}
+    ${todayCard()}${gapCard()}${overviewSide()}
   </div>`;
 }
 
@@ -382,9 +382,18 @@ function categoryBudgetCard(rest, ro) {
 }
 /* Report has two pages: Transactions and Analysis (budget progress, Spending, Category trend, Money Flow) */
 const reportTabs = (on) => `<div class="tabs report-tabs" role="tablist" aria-label="${__('Report pages')}">${['transactions', 'analysis'].map((t) => `<button type="button" class="tab${on === t ? ' on' : ''}" role="tab" aria-selected="${on === t}" data-act="report-tab" data-tab="${t}">${__(t === 'transactions' ? 'Transactions' : 'Analysis')}</button>`).join('')}</div>`;
-function viewAnalysis() {
-  const k = state.ui.month, list = inMonth(k), exp = sumBy(list, 'expense'), net = sumBy(list, 'income') - exp;
+/* Money Flow card: shown on Report > Analysis and, on desktop only, beside the Overview hero. */
+function flowCard(k) {
+  const list = inMonth(k), net = sumBy(list, 'income') - sumBy(list, 'expense');
   const months = lastMonths(6), incs = months.map((m) => sumBy(inMonth(m), 'income')), exps = months.map((m) => sumBy(inMonth(m), 'expense'));
+  return `<section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
+      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
+      ${flowChart(months, incs, exps)}</section>`;
+}
+/* Desktop only (hidden at 1100px and below): two Report sections fill the column beside the hero and Today. */
+const overviewSide = () => `<div class="ov-side">${flowCard(state.ui.month)}${categoryBudgetCard(budgetStatus(state.ui.month).filter((b) => b.category_id), true)}</div>`;
+function viewAnalysis() {
+  const k = state.ui.month, exp = sumBy(inMonth(k), 'expense');
   const bs = budgetStatus(k);
   return `${topbar('Report')}${reportTabs('analysis')}
   <div class="grid">
@@ -392,9 +401,7 @@ function viewAnalysis() {
     <section class="card"><div class="card-head"><h2>${__('Spending')}</h2><div class="tools">${monthSelect()}<button class="chip" data-act="breakdown">${__('Details')}</button></div></div>
       ${halfDonut(spendByCategory(k), exp)}</section>
     ${trendCard()}
-    <section class="card"><div class="card-head"><h2>${__('Money Flow')}</h2><span class="chip">${__('6 months')}</span></div>
-      <div class="big num">${money(Math.max(net, 0), cur())}</div><p class="muted" style="margin-bottom:14px">${__('Saved in {month}', { month: esc(monthLabel(k)) })}</p>
-      ${flowChart(months, incs, exps)}</section>
+    ${flowCard(k)}
   </div>`;
 }
 

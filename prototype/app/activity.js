@@ -76,7 +76,7 @@ function render() {
   hideWriteControls();
   if (r === 'portfolio' && state.chart && $('#pf')) bindValue(state.chart.months, state.chart.series, state.chart.vc);
   if (r === 'portfolio' && state.chart2 && $('#pnl')) bindValue(state.chart2.months, state.chart2.series, state.chart2.vc, { id: 'pnl', neg: true });   // the asset page (#/portfolio/<id>) has no value chart
-  if (r === 'analysis') {
+  if (r === 'analysis' || (r === 'overview' && $('#flow'))) {   // the Overview shows Money Flow in its desktop-only side column
     const months = lastMonths(6);
     bindFlow(months, months.map((m) => sumBy(inMonth(m), 'income')), months.map((m) => sumBy(inMonth(m), 'expense')));
   }

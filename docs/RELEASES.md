@@ -2,6 +2,36 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 21 contents (main b19a760)
+
+**Items in this release**
+Features:
+- Transactions: names and a person filter only with 2+ writers (filter button + sheet, no read-only text, plain Expand all / Hide all)
+
+**Exact detail.** Range: b7e2ce2..0809bb0. 3 commits, 17 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- 2026-11-13: Names and person filter on Transactions only with 2+ writers. The first name under a Transactions row is shown only when the owner plus Editors number two or more (Viewers do not count); then a person filter (owner, Editors, a removed member with entries) is added; with 2+ writers all filters (Category, Occasion, Account, Person) move into a sheet opened by a filter button in the search row, and active filters show as chips that clear on a tap. Entries without a creator count as the owner's. e2e `household_labels` extended; branch claude/txn-who-filter. The "read-only" text is removed from Transactions rows (other people's rows still open a read-only detail); "Expand all"/"Hide all" have no background in any state.
+
+**What a user can see change**
+Yes: 7 app files changed (prototype/app/events-input.js, prototype/app/household.js, prototype/app/icons.js, prototype/app/state.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css).
+
+**Commits**
+- 0809bb0 Transactions: names and a person filter only with 2+ people who can add entries
+- bd57510 learning.md: release 20 lessons (docs only)
+- 582a047 Release record 20: Spent today (docs only)
+
+**Files by area**
+- App (what users see) (7): prototype/app/events-input.js, prototype/app/household.js, prototype/app/icons.js, prototype/app/state.js, prototype/app/views.js, prototype/i18n-id.js, prototype/styles.css
+- Tests (1): tests/e2e/household_labels.js
+- Docs and rules (9): context.md, docs/ANALYTICS.md, docs/COSTS.md, docs/FEATURE_TESTS.md, docs/RELEASES.md, docs/changes/2026-11-13-txn-who-filter.md, docs/tasks/2026-11-13-txn-who-filter.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** browser suite 60/60 on staging before merge; CI e2e green on PR 73; https://stiver.io answers 200 and serves stiver-shell-b19a760196. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** Tier 3 diff-only review and the owner's staging check were skipped on the owner's word Release; Figma frames still show the earlier Option A
+
 ## Release 20 contents (main b7e2ce2)
 
 **Items in this release**

@@ -13,6 +13,7 @@ const { chromium } = require('playwright'); const fs = require('fs'); const asse
     }
     // "Get a better experience on your phone": sits between the video and the feature grid; its button opens the tutorial (iPhone Safari / Chrome and Android tabs) on any device
     const order = await p.evaluate(() => { const y = (q) => document.querySelector(q).getBoundingClientRect().top; return y('.land-demo') < y('.land-phone') && y('.land-phone') < y('.feats'); }); assert(order, name + ': phone section is after the video and before the features');
+    assert.equal(await p.$$eval('.land-phone .phone-mock video source', (e) => e.length), 2, name + ': phone video has mp4 + webm');
     assert((await p.innerText('.land-phone h2')).includes('better experience on your phone'), name + ': headline');
     await p.click('.land-phone [data-act=phone-tutorial]'); await p.waitForSelector('#dlg .install-guide');
     assert.equal(await p.$$eval('#dlg .g-tabs button', (e) => e.length), 3, name + ': three tabs'); assert.equal(await p.$$eval('#dlg .g-scene', (e) => e.length), 5, name + ': Safari animation first');

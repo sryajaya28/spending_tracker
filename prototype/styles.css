@@ -739,17 +739,14 @@ dialog, .cs-pop, .bk { overscroll-behavior: contain; }   /* scrolling inside a l
 
 /* landing: "get a better experience on your phone" card (button opens the Add to Home Screen tutorial) */
 .land-phone { padding-top: 0; }
-.phone-card { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 36px; max-width: 820px; margin: 0 auto; padding: 28px 36px; border-radius: 28px; background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line); }
+.phone-card { display: grid; grid-template-columns: 230px 1fr; align-items: center; gap: 40px; max-width: 860px; margin: 0 auto; padding: 28px 36px; border-radius: 28px; background: var(--surface); box-shadow: var(--shadow); border: 1px solid var(--line); }
 .phone-copy h2 { text-align: left; font-size: clamp(22px, 2.6vw, 30px); margin: 0 0 10px; }
 .phone-copy p { margin: 0 0 18px; color: var(--muted); line-height: 1.55; font-size: 16px; }
 .phone-art { display: grid; place-items: center; }
-.phone-mock { position: relative; width: 120px; height: 200px; border-radius: 26px; border: 4px solid var(--ink); background: linear-gradient(160deg, var(--soft), var(--surface)); display: grid; grid-template-rows: auto 1fr; justify-items: center; padding: 22px 14px 14px; gap: 10px; }
-.phone-mock::before { content: ""; position: absolute; top: 7px; left: 50%; width: 30px; height: 5px; border-radius: 3px; background: var(--ink); transform: translateX(-50%); opacity: .6; }
-.phone-mock img { width: 46px; height: 46px; border-radius: 12px; box-shadow: 0 6px 14px rgba(59, 53, 181, .3); }
-.phone-mock i { display: block; width: 100%; height: 14px; border-radius: 7px; background: var(--line); align-self: start; }
-.phone-mock i:nth-of-type(2) { width: 70%; } .phone-mock i:nth-of-type(3) { width: 85%; }
+.phone-mock { width: 200px; aspect-ratio: 390 / 844; border-radius: 32px; border: 6px solid var(--ink); background: #0f0e24; overflow: hidden; box-shadow: 0 20px 44px rgba(59, 53, 181, .25); }
+.phone-mock video { display: block; width: 100%; height: 100%; object-fit: cover; }
 .android-guide .install-steps { text-align: left; width: 100%; margin: 6px 0 0; }
-@media (max-width: 700px) { .phone-card { grid-template-columns: 1fr; gap: 18px; padding: 24px 20px; text-align: center; } .phone-copy h2 { text-align: center; } .phone-copy .btn { width: 100%; justify-content: center; } .phone-mock { width: 96px; height: 150px; padding-top: 18px; } .phone-mock img { width: 38px; height: 38px; } }
+@media (max-width: 700px) { .phone-card { grid-template-columns: 1fr; gap: 20px; padding: 24px 20px; text-align: center; } .phone-copy h2 { text-align: center; } .phone-copy .btn { width: 100%; justify-content: center; } .phone-mock { width: 180px; } }
 
 /* how-to animation (iPhone): four scenes of 3 s each, looping, silent */
 .install-guide { margin: 4px 0 14px; display: grid; justify-items: center; gap: 10px; }

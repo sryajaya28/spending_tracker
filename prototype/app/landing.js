@@ -111,7 +111,7 @@ function viewLanding() {
   <section class="land-sec land-demo"><h2>${__('See Stiver in action')}</h2><p class="land-demo-sub">${__('A quick tour: add an expense, browse your days, hide your balance, check budgets, debts and investments, and move money between accounts.')}</p>
     <div class="demo-frame"><video controls playsinline preload="metadata" poster="media/demo-poster.jpg" aria-label="${__('Stiver demo video')}"><source src="media/demo.mp4" type="video/mp4"><source src="media/demo.webm" type="video/webm"></video></div></section>
   ${IS_STANDALONE ? '' : `<section class="land-sec land-phone"><div class="phone-card">
-    <div class="phone-art" aria-hidden="true"><div class="phone-mock"><img src="icon.svg" alt=""><i></i><i></i><i></i></div></div>
+    <div class="phone-art"><div class="phone-mock"><video autoplay muted loop playsinline preload="metadata" poster="media/demo-phone-poster.jpg" aria-label="${__('Stiver on a phone')}"><source src="media/demo-phone.mp4" type="video/mp4"><source src="media/demo-phone.webm" type="video/webm"></video></div></div>
     <div class="phone-copy"><h2>${__('Get a better experience on your phone')}</h2><p>${__('Add Stiver to your Home Screen: it opens full screen, loads faster and feels like a real app. No app store needed.')}</p>
       <button type="button" class="btn lg" data-act="phone-tutorial">📲 ${__('See how to add it to your phone')}</button></div></div></section>`}
   <section class="land-sec"><h2>${__('Everything you need, nothing you don’t')}</h2>

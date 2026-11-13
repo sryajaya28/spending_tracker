@@ -15,7 +15,10 @@ document.addEventListener('click', (e) => {
   else if (act === 'open-day') { state.ui.dayQ = ''; location.hash = '#/transactions/' + id; }
   else if (act === 'toggle-day') { const g = el.closest('.day-group'), on = !g.classList.contains('open'); g.classList.toggle('open', on); el.setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(id); else state.ui.openDays.delete(id); }
   else if (act === 'cat-txns') { Object.assign(state.ui, { cat: el.dataset.cat, q: '', occ: '', wallet: '', allPeriods: false }); forgetScroll('#/transactions'); location.hash = '#/transactions'; }   // a budget row opens its transactions for the same period
-  else if (act === 'reset-filters') { Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '' }); render(); }
+  else if (act === 'reset-filters') { Object.assign(state.ui, { q: '', cat: '', occ: '', wallet: '', who: '' }); render(); }
+  else if (act === 'open-filters') filtersDialog();  // the filter button (2+ writers)
+  else if (act === 'clear-filter') { state.ui[id] = ''; Analytics.track('filter_changed', { filter: id, active: false }); refreshFilterUi(); }
+  else if (act === 'filters-reset') { Object.assign(state.ui, { cat: '', occ: '', wallet: '', who: '' }); filtersDialog(); refreshFilterUi(); }
   else if (act === 'days-all' || act === 'days-none') { $$('#txn-list .day-group').forEach((g) => { const on = act === 'days-all'; g.classList.toggle('open', on); $('.day-row', g).setAttribute('aria-expanded', on); if (on) state.ui.openDays.add(g.dataset.day); else state.ui.openDays.delete(g.dataset.day); }); }
   else if (act === 'invest') holdingDialog(null, null, { invest: true });
   else if (act === 'transfer') transferDialog();
@@ -175,7 +178,7 @@ document.addEventListener('change', (e) => {
   else if (t.matches('[data-bind="pfRange"]')) { state.ui.pfRange = t.value; render(); }
   else if (t.matches('[data-bind="pnlPeriod"]')) { location.hash = '#/portfolio/pnl-' + t.value; }
   // (the search box is handled on input: a change event from a removed, focused box must not bring its old text back)
-  else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml(); }
+  else if (t.matches('select[data-filter]')) { state.ui[t.dataset.filter] = t.value; t.classList.toggle('f-on', !!t.value); refreshFilterUi(); }
   else if (t.name === 'category' && (t.form?.dataset.form === 'txn' || t.form?.dataset.form === 'budget')) {
     const q = $('.quick-cat', t.form); if (!q) return;
     if (t.value === '__new') { t.value = t.dataset.prev || ''; q.hidden = false; q.scrollIntoView({ block: 'nearest' }); }   // open the add-category form; no keyboard until a field is tapped

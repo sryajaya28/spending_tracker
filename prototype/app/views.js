@@ -235,12 +235,12 @@ function txnRow(t) {
   const c = catOf(t.category_id), sign = t.type === 'income' ? '+' : '−';
   return `<div class="row" data-act="edit-txn" data-id="${t.id}" tabindex="0">${tile(c)}
     <div><div class="title">${esc(t.note || c?.name || __('Transaction'))}${t.category_source === 'ai' ? ('<span class="badge ai" title="' + __('Tagged by AI') + '">AI</span>') : ''}${t.occasion_id && occasionOf(t.occasion_id) ? `<span class="badge">🎉 ${esc(occasionOf(t.occasion_id).name)}</span>` : ''}</div>
-    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}${hhMulti() && t.by ? ` · ${esc(hhName(t.by) || '')}` : ''}${hhMulti() && Cloud.household.role === 'editor' && !canEditRec(t) ? ` · ${__('read-only')}` : ''}</div></div>
+    <div class="sub">${esc(c ? c.name : __('No category'))} · ${esc(txnWhere(t))}${hhNames() && t.by ? ` · ${esc(hhName(t.by) || '')}` : ''}</div></div>
     <div class="amt-col"><div class="amt num ${t.type}">${sign}${coinOf(t) ? coinAmount(coinOf(t), t.amount_minor) : money(t.amount_minor, t.currency)}</div><div class="sub">${t.occurred_at > todayIso() ? ('<span class="badge">' + __('Upcoming') + '</span>') : ''}${esc(new Date(t.occurred_at + 'T00:00').toLocaleDateString(locale(), { month: 'short', day: 'numeric' }))}</div></div></div>`;
 }
 function filteredTxns(upcoming = false) {
-  const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase();
-  return D().transactions.filter((t) => !hiddenLeg(t) && (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
+  const { q, cat, wallet, occ } = state.ui, ql = q.trim().toLowerCase(), who = hhNames() ? state.ui.who : '';
+  return D().transactions.filter((t) => !hiddenLeg(t) && (!who || txnAuthor(t) === who) && (upcoming ? t.occurred_at > todayIso() : t.occurred_at <= todayIso())   // upcoming (future-dated) entries are not part of the history yet; they open in their own pop-up
     && (occ || state.ui.allPeriods || inPeriod(t.occurred_at, state.ui.month))
     && (!cat || (cat === 'none' ? !t.category_id && t.type !== 'transfer' : t.category_id === cat || (t.category_id && rootOf(t.category_id) === cat))) && (!wallet || t.wallet_id === wallet || (wallet.startsWith('h:') && coinOf(t)?.id === wallet.slice(2)) || (wallet.startsWith('l:') && (t.loan_id === wallet.slice(2) || (repaymentOf(t.id) || {}).loan?.id === wallet.slice(2)))) && (!occ || t.occasion_id === occ)
     && (!ql || (t.note || '').toLowerCase().includes(ql) || (catOf(t.category_id)?.name || '').toLowerCase().includes(ql)));
@@ -248,7 +248,7 @@ function filteredTxns(upcoming = false) {
 /* the Transactions page filtered to a loan account: what was charged to it (expenses paid with it) and the payments made on it */
 const loanViewId = () => (state.ui.wallet && state.ui.wallet.startsWith('l:') ? state.ui.wallet.slice(2) : '');
 function loanPaymentRows() {
-  const id = loanViewId(), l = id && D().loans.find((x) => x.id === id), { q, cat, occ } = state.ui, ql = q.trim().toLowerCase(); if (!l || cat || occ) return [];
+  const id = loanViewId(), l = id && D().loans.find((x) => x.id === id), { q, cat, occ } = state.ui, ql = q.trim().toLowerCase(); if (!l || cat || occ || (hhNames() && state.ui.who)) return [];
   return l.payments.filter((p) => p.kind !== 'charge' && !p.txn_id && p.date <= todayIso() &&   // a payment made from an account is listed as that account's expense instead
  (state.ui.allPeriods || inPeriod(p.date, state.ui.month)) && (!ql || __('Debt payment').toLowerCase().includes(ql)))
     .map((p) => ({ id: 'pay:' + p.id, type: 'loan_payment', amount_minor: p.amount_minor, currency: l.currency, occurred_at: p.date, note: __('Debt payment'), loan_id: l.id }));
@@ -259,7 +259,7 @@ const countLabel = (n) => n === 1 ? __('1 transaction') : __('{n} transactions',
 /* days are collapsible: tap a day to open its transactions in place; Expand all / Hide all for the whole list. A search opens every matching day. */
 function txnListHtml() {
   const loanView = !!loanViewId(), rows = [...filteredTxns(), ...loanPaymentRows()];
-  const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet), up = filteredTxns(true).length;
+  const anyFilter = !!(state.ui.q.trim() || state.ui.cat || state.ui.occ || state.ui.wallet || (hhNames() && state.ui.who)), up = filteredTxns(true).length;
   const upBtn = up ? `<button type="button" class="see-upcoming" data-act="see-upcoming">${__('See upcoming transactions ({n})', { n: up })}</button>` : '';
   const reset = anyFilter ? `<button type="button" class="legend-btn reset-filters" data-act="reset-filters">${__('Reset filters')}</button>` : '';
   if (!rows.length) return (reset ? `<div class="day-tools">${reset}</div>` : '') + '<div class="empty">' + __('No transactions match.') + '</div>' + upBtn;
@@ -296,14 +296,45 @@ function viewDay(d) {
     <div class="txn-top"><input data-filter="dayq" placeholder="${__('Search')}" value="${esc(state.ui.dayQ || '')}" aria-label="${__('Search note or category')}"></div>
     <div class="list" id="day-list">${dayListHtml(d)}</div></section>`;
 }
+/* the three usual filters (category, occasion when the account has any, account) */
+const txnFilterSelects = () => `<select data-filter="cat" class="${state.ui.cat ? 'f-on' : ''}" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}</select>
+      ${D().occasions.length ? `<select data-filter="occ" class="${state.ui.occ ? 'f-on' : ''}" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
+      <select data-filter="wallet" class="${state.ui.wallet ? 'f-on' : ''}" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option><optgroup label="${__('Savings Account')}">${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>${stableHoldings().length ? `<optgroup label="${__('Investment Account')}">${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(coinLabel(h))}</option>`).join('')}</optgroup>` : ''}${D().loans.length ? `<optgroup label="${__('Debt Account')}">${D().loans.map((l) => `<option value="l:${l.id}" ${state.ui.wallet === 'l:' + l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</optgroup>` : ''}</select>`;
+const whoSelect = () => `<select data-filter="who" class="${state.ui.who ? 'f-on' : ''}" aria-label="${__('Person')}"><option value="">${__('All people')}</option>${hhAuthors().map((p) => `<option value="${p.user_id}" ${state.ui.who === p.user_id ? 'selected' : ''}>${esc(hhName(p.user_id) || '?')}</option>`).join('')}</select>`;
+const FKEYS = ['cat', 'occ', 'wallet', 'who'];
+const fActive = () => FKEYS.filter((k) => state.ui[k] && (k !== 'who' || hhNames()));
+function fLabel(k) {
+  const v = state.ui[k];
+  if (k === 'cat') return v === 'none' ? 'Uncategorized' : (catOf(v)?.name || '');
+  if (k === 'occ') return occasionOf(v)?.name || '';
+  if (k === 'who') return hhName(v) || '?';
+  if (v.startsWith('h:')) { const h = stableHoldings().find((x) => x.id === v.slice(2)); return h ? coinLabel(h) : ''; }
+  if (v.startsWith('l:')) return (D().loans.find((x) => x.id === v.slice(2)) || {}).name || '';
+  return walletOf(v)?.name || '';
+}
+/* the person filter (2+ writers): all filters move into a sheet opened by the filter button in the search row; active ones show as chips that clear on a tap */
+const filterBtnHtml = () => { const n = fActive().length; return `<button type="button" class="filter-btn ${n ? 'on' : ''}" id="filter-btn" data-act="open-filters" aria-label="${__('Filters')}">${icon('filter')}${n ? `<i class="fcount">${n}</i>` : ''}</button>`; };
+const filtersAHtml = () => `<div class="filters-a" id="filters-a">${fActive().map((k) => `<button type="button" class="chip f-btn f-on" data-act="clear-filter" data-id="${k}" aria-label="${__('Clear filter')}">${esc(fLabel(k))} ✕</button>`).join('')}</div>`;
+const txnFiltersHtml = () => (hhNames() ? filtersAHtml() : `<div class="filters scroll-row">${txnFilterSelects()}</div>`);
+const showLabel = () => { const n = [...filteredTxns(), ...loanPaymentRows()].length; return n === 1 ? __('Show 1 transaction') : __('Show {n} transactions', { n }); };
+/* the sheet. The selects are the same ones with the same data-filter, so the page's change handler updates the list behind it */
+function filtersDialog() {
+  const f = (label, sel) => `<label class="field">${label}${sel}</label>`;
+  open(`<div data-form="txn-filters"><h2>${__('Filters')}</h2>${f(__('Category'), txnFilterSelects().match(/<select data-filter="cat".*?<\/select>/s)[0])}${D().occasions.length ? f(__('Occasion'), txnFilterSelects().match(/<select data-filter="occ".*?<\/select>/s)[0]) : ''}${f(__('Account'), txnFilterSelects().match(/<select data-filter="wallet".*?<\/select>/s)[0])}${f(__('Person'), whoSelect())}
+    <div class="actions"><button type="button" class="btn secondary" data-act="filters-reset">${__('Reset')}</button><button type="button" class="btn" id="filters-count" data-act="close">${showLabel()}</button></div></div>`);
+}
+/* after any filter changed: the list, the button, the chips and the sheet's count */
+function refreshFilterUi() {
+  const l = $('#txn-list'); if (l) l.innerHTML = txnListHtml();
+  const a = $('#filters-a'); if (a) a.outerHTML = filtersAHtml();
+  const w = $('#filter-btn'); if (w) w.outerHTML = filterBtnHtml();
+  const b = $('#filters-count'); if (b) b.textContent = showLabel();
+}
 function viewTransactions() {
   const all = !!state.ui.allPeriods, list = all ? D().transactions.filter((t) => t.occurred_at <= todayIso()) : inMonth(state.ui.month);
   return `${topbar('Transactions', __('{n} in {month} · income {income} · spent {spent}', { n: list.length, month: all ? __('All periods') : monthLabel(state.ui.month), income: money(sumBy(list, 'income'), cur()), spent: money(sumBy(list, 'expense'), cur()) }))}
-  <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true, true)}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
-    <div class="filters scroll-row">
-      <select data-filter="cat" class="${state.ui.cat ? 'f-on' : ''}" data-search data-empty="${__('Category not found')}" aria-label="${__('Category')}"><option value="">${__('All categories')}</option><option value="none" ${state.ui.cat === 'none' ? 'selected' : ''}>Uncategorized</option>${catTree().map((c) => `<option value="${c.id}" data-s="${esc((c.parent_id ? (catOf(c.parent_id)?.name || '') + ' ' : '') + c.name)}" ${state.ui.cat === c.id ? 'selected' : ''}>${c.parent_id ? '  ↳ ' : ''}${c.icon} ${esc(c.name)}</option>`).join('')}</select>
-      ${D().occasions.length ? `<select data-filter="occ" class="${state.ui.occ ? 'f-on' : ''}" aria-label="${__('Occasion')}"><option value="">${__('All occasions')}</option>${D().occasions.map((o) => `<option value="${o.id}" ${state.ui.occ === o.id ? 'selected' : ''}>🎉 ${esc(o.name)}</option>`).join('')}</select>` : ''}
-      <select data-filter="wallet" class="${state.ui.wallet ? 'f-on' : ''}" aria-label="${__('Account')}"><option value="">${__('All accounts')}</option><optgroup label="${__('Savings Account')}">${D().wallets.map((w) => `<option value="${w.id}" ${state.ui.wallet === w.id ? 'selected' : ''}>${esc(w.name)}</option>`).join('')}</optgroup>${stableHoldings().length ? `<optgroup label="${__('Investment Account')}">${stableHoldings().map((h) => `<option value="h:${h.id}" ${state.ui.wallet === 'h:' + h.id ? 'selected' : ''}>${esc(coinLabel(h))}</option>`).join('')}</optgroup>` : ''}${D().loans.length ? `<optgroup label="${__('Debt Account')}">${D().loans.map((l) => `<option value="l:${l.id}" ${state.ui.wallet === 'l:' + l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</optgroup>` : ''}</select></div>
+  <section class="card"><div class="txn-top"><input data-filter="q" class="${state.ui.q.trim() ? 'f-on' : ''}" placeholder="${__('Search')}" value="${esc(state.ui.q)}" aria-label="${__('Search note or category')}">${monthSelect(true, true)}${hhNames() ? filterBtnHtml() : ''}<button class="btn add-desk" data-act="add-txn">${__('+ Add')}</button></div>
+    ${txnFiltersHtml()}
     <div class="list" id="txn-list">${txnListHtml()}</div></section>`;
 }
 

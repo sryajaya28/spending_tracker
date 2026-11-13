@@ -569,6 +569,7 @@ select:not([data-native]) { pointer-events: none; }
 .filters.scroll-row select[data-filter="cat"] { flex-grow: 36; }
 .filters.scroll-row select[data-filter="occ"] { flex-grow: 33; }
 .filters.scroll-row select[data-filter="wallet"] { flex-grow: 31; }
+
 @media (max-width: 900px) { .add-desk { display: none; } }
 @media (max-width: 380px) { .filters.scroll-row select { font-size: 12px; padding: 0 6px; } }
 
@@ -887,7 +888,8 @@ input[type="date"].dp-on::-webkit-datetime-edit { opacity: 0; }
 
 /* Expand all / Hide all / Reset filters: they stay on the right; the pressed highlight is a pill with the text in its middle */
 .day-tools .legend-btn { padding: 5px 12px; justify-content: center; border-radius: 99px; }
-.day-tools .legend-btn:active { background: var(--soft); color: var(--ink); }
+.day-tools .legend-btn:active { background: none; color: var(--ink); }
+@media (hover: hover) { .day-tools .legend-btn:hover { background: none; color: var(--ink); } }   /* Expand all / Hide all / Reset filters are plain text: no background in any state */
 
 /* four buttons (Delete, Reopen, Cancel, Save) do not fit in one row on a phone: two rows of two, equal width, nothing outside the dialog's padding */
 .actions:has(> :nth-child(4)) { display: grid; grid-template-columns: 1fr 1fr; }
@@ -1040,3 +1042,18 @@ button.chip { border: 0; font: inherit; font-weight: 600; color: inherit; cursor
 .hero-bar i.warning { background: var(--warn); }
 .hero-bar i.exceeded { background: #ff6b70; }
 .hero-bud:focus-visible, .hero .hero-chip:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+/* Transactions person filter (2+ writers): a filter button in the search row opens a sheet; active filters show as chips under the search row */
+.filter-btn { position: relative; flex: none; width: 44px; height: 44px; border: 1px solid transparent; border-radius: 14px; background: var(--soft); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.filter-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.filter-btn.on { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); border: 1.5px solid var(--brand); }
+:root[data-theme="dark"] .filter-btn.on { background: color-mix(in srgb, var(--brand) 24%, var(--surface)); }
+.fcount { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; font-style: normal; text-align: center; }
+.filters-a { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters-a:not(:empty) { margin-bottom: 4px; }
+.f-btn { flex: 0 0 auto; border: 1.5px solid transparent; font-size: 13px; padding: 0 12px; height: 32px; }
+.f-btn.f-on { background: color-mix(in srgb, var(--brand) 14%, var(--surface)); color: var(--brand); border-color: var(--brand); }
+:root[data-theme="dark"] .f-btn.f-on { background: color-mix(in srgb, var(--brand) 24%, var(--surface)); }
+[data-form="txn-filters"] { display: grid; gap: 14px; }
+[data-form="txn-filters"] h2 { margin: 0; }
+[data-form="txn-filters"] .field { display: grid; gap: 6px; margin: 0; }
+[data-form="txn-filters"] .actions { margin-top: 4px; }

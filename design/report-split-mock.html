@@ -194,7 +194,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .occ .s { font-size: 12.5px; color: var(--muted); }
 
 /* ---- bottom bar ---- */
-.bottom-nav { display: grid; grid-template-columns: repeat(4, 1fr); align-items: end; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 6px 14px; }
+.bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 6px 14px; }
 .bottom-nav a, .bottom-nav button { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--muted); text-decoration: none; padding: 4px 0; }
 .bottom-nav .on { color: var(--brand); }
 .bottom-nav .add span { width: 46px; height: 46px; margin-top: -22px; border-radius: 50%; background: linear-gradient(135deg, var(--fill), var(--fill-2)); color: #fff; display: grid; place-items: center; box-shadow: 0 8px 18px rgba(74,68,198,.35); }
@@ -225,6 +225,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
   <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 7h13M16 3l4 4-4 4M17 17H4M8 13l-4 4 4 4"/></symbol>
   <symbol id="i-trend" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></symbol>
+  <symbol id="i-pie" viewBox="0 0 24 24"><path d="M12 3v9h9A9 9 0 1 1 12 3z"/><path d="M15 3.6A9 9 0 0 1 20.4 9H15z"/></symbol>
   <symbol id="i-dash" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
 </svg>
 
@@ -293,6 +294,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
         <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-pie"/></svg>Budgets</a>
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
       </nav>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -326,6 +328,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
         <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
         <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-pie"/></svg>Budgets</a>
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
       </nav>
     </div>
@@ -341,22 +344,17 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         <div class="line" style="justify-content:space-between"><span class="pill-select">November 2026 <svg class="ic"><use href="#i-chev"/></svg></span><span class="sum">Period 1 – 30 Nov</span></div>
 
         <section class="card">
-          <div class="card-head"><div><h2>Overall budget</h2></div><span class="chip"><svg class="ic"><use href="#i-plus"/></svg>Budget</span></div>
+          <div class="card-head"><div><h2>Overall budget</h2></div><span class="chip">Budgets <svg class="ic"><use href="#i-chev"/></svg></span></div>
           <div class="big num">Rp 3.240.000 <small>of Rp 5.000.000</small></div>
           <div class="bar" style="margin:12px 0 0" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="65" aria-label="Budget used 65%"><i style="width:65%"></i></div>
           <div class="foot"><span class="num">Rp 1.760.000 left · 65% used · 18 days to go</span><span class="badge ok" style="margin:0">On track</span></div>
         </section>
 
         <section class="card">
-          <div class="card-head"><h2>By category</h2><span class="chip"><svg class="ic"><use href="#i-plus"/></svg>Add</span></div>
+          <div class="card-head"><h2>By category</h2></div>
           <div class="brow"><span class="tile">🍜</span><div><div class="m"><span>Food &amp; drink <span class="badge warning">Almost there</span></span><span class="num">1.450.000 / 1.600.000</span></div><div class="bar"><i class="warning" style="width:91%"></i></div></div></div>
           <div class="brow"><span class="tile">🛵</span><div><div class="m"><span>Transport <span class="badge ok">On track</span></span><span class="num">720.000 / 1.200.000</span></div><div class="bar"><i style="width:60%"></i></div></div></div>
           <div class="brow"><span class="tile">🛍️</span><div><div class="m"><span>Shopping <span class="badge exceeded">Over budget</span></span><span class="num">610.000 / 500.000</span></div><div class="bar"><i class="exceeded" style="width:100%"></i></div></div></div>
-        </section>
-
-        <section class="card">
-          <div class="card-head"><h2>Special occasions</h2><span class="chip">History</span></div>
-          <div class="occ"><div><div class="t">Bali trip</div><div class="s num">20 – 27 Nov · Rp 1.800.000 of 6.000.000</div></div><svg class="ic" style="color:var(--muted)"><use href="#i-chev"/></svg></div>
         </section>
 
         <section class="card">
@@ -404,6 +402,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
         <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
         <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-pie"/></svg>Budgets</a>
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
       </nav>
     </div>
@@ -435,6 +434,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
         <a href="#" class="on" onclick="return false"><svg class="ic"><use href="#i-home"/></svg>Overview</a>
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-report"/></svg>Report</a>
         <button type="button" class="add" aria-label="Add transaction"><span><svg class="ic"><use href="#i-plus"/></svg></span>Add</button>
+        <a href="#" onclick="return false"><svg class="ic"><use href="#i-pie"/></svg>Budgets</a>
         <a href="#" onclick="return false"><svg class="ic"><use href="#i-wallet"/></svg>Portfolio</a>
       </nav>
     </div>
@@ -449,7 +449,7 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
       <li><b>Today list</b> shows every item from today, including income and transfers. The big number counts expenses only, as now.</li>
       <li><b>Missing days</b> sit below today's list: a 7-day strip, then one row per empty day with Add and Nothing to add.</li>
       <li><b>Report</b> replaces Transactions in the bar. Transactions | Analysis is a switch at the top of the page.</li>
-      <li><b>Budgets tab</b> is gone. Its whole page lives in Analysis, so the bar is Overview, Report, Add, Portfolio.</li>
+      <li><b>Budgets tab</b> stays: Overview, Report, Add, Budgets, Portfolio. It keeps the full page (add, edit, special occasions). Analysis shows budget progress only, with a link to it.</li>
     </ul>
   </div>
   <div class="note">
@@ -465,8 +465,8 @@ button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   <div class="note">
     <h3>Please look at</h3>
     <ul>
-      <li><b>Add button position.</b> With three tabs, Add sits between Report and Portfolio, off centre. A floating Add button is the alternative.</li>
-      <li><b>Analysis order.</b> Budget, categories, occasions, Spending, Category trend, then Money Flow. Money Flow was not in your list, so it comes last.</li>
+      <li><b>Budget in Analysis.</b> Progress bars only, no add or edit, and no special occasions. Is a read-only copy what you want, or should Analysis not show budgets at all?</li>
+      <li><b>Analysis order.</b> Budget, categories, Spending, Category trend, then Money Flow. Money Flow was not in your list, so it comes last.</li>
       <li><b>Report remembers the month</b> you pick, and the same month applies to both pages.</li>
       <li>Not drawn: an optional "no transactions" marker for empty days inside the Transactions list.</li>
     </ul>

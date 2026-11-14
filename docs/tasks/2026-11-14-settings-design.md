@@ -10,3 +10,6 @@ Hand-over from the Portfolio session. Docs/Figma only, branch `claude/relaxed-te
 **Files:** `prototype/app/views.js`, `events-input.js`, `household.js`; docs `2026-11-14-design-handover.md`, `2026-11-13-redesign.md`.
 **Done already:** (a) Day PARKED, (b) Analysis, (c) Budgets, (d) Portfolio phone + desktop incl. Debt / Investment / Lent tabs, P&L month, Asset page: all owner approved. Owner rules added in (d): phone Asset detail page has NO bottom nav (build slice hides it on `#/portfolio/<holding id>`); desktop cards must end at the same right edge as the Breakdown card (1008 wide in the 1280 frame).
 **Open / next:** (f) dialogs and (g) states (Portfolio conditional states are listed in the hand-over (d) line), then `docs/design-handover/` (not before).
+
+## Session 13 result (2026-11-14, Sonnet 5.5)
+Part 1 done, awaiting owner approval: hub, Preferences, Profile, Terms & privacy, Recurring, phone + desktop, dark + light (ids in the redesign task NEXT line). Left: Categories, Occasions, Household. Owner added `+ Recurring` (new control, see hand-over (e)).

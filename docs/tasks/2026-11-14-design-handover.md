@@ -23,7 +23,7 @@ Frame ids are `?node-id=` values, dark / light. All phone frames are 390 wide, d
 
 ## 3. Missing pages and states (to draw, in this order, one fresh session each)
 Method per item: list the controls from the code view, compare with the Figma frame AND the old app (frames 116-1381/1831), write the fix (in-place `use_figma` for small things; for big pages import a fixed copy with `tools/canvas_static.js` + `tools/canvas_patches/` as described in the redesign task file), delete the replaced frames, measure (overflow, 44px, contrast), screenshot every frame in both themes.
-- (a) **Day page** (`viewDay`): DONE (session 10, owner not yet approved). Phone 215-1376 dark / 215-1612 light, desktop 215-2580 dark / 215-2835 light; empty day 215-1848 / 215-2031; search no match 215-2214 / 215-2397. Phone has no global search (Overview rule); desktop keeps it. Not drawn: Upcoming badge row, lent / debt / coin-transfer rows (same row layout).
+- (a) **Day page** (`viewDay`): DONE (session 10, owner approved the phone frames 2026-11-14: "looks good"; desktop and the two state pairs not separately confirmed). Phone 215-1376 dark / 215-1612 light, desktop 215-2580 dark / 215-2835 light; empty day 215-1848 / 215-2031; search no match 215-2214 / 215-2397. Phone has no global search (Overview rule); desktop keeps it. Not drawn: Upcoming badge row, lent / debt / coin-transfer rows (same row layout).
 - (b) **Analysis** phone + desktop (frames 120/122, 138/139): check against the code; charts are grey placeholder boxes (`... (unchanged)`), keep and label them, list what each chart shows.
 - (c) **Budgets** phone + desktop (132/134, 136/137).
 - (d) **Portfolio + asset page** (140-147), then the tabs Debt, Investment, Lent and the P&L month view (not drawn at all).

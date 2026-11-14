@@ -12,4 +12,4 @@ Hand-over from the Portfolio session. Docs/Figma only, branch `claude/relaxed-te
 **Open / next:** (f) dialogs and (g) states (Portfolio conditional states are listed in the hand-over (d) line), then `docs/design-handover/` (not before).
 
 ## Session 13 result (2026-11-14, Sonnet 5.5)
-Part 1 done, awaiting owner approval: hub, Preferences, Profile, Terms & privacy, Recurring, phone + desktop, dark + light (ids in the redesign task NEXT line). Left: Categories, Occasions, Household. Owner added `+ Add` (new control, see hand-over (e)).
+Part 1 done, OWNER APPROVED: hub, Preferences, Profile, Terms & privacy, Recurring, phone + desktop, dark + light (ids in the redesign task NEXT line). Left: Categories, Occasions, Household. Owner added `+ Add` (new control, see hand-over (e)).

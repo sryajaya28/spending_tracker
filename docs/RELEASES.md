@@ -2,6 +2,41 @@
 
 Every release starts with the high-level list of its items (Features, Fixes, Docs/process, Tooling, each with its branch), then the exact detail (owner, 2026-11-05). Generated with `node tools/release_contents.js --merge <main sha>`; the Tech-Lead adds tests, smoke and known gaps and appends the block here after each release, then posts it to the Workspace (channel releases, to owner).
 
+## Release 24 contents (main 4b9860a)
+
+**Items in this release**
+- (no changelog entry: write the items here)
+
+**Exact detail.** Range: 3bbe02a..bb0c0cd. 9 commits, 29 files.
+
+**What changed, in plain words** (the changelog lines this release added)
+- (no changelog line added)
+
+**What a user can see change**
+Yes: 12 app files changed (prototype/app/activity.js, prototype/app/events-input.js, prototype/app/landing.js, prototype/app/views.js, prototype/i18n-id.js, prototype/media/demo-phone-poster.jpg, prototype/media/demo-phone.mp4, prototype/media/demo-phone.webm, ...).
+
+**Commits**
+- 993cd20 Landing desktop demo video re-recorded on the new two-column Overview
+- 630b2bf Task file: PR link
+- ec79fa7 Desktop layout pass: tests, docs and change file
+- 92ca2b4 Landing videos re-recorded against the current app (Spent today, Report); caption, docs, learning
+- b30d275 Desktop layout: revert stretched Today card; write hand-over task file
+- 4ffb392 WIP: desktop layout pass (design mock, awaiting owner approval)
+- 319e9e1 Landing: living/futuristic motion layer, Household key item, nav fit, tests
+- 9267847 Landing phone card: looping phone-size tour video in a phone frame
+- 7da4e23 Landing: phone-experience section with Add to Home Screen tutorial, refreshed demo video
+
+**Files by area**
+- App (what users see) (12): prototype/app/activity.js, prototype/app/events-input.js, prototype/app/landing.js, prototype/app/views.js, prototype/i18n-id.js, prototype/media/demo-phone-poster.jpg, prototype/media/demo-phone.mp4, prototype/media/demo-phone.webm, prototype/media/demo-poster.jpg, prototype/media/demo.mp4, prototype/media/demo.webm, prototype/styles.css
+- Tests (8): tests/e2e/analytics.js, tests/e2e/desklayout.js, tests/e2e/encode_phone_demo.sh, tests/e2e/landshot.js, tests/e2e/record_demo_tour.js, tests/e2e/record_phone_tour.js, tests/e2e/report.js, tests/e2e/run_all.sh
+- Docs and rules (9): context.md, docs/COSTS.md, docs/EVENTS.md, docs/FEATURE_TESTS.md, docs/changes/2026-11-13-desktop-layout.md, docs/changes/2026-11-13-landing-phone-section.md, docs/tasks/2026-11-13-desktop-layout.md, learning.md, regression_scenario.md
+
+**Database migrations**
+None.
+
+**Tests and smoke:** see the regression summary; https://stiver.io answers 200 and serves stiver-shell-4b9860a1ba. production smoke test passed (SMOKE PASSED: 15/15 steps passed on https://stiver.io)
+**Known gaps:** none recorded
+
 ## Release 23 contents (main 73c040d)
 
 **Items in this release**
